@@ -674,7 +674,7 @@ function voiceToggle(){const SR=_SR();if(!SR){vstat('المتصفح ده مش ب
 function openTransaction(type){let isSale=type==='sale';TTYPE=type;paidTouched=false;
  openModal(`<div class="modal-head"><h2>${isSale?'تسجيل فاتورة بيع':'تسجيل فاتورة شراء'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <form onsubmit="submitTransaction(event,'${type}')"><div class="form">
- <div class="field full"><label>ابحث عن الصنف واختاره</label><input id="txSearch" data-mic="1" placeholder="اكتب اسم الصنف..." autocomplete="off"><div id="txBox" style="display:none;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff"></div></div>
+ <div class="field full"><label>ابحث عن الصنف واختاره</label><input id="txSearch" placeholder="اكتب اسم الصنف..." autocomplete="off"><div id="txBox" style="display:none;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff"></div></div>
  <div class="field full"><div id="txLines"></div></div>
  <div class="field full" style="font-size:18px">إجمالي الفاتورة: <b id="txTotal">0</b></div>
  <div class="field"><label>${isSale?'العميل':'المورد'}</label><input id="txPerson" placeholder="الاسم" ${isSale?'list="custList" onchange="fillCust()"':''}>${isSale?`<datalist id="custList">${db.contacts.filter(c=>c.type==='عميل').map(c=>`<option value="${esc(c.name)}">`).join('')}</datalist>`:''}</div>
