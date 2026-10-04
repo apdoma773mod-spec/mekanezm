@@ -229,7 +229,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   </div></div>
   <div class="card"><h3>النسخ الاحتياطي</h3><p style="color:var(--muted)">احفظ نسخة من بيانات النظام على جهازك، أو استعد نسخة سابقة.</p>
    <div class="toolbar"><button class="secondary" onclick="backup()"><svg class="i"><use href="#i-download"/></svg> تصدير نسخة</button><button class="secondary" onclick="document.getElementById('restoreFile').click()"><svg class="i"><use href="#i-upload"/></svg> استعادة نسخة</button><input id="restoreFile" type="file" accept=".json" hidden onchange="restore(event)"></div>
-   <button class="secondary" onclick="cloudLogout()">تسجيل الخروج</button> <button class="secondary danger" onclick="clearOps()">مسح العمليات فقط (الأصناف تفضل)</button> <button class="secondary danger" onclick="resetData()">مسح كل شيء حتى المظهر</button>
+   <button class="secondary" onclick="openRecat()">إعادة تصنيف الأصناف</button> <button class="secondary" onclick="cloudLogout()">تسجيل الخروج</button> <button class="secondary danger" onclick="clearOps()">مسح العمليات فقط (الأصناف تفضل)</button> <button class="secondary danger" onclick="resetData()">مسح كل شيء حتى المظهر</button>
   </div>
  </div>
 </section>
@@ -873,6 +873,42 @@ fi.onchange=async()=>{
 };
 window.openImpDaily=()=>{if(typeof XLSX==='undefined')return toast('مكتبة الإكسل ما اتحملتش — اتأكد من النت');fi.click()};
 window.__imp={parseAoa,groupRows};
+})();
+
+</script>
+<script>
+/* ===== إعادة تصنيف الأصناف تلقائياً ===== */
+(function(){
+const DEF='إكسسوارات مطابخ',C_H='مفصلات',C_R='مجرى الادراج';
+const reHinge=/(^| )عدل|باكم|3d|ثري دي|مفصل/,reRunS=/مجري|مجار/,reRunW=/جانبي|سفلي/;
+function classify(name){
+  const t=VN(name),h=reHinge.test(t),rs=reRunS.test(t),rw=reRunW.test(t);
+  let cat=rs?C_R:h?C_H:rw?C_R:'';
+  return {cat,conflict:h&&(rs||rw)};
+}
+let RC={forceAll:false,res:[]};
+function calc(){
+  RC.res=db.products.map(p=>{const c=classify(p.name);const manual=p.cat&&p.cat!==DEF&&p.cat!==c.cat;return {p,to:c.cat,conflict:c.conflict,manual}});
+}
+function rows(list,n){return list.slice(0,n).map(x=>`<div style="font-size:13px;padding:2px 0">${esc(x.p.name)}${x.conflict?' <span class="badge red">تعارض</span>':''}</div>`).join('')+(list.length>n?`<div style="font-size:12px;color:var(--muted)">و ${list.length-n} غيرهم…</div>`:'')}
+function render(){
+  const H=RC.res.filter(x=>x.to===C_H),R=RC.res.filter(x=>x.to===C_R),M=RC.res.filter(x=>x.to&&x.manual);
+  const eff=x=>x.to&&(RC.forceAll||!x.manual)&&x.p.cat!==x.to,N=RC.res.filter(eff).length;
+  openModal(`<div class="modal-head"><h2>إعادة تصنيف الأصناف</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="card" style="line-height:1.9"><b>${H.length}</b> صنف → <b>${C_H}</b><br><b>${R.length}</b> صنف → <b>${C_R}</b><br>باقي الأصناف (<b>${RC.res.length-H.length-R.length}</b>) هتفضل زي ما هي.</div>
+  <label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" ${RC.forceAll?'checked':''} onchange="recatForce(this.checked)"> غيّر كمان الأصناف اللي تصنيفها اتعدل يدوي (${M.length} صنف)</label>
+  <div class="card" style="margin-bottom:8px"><b>${C_H}</b>${rows(H,10)}</div>
+  <div class="card" style="margin-bottom:8px"><b>${C_R}</b>${rows(R,10)}</div>
+  <div class="modal-foot"><button class="primary" onclick="recatGo()">تطبيق على ${N} صنف</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+}
+window.openRecat=()=>{calc();render()};
+window.recatForce=v=>{RC.forceAll=v;render()};
+window.recatGo=()=>{
+  let n=0;RC.res.forEach(x=>{if(x.to&&(RC.forceAll||!x.manual)&&x.p.cat!==x.to){x.p.cat=x.to;n++}});
+  if(!n){closeModal();return toast('مفيش حاجة اتغيرت')}
+  save();closeModal();toast('تم تغيير تصنيف '+n+' صنف');
+};
+window.__recat={classify};
 })();
 
 </script>
