@@ -36,6 +36,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <style>.brand{white-space:nowrap;min-width:0}.brand div{overflow:hidden;text-overflow:ellipsis}@media(max-width:900px){.brand{font-size:19px;gap:6px}.top{padding-left:10px;padding-right:12px}.top-actions{gap:6px}.icon-btn{width:40px;height:40px}}</style>
 <style>@media(max-width:900px){.top{position:relative;height:auto;min-height:64px;padding-top:var(--topgap,62px);padding-bottom:6px;align-items:flex-end}}</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -135,7 +136,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </section>
 
 <section id="sales" class="page">
- <div class="title-row"><div class="title"><h1>المبيعات</h1><p>تسجيل ومراجعة حركة البيع</p></div><button class="primary" onclick="openTransaction('sale')"><svg class="i"><use href="#i-plus"/></svg> تسجيل بيع</button></div>
+ <div class="title-row"><div class="title"><h1>المبيعات</h1><p>تسجيل ومراجعة حركة البيع</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="openImpDaily()">استيراد يومية (إكسل)</button><button class="primary" onclick="openTransaction('sale')"><svg class="i"><use href="#i-plus"/></svg> تسجيل بيع</button></div></div>
  <div class="card"><input id="salesQ" placeholder="ابحث بالاسم أو التاريخ أو العميل أو رقم الفاتورة..." oninput="renderInvLists()" style="width:100%;margin-bottom:6px"><div id="salesCount" style="font-size:13px;color:#7a8a8f;margin-bottom:8px"></div><div class="table-wrap"><table class="table"><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>العميل</th><th>الأصناف</th><th>الإجمالي</th><th>الدفع</th></tr></thead><tbody id="salesBody"></tbody></table></div></div>
 </section>
 
@@ -747,6 +748,135 @@ function openPurchaseView(id){let r=db.purchases.find(x=>x.id===id);if(!r)return
 renderTables();
 </script>
 <script>
+/* ===== استيراد يومية البيع من إكسل ===== */
+(function(){
+const A=s=>String(s==null?'':s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const nv=v=>{if(typeof v==='number')return v;const n=parseFloat(A(v).replace(/[,٬\s]/g,'').replace(/٫/g,'.'));return isNaN(n)?0:n};
+const HD={prod:['الصنف','المنتج','الاصناف','البيان'],qty:['عدد','العدد','الكمية'],price:['سعر','السعر','سعر الوحدة'],total:['الاجمالي','اجمالي','المجموع'],pay:['طريقة الدفع','الدفع'],note:['ملاحظات','ملاحظة'],cust:['اسم العميل','العميل']};
+const z2=v=>String(v).padStart(2,'0');
+function parseAoa(aoa){
+  const hn={};for(const k in HD)hn[k]=HD[k].map(x=>VN(x));
+  let hi=-1,col={};
+  for(let r=0;r<Math.min(aoa.length,40);r++){
+    const c={};(aoa[r]||[]).forEach((v,j)=>{if(v==null||v==='')return;const t=VN(v);for(const k in hn)if(c[k]==null&&hn[k].includes(t))c[k]=j});
+    if(c.prod!=null&&c.qty!=null&&c.price!=null){hi=r;col=c;break}
+  }
+  if(hi<0)return null;
+  let iso='';
+  for(let r=0;r<hi&&!iso;r++)for(const v of (aoa[r]||[])){
+    if(v instanceof Date&&!isNaN(v)){iso=v.getFullYear()+'-'+z2(v.getMonth()+1)+'-'+z2(v.getDate());break}
+    if(typeof v==='string'){const m=A(v).match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);if(m){iso=m[3]+'-'+z2(m[2])+'-'+z2(m[1]);break}}
+  }
+  const rows=[];
+  for(let r=hi+1;r<aoa.length;r++){
+    const a=aoa[r]||[],g=k=>col[k]==null?'':a[col[k]];
+    const prod=String(g('prod')==null?'':g('prod')).trim(),qty=nv(g('qty'));
+    if(!prod||!qty)continue;
+    let price=nv(g('price')),total=col.total!=null?nv(g('total')):0,mism=false;
+    if(total&&price&&Math.abs(total-qty*price)>0.01){price=total/qty;mism=true}
+    else if(!price&&total)price=total/qty;
+    const pr=String(g('pay')==null?'':g('pay')).trim(),pn=VN(pr);
+    const pay=pn.includes('اجل')?'credit':'cash';
+    const extra=pr&&!pn.includes('اجل')&&!pn.includes('نقد')?pr:'';
+    const note=[String(g('note')==null?'':g('note')).trim(),extra].filter(Boolean).join(' - ');
+    rows.push({prod,qty,price:+price.toFixed(4),mism,pay,note,cust:String(g('cust')==null?'':g('cust')).trim(),pid:'',hint:''});
+  }
+  return {iso,rows};
+}
+function groupRows(rows,mode){
+  const m=new Map();
+  rows.forEach((r,i)=>{const nm=VN(r.cust);const k=(nm||(mode==='one'?'':'#'+i))+'|'+r.pay;
+    if(!m.has(k))m.set(k,{cust:r.cust,pay:r.pay,idx:[]});const g=m.get(k);if(!g.cust&&r.cust)g.cust=r.cust;g.idx.push(i)});
+  return [...m.values()];
+}
+const dice=(a,b)=>{const ta=new Set(VN(a).split(' ')),tb=new Set(VN(b).split(' '));let c=0;ta.forEach(t=>{if(tb.has(t))c++});return 2*c/(ta.size+tb.size||1)};
+let IMP={sheets:[],cur:0,iso:'',rows:[],mode:'each',G:[]};
+const pById=id=>db.products.find(x=>x.id===id);
+function matchAll(){
+  const idx=new Map();db.products.forEach(p=>{const k=VN(p.name);if(!idx.has(k))idx.set(k,p)});
+  IMP.rows.forEach(r=>{
+    const p=idx.get(VN(r.prod));r.pid=p?p.id:'';r.hint='';
+    if(!p){let best=0,bp=null;db.products.forEach(q=>{const d=dice(r.prod,q.name);if(d>best){best=d;bp=q}});if(bp&&best>=0.5)r.hint=bp.id}
+  });
+}
+function stockWarn(){
+  const need=new Map();IMP.rows.forEach(r=>{if(r.pid)need.set(r.pid,(need.get(r.pid)||0)+r.qty)});
+  const out=[];need.forEach((q,id)=>{const p=pById(id);if(p&&q>(+p.qty||0))out.push(p.name)});return out;
+}
+function statusHtml(i){const r=IMP.rows[i];
+  if(r.pid)return '<span style="color:#159447">✓ متطابق</span>';
+  const h=r.hint&&pById(r.hint);
+  return '<span style="color:#c0392b">⚠ مش لاقيه في المخزون</span>'+(h?` <button type="button" class="secondary" style="padding:3px 8px;font-size:12px" onclick="impHint(${i})">تقصد: ${esc(h.name)}؟</button>`:'');}
+function updSum(){
+  const R=IMP.rows,G=groupRows(R,IMP.mode),tot=R.reduce((s,r)=>s+r.qty*r.price,0),bad=R.filter(r=>!r.pid).length,w=stockWarn();
+  const e=document.getElementById('impSum');if(e)e.innerHTML=`<b>${G.length}</b> فاتورة • <b>${R.length}</b> صنف • الإجمالي <b>${money(tot)}</b><br>`+
+   (bad?`<span style="color:#c0392b">${bad} صنف مش متطابق (هيتخطى لو سبته)</span><br>`:'<span style="color:#159447">كل الأصناف متطابقة</span><br>')+
+   (w.length?`<span style="color:#b9770e">المخزون هيبقى بالسالب في ${w.length} صنف: ${esc(w.slice(0,4).join('، '))}${w.length>4?'…':''}</span>`:'');
+}
+function render(){
+  const R=IMP.rows,G=groupRows(R,IMP.mode);IMP.G=G;
+  const sh=IMP.sheets.length>1?`<div class="field"><label>الورقة</label><select onchange="impSheet(this.value)">${IMP.sheets.map((s,k)=>`<option value="${k}" ${k===IMP.cur?'selected':''}>${esc(s.name)} (${s.rows.length} صنف)</option>`).join('')}</select></div>`:'';
+  openModal(`<div class="modal-head"><h2>استيراد يومية البيع</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <datalist id="impList">${db.products.map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist>
+  <div class="form">${sh}<div class="field"><label>تاريخ اليومية</label><input type="date" value="${esc(IMP.iso)}" onchange="impDate(this.value)"></div>
+  <div class="field"><label>الصفوف من غير اسم عميل</label><select onchange="impMode(this.value)"><option value="each" ${IMP.mode==='each'?'selected':''}>فاتورة لكل صف</option><option value="one" ${IMP.mode==='one'?'selected':''}>فاتورة واحدة لكلهم</option></select></div></div>
+  <div id="impSum" class="card" style="margin:10px 0;line-height:1.9;font-size:14px"></div>
+  ${G.map((g,gi)=>{const T=g.idx.reduce((s,i)=>s+R[i].qty*R[i].price,0);
+   return `<div class="card" style="margin-bottom:10px;padding:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input value="${esc(g.cust)}" placeholder="عميل نقدي (من غير اسم)" oninput="impCust(${gi},this.value)" style="flex:1"><span class="badge">${g.pay==='credit'?'آجل':'نقدي'}</span></div>
+   ${g.idx.map(i=>{const r=R[i],p=r.pid&&pById(r.pid);return `<div style="border-top:1px solid var(--border);padding:6px 0"><input list="impList" value="${esc(p?p.name:r.prod)}" onchange="impSet(${i},this.value)" style="width:100%"><div style="font-size:13px;color:var(--muted);margin-top:3px">${r.qty} × ${money(r.price)} = <b>${money(r.qty*r.price)}</b>${r.mism?' (السعر اتعدل عشان يطابق الإجمالي)':''}${r.note?' • '+esc(r.note):''}</div><div id="ist${i}" style="font-size:13px">${statusHtml(i)}</div></div>`}).join('')}
+   <div style="text-align:left;margin-top:6px;font-weight:700">إجمالي الفاتورة: ${money(T)}</div></div>`}).join('')}
+  <div class="modal-foot"><button class="primary" onclick="impGo()">تأكيد الاستيراد</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+  updSum();
+}
+function pick(k){const s=IMP.sheets[k];IMP.cur=k;IMP.iso=s.iso||isoToday();IMP.rows=s.rows.map(r=>({...r}));IMP.mode='each';matchAll();render()}
+function updRow(i){const e=document.getElementById('ist'+i);if(e)e.innerHTML=statusHtml(i);updSum()}
+window.impSheet=v=>pick(+v);
+window.impDate=v=>{IMP.iso=v};
+window.impMode=v=>{IMP.mode=v;render()};
+window.impCust=(gi,v)=>{(IMP.G[gi]?IMP.G[gi].idx:[]).forEach(i=>{IMP.rows[i].cust=v.trim()})};
+window.impSet=(i,v)=>{const k=VN(v),p=db.products.find(x=>x.name===v)||db.products.find(x=>VN(x.name)===k);IMP.rows[i].pid=p?p.id:'';updRow(i)};
+window.impHint=i=>{IMP.rows[i].pid=IMP.rows[i].hint;render()};
+window.impGo=()=>{
+  const R=IMP.rows,ok=R.filter(r=>r.pid),bad=R.length-ok.length;
+  if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
+  const G=groupRows(R,IMP.mode).map(g=>({...g,idx:g.idx.filter(i=>R[i].pid)})).filter(g=>g.idx.length);
+  if(G.some(g=>g.pay==='credit'&&!VN(g.cust)))return toast('فيه فاتورة آجل من غير اسم عميل — اكتب الاسم');
+  const iso=IMP.iso||isoToday();
+  const dup=ok.filter(r=>{const p=pById(r.pid);return db.sales.some(s=>s.iso===iso&&s.product===p.name&&+s.qty===+r.qty&&VN(s.person||'')===VN(r.cust||''))}).length;
+  let msg='';
+  if(dup>=Math.max(1,ok.length/2))msg+='⚠️ شكل اليومية دي اتسجلت قبل كده ('+dup+' صنف مطابق في مبيعات نفس اليوم). لو كملت هتتخصم تاني من المخزون.\n\n';
+  if(bad)msg+=bad+' صنف مش متطابق هيتخطى.\n\n';
+  msg+='هيتسجل '+G.length+' فاتورة بتاريخ '+iso+'. متأكد؟';
+  if(!confirm(msg))return;
+  const dstr=new Date(iso+'T12:00:00').toLocaleDateString('ar-EG');
+  G.forEach(g=>{
+    db.settings.invNo=(db.settings.invNo||db.sales.length)+1;
+    const no='MK-'+String(db.settings.invNo).padStart(4,'0'),nm=(g.cust||'').trim(),out=[];let rem=0;
+    g.idx.forEach(i=>{const r=R[i],p=pById(r.pid),total=+(r.qty*r.price).toFixed(2);
+      p.qty=+((+p.qty||0)-r.qty).toFixed(2);
+      const paid=g.pay==='credit'?0:total,rm=+(total-paid).toFixed(2);rem+=rm;
+      out.push({id:crypto.randomUUID(),date:dstr,iso,cost:p.cost,product:p.name,person:nm,qty:r.qty,price:r.price,total,note:r.note||'',no,phone:'',addr:'',paid,rem:rm})});
+    if(nm){let c=db.contacts.find(x=>x.name===nm&&x.type==='عميل');if(!c){c={id:crypto.randomUUID(),name:nm,type:'عميل',phone:'',balance:0,note:''};db.contacts.unshift(c)}c.balance=+((+c.balance||0)+rem).toFixed(2)}
+    db.sales.unshift(...out);
+  });
+  save();closeModal();toast('تم استيراد '+G.length+' فاتورة');
+};
+const fi=document.createElement('input');fi.type='file';fi.accept='.xlsx,.xlsm,.xls,.csv';fi.style.display='none';document.body.appendChild(fi);
+fi.onchange=async()=>{
+  const f=fi.files[0];fi.value='';if(!f)return;
+  try{
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});IMP.sheets=[];
+    wb.SheetNames.forEach(n=>{const p=parseAoa(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}));if(p&&p.rows.length)IMP.sheets.push({name:n,...p})});
+    if(!IMP.sheets.length)return toast('ما لقيتش جدول يومية (لازم أعمدة: الصنف، عدد، سعر)');
+    pick(0);
+  }catch(e){console.error(e);toast('تعذر قراءة الملف')}
+};
+window.openImpDaily=()=>{if(typeof XLSX==='undefined')return toast('مكتبة الإكسل ما اتحملتش — اتأكد من النت');fi.click()};
+window.__imp={parseAoa,groupRows};
+})();
+
+</script>
+<script>
 (function(){
 const SB_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',SB_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
 const sb=supabase.createClient(SB_URL,SB_KEY);
@@ -820,7 +950,7 @@ async function doLogin(){
   $('mkGo').disabled=true;
   const r=await sb.auth.signInWithPassword({email,password});
   $('mkGo').disabled=false;
-  if(r.error){$('mkErr').textContent='الإيميل أو كلمة السر غلط';return}
+  if(r.error){const m=String(r.error.message||'');$('mkErr').textContent=/invalid login|credentials/i.test(m)?'الإيميل أو كلمة السر غلط':'مفيش اتصال بالسيرفر — جرّب من الرابط الحقيقي بعد ما تتأكد من النت';return}
   $('mkPass').value='';hideLogin();startSync(r.data.user);
 }
 $('mkGo').onclick=doLogin;
