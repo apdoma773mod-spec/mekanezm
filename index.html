@@ -786,7 +786,7 @@ function parseAoa(aoa){
 }
 function groupRows(rows,mode){
   const m=new Map();
-  rows.forEach((r,i)=>{const nm=VN(r.cust);const k=(nm||(mode==='one'?'':'#'+i))+'|'+r.pay;
+  rows.forEach((r,i)=>{const nm=VN(r.cust);const k=nm||(mode==='one'?'':'#'+i);
     if(!m.has(k))m.set(k,{cust:r.cust,pay:r.pay,idx:[]});const g=m.get(k);if(!g.cust&&r.cust)g.cust=r.cust;g.idx.push(i)});
   return [...m.values()];
 }
@@ -820,16 +820,16 @@ function render(){
   openModal(`<div class="modal-head"><h2>استيراد يومية البيع</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
   <datalist id="impList">${db.products.map(p=>`<option value="${esc(p.name)}">`).join('')}</datalist>
   <div class="form">${sh}<div class="field"><label>تاريخ اليومية</label><input type="date" value="${esc(IMP.iso)}" onchange="impDate(this.value)"></div>
-  <div class="field"><label>الصفوف من غير اسم عميل</label><select onchange="impMode(this.value)"><option value="each" ${IMP.mode==='each'?'selected':''}>فاتورة لكل صف</option><option value="one" ${IMP.mode==='one'?'selected':''}>فاتورة واحدة لكلهم</option></select></div></div>
+  <div class="field"><label>الصفوف من غير اسم عميل</label><select onchange="impMode(this.value)"><option value="each" ${IMP.mode==='each'?'selected':''}>فاتورة لكل صف</option><option value="one" ${IMP.mode==='one'?'selected':''}>فاتورة واحدة باسم «يومية»</option></select></div></div>
   <div id="impSum" class="card" style="margin:10px 0;line-height:1.9;font-size:14px"></div>
   ${G.map((g,gi)=>{const T=g.idx.reduce((s,i)=>s+R[i].qty*R[i].price,0);
-   return `<div class="card" style="margin-bottom:10px;padding:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input value="${esc(g.cust)}" placeholder="عميل نقدي (من غير اسم)" oninput="impCust(${gi},this.value)" style="flex:1"><span class="badge">${g.pay==='credit'?'آجل':'نقدي'}</span></div>
+   return `<div class="card" style="margin-bottom:10px;padding:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input value="${esc(g.cust)}" placeholder="يومية (من غير اسم عميل)" oninput="impCust(${gi},this.value)" style="flex:1">${VN(g.cust)?(db.contacts.some(x=>x.type==='عميل'&&x.name===g.cust)?'<span class="badge green">عميل مسجل</span>':'<span class="badge">عميل جديد</span>'):'<span class="badge">يومية</span>'}<span class="badge">${g.idx.some(i=>R[i].pay==='credit')?'فيها آجل':'نقدي'}</span></div>
    ${g.idx.map(i=>{const r=R[i],p=r.pid&&pById(r.pid);return `<div style="border-top:1px solid var(--border);padding:6px 0"><input list="impList" value="${esc(p?p.name:r.prod)}" onchange="impSet(${i},this.value)" style="width:100%"><div style="font-size:13px;color:var(--muted);margin-top:3px">${r.qty} × ${money(r.price)} = <b>${money(r.qty*r.price)}</b>${r.mism?' (السعر اتعدل عشان يطابق الإجمالي)':''}${r.note?' • '+esc(r.note):''}</div><div id="ist${i}" style="font-size:13px">${statusHtml(i)}</div></div>`}).join('')}
    <div style="text-align:left;margin-top:6px;font-weight:700">إجمالي الفاتورة: ${money(T)}</div></div>`}).join('')}
   <div class="modal-foot"><button class="primary" onclick="impGo()">تأكيد الاستيراد</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
   updSum();
 }
-function pick(k){const s=IMP.sheets[k];IMP.cur=k;IMP.iso=s.iso||isoToday();IMP.rows=s.rows.map(r=>({...r}));IMP.mode='each';matchAll();render()}
+function pick(k){const s=IMP.sheets[k];IMP.cur=k;IMP.iso=s.iso||isoToday();IMP.rows=s.rows.map(r=>({...r}));IMP.mode='one';IMP.rows.forEach(r=>{const k=VN(r.cust||'');if(k){const c=db.contacts.find(x=>x.type==='عميل'&&VN(x.name)===k);if(c)r.cust=c.name}});matchAll();render()}
 function updRow(i){const e=document.getElementById('ist'+i);if(e)e.innerHTML=statusHtml(i);updSum()}
 window.impSheet=v=>pick(+v);
 window.impDate=v=>{IMP.iso=v};
@@ -841,7 +841,7 @@ window.impGo=()=>{
   const R=IMP.rows,ok=R.filter(r=>r.pid),bad=R.length-ok.length;
   if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
   const G=groupRows(R,IMP.mode).map(g=>({...g,idx:g.idx.filter(i=>R[i].pid)})).filter(g=>g.idx.length);
-  if(G.some(g=>g.pay==='credit'&&!VN(g.cust)))return toast('فيه فاتورة آجل من غير اسم عميل — اكتب الاسم');
+  if(G.some(g=>!VN(g.cust)&&g.idx.some(i=>R[i].pay==='credit')))return toast('فيه فاتورة آجل من غير اسم عميل — اكتب الاسم');
   const iso=IMP.iso||isoToday();
   const dup=ok.filter(r=>{const p=pById(r.pid);return db.sales.some(s=>s.iso===iso&&s.product===p.name&&+s.qty===+r.qty&&VN(s.person||'')===VN(r.cust||''))}).length;
   let msg='';
@@ -852,12 +852,12 @@ window.impGo=()=>{
   const dstr=new Date(iso+'T12:00:00').toLocaleDateString('ar-EG');
   G.forEach(g=>{
     db.settings.invNo=(db.settings.invNo||db.sales.length)+1;
-    const no='MK-'+String(db.settings.invNo).padStart(4,'0'),nm=(g.cust||'').trim(),out=[];let rem=0;
+    const no='MK-'+String(db.settings.invNo).padStart(4,'0'),nm=(g.cust||'').trim()||'يومية',out=[];let rem=0;
     g.idx.forEach(i=>{const r=R[i],p=pById(r.pid),total=+(r.qty*r.price).toFixed(2);
       p.qty=+((+p.qty||0)-r.qty).toFixed(2);
-      const paid=g.pay==='credit'?0:total,rm=+(total-paid).toFixed(2);rem+=rm;
+      const paid=r.pay==='credit'?0:total,rm=+(total-paid).toFixed(2);rem+=rm;
       out.push({id:crypto.randomUUID(),date:dstr,iso,cost:p.cost,product:p.name,person:nm,qty:r.qty,price:r.price,total,note:r.note||'',no,phone:'',addr:'',paid,rem:rm})});
-    if(nm){let c=db.contacts.find(x=>x.name===nm&&x.type==='عميل');if(!c){c={id:crypto.randomUUID(),name:nm,type:'عميل',phone:'',balance:0,note:''};db.contacts.unshift(c)}c.balance=+((+c.balance||0)+rem).toFixed(2)}
+    if(nm&&nm!=='يومية'){let c=db.contacts.find(x=>x.name===nm&&x.type==='عميل');if(!c){c={id:crypto.randomUUID(),name:nm,type:'عميل',phone:'',balance:0,note:''};db.contacts.unshift(c)}c.balance=+((+c.balance||0)+rem).toFixed(2)}
     db.sales.unshift(...out);
   });
   save();closeModal();toast('تم استيراد '+G.length+' فاتورة');
@@ -1007,7 +1007,9 @@ window.addEventListener('online',()=>{if(uid)synced?push():sb.auth.getSession().
 })();
 </script>
 <style>
-.dash-acts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.dash-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.plr{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 4px;border-bottom:1px solid var(--border)}.plr:last-child{border:0}
+.plr .pp{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.plr .pp b{font-size:16px;display:block}
 .dash-acts button{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:17px;box-shadow:0 2px 9px #17363b0b}
 .dash-acts button small{font-weight:400;font-size:12px;color:var(--muted)}
 .dash-acts .ic{width:56px;height:56px;border-radius:16px;background:var(--tint2);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:26px}
@@ -1102,7 +1104,7 @@ updRem=function(){let t=0;document.querySelectorAll('#txLines .txl').forEach(d=>
  resetWarn();edInfo()};
 
 /* حفظ فاتورة جديدة (بيع أو شراء) */
-submitTransaction=function(ev,type){ev.preventDefault();let isSale=type==='sale',woId=(ev.target&&ev.target.dataset&&ev.target.dataset.wo)||'',L=readLines();if(!L)return;
+submitTransaction=function(ev,type){ev.preventDefault();let isSale=type==='sale',woId=(ev.target&&ev.target.dataset&&ev.target.dataset.wo)||'',qtId=(ev.target&&ev.target.dataset&&ev.target.dataset.qt)||'',L=readLines();if(!L)return;
  if(!L.length)return toast('أضف صنف واحد على الأقل');
  if(isSale){let s=shortList(L);if(s.length&&!warnOk(s))return}
  let ship=shipVal(),T=r2(sumBy(L,x=>x.q*x.pr)+ship),person=txPerson.value.trim(),pv=val('txPaid'),pd=pv===''?T:+pv;
@@ -1116,6 +1118,7 @@ submitTransaction=function(ev,type){ev.preventDefault();let isSale=type==='sale'
   rows=buildRows(L,ship,{isSale,date:today(),iso:isoToday(),no,pno,gid:crypto.randomUUID(),person:txPerson.value.trim(),phone,addr,note:txNote.value,paid:pd});
  if(person){let c=getContact(person,ctypeOf(type),phone,addr);c.balance=r2((+c.balance||0)+sumBy(rows,x=>x.rem))}
  (isSale?db.sales:db.purchases).unshift(...rows);
+ if(qtId&&isSale){let q=(db.quotes||[]).find(x=>x.id===qtId);if(q){q.status='converted';q.invNo=no}}
  save();toast(isSale?'تم تسجيل البيع':'تم تسجيل الشراء');isSale?openInvoiceModal(rows[0].id):openPurchaseView(rows[0].id);
  if(woId&&isSale)woSet(woId,'done',no)};
 
@@ -1323,7 +1326,7 @@ async function crPdf(share){if(!CR)return;CR.withProfit=!!(document.getElementBy
   if(await saveFile(name,blob)){if(m)m.textContent='تم تجهيز الملف ✔'}
  }catch(e){if(m)m.textContent=e.message||'حصل خطأ'}finally{host.remove()}}
 function renderCrTop(){let b=document.getElementById('crTop');if(!b)return;let mp=new Map();
- db.sales.forEach(x=>{let n=(x.person||'').trim();if(!n)return;let o=mp.get(n)||{n,t:0,pf:0,inv:new Set()};o.t+=+x.total||0;if(!x.ship)o.pf+=(+x.total||0)-rowCost(x)*(+x.qty||0);o.inv.add(x.no||x.id);mp.set(n,o)});
+ db.sales.forEach(x=>{let n=(x.person||'').trim();if(!n||n==='يومية')return;let o=mp.get(n)||{n,t:0,pf:0,inv:new Set()};o.t+=+x.total||0;if(!x.ship)o.pf+=(+x.total||0)-rowCost(x)*(+x.qty||0);o.inv.add(x.no||x.id);mp.set(n,o)});
  db.returns.filter(r=>r.type==='sale').forEach(r=>{let o=mp.get((r.person||'').trim());if(o){o.t-=+r.total||0;o.pf-=(+r.total||0)-rowCost(r)*(+r.qty||0)}});
  let L=[...mp.values()].sort((a,b)=>b.t-a.t).slice(0,15);
  b.innerHTML=L.length?L.map(o=>{let c=findContact(o.n,'عميل');return `<tr class="prow" data-n="${esc(o.n)}" onclick="contactReport(this.dataset.n,'عميل')"><td><b>${esc(o.n)}</b></td><td>${o.inv.size}</td><td>${money(o.t)}</td><td style="color:${pfColor(o.pf)};font-weight:700">${money(o.pf)}</td><td style="color:${c?balColor(c):'inherit'}">${c?balTxt(c):'—'}</td></tr>`}).join(''):'<tr><td colspan="5"><div class="empty">لسه مفيش مبيعات بأسماء عملاء.</div></td></tr>'}
@@ -1341,7 +1344,10 @@ function crGo(){contactReport(val('crName'),val('crType'),val('crFrom'),val('crT
   st.innerHTML=`<button class="pri" onclick="openTransaction('sale')"><span class="ic"><svg class="i"><use href="#i-up"/></svg></span>فاتورة بيع<small>تسجيل بيع جديد</small></button>
   <button class="pri" onclick="openTransaction('purchase')"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span>فاتورة شراء<small>تسجيل مشتريات</small></button>
   <button onclick="openProduct()"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span>إضافة منتج<small>صنف جديد للمخزون</small></button>
-  <button onclick="showPage('sales')"><span class="ic"><svg class="i"><use href="#i-file"/></svg></span>فواتير البيع<small>كل الفواتير والبحث</small></button>`}
+  <button onclick="openQuote()"><span class="ic">📝</span>عرض سعر<small>من غير ما يخصم من المخزون</small></button>
+  <button onclick="showPage('sales')"><span class="ic"><svg class="i"><use href="#i-file"/></svg></span>فواتير البيع<small>كل فواتير البيع والبحث</small></button>
+  <button onclick="showPage('purchases')"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span>فواتير الشراء<small>كل فواتير الشراء والبحث</small></button>`;
+  st.insertAdjacentHTML('beforebegin',`<div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 10px">🔎 استعلام عن سعر صنف</h3><input id="plQ" class="search" style="width:100%" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off" oninput="priceLookup()"><div id="plOut"></div></div>`)}
  let pc2=document.querySelector('#reports .card');
  if(pc2)pc2.insertAdjacentHTML('afterend',`<div class="card" style="margin-top:14px"><h3>تقرير عميل / مورد (اشترى منك بكام)</h3>
   <div class="form"><div class="field"><label>النوع</label><select id="crType" onchange="crName.value=''"><option value="عميل">عميل</option><option value="مورد">مورد</option></select></div>
@@ -1418,8 +1424,90 @@ setTimeout(()=>loadOrders(true),4000);
 setInterval(()=>{if(document.visibilityState==='visible')loadOrders(true)},60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadOrders(false)});
 
+/* ===== استعلام عن سعر صنف (سعر الشراء + آخر شراء) ===== */
+function lastBuy(p){let r=db.purchases.filter(x=>!x.ship&&findP(x)===p).sort((a,b)=>dKey(b)-dKey(a))[0];return r}
+function priceLookup(){let o=document.getElementById('plOut');if(!o)return;let q=VN(val('plQ')).split(' ').filter(Boolean);if(!q.length){o.innerHTML='';return}
+ let L=db.products.filter(p=>{let h=VN(p.name+' '+(p.code||''));return q.every(w=>h.includes(w))}).slice(0,8);
+ o.innerHTML=L.length?L.map(p=>{let lb=lastBuy(p);return `<div class="plr"><div style="min-width:160px;flex:1"><b>${esc(p.name)}</b>${p.code?` <small style="color:var(--muted)">كود ${esc(p.code)}</small>`:''}<div style="font-size:12px;color:var(--muted);margin-top:3px">${lb?`آخر شراء: ${money(lb.price!=null?lb.price:lb.total/(lb.qty||1))} من ${esc(lb.person||'—')} يوم ${esc(lb.date)}`:'مفيش فواتير شراء للصنف ده لسه'}</div></div>
+  <div class="pp"><div><small>سعر الشراء</small><b style="color:var(--blue)">${money(p.cost)}</b></div><div><small>سعر البيع</small><b>${money(p.price)}</b></div><div><small>المكسب</small><b style="color:${(p.price-p.cost)<0?'var(--danger)':'var(--green)'}">${money((+p.price||0)-(+p.cost||0))}</b></div><div><small>المتاح</small><b>${p.qty} ${esc(p.unit||'')}</b></div></div></div>`}).join(''):'<div class="empty" style="padding:14px">مفيش صنف بالاسم ده</div>'}
+
+/* ===== عروض الأسعار: مش بتخصم من المخزون ومش بتدخل في التقارير ===== */
+const qts=()=>db.quotes||(db.quotes=[]);
+function openQuote(id){let q=id?qts().find(x=>x.id===id):null;
+ openTransaction('sale');let m=document.getElementById('modal'),f=m.querySelector('form');
+ m.querySelector('.modal-head h2').textContent=q?'تعديل عرض سعر '+q.no:'📝 عرض سعر جديد';
+ f.removeAttribute('onsubmit');f.onsubmit=e=>submitQuote(e,q?q.id:'');f.querySelector('.modal-foot .primary').textContent='حفظ عرض السعر';
+ ['txPaid','txRem'].forEach(k=>{let e=document.getElementById(k);if(e)e.closest('.field').remove()});
+ txNote.placeholder='مثلاً: العرض ساري لمدة أسبوع';
+ txTotal.closest('.field').insertAdjacentHTML('afterend','<div class="field full" style="background:var(--tint2);border-radius:12px;padding:10px;font-size:13px">📝 عرض السعر مش بيخصم من المخزون ومش بيدخل في المبيعات أو التقارير. تقدر تحوّله لفاتورة بيع بعدين بضغطة.</div>');
+ if(q){txPerson.value=q.person||'';txPhone.value=q.phone||'';txAddr.value=q.addr||'';txNote.value=q.note||'';txShip.value=q.ship||'';
+  q.items.forEach(x=>{let p=x.pid&&db.products.find(y=>y.id===x.pid)||db.products.find(y=>y.name===x.name);addItem(p?p.id:'new',p?undefined:x.name);let d=document.getElementById('txLines').lastElementChild;if(d){d.querySelector('.lq').value=x.qty;d.querySelector('.lp').value=x.price}})}
+ updRem()}
+function submitQuote(ev,id){ev.preventDefault();let L=readLines();if(!L)return;if(!L.length)return toast('أضف صنف واحد على الأقل');
+ let ship=shipVal(),items=L.map(x=>({pid:x.p?x.p.id:'',name:x.name,qty:x.q,price:x.pr,total:r2(x.q*x.pr),unit:x.p?x.p.unit||'':''})),
+  base={person:txPerson.value.trim(),phone:val('txPhone'),addr:val('txAddr'),note:txNote.value.trim(),ship,items,total:r2(sumBy(items,x=>x.total)+ship)},q;
+ if(id){q=qts().find(x=>x.id===id);Object.assign(q,base,{edited:nowStamp()})}
+ else{db.settings.qNo=(db.settings.qNo||0)+1;q=Object.assign({id:crypto.randomUUID(),no:'QT-'+String(db.settings.qNo).padStart(4,'0'),date:today(),iso:isoToday(),status:'open'},base);qts().unshift(q)}
+ save();toast('تم حفظ عرض السعر');openQuoteView(q.id)}
+function openQuoteView(id){let q=qts().find(x=>x.id===id);if(!q)return;
+ openModal(`<div class="modal-head"><h2>عرض سعر ${esc(q.no)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="card" style="background:var(--tint2);border:0;line-height:2"><div>العميل: <b>${esc(q.person||'—')}</b>${q.phone?` — <span dir="ltr">${esc(q.phone)}</span>`:''}</div><div>التاريخ: <b>${esc(q.date)}</b> ${q.status==='converted'?`<span class="badge green">اتحول لفاتورة ${esc(q.invNo||'')}</span>`:'<span class="badge">مفتوح</span>'}</div>
+ ${q.items.map(x=>`<div>${esc(x.name)} × ${x.qty} — ${money(x.total)}</div>`).join('')}${q.ship?`<div>🚚 ${SHIP} — ${money(q.ship)}</div>`:''}<div>الإجمالي: <b>${money(q.total)}</b></div>${q.note?`<div style="color:var(--muted)">${esc(q.note)}</div>`:''}</div>
+ <div class="btnrow" style="margin-top:12px">${q.status!=='converted'?`<button class="primary" style="flex:1" onclick="quoteToSale('${q.id}')">🧾 تحويل لفاتورة بيع</button>`:''}<button class="secondary" onclick="openQuote('${q.id}')">✏️ تعديل</button><button class="secondary danger" onclick="delQuote('${q.id}')">حذف</button></div>
+ <div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="quotePdf('${q.id}',1)">مشاركة PDF</button><button class="secondary" style="flex:1" onclick="quotePdf('${q.id}',0)">حفظ PDF</button></div><div id="qtMsg" style="font-size:13px;color:var(--muted);margin-top:6px"></div>`)}
+function quoteToSale(id){let q=qts().find(x=>x.id===id);if(!q)return;
+ openTransaction('sale',{person:q.person});let f=document.querySelector('#modal form');f.dataset.qt=id;
+ document.querySelector('#modal .modal-head h2').textContent='فاتورة بيع من عرض السعر '+q.no;
+ if(q.phone)txPhone.value=q.phone;if(q.addr)txAddr.value=q.addr;if(q.ship)txShip.value=q.ship;txNote.value=q.note||'';
+ q.items.forEach(x=>{let p=x.pid&&db.products.find(y=>y.id===x.pid)||db.products.find(y=>y.name===x.name);addItem(p?p.id:'new',p?undefined:x.name);let d=document.getElementById('txLines').lastElementChild;if(d){d.querySelector('.lq').value=x.qty;d.querySelector('.lp').value=x.price}});
+ updRem()}
+async function delQuote(id){let q=qts().find(x=>x.id===id);if(!q)return;if(!await ask('حذف عرض السعر '+q.no+'؟','حذف','رجوع'))return openQuoteView(id);db.quotes=qts().filter(x=>x.id!==id);save();closeModal();toast('تم حذف عرض السعر')}
+function renderQuotes(){let b=document.getElementById('qtBody');if(!b)return;let s=VN(val('qtQ')).split(' ').filter(Boolean),
+ L=qts().filter(q=>{let h=VN([q.no,q.person,q.date,...q.items.map(x=>x.name)].join(' '));return s.every(w=>h.includes(w))});
+ b.innerHTML=L.length?L.map(q=>`<tr class="prow" onclick="openQuoteView('${q.id}')"><td><b>${esc(q.no)}</b></td><td>${esc(q.date)}</td><td>${esc(q.person||'—')}</td><td>${esc(q.items[0]?q.items[0].name:'—')}${q.items.length>1?` <span class="badge">+${q.items.length-1}</span>`:''}</td><td>${money(q.total)}</td><td>${q.status==='converted'?'<span class="badge green">اتحول لفاتورة</span>':'<span class="badge">مفتوح</span>'}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty">مفيش عروض أسعار.</div></td></tr>'}
+function quoteHTML(q){let T=db.theme,H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),
+ logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',sub=r2(q.total-(q.ship||0));
+ return `<div style="width:794px;min-height:1000px;background:#fff;direction:rtl;font-family:${fam};color:${T.text};position:relative;overflow:hidden">
+ <div style="background:${H};color:${HT};padding:30px 44px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center">${logo}<div><div style="font-size:34px;font-weight:800">${shop}</div><div style="margin-top:6px;font-size:14px;opacity:.9">${addr}${ph?` • تليفون: <span dir="ltr">${ph}</span>`:''}</div></div></div><div style="font-size:30px;font-weight:800;color:${A}">عرض سعر</div></div>
+ <div style="height:6px;background:${A}"></div>
+ <div style="padding:30px 44px"><div style="display:flex;gap:20px"><div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H}">مقدّم إلى</div><div>الاسم: <b>${esc(q.person||'—')}</b></div>${q.phone?`<div>التليفون: <b dir="ltr">${esc(q.phone)}</b></div>`:''}</div>
+ <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H}">بيانات العرض</div><div>رقم العرض: <b>${esc(q.no)}</b></div><div>التاريخ: <b>${esc(q.date)}</b></div></div></div>
+ <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:16px"><thead><tr style="background:${H};color:${HT}"><th style="padding:12px;text-align:right">البيان</th><th style="padding:12px;text-align:center">الكمية</th><th style="padding:12px;text-align:center">سعر الوحدة</th><th style="padding:12px;text-align:center">الإجمالي</th></tr></thead>
+ <tbody>${q.items.map(x=>`<tr style="border-bottom:1px solid #e4eaed"><td style="padding:14px 12px"><b>${esc(x.name)}</b></td><td style="padding:14px 12px;text-align:center">${x.qty} ${esc(x.unit||'')}</td><td style="padding:14px 12px;text-align:center">${money(x.price)}</td><td style="padding:14px 12px;text-align:center;font-weight:700">${money(x.total)}</td></tr>`).join('')}</tbody></table>
+ ${q.ship?`<div style="width:320px;font-size:17px;line-height:2.1;margin-top:18px"><div style="display:flex;justify-content:space-between"><span>إجمالي الأصناف</span><b>${money(sub)}</b></div><div style="display:flex;justify-content:space-between"><span>مصاريف النقل</span><b>${money(q.ship)}</b></div></div>`:''}
+ <div style="width:320px;background:${H};color:${HT};border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;font-size:20px;margin-top:14px"><span>الإجمالي</span><b style="font-size:24px">${money(q.total)}</b></div>
+ ${q.note?`<div style="margin-top:22px;background:${tint};border-radius:12px;padding:14px 18px;line-height:1.9">${esc(q.note)}</div>`:''}</div>
+ <div style="position:absolute;bottom:0;right:0;left:0;text-align:center;padding:20px;border-top:1px solid #e4eaed;color:#718087;font-size:14px">عرض السعر ده للعلم ومش فاتورة — ${shop}</div></div>`}
+async function htmlPdf(html){if(typeof html2canvas==='undefined'||!window.jspdf)throw new Error('مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت');
+ let host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;z-index:-1';host.innerHTML=html;document.body.appendChild(host);
+ try{try{await withTimeout(loadInvFont(),PDFT.font)}catch(e){}
+  let cv=await withTimeout(html2canvas(host.firstElementChild,{scale:PDFT.scale,backgroundColor:'#fff',useCORS:true,logging:false}),PDFT.render);if(cv==='timeout')throw new Error('التحويل أخد وقت طويل، جرّب تاني');
+  let w=210,h=Math.max(297,cv.height*w/cv.width),pdf=new window.jspdf.jsPDF({unit:'mm',format:[w,h]});pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,w,cv.height*w/cv.width);return pdf.output('blob')}
+ finally{host.remove()}}
+async function quotePdf(id,share){let q=qts().find(x=>x.id===id),m=document.getElementById('qtMsg');if(!q)return;if(m)m.textContent='جاري تجهيز الـ PDF...';
+ try{let blob=await htmlPdf(quoteHTML(q)),name='عرض-سعر-'+q.no+'.pdf';
+  if(share){let f=new File([blob],name,{type:'application/pdf'}),d={files:[f],title:'عرض سعر '+q.no};if(navigator.share&&(!navigator.canShare||navigator.canShare(d))){try{await navigator.share(d);if(m)m.textContent='';return}catch(e){if(e&&e.name==='AbortError'){if(m)m.textContent='';return}}}}
+  if(await saveFile(name,blob)){if(m)m.textContent='تم تجهيز الملف ✔'}}catch(e){if(m)m.textContent=e.message||'حصل خطأ'}}
+(function(){let sb3=document.querySelector('aside nav [data-page="sales"]');
+ if(sb3)sb3.insertAdjacentHTML('afterend','<button data-page="quotes" onclick="showPage(\'quotes\')"><span style="width:1.15em;text-align:center">📝</span> <span>عروض الأسعار</span></button>');
+ let mn=document.querySelector('main');if(mn)mn.insertAdjacentHTML('beforeend',`<section id="quotes" class="page"><div class="title-row"><div class="title"><h1>عروض الأسعار</h1><p>مش بتخصم من المخزون ومش بتدخل في التقارير</p></div><button class="primary" onclick="openQuote()">＋ عرض سعر جديد</button></div>
+  <div class="card"><input id="qtQ" placeholder="ابحث بالاسم أو الرقم أو الصنف..." oninput="renderQuotes()" style="width:100%;margin-bottom:8px"><div class="table-wrap"><table class="table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody id="qtBody"></tbody></table></div></div></section>`)})();
+const _rtQ=renderTables;renderTables=function(){_rtQ();renderQuotes()};
+
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-05-5';
+const APP_VER='2026-10-05-6';
+
+/* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
+/* لو مفيش نت وجلسة الدخول انتهت: افتح على البيانات المتسجلة على الجهاز، وأول ما النت يرجع بيتزامن */
+(function(){const lg=document.getElementById('mkLogin');if(!lg)return;
+ const hasLocal=()=>{try{return !!localStorage.getItem(KEY)}catch(e){return false}};
+ function upd(){let b=document.getElementById('mkOff');
+  if(lg.classList.contains('show')&&!navigator.onLine&&hasLocal()){if(!b){lg.querySelector('.mkbox').insertAdjacentHTML('beforeend','<button id="mkOff" type="button" class="alt" style="margin-top:10px">📴 مفيش نت — افتح على البيانات اللي على الجهاز</button><p id="mkOffP" style="font-size:12px;margin:8px 0 0">أي حاجة تسجلها هتتحفظ على الجهاز، ولما النت يرجع سجّل دخول وهتترفع على السيرفر.</p>');document.getElementById('mkOff').onclick=()=>{lg.classList.remove('show');try{renderAll()}catch(e){}let s=document.getElementById('mkStat');if(s)s.textContent='📴 شغال من غير نت'}}}
+  else if(b&&navigator.onLine){b.remove();let p=document.getElementById('mkOffP');if(p)p.remove()}}
+ new MutationObserver(upd).observe(lg,{attributes:true,attributeFilter:['class']});
+ window.addEventListener('offline',upd);window.addEventListener('online',()=>{upd();if(!window.mkSB){toast('النت رجع — اقفل السيستم وافتحه تاني عشان يتزامن');return}if(!lg.classList.contains('show'))window.mkSB.auth.getSession().then(x=>{if(!x.data.session)lg.classList.add('show')}).catch(()=>{})});
+ upd()})();
 (function(){let last=0,shown=false;
  async function check(){if(shown||Date.now()-last<60000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
