@@ -151,7 +151,7 @@ const uid=()=>Math.random().toString(36).slice(2,9);
 function applyTheme(){const r=document.documentElement.style;for(const k in D){S.theme[k]?r.setProperty('--'+k,S.theme[k]):r.removeProperty('--'+k)}}
 function gal(p){const im=p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]);if(!im.length)return'<div class="ph">🔧</div>';return `<img class="mainimg" src="${im[0]}" alt="${esc(p.name)}">`+(im.length>1?`<div class="th">${im.map((x,i)=>`<img src="${x}" data-a="th" data-id="${p.id}" data-i="${i}" alt="">`).join('')}</div>`:'')}
 function card(p){
- const ok=!p.out,fv=fav.has(p.id);
+ const ok=stockOk(p),fv=fav.has(p.id);
  const bt=ok?'<button class="btn g" data-a="ad" data-id="'+p.id+'">➕ أضف للطلب</button>':'<span class="btn out">نفد حاليًا</span>';
  return `<div class="card"><div class="imw">${gal(p)}<button class="hrt${fv?' on':''}" data-a="fv" data-id="${p.id}" aria-label="المفضلة">♥</button></div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="av ${ok?'ok':'no'}">● ${ok?'متوفر':'غير متوفر'}</div><a class="ask" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أعرف سعر: '+p.name+(p.code?' (كود '+p.code+')':''))}">💬 اسأل عن السعر</a>${bt}${admin?`<div class="row"><button data-a="star" data-id="${p.id}">${p.top?'★':'☆'} مميز</button><button data-a="ep" data-id="${p.id}">تعديل</button><button data-a="dp" data-id="${p.id}">حذف</button></div>`:''}</div>`}
 let fav=new Set(),favOn=false;
@@ -396,8 +396,14 @@ document.addEventListener('click',e=>{const d=e.target.closest('#dts i');if(d){s
  if(s.dataset.a==='star'){const p=byId(S.products,s.dataset.id);p.top=!p.top;render()}
  else form('بانرات السلايدر (اختار صور؛ بدون اختيار = تلقائي)',[{l:'الصور',t:'file',m:1,mx:1400}],v=>{S.slides=(v[0]&&v[0].length)?v[0]:[]})});
 
+/* المتوفر من السيستم مباشرة (من غير كميات ولا أسعار) */
+let STK=null;
+function stockOk(p){const k=String(p.code||'');return STK&&k&&Object.prototype.hasOwnProperty.call(STK,k)?!!STK[k]:!p.out}
+async function loadStock(){try{const r=await fetch(SB_URL+'/rest/v1/rpc/site_stock',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:'{}',cache:'no-store'});if(!r.ok)return;const j=await r.json();if(j&&typeof j==='object'&&!Array.isArray(j)){STK=j;render()}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadStock()});
 render();
 loadRemote();
+loadStock();
 if(/[?&]admin\b/.test(location.search)||location.hash==='#admin')openLogin();
 {let _t=0,_tt=0;
 document.addEventListener('click',e=>{
