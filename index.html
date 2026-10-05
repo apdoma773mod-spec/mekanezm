@@ -1364,6 +1364,7 @@ renderAll();
 
 /* ===== طلبات الموقع (جدول web_orders) ===== */
 let WO={list:[],tab:'new',err:'',loading:false,at:0};
+const woDoneSt=o=>o.status==='done'||o.status==='imported';
 const woProd=code=>db.products.find(x=>String(x.code||'')===String(code));
 const waLinkTo=(ph,t)=>{let d=String(ph||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);return d?'https://wa.me/'+d+'?text='+encodeURIComponent(t):''};
 async function loadOrders(force){let c=window.mkSB;if(!c||WO.loading)return;if(!force&&Date.now()-WO.at<20000)return renderOrders();
@@ -1379,14 +1380,14 @@ function woBadge(){let n=WO.list.filter(o=>o.status==='new').length,c=document.g
 function renderOrders(){let b=document.getElementById('woBody');if(!b)return;
  document.querySelectorAll('#woTabs button').forEach(x=>x.className=x.dataset.t===WO.tab?'primary':'secondary');
  if(WO.err){b.innerHTML=`<div class="card"><p style="color:var(--danger);margin-top:0">${esc(WO.err)}</p><p style="color:var(--muted);font-size:13px;margin:0">لو الرسالة فيها permission أو الطلبات مش ظاهرة، يبقى أمر الـ SQL لسه ماتشغلش في Supabase.</p></div>`;return}
- let L=WO.list.filter(o=>WO.tab==='new'?o.status==='new':WO.tab==='done'?o.status==='done':(o.status!=='new'&&o.status!=='done'));
+ let L=WO.list.filter(o=>WO.tab==='new'?o.status==='new':WO.tab==='done'?woDoneSt(o):(o.status!=='new'&&!woDoneSt(o)));
  if(!L.length){b.innerHTML=`<div class="card"><div class="empty">${WO.loading?'جاري التحميل...':WO.tab==='new'?'مفيش طلبات جديدة.':'مفيش طلبات هنا.'}</div></div>`;return}
  b.innerHTML=L.map(o=>{let it=(o.items||[]).map(x=>({x,p:woProd(x.code)})),est=sumBy(it,y=>y.p?(+y.p.price||0)*(+y.x.qty||0):0),sid=String(o.id).slice(0,8),
   wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name}، بخصوص طلبك رقم ${sid} من موقع ميكانيزم`):'',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no);
-  return `<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:18px">${esc(o.customer_name)}</b>${o.phone?` — <span dir="ltr">${esc(o.phone)}</span>`:''}<div style="color:var(--muted);font-size:12px">طلب رقم ${esc(sid)} • ${esc(new Date(o.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${o.status==='done'?'<span class="badge green">اتعملها فاتورة</span>':o.status==='new'?'<span class="badge red">جديد</span>':'<span class="badge">ملغي</span>'}</div>
+  return `<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:18px">${esc(o.customer_name)}</b>${o.phone?` — <span dir="ltr">${esc(o.phone)}</span>`:''}<div style="color:var(--muted);font-size:12px">طلب رقم ${esc(sid)} • ${esc(new Date(o.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${woDoneSt(o)?'<span class="badge green">اتعملها فاتورة</span>':o.status==='new'?'<span class="badge red">جديد</span>':'<span class="badge">ملغي</span>'}</div>
   <div class="table-wrap" style="margin-top:10px"><table class="table" style="min-width:380px"><thead><tr><th>الصنف</th><th>المطلوب</th><th>في المخزن</th><th>سعر البيع</th></tr></thead><tbody>${it.map(y=>`<tr><td>${y.p?esc(y.p.name):`<span style="color:var(--danger)">كود ${esc(y.x.code)} مش موجود في السيستم</span>`}</td><td><b>${esc(y.x.qty)}</b></td><td style="color:${y.p&&(+y.p.qty||0)>=(+y.x.qty||0)?'inherit':'var(--danger)'}">${y.p?y.p.qty:'—'}</td><td>${y.p?money(y.p.price):'—'}</td></tr>`).join('')}</tbody></table></div>
   <div style="margin:8px 0">الإجمالي التقريبي: <b>${money(est)}</b></div>
-  <div class="btnrow">${o.status==='new'?`<button class="primary" onclick="woInvoice('${o.id}')">🧾 تحويل لفاتورة بيع</button><button class="secondary danger" onclick="woCancel('${o.id}')">رفض الطلب</button>`:''}${o.status==='done'&&inv?`<button class="secondary" onclick="openInvoiceModal('${inv.id}')">فتح الفاتورة ${esc(o.invoice_no)}</button>`:''}${wa?`<a class="secondary" style="text-decoration:none;padding:10px 14px" target="_blank" rel="noopener" href="${wa}">💬 واتساب العميل</a>`:''}</div></div>`}).join('')}
+  <div class="btnrow">${o.status==='new'?`<button class="primary" onclick="woInvoice('${o.id}')">🧾 تحويل لفاتورة بيع</button><button class="secondary danger" onclick="woCancel('${o.id}')">رفض الطلب</button>`:''}${woDoneSt(o)&&inv?`<button class="secondary" onclick="openInvoiceModal('${inv.id}')">فتح الفاتورة ${esc(o.invoice_no)}</button>`:''}${wa?`<a class="secondary" style="text-decoration:none;padding:10px 14px" target="_blank" rel="noopener" href="${wa}">💬 واتساب العميل</a>`:''}</div></div>`}).join('')}
 function woInvoice(id){let o=WO.list.find(x=>x.id===id);if(!o)return;
  openTransaction('sale',{person:o.customer_name});let f=document.querySelector('#modal form');f.dataset.wo=id;
  document.querySelector('#modal .modal-head h2').textContent='فاتورة من طلب الموقع '+String(id).slice(0,8);
@@ -1396,7 +1397,7 @@ function woInvoice(id){let o=WO.list.find(x=>x.id===id);if(!o)return;
 async function woUpdate(id,patch){let c=window.mkSB;if(!c)throw new Error('مفيش اتصال');
  let r=await c.from('web_orders').update(patch).eq('id',id).select('id');
  if(r.error&&/column/i.test(r.error.message||''))r=await c.from('web_orders').update({status:patch.status}).eq('id',id).select('id');
- if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('مفيش صلاحية تعديل الطلب');}
+ if(r.error)throw (/check constraint/i.test(r.error.message||'')?new Error('محتاج تشغّل أمر «حالات-الطلب.sql» في Supabase'):r.error);if(!r.data||!r.data.length)throw new Error('مفيش صلاحية تعديل الطلب');}
 async function woSet(id,status,no){try{await woUpdate(id,{status,invoice_no:no||null,handled_at:new Date().toISOString()});let o=WO.list.find(x=>x.id===id);if(o){o.status=status;o.invoice_no=no||o.invoice_no}renderOrders();woBadge()}
  catch(e){toast('اتسجلت الفاتورة، بس حالة الطلب ماتغيرتش في الموقع ('+((e&&e.message)||'خطأ')+')')}}
 async function woCancel(id){let o=WO.list.find(x=>x.id===id);if(!o)return;
@@ -1418,7 +1419,7 @@ setInterval(()=>{if(document.visibilityState==='visible')loadOrders(true)},60000
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadOrders(false)});
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-05-4';
+const APP_VER='2026-10-05-5';
 (function(){let last=0,shown=false;
  async function check(){if(shown||Date.now()-last<60000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
