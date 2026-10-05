@@ -1069,7 +1069,7 @@ function mkProd(x,isSale){let p={id:crypto.randomUUID(),code:'P'+String(db.produ
 function buildRows(L,ship,o){let left=o.paid;
  let rows=L.map(x=>{let old=o.oldG&&o.oldG.find(r=>!r.ship&&findP(r)===x.p);return {id:crypto.randomUUID(),cost:old&&old.cost!=null?old.cost:x.p.cost,product:x.p.name,pid:x.p.id,qty:x.q,price:x.pr,total:r2(x.q*x.pr)}});
  if(ship>0)rows.push({id:crypto.randomUUID(),cost:0,product:SHIP,ship:true,qty:1,price:r2(ship),total:r2(ship)});
- rows.forEach(r=>{r.date=o.date;r.iso=o.iso;r.person=o.person;r.note=o.note;r.gid=o.gid;r.phone=o.phone;if(o.isSale){r.no=o.no;r.addr=o.addr}else r.pno=o.pno;if(o.stamp)r.edited=o.stamp;
+ rows.forEach(r=>{r.date=o.date;r.iso=o.iso;r.person=o.person;r.note=o.note;r.gid=o.gid;r.phone=o.phone;if(o.isSale){r.no=o.no;r.addr=o.addr}else r.pno=o.pno;if(o.stamp){r.edited=o.stamp;r.editedBy=userName();r.by=(o.oldG&&o.oldG[0].by)||''}else r.by=userName();
   let pr=Math.min(r.total,Math.max(0,left));left=r2(left-pr);r.paid=r2(pr);r.rem=r2(r.total-pr)});
  return rows}
 const shipVal=()=>+val('txShip')||0;
@@ -1124,7 +1124,7 @@ submitTransaction=function(ev,type){ev.preventDefault();let isSale=type==='sale'
 
 /* عرض الفواتير */
 function invActions(kind,key,G){let ed=G.find(x=>x.edited);
- return `<div class="btnrow" style="margin-top:12px"><button class="secondary" style="flex:1" onclick="openInvEdit('${kind}','${esc(key)}')">✏️ تعديل الفاتورة</button><button class="secondary danger" onclick="cancelInv('${kind}','${esc(key)}')">إلغاء الفاتورة</button></div>${ed?`<p style="color:var(--muted);font-size:12px;margin:8px 0 0">اتعدلت آخر مرة: ${esc(ed.edited)}</p>`:''}`}
+ return `<div class="btnrow own" style="margin-top:12px"><button class="secondary" style="flex:1" onclick="openInvEdit('${kind}','${esc(key)}')">✏️ تعديل الفاتورة</button><button class="secondary danger" onclick="cancelInv('${kind}','${esc(key)}')">إلغاء الفاتورة</button></div>${ed?`<p style="color:var(--muted);font-size:12px;margin:8px 0 0">اتعدلت آخر مرة: ${esc(ed.edited)}</p>`:''}`}
 function openInvoiceModal(id){
  let r=db.sales.find(x=>x.id===id);if(!r)return;lastInv=null;let key=r.no||r.id,G=invGroup('sale',key);if(!G.length)G=[r];
  let T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0),pd=sumBy(G,paidOf);
@@ -1139,7 +1139,7 @@ function renderInvLists(){
  let sg=invFilter(groupInv(db.sales,r=>r.no||r.id),'salesQ',r=>r.no||''),pg=invFilter(groupInv(db.purchases,r=>r.gid||r.id),'purchasesQ',r=>r.pno||'');
  salesCount.textContent=sg.length+' فاتورة بيع';purchasesCount.textContent=pg.length+' فاتورة شراء';
  salesBody.innerHTML=sg.length?sg.map(G=>{let r=G[0],T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="openInvoiceModal('${r.id}')"><td><b>${esc(invNo(r))}</b></td><td>${r.date}</td><td>${esc(r.person||'—')}</td><td>${invItems(G)}</td><td>${money(T)}</td><td>${rem>0?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</td></tr>`}).join(''):'<tr><td colspan="6"><div class="empty">لا توجد فواتير بيع.</div></td></tr>';
- purchasesBody.innerHTML=pg.length?pg.map(G=>{let r=G[0],T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="openPurchaseView('${r.id}')"><td><b>${esc(r.pno||'—')}</b></td><td>${r.date}</td><td>${esc(r.person||'—')}</td><td>${invItems(G)}</td><td>${money(T)}</td><td>${rem>0?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</td></tr>`}).join(''):'<tr><td colspan="6"><div class="empty">لا توجد فواتير شراء.</div></td></tr>'}
+ purchasesBody.innerHTML=pg.length?pg.map(G=>{let r=G[0],T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="openPurchaseView('${r.id}')"><td><b>${esc(r.pno||'—')}</b></td><td>${r.date}</td><td>${esc(r.person||'—')}</td><td>${invItems(G)}</td><td>${isEmp()?'—':money(T)}</td><td>${isEmp()?'—':rem>0?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</td></tr>`}).join(''):'<tr><td colspan="6"><div class="empty">لا توجد فواتير شراء.</div></td></tr>'}
 
 /* فاتورة الـ PDF: الأصناف + سطر النقل */
 function invoiceHTML(r){
@@ -1343,11 +1343,11 @@ function crGo(){contactReport(val('crName'),val('crType'),val('crFrom'),val('crT
   st.className='dash-acts';
   st.innerHTML=`<button class="pri" onclick="openTransaction('sale')"><span class="ic"><svg class="i"><use href="#i-up"/></svg></span>فاتورة بيع<small>تسجيل بيع جديد</small></button>
   <button class="pri" onclick="openTransaction('purchase')"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span>فاتورة شراء<small>تسجيل مشتريات</small></button>
-  <button onclick="openProduct()"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span>إضافة منتج<small>صنف جديد للمخزون</small></button>
+  <button class="own" onclick="openProduct()"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span>إضافة منتج<small>صنف جديد للمخزون</small></button>
   <button onclick="openQuote()"><span class="ic">📝</span>عرض سعر<small>من غير ما يخصم من المخزون</small></button>
   <button onclick="showPage('sales')"><span class="ic"><svg class="i"><use href="#i-file"/></svg></span>فواتير البيع<small>كل فواتير البيع والبحث</small></button>
   <button onclick="showPage('purchases')"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span>فواتير الشراء<small>كل فواتير الشراء والبحث</small></button>`;
-  st.insertAdjacentHTML('beforebegin',`<div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 10px">🔎 استعلام عن سعر صنف</h3><input id="plQ" class="search" style="width:100%" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off" oninput="priceLookup()"><div id="plOut"></div></div>`)}
+  st.insertAdjacentHTML('afterend',`<div class="card own" id="plCard" style="margin-top:14px"><h3 style="margin:0 0 10px">🔎 استعلام عن سعر صنف</h3><input id="plQ" class="search" style="width:100%" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off" oninput="priceLookup()"><div id="plOut"></div></div>`)}
  let pc2=document.querySelector('#reports .card');
  if(pc2)pc2.insertAdjacentHTML('afterend',`<div class="card" style="margin-top:14px"><h3>تقرير عميل / مورد (اشترى منك بكام)</h3>
   <div class="form"><div class="field"><label>النوع</label><select id="crType" onchange="crName.value=''"><option value="عميل">عميل</option><option value="مورد">مورد</option></select></div>
@@ -1447,7 +1447,7 @@ function submitQuote(ev,id){ev.preventDefault();let L=readLines();if(!L)return;i
  let ship=shipVal(),items=L.map(x=>({pid:x.p?x.p.id:'',name:x.name,qty:x.q,price:x.pr,total:r2(x.q*x.pr),unit:x.p?x.p.unit||'':''})),
   base={person:txPerson.value.trim(),phone:val('txPhone'),addr:val('txAddr'),note:txNote.value.trim(),ship,items,total:r2(sumBy(items,x=>x.total)+ship)},q;
  if(id){q=qts().find(x=>x.id===id);Object.assign(q,base,{edited:nowStamp()})}
- else{db.settings.qNo=(db.settings.qNo||0)+1;q=Object.assign({id:crypto.randomUUID(),no:'QT-'+String(db.settings.qNo).padStart(4,'0'),date:today(),iso:isoToday(),status:'open'},base);qts().unshift(q)}
+ else{db.settings.qNo=(db.settings.qNo||0)+1;q=Object.assign({id:crypto.randomUUID(),no:'QT-'+String(db.settings.qNo).padStart(4,'0'),date:today(),iso:isoToday(),status:'open',by:userName()},base);qts().unshift(q)}
  save();toast('تم حفظ عرض السعر');openQuoteView(q.id)}
 function openQuoteView(id){let q=qts().find(x=>x.id===id);if(!q)return;
  openModal(`<div class="modal-head"><h2>عرض سعر ${esc(q.no)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -1494,8 +1494,92 @@ async function quotePdf(id,share){let q=qts().find(x=>x.id===id),m=document.getE
   <div class="card"><input id="qtQ" placeholder="ابحث بالاسم أو الرقم أو الصنف..." oninput="renderQuotes()" style="width:100%;margin-bottom:8px"><div class="table-wrap"><table class="table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody id="qtBody"></tbody></table></div></div></section>`)})();
 const _rtQ=renderTables;renderTables=function(){_rtQ();renderQuotes()};
 
+/* ===== المستخدمين: أول ما السيستم يفتح يختار «موظف» أو «مدير» ويدخل باسمه ورقمه السري =====
+   المدير: كل حاجة. الموظف: فاتورة بيع، فاتورة شراء (من غير ما يشوف سعر الشراء)، عرض سعر، طلبات الموقع.
+   الدخول بيفضل لحد آخر اليوم أو لحد ما يدوس «خروج». */
+const users=()=>db.settings.users||(db.settings.users=[]);
+const lsG=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsS=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+function curUser(){try{let s=JSON.parse(lsG('mk_user')||'null');if(!s||s.day!==isoToday())return null;return users().find(u=>u.id===s.id)||null}catch(e){return null}}
+function isEmp(){let u=curUser();return !!u&&u.role==='emp'}
+const userName=()=>(curUser()||{}).name||'';
+const EMP_OK=['dashboard','sales','purchases','quotes','weborders'];
+async function pinHash(p){let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('mekanizm|'+p));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function applyRole(){let u=curUser();document.body.classList.toggle('emp',isEmp());
+ let b=document.getElementById('whoBtn');if(b)b.textContent=u?'👤 '+u.name+' — خروج':'👤';
+ let w=document.getElementById('mkWho');
+ if(w){let was=w.classList.contains('show');w.classList.toggle('show',!u);
+  /* مانرجّعش الشاشة من الأول وهو بيكتب، إلا لو كانت شاشة «أول مرة» أو «جاري التحميل» واتغيرت البيانات */
+  if(!u&&(!was||document.getElementById('wName')||document.getElementById('wWait')))whoStart()}
+ renderUsers()}
+/* شاشة الدخول */
+function whoStart(){let w=document.getElementById('mkWho');if(!w)return;
+ /* جهاز جديد: نستنى بيانات السيرفر الأول عشان مانعملش مدير تاني بالغلط */
+ if(!users().some(u=>u.role==='admin')&&lsG('mk_cloud_ver')==null&&navigator.onLine&&typeof supabase!=='undefined'){w.innerHTML='<div class="mkbox" id="wWait"><h2>ميكانيزم</h2><p>⏳ جاري تحميل البيانات من السيرفر...</p></div>';setTimeout(()=>{if(document.getElementById('wWait'))whoStart()},8000);return}
+ if(!users().some(u=>u.role==='admin')){w.innerHTML=`<div class="mkbox"><h2>أهلاً بيك في ميكانيزم</h2><p>أول مرة: اعمل حساب المدير (إنت). الاسم والرقم السري ده هتدخل بيهم كل يوم.</p>
+  <input id="wName" placeholder="اسم المدير" style="direction:rtl;text-align:right"><input id="wPin" type="password" inputmode="numeric" placeholder="رقم سري (4 أرقام على الأقل)"><input id="wPin2" type="password" inputmode="numeric" placeholder="اكتب الرقم السري تاني">
+  <button type="button" onclick="whoSetup()">حفظ ودخول</button><div id="wErr" class="werr"></div></div>`;return}
+ w.innerHTML=`<div class="mkbox"><h2>ميكانيزم</h2><p>اختار طريقة الدخول</p><button type="button" onclick="whoRole('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="whoRole('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button></div>`}
+function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u=>u.role===role);
+ if(!L.length){w.querySelector('.mkbox').insertAdjacentHTML('beforeend','<div class="werr">مفيش موظفين متسجلين لسه — المدير يضيفهم من الإعدادات.</div>');return}
+ w.innerHTML=`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
+ <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>
+ <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off">
+ <button type="button" onclick="whoGo()">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="whoStart()">رجوع</button><div id="wErr" class="werr"></div></div>`;
+ setTimeout(()=>{let p=document.getElementById('wPin');if(p){p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
+async function whoGo(){let u=users().find(x=>x.id===val('wUser')),p=val('wPin');if(!u||!p)return wErr.textContent='اكتب الرقم السري';
+ if(await pinHash(p)!==u.pin){wErr.textContent='الرقم السري غلط';wPin.value='';return}
+ lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+u.name)}
+async function whoSetup(){let n=val('wName'),a=val('wPin');if(n.length<2)return wErr.textContent='اكتب الاسم';if(!/^\d{4,}$/.test(a))return wErr.textContent='الرقم السري 4 أرقام على الأقل';if(a!==val('wPin2'))return wErr.textContent='الرقمين مش زي بعض';
+ let u={id:crypto.randomUUID(),name:n,role:'admin',pin:await pinHash(a)};users().push(u);save();lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+n)}
+function whoOut(){if(!curUser())return applyRole();ask('خروج '+userName()+'؟\nالجهاز هيرجع لشاشة اختيار موظف أو مدير.','خروج','رجوع').then(ok=>{if(!ok)return;lsS('mk_user',null);closeModal();applyRole()})}
+/* إدارة المستخدمين (للمدير) */
+function renderUsers(){let b=document.getElementById('usersBody');if(!b)return;
+ b.innerHTML=users().map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)"><div><b>${esc(u.name)}</b> <span class="badge ${u.role==='admin'?'green':''}">${u.role==='admin'?'مدير':'موظف'}</span>${curUser()&&curUser().id===u.id?' <small style="color:var(--muted)">(إنت)</small>':''}</div><div style="display:flex;gap:6px"><button class="secondary" onclick="userForm('${u.id}')">تعديل</button><button class="secondary danger" onclick="userDel('${u.id}')">حذف</button></div></div>`).join('')||'<div class="empty">مفيش مستخدمين</div>'}
+function userForm(id){let u=id?users().find(x=>x.id===id):null;
+ openModal(`<div class="modal-head"><h2>${u?'تعديل '+esc(u.name):'إضافة مستخدم'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <form id="uF"><div class="form"><div class="field"><label>الاسم</label><input id="uName" required value="${esc(u?u.name:'')}"></div><div class="field"><label>النوع</label><select id="uRole"><option value="emp" ${!u||u.role==='emp'?'selected':''}>موظف</option><option value="admin" ${u&&u.role==='admin'?'selected':''}>مدير</option></select></div>
+ <div class="field"><label>${u?'رقم سري جديد (سيبه فاضي لو مش هتغيره)':'الرقم السري (4 أرقام على الأقل)'}</label><input id="uPin" type="password" inputmode="numeric" autocomplete="off" ${u?'':'required'}></div></div><div id="uErr" class="werr" style="color:var(--danger)"></div>
+ <div class="modal-foot"><button class="primary">حفظ</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`);
+ document.getElementById('uF').onsubmit=async ev=>{ev.preventDefault();let n=val('uName'),r=val('uRole'),p=val('uPin');
+  if(n.length<2)return uErr.textContent='اكتب الاسم';if(p&&!/^\d{4,}$/.test(p))return uErr.textContent='الرقم السري 4 أرقام على الأقل';
+  if(users().some(x=>x.name===n&&x.id!==id))return uErr.textContent='في مستخدم بنفس الاسم';
+  if(u&&u.role==='admin'&&r!=='admin'&&users().filter(x=>x.role==='admin').length<2)return uErr.textContent='لازم يفضل مدير واحد على الأقل';
+  if(u){u.name=n;u.role=r;if(p)u.pin=await pinHash(p)}else users().push({id:crypto.randomUUID(),name:n,role:r,pin:await pinHash(p)});
+  save();closeModal();applyRole();toast('تم الحفظ')}}
+async function userDel(id){let u=users().find(x=>x.id===id);if(!u)return;
+ if(u.role==='admin'&&users().filter(x=>x.role==='admin').length<2)return toast('لازم يفضل مدير واحد على الأقل');
+ if(curUser()&&curUser().id===id)return toast('مينفعش تحذف نفسك وانت داخل');
+ if(!await ask('حذف '+u.name+'؟','حذف','رجوع'))return;db.settings.users=users().filter(x=>x.id!==id);save();applyRole();toast('تم الحذف')}
+/* صلاحيات الموظف */
+const _spE=showPage;showPage=function(id){if(isEmp()&&!EMP_OK.includes(id))id='dashboard';_spE(id)};
+const _oq=openQuick;openQuick=function(){if(!isEmp())return _oq();
+ openModal(`<div class="modal-head"><h2>إضافة عملية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="quick"><button onclick="closeModal();openTransaction('sale')"><b>فاتورة بيع</b></button><button onclick="closeModal();openTransaction('purchase')"><b>فاتورة شراء</b></button><button onclick="closeModal();openQuote()"><b>عرض سعر</b></button><button onclick="closeModal();showPage('weborders')"><b>طلبات الموقع</b></button></div>`)};
+/* فاتورة الشراء عند الموظف: خانة السعر فاضية (مايشوفش سعر الشراء المتسجل) */
+const _ai=addItem;addItem=function(pid,nm){let n=document.querySelectorAll('#txLines .txl').length;_ai(pid,nm);if(isEmp()&&TTYPE==='purchase'){let L=document.querySelectorAll('#txLines .txl');if(L.length>n){let lp=L[L.length-1].querySelector('.lp');lp.value='';lp.placeholder='اكتب السعر';updRem()}}};
+const _opv=openPurchaseView;openPurchaseView=function(id){_opv(id);let r=db.purchases.find(x=>x.id===id),m=document.getElementById('modal');
+ if(r&&r.by)m.querySelector('.card').insertAdjacentHTML('beforeend',`<div>سجّلها: <b>${esc(r.by)}</b></div>`);
+ if(!isEmp())return;m.querySelectorAll('table tr').forEach(tr=>{[...tr.children].slice(2).forEach(td=>td.remove())});m.querySelectorAll('.table-wrap+div').forEach(d=>d.remove())};
+const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sales.find(x=>x.id===id);if(r&&r.by){let c=document.querySelector('#modal .card');if(c)c.insertAdjacentHTML('beforeend',`<div>سجّلها: <b>${esc(r.by)}</b></div>`)}};
+(function(){
+ document.head.insertAdjacentHTML('beforeend',`<style>
+ #mkWho{position:fixed;inset:0;z-index:99998;background:#f5f7f8;display:none;align-items:center;justify-content:center;padding:20px;font-family:Cairo,Tahoma,Arial,sans-serif;direction:rtl}#mkWho.show{display:flex}
+ .werr{color:#c0392b;font-size:13px;min-height:18px;margin-top:8px}
+ body.emp .own,body.emp #dashboard .grid2,body.emp .top-actions .icon-btn:not(#whoBtn),
+ body.emp [data-page="products"],body.emp [data-page="returns"],body.emp [data-page="contacts"],body.emp [data-page="cash"],body.emp [data-page="reports"],body.emp [data-page="theme"],body.emp [data-page="settings"]{display:none!important}
+ #whoBtn{width:auto!important;padding:0 12px;font-size:13px!important;font-weight:700;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+ body.emp #whoBtn{background:#fff4e5!important;color:#8a4b00!important}
+ </style>`);
+ document.body.insertAdjacentHTML('beforeend','<div id="mkWho"></div>');
+ let ta=document.querySelector('.top-actions');if(ta)ta.insertAdjacentHTML('afterbegin','<button class="icon-btn" id="whoBtn" onclick="whoOut()" title="خروج / تبديل المستخدم">👤</button>');
+ let sg=document.querySelector('#settings .grid2');if(sg)sg.insertAdjacentHTML('beforeend',`<div class="card"><h3>👥 المستخدمين (مدير وموظفين)</h3><p style="color:var(--muted);line-height:1.9;margin-top:0">كل واحد بيدخل باسمه ورقمه السري أول اليوم.<br><b>الموظف</b> يقدر بس: فاتورة بيع، فاتورة شراء، عرض سعر، والرد على طلبات الموقع — ومش بيشوف أسعار الشراء ولا التقارير ولا الاستعلام، ومايقدرش يعدّل أو يلغي فاتورة.<br>كل فاتورة بيتكتب عليها مين اللي سجّلها.</p><div id="usersBody"></div><button class="primary" style="margin-top:10px" onclick="userForm()">＋ إضافة موظف أو مدير</button></div>`);
+ applyRole();if(isEmp())showPage('dashboard');
+ const _raU=renderAll;renderAll=function(){_raU();applyRole()};
+ /* لو اليوم خلص والسيستم مفتوح، يرجع لشاشة الدخول */
+ setInterval(()=>{if(!curUser()&&!document.getElementById('mkWho').classList.contains('show')){closeModal();applyRole()}},60000);
+})();
+
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-05-6';
+const APP_VER='2026-10-05-8';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1517,6 +1601,5 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
  window.addEventListener('focus',check);setInterval(check,10*60000);setTimeout(check,5000)})();
 </script>
-
 </body>
 </html>
