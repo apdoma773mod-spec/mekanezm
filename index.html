@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-9';
+const APP_VER='2026-10-06-10';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2476,6 +2476,42 @@ window.siteSitemap=function(){let d=SITE.data,day=isoToday(),u=[SHOP_URL].concat
 window.sdAdd=function(){let r=document.getElementById('sdRows');r.insertAdjacentHTML('beforeend','<div class="sdr" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;margin-bottom:6px"><input placeholder="المنطقة"><input placeholder="المصاريف" inputmode="decimal"><input placeholder="المدة (مثلاً يوم)"><button type="button" class="secondary danger" onclick="this.parentNode.remove()">✕</button></div>')};
 (function(){let nv=document.querySelector('aside nav [data-page="weborders"]');if(nv)nv.insertAdjacentHTML('afterend','<button class="own" onclick="openSiteAdmin()"><span style="width:1.15em;text-align:center">🌐</span> <span>محتوى الموقع</span></button>');
  let pt=document.querySelector('#products .title-row .btnrow');if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary own" onclick="openSiteAdmin()">🌐 محتوى الموقع</button>')})();
+
+/* ---------- 📷 طلبات بالصور (منتجات مش موجودة في الموقع) ---------- */
+let RQS=[],rqLast=null,rqShowAll=false;
+async function loadReqs(){if(!sbx()||!window.mkT_user)return;let {data,error}=await sbx().from('web_requests').select('*').order('created_at',{ascending:false}).limit(200);if(error)return;
+ RQS=data||[];let n=RQS.filter(r=>r.status==='new').length;
+ if(rqLast!==null&&n>rqLast){ding();toast('📷 عميل بعت صورة منتج بيدوّر عليه')}rqLast=n;
+ let b=document.getElementById('rqBanner');if(b){b.style.display=n?'':'none';b.innerHTML=`📷 عندك <b>${n}</b> طلب بالصور (منتج مش في الموقع) — اضغط للعرض`}
+ let c=document.getElementById('rqCount');if(c){c.textContent=n;c.style.display=n?'':'none'}renderReqs()}
+window.loadReqs=loadReqs;
+function renderReqs(){let el=document.getElementById('rqBody');if(!el)return;let L=rqShowAll?RQS:RQS.filter(r=>r.status==='new');
+ el.innerHTML=(L.length?L.map(r=>{let imgs=(r.imgs||[]);return `<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b style="font-size:17px">${esc(r.name)}</b> — <span dir="ltr">${esc(r.phone)}</span><div style="color:var(--muted);font-size:12px">${esc(new Date(r.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${r.status==='new'?'<span class="badge red">جديد</span>':r.status==='replied'?'<span class="badge green">اترد عليه</span>':'<span class="badge">مقفول</span>'}</div>
+  ${imgs.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${imgs.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--border)" loading="lazy"></a>`).join('')}</div>`:''}
+  ${r.note?`<p style="margin:10px 0 0;white-space:pre-line">📝 ${esc(r.note)}</p>`:''}${r.reply?`<p style="margin:8px 0 0;color:var(--green)">💬 الرد: ${esc(r.reply)}${r.replied_by?' — '+esc(r.replied_by):''}</p>`:''}
+  <div class="btnrow" style="margin-top:10px"><button class="primary" onclick="reqReply('${r.id}')">💬 رد على العميل</button>${r.status!=='closed'?`<button class="secondary" onclick="reqClose('${r.id}')">✔ اقفل</button>`:''}</div></div>`}).join(''):'<div class="card"><div class="empty">مفيش طلبات بالصور'+(rqShowAll?'':' جديدة')+'</div></div>')
+  +`<button class="secondary" style="margin-top:4px" onclick="rqToggle()">${rqShowAll?'اعرض الجديد بس':'اعرض كل الطلبات (اللي اترد عليها كمان)'}</button>`}
+window.rqToggle=()=>{rqShowAll=!rqShowAll;renderReqs()};
+const RQ_OPTS=[['ok','✅ متوفر عندنا — تقدر تطلبه أو تيجي تاخده'],['will','📦 هنوفّره لك'],['no','❌ للأسف مش متاح عندنا حالياً'],['c','✍️ رد تاني']];
+window.reqReply=function(id){let r=RQS.find(x=>x.id===id);if(!r)return;
+ openModal(`<div class="modal-head"><h2>💬 الرد على ${esc(r.name)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ ${(r.imgs||[]).length?`<img src="${esc(r.imgs[0])}" style="width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#f3f5f6">`:''}
+ <div style="display:grid;gap:8px;margin-top:10px">${RQ_OPTS.map(([k,t],i)=>`<label class="chk" style="padding:10px;border:1px solid var(--border);border-radius:10px"><input type="radio" name="rqo" value="${k}" ${i===1?'checked':''}> ${t}</label>`).join('')}</div>
+ <div class="form" style="margin-top:10px"><div class="field"><label>الميعاد (لو هنوفّره)</label><input id="rqWhen" placeholder="مثلاً: خلال 3 أيام"></div><div class="field"><label>الرد اللي هتكتبه (لو اخترت «رد تاني»)</label><input id="rqTxt"></div>
+ <div class="field full"><label>ملاحظة إضافية (اختياري)</label><input id="rqExtra" placeholder="مثلاً: تقدر تعدي على المحل في أي وقت"></div></div>
+ <div class="modal-foot"><button class="primary" id="rqGo">💬 ابعت على الواتساب</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ rqGo.onclick=async()=>{let k=(document.querySelector('input[name=rqo]:checked')||{}).value,t;
+  if(k==='ok')t='المنتج ده متوفر عندنا ✅ — تقدر تطلبه أو تيجي تاخده';else if(k==='will'){let w=val('rqWhen');if(!w)return toast('اكتب الميعاد');t='هنوفّرلك المنتج ده 📦 — هيبقى جاهز '+w}else if(k==='no')t='للأسف المنتج ده مش متاح عندنا حالياً 🙏';else{t=val('rqTxt');if(!t)return toast('اكتب الرد')}
+  let msg=`أهلاً ${r.name} 👋\nبخصوص المنتج اللي بعتلنا ${(r.imgs||[]).length?'صورته':'تفاصيله'} على موقع ${db.settings.companyName||'ميكانيزم'}${r.note?` (${r.note.slice(0,80)})`:''}:\n\n${t}`+(val('rqExtra')?`\n${val('rqExtra')}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+  let d=String(r.phone||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);let wa='https://wa.me/'+d+'?text='+encodeURIComponent(msg),win=window.open(wa,'_blank');
+  let {error}=await sbx().from('web_requests').update({status:'replied',reply:t,replied_at:new Date().toISOString(),replied_by:userName()}).eq('id',id);if(error)toast('الرد ماتسجلش: '+error.message);
+  closeModal();await loadReqs();if(!win)location.href=wa}};
+window.reqClose=async function(id){let {error}=await sbx().from('web_requests').update({status:'closed'}).eq('id',id);if(error)return toast(error.message);await loadReqs();toast('اتقفل')};
+(function(){let wb=document.getElementById('woBody');
+ if(wb)wb.insertAdjacentHTML('afterend','<h2 style="margin:22px 0 10px">📷 طلبات بالصور <span id="rqCount" class="badge red" style="display:none"></span></h2><p style="color:var(--muted);margin:-4px 0 10px;font-size:13px">منتجات العملاء بعتوا صورها لأنهم مالقوهاش في الموقع</p><div id="rqBody"></div>');
+ let ban=document.getElementById('woBanner');
+ if(ban)ban.insertAdjacentHTML('afterend','<button id="rqBanner" onclick="showPage(\'weborders\');setTimeout(()=>document.getElementById(\'rqBody\').scrollIntoView({behavior:\'smooth\'}),200)" style="display:none;width:100%;margin-bottom:14px;background:#eef6ff;color:#0b4a8b;border:1px solid #9cc3ef;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
+const _lo=loadOrders;loadOrders=async function(f){let r=await _lo(f);loadReqs();return r};
 
 /* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
 let lastNew=null;

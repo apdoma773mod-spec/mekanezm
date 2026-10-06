@@ -572,7 +572,7 @@ function trustHTML(){let t=(S.trust||[]).filter(Boolean);if(!t.length){t=[];if((
  return t.length?`<div class="trust">${t.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
 const _pm=pubMain;
 pubMain=function(){_pm();let m=$('main');if(!m)return;m.insertAdjacentHTML('afterbegin',trustHTML());m.insertAdjacentHTML('beforeend',worksHTML()+reviewsHTML()+infoHTML());
- let fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.x){fl.dataset.x=1;if((S.works||[]).length)fl.insertAdjacentHTML('beforeend','<a href="#works">أعمالنا</a>');if((S.delivery||[]).length||S.policy)fl.insertAdjacentHTML('beforeend','<a href="#info">التوصيل والاستبدال</a>')}};
+ setTimeout(()=>{let fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.x){fl.dataset.x=1;if((S.works||[]).length)fl.insertAdjacentHTML('beforeend','<a href="#works">أعمالنا</a>');if((S.delivery||[]).length||S.policy)fl.insertAdjacentHTML('beforeend','<a href="#info">التوصيل والاستبدال</a>')}},0)};
 /* عرض صور الشغلانة */
 document.addEventListener('click',e=>{let c=e.target.closest('[data-wk]');if(c){let w=(S.works||[]).filter(w=>w.imgs&&w.imgs.length)[+c.dataset.wk];if(!w)return;
   document.body.insertAdjacentHTML('beforeend',`<div id="wkv"><div class="wkt"><b>${esc(w.title)}</b><button type="button" data-wkx>✕</button></div><div class="wks">${w.imgs.map(u=>`<img src="${esc(u)}" alt="">`).join('')}</div>${w.desc?`<div class="wkd">${esc(w.desc)}</div>`:''}</div>`);return}
@@ -622,6 +622,39 @@ const _co=cartOpen;cartOpen=function(){_co();let any=false;
 const _so=sendOrder;sendOrder=async function(btn){let back=Object.keys(cart).some(id=>{let p=byId(S.products,id);return p&&!stockOk(p)});await _so(btn);
  if(back){let h=document.querySelector('#modal .mc h3');if(h&&/تم تسجيل/.test(h.textContent)&&!document.getElementById('boNote'))h.insertAdjacentHTML('afterend','<p id="boNote" style="color:#b7791f;margin:0">📦 طلبك فيه أصناف بالحجز — هنكلمك على الواتساب ونقولك ميعاد الاستلام.</p>')}
  setTimeout(loadStock,800)};
+
+/* ---------- 📷 «مش لاقي اللي بتدوّر عليه؟» العميل يصوّر المنتج ويبعته ---------- */
+document.head.insertAdjacentHTML('beforeend','<style>.reqbtn{display:block;width:100%;background:var(--card);border:2px dashed var(--accent);color:var(--fg);border-radius:18px;padding:16px;font:800 16px Cairo,Tahoma,sans-serif;text-align:center;cursor:pointer}.reqbtn small{display:block;font-weight:400;color:var(--mut);font-size:13px;margin-top:4px}#rqImgs div{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}#rqImgs img{width:100%;height:100%;object-fit:cover}#rqImgs button{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;padding:0;background:#fffe;color:#c0392b}.mc textarea{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}</style>');
+const REQ_BTN='<button type="button" class="reqbtn" data-req>📷 مش لاقي اللي بتدوّر عليه؟<small>صوّر المنتج وابعتهولنا — هنرد عليك ونقولك نوفّره إمتى</small></button>';
+function shrinkBlob(f){return new Promise((res,rej)=>{const r=new FileReader();r.onerror=rej;r.onload=()=>{const im=new Image();im.onerror=rej;im.onload=()=>{const k=Math.min(1,1200/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);/* JPEG عشان صورة الإشعار توصل على تليجرام */c.toBlob(j=>j?res(j):rej(new Error('img')),'image/jpeg',.8)};im.src=r.result};r.readAsDataURL(f)})}
+let RQ=[];
+function reqOpen(){RQ=[];
+ $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>📷 مش لاقي اللي بتدوّر عليه؟</h3><p class="mut" style="margin:0">صوّر المنتج أو ابعت صورته (لحد 3 صور)، وإحنا هنرد عليك على الواتساب ونقولك نقدر نوفّره ولا لأ وإمتى.</p>
+ <div id="rqImgs" style="display:flex;gap:6px;flex-wrap:wrap"></div><button type="button" id="rqAdd" class="btn g">📷 صوّر أو اختار صورة</button><input type="file" id="rqFile" accept="image/*" multiple hidden>
+ <label>وصف (اختياري — المقاس، الماركة، الاستخدام…)<textarea id="rqNote" maxlength="1000" rows="3"></textarea></label>
+ <label>اسمك<input id="rqName" maxlength="80"></label><label>رقم موبايلك (واتساب)<input id="rqPhone" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx"></label>
+ <p id="rqMsg" class="mut" style="margin:0"></p><div class="row"><button class="pri" id="rqSend">إرسال</button><button data-a="cc">إغلاق</button></div></div></div>`;
+ const draw=()=>{$('rqImgs').innerHTML=RQ.map((x,i)=>`<div><img src="${x.url}" alt=""><button type="button" data-rqx="${i}">✕</button></div>`).join('');$('rqAdd').style.display=RQ.length>=3?'none':''};
+ $('rqAdd').onclick=()=>$('rqFile').click();
+ $('rqFile').onchange=async()=>{const fs=[...$('rqFile').files].slice(0,3-RQ.length);$('rqFile').value='';$('rqMsg').textContent='⏳ بنجهّز الصور…';
+  for(const f of fs){try{const b=await shrinkBlob(f);RQ.push({blob:b,url:URL.createObjectURL(b)})}catch(e){}}$('rqMsg').textContent='';draw()};
+ $('rqImgs').onclick=e=>{const x=e.target.closest('[data-rqx]');if(x){RQ.splice(+x.dataset.rqx,1);draw()}};
+ $('rqSend').onclick=async()=>{const nm=$('rqName').value.trim(),ph=$('rqPhone').value.trim(),note=$('rqNote').value.trim(),m=$('rqMsg');
+  if(nm.length<2){m.textContent='اكتب اسمك';return}if(ph.replace(/\D/g,'').length<8){m.textContent='اكتب رقم موبايلك عشان نرد عليك';return}if(!RQ.length&&note.length<3){m.textContent='ابعت صورة أو اكتب وصف للمنتج';return}
+  const b=$('rqSend');b.disabled=true;
+  try{const urls=[];for(let i=0;i<RQ.length;i++){m.textContent=`⏳ جاري رفع الصورة ${i+1} من ${RQ.length}…`;const x=RQ[i],ext=x.blob.type==='image/webp'?'webp':'jpg',path='r/'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9)+'.'+ext;
+    const r=await fetch(SB_URL+'/storage/v1/object/customer-requests/'+path,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':x.blob.type,'cache-control':'max-age=31536000'},body:x.blob});
+    if(!r.ok)throw new Error('upload');urls.push(SB_URL+'/storage/v1/object/public/customer-requests/'+path)}
+   m.textContent='⏳ جاري الإرسال…';
+   const r=await fetch(SB_URL+'/rest/v1/rpc/place_request',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_name:nm,p_phone:ph,p_note:note,p_imgs:urls})});
+   const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
+   if(!r.ok||typeof j!=='string'){const em=(j&&j.message)||'';m.textContent=em==='invalid_phone'?'رقم الموبايل مش صحيح':em==='too_many_requests'?'في ضغط دلوقتي، جرّب بعد شوية':'ماتبعتش — جرّب تاني أو كلمنا على الواتساب';b.disabled=false;return}
+   $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>وصلنا طلبك ✔</h3><p>هنشوف المنتج ونرد عليك على الواتساب على رقم <b dir="ltr">${esc(ph)}</b> قريب.</p><div class="row"><a class="btn g" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بعتلكم صورة منتج من الموقع باسم '+nm+' — عايز أعرف تقدروا توفّروه؟')}">💬 كلّمنا على الواتساب كمان</a><button data-a="cc">إغلاق</button></div></div></div>`}
+  catch(e){m.textContent='مفيش اتصال أو الصورة كبيرة — جرّب تاني';b.disabled=false}}}
+document.addEventListener('click',e=>{if(e.target.closest('[data-req]'))reqOpen()});
+const _pm2=pubMain;pubMain=function(){_pm2();const c=document.getElementById('cats');if(c&&!document.getElementById('reqHome'))c.insertAdjacentHTML('afterend','<section id="reqHome">'+REQ_BTN+'</section>');
+ setTimeout(()=>{const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.rq){fl.dataset.rq=1;fl.insertAdjacentHTML('beforeend','<a href="#" data-req onclick="return false">📷 اطلب منتج مش موجود</a>')}},0)};
+const _dp=drawProds;drawProds=function(){_dp();const e=document.querySelector('#prods .empty');if(e&&!e.querySelector('[data-req]'))e.insertAdjacentHTML('beforeend','<div style="margin-top:12px">'+REQ_BTN+'</div>')};
 
 seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();
