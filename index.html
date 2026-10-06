@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-4';
+const APP_VER='2026-10-06-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2228,6 +2228,26 @@ window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;
  <div class="c sm">${r.by?'سجّلها: '+esc(r.by)+'<br>':''}شكراً لتعاملكم معنا</div></div><script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`)};
 const _oim2=openInvoiceModal;
 openInvoiceModal=function(id){_oim2(id);let o=document.getElementById('invOut');if(o)o.insertAdjacentHTML('beforebegin',`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="printReceipt('${id}')">🧾 إيصال حراري (80 مم)</button></div>`)};
+
+/* ---------- 💸 المصروفات: تاريخ لكل مصروف + اقتراح المصروفات اللي اتكتبت قبل كده ---------- */
+const arD=iso=>{let [y,m,d]=String(iso).split('-');return new Date(+y,+m-1,+d).toLocaleDateString('ar-EG')};
+function expNames(){let m=new Map();db.expenses.slice().sort((a,b)=>String(b.iso||'').localeCompare(String(a.iso||''))).forEach(e=>{let k=String(e.note||'').trim();if(k&&!m.has(k))m.set(k,e)});return [...m.values()]}
+const _oe=openExpense;
+openExpense=function(){_oe();let n=document.getElementById('enote');if(!n)return;
+ n.closest('.field').insertAdjacentHTML('afterend',`<div class="field"><label>التاريخ</label><input type="date" id="edate" value="${isoToday()}"></div>`);
+ n.autocomplete='off';let box=document.createElement('div');box.style.cssText='display:none;max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff';n.closest('.field').appendChild(box);
+ const show=()=>{let q=VN(n.value);let L=expNames().filter(e=>!q||VN(e.note).startsWith(q)||VN(e.note).includes(q)).sort((a,b)=>(VN(b.note).startsWith(q)?1:0)-(VN(a.note).startsWith(q)?1:0)).slice(0,8);
+  if(!L.length||(L.length===1&&L[0].note===n.value)){box.style.display='none';return}
+  box.innerHTML=L.map((e,i)=>`<div data-i="${i}" style="padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer"><b>${esc(e.note)}</b> <small style="color:var(--muted)">${esc(e.cat||'')} • آخر مرة ${money(e.amount)}</small></div>`).join('');box._L=L;box.style.display='block'};
+ n.addEventListener('input',show);n.addEventListener('focus',show);n.addEventListener('blur',()=>setTimeout(()=>{box.style.display='none'},250));
+ box.addEventListener('mousedown',e=>e.preventDefault());
+ box.addEventListener('click',e=>{let d=e.target.closest('[data-i]');if(!d)return;let x=box._L[+d.dataset.i];n.value=x.note;let c=document.getElementById('ecat');if(c&&x.cat)c.value=x.cat;let a=document.getElementById('eamount');if(a){a.placeholder='آخر مرة '+x.amount;a.focus()}box.style.display='none'})};
+const _se=submitExpense;
+submitExpense=function(ev){let d=val('edate')||isoToday();_se(ev);let x=db.expenses[0];if(x&&d!==isoToday()){x.iso=d;x.date=arD(d)}renderExpenses()};
+function renderExpenses(){let b=document.getElementById('expensesBody');if(!b)return;
+ let L=db.expenses.slice().sort((a,b)=>String(b.iso||'').localeCompare(String(a.iso||'')));
+ b.innerHTML=L.length?L.map(e=>`<tr><td style="white-space:nowrap"><b>${esc(e.date||arD(e.iso))}</b></td><td>${esc(e.note)}</td><td>${esc(e.cat)}</td><td>${money(e.amount)}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty">لا توجد مصروفات.</div></td></tr>'}
+const _rtE=renderTables;renderTables=function(){_rtE();renderExpenses()};
 
 /* ---------- الإعدادات: رقم واتساب المالك ---------- */
 const _ss=saveSettings;saveSettings=function(){let e=document.getElementById('companyOwner');if(e)db.settings.ownerPhone=e.value.trim();_ss()};
