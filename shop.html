@@ -152,7 +152,7 @@ function applyTheme(){const r=document.documentElement.style;for(const k in D){S
 function gal(p){const im=p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]);if(!im.length)return'<div class="ph">🔧</div>';return `<img class="mainimg" src="${im[0]}" alt="${esc(p.name)}">`+(im.length>1?`<div class="th">${im.map((x,i)=>`<img src="${x}" data-a="th" data-id="${p.id}" data-i="${i}" alt="">`).join('')}</div>`:'')}
 function card(p){
  const ok=stockOk(p),fv=fav.has(p.id);
- const bt=ok?'<button class="btn g" data-a="ad" data-id="'+p.id+'">➕ أضف للطلب</button>':'<span class="btn out">نفد حاليًا</span>';
+ const bt=ok?'<button class="btn g" data-a="ad" data-id="'+p.id+'">➕ أضف للطلب</button>':'<button class="btn g" data-a="ad" data-id="'+p.id+'" style="border-style:dashed">📦 اطلبه بالحجز</button>';
  return `<div class="card"><div class="imw">${gal(p)}<button class="hrt${fv?' on':''}" data-a="fv" data-id="${p.id}" aria-label="المفضلة">♥</button></div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="av ${ok?'ok':'no'}">● ${ok?'متوفر':'غير متوفر'}</div><a class="ask" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، لو سمحت ده بكام؟\n'+p.name+(p.code?' (كود '+p.code+')':'')+'\n'+location.href.split('#')[0]+'#p='+p.id)}">💬 اسأل عن السعر</a>${bt}${admin?`<div class="row"><button data-a="star" data-id="${p.id}">${p.top?'★':'☆'} مميز</button><button data-a="ep" data-id="${p.id}">تعديل</button><button data-a="dp" data-id="${p.id}">حذف</button></div>`:''}</div>`}
 let fav=new Set(),favOn=false;
 try{fav=new Set(JSON.parse(localStorage.getItem('mkfav')||'[]'))}catch(e){}
@@ -612,6 +612,16 @@ document.getElementById('goCart').onclick=()=>cartOpen();
 const _cu=cartUI;cartUI=function(){_cu();let n=cartN(),g=document.getElementById('goCart');if(!g)return;g.classList.toggle('on',n>0&&!admin);document.getElementById('goCartT').textContent='🛒 عندك '+n+' في طلبك'};
 /* بعد «أضف للطلب» من الكارت: رسالة توضح الخطوة الجاية */
 document.addEventListener('click',e=>{if(e.target.closest('[data-a="ad"],[data-pv="add"]'))setTimeout(()=>{let t=document.getElementById('goCartT');if(t){let g=document.getElementById('goCart');g.animate&&g.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:350})}},50)},true);
+
+/* ---------- 📦 الطلب بالحجز للمنتج اللي مش متوفر ---------- */
+pvBar=function(){const p=byId(S.products,PV.id);if(!p)return;const ok=stockOk(p),n=cart[p.id]||0;
+ $('pvbar').innerHTML=`<div class="pvq"><button data-pv="q+" aria-label="زيادة">+</button><b>${PV.q}</b><button data-pv="q-" aria-label="نقص">−</button></div><button class="pvadd${n?' done':''}" data-pv="add" style="${ok?'':'background:#b7791f'}">${n?`✔ في طلبك (${n}) — أضف كمان`:(ok?'➕ أضف للطلب':'📦 اطلبه — هيوصلك لما يتوفر')}</button>${n?'<button class="pvq" style="padding:0 14px;height:46px;font-weight:700" data-pv="cart">🛒 طلبي</button>':''}`};
+const _co=cartOpen;cartOpen=function(){_co();let any=false;
+ document.querySelectorAll('#modal [data-a="cp"]').forEach(b=>{let p=byId(S.products,b.dataset.id);if(p&&!stockOk(p)){any=true;let row=b.closest('.row'),s=row&&row.querySelector('span');if(s&&!s.querySelector('.bo'))s.insertAdjacentHTML('beforeend',' <b class="bo" style="color:#b7791f;font-size:12px">📦 حجز — مش متوفر دلوقتي</b>')}});
+ if(any){let m=document.getElementById('cmsg');if(m&&!m.textContent)m.innerHTML='<span style="color:#b7791f">في أصناف مش متوفرة دلوقتي — اطلبها عادي وهنكلمك نقولك ميعاد وصولها.</span>'}};
+const _so=sendOrder;sendOrder=async function(btn){let back=Object.keys(cart).some(id=>{let p=byId(S.products,id);return p&&!stockOk(p)});await _so(btn);
+ if(back){let h=document.querySelector('#modal .mc h3');if(h&&/تم تسجيل/.test(h.textContent)&&!document.getElementById('boNote'))h.insertAdjacentHTML('afterend','<p id="boNote" style="color:#b7791f;margin:0">📦 طلبك فيه أصناف بالحجز — هنكلمك على الواتساب ونقولك ميعاد الاستلام.</p>')}
+ setTimeout(loadStock,800)};
 
 seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();

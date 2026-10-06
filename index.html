@@ -1391,15 +1391,32 @@ function renderOrders(){let b=document.getElementById('woBody');if(!b)return;
  b.innerHTML=L.map(o=>{let it=(o.items||[]).map(x=>({x,p:woProd(x.code)})),est=sumBy(it,y=>y.p?(+y.p.price||0)*(+y.x.qty||0):0),sid=String(o.id).slice(0,8),
   wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name}، بخصوص طلبك رقم ${sid} من موقع ميكانيزم`):'',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no);
   return `<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:18px">${esc(o.customer_name)}</b>${o.phone?` — <span dir="ltr">${esc(o.phone)}</span>`:''}<div style="color:var(--muted);font-size:12px">طلب رقم ${esc(sid)} • ${esc(new Date(o.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${woDoneSt(o)?'<span class="badge green">اتعملها فاتورة</span>':o.status==='new'?'<span class="badge red">جديد</span>':'<span class="badge">ملغي</span>'}</div>
-  <div class="table-wrap" style="margin-top:10px"><table class="table" style="min-width:380px"><thead><tr><th>الصنف</th><th>المطلوب</th><th>في المخزن</th><th>سعر البيع</th></tr></thead><tbody>${it.map(y=>`<tr><td>${y.p?esc(y.p.name):`<span style="color:var(--danger)">كود ${esc(y.x.code)} مش موجود في السيستم</span>`}</td><td><b>${esc(y.x.qty)}</b></td><td style="color:${y.p&&(+y.p.qty||0)>=(+y.x.qty||0)?'inherit':'var(--danger)'}">${y.p?y.p.qty:'—'}</td><td>${y.p?money(y.p.price):'—'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="table-wrap" style="margin-top:10px"><table class="table" style="min-width:380px"><thead><tr><th>الصنف</th><th>المطلوب</th><th>في المخزن</th><th>سعر البيع</th></tr></thead><tbody>${it.map(y=>`<tr><td>${y.p?esc(y.p.name):`<span style="color:var(--danger)">كود ${esc(y.x.code)} مش موجود في السيستم</span>`}${y.x.backorder?' <span class="badge red">⏳ حجز — مش متوفر</span>':''}</td><td><b>${esc(y.x.qty)}</b></td><td style="color:${y.p&&(+y.p.qty||0)>=(+y.x.qty||0)?'inherit':'var(--danger)'}">${y.p?y.p.qty:'—'}</td><td>${y.p?money(y.p.price):'—'}</td></tr>`).join('')}</tbody></table></div>
   <div style="margin:8px 0">الإجمالي التقريبي: <b>${money(est)}</b></div>
-  <div class="btnrow">${o.status==='new'?`<button class="primary" onclick="woInvoice('${o.id}')">🧾 تحويل لفاتورة بيع</button><button class="secondary danger" onclick="woCancel('${o.id}')">رفض الطلب</button>`:''}${woDoneSt(o)&&inv?`<button class="secondary" onclick="openInvoiceModal('${inv.id}')">فتح الفاتورة ${esc(o.invoice_no)}</button>`:''}${wa?`<a class="secondary" style="text-decoration:none;padding:10px 14px" target="_blank" rel="noopener" href="${wa}">💬 واتساب العميل</a>`:''}</div></div>`}).join('')}
+  ${o.eta?`<div style="margin:0 0 8px;color:var(--green);font-weight:700">📅 العميل اتبلّغ: ${esc(o.eta)}</div>`:''}
+  <div class="btnrow">${o.status==='new'?`<button class="primary" onclick="woInvoice('${o.id}')">🧾 تحويل لفاتورة بيع</button><button class="secondary" onclick="woEta('${o.id}')">📅 رد بالميعاد</button><button class="secondary danger" onclick="woCancel('${o.id}')">رفض الطلب</button>`:''}${woDoneSt(o)&&inv?`<button class="secondary" onclick="openInvoiceModal('${inv.id}')">فتح الفاتورة ${esc(o.invoice_no)}</button>`:''}${wa?`<a class="secondary" style="text-decoration:none;padding:10px 14px" target="_blank" rel="noopener" href="${wa}">💬 واتساب العميل</a>`:''}</div></div>`}).join('')}
 function woInvoice(id){let o=WO.list.find(x=>x.id===id);if(!o)return;
  openTransaction('sale',{person:o.customer_name});let f=document.querySelector('#modal form');f.dataset.wo=id;
  document.querySelector('#modal .modal-head h2').textContent='فاتورة من طلب الموقع '+String(id).slice(0,8);
  let ph=document.getElementById('txPhone');if(ph&&o.phone)ph.value=o.phone;
  let miss=[];(o.items||[]).forEach(x=>{let p=woProd(x.code);if(!p){miss.push(x.code);return}addItem(p.id);let d=document.querySelector(`#txLines .txl[data-pid="${p.id}"]`);if(d)d.querySelector('.lq').value=x.qty});
  updRem();if(miss.length)toast('أكواد مش موجودة في السيستم: '+miss.join('، '))}
+/* 📅 الرد على العميل بميعاد الاستلام (واتساب) + تسجيله على الطلب */
+const ETAS=['النهارده','بكره إن شاء الله','بعد يومين','خلال 3 لـ 5 أيام','أول ما المنتج يوصلنا هنكلمك'];
+function woEta(id){let o=WO.list.find(x=>x.id===id);if(!o)return;let back=(o.items||[]).some(x=>x.backorder);
+ openModal(`<div class="modal-head"><h2>📅 ميعاد الاستلام لـ ${esc(o.customer_name)}</h2><button class="close" onclick="showPage('weborders');closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ ${back?'<p style="margin-top:0;color:var(--danger)">⏳ الطلب فيه أصناف مش متوفرة دلوقتي.</p>':''}
+ <div style="display:grid;gap:8px">${ETAS.map((t,i)=>`<label class="chk" style="padding:10px;border:1px solid var(--border);border-radius:10px"><input type="radio" name="eta" value="${i}" ${i===(back?4:1)?'checked':''}> ${esc(t)}</label>`).join('')}
+ <label class="chk" style="padding:10px;border:1px solid var(--border);border-radius:10px"><input type="radio" name="eta" value="c"> ميعاد تاني: <input id="etaC" placeholder="مثلاً: يوم الخميس" style="flex:1;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px" oninput="document.querySelector('input[name=eta][value=c]').checked=true"></label></div>
+ <div class="field" style="margin-top:10px"><label>رسالة إضافية (اختياري)</label><input id="etaN" placeholder="مثلاً: التوصيل 50 ج.م"></div>
+ <div class="modal-foot"><button class="primary" id="etaGo">💬 ابعت للعميل على الواتساب</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ etaGo.onclick=async()=>{let v=(document.querySelector('input[name=eta]:checked')||{}).value,t=v==='c'?val('etaC'):ETAS[+v];if(!t)return toast('اختار أو اكتب الميعاد');
+  let sid=String(o.id).slice(0,8),names=(o.items||[]).map(x=>{let p=woProd(x.code);return (p?p.name:'كود '+x.code)+' × '+x.qty}).join('\n');
+  let msg=`أهلاً ${o.customer_name} 👋\nطلبك رقم ${sid} من ${db.settings.companyName||'ميكانيزم'} اتأكد ✅\n\n${names}\n\n📅 الاستلام: ${t}`+(val('etaN')?`\n${val('etaN')}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+  let wa=o.phone?waLinkTo(o.phone,msg):'',win=wa?window.open(wa,'_blank'):null;   /* بنفتح الواتساب قبل الحفظ عشان المتصفح مايمنعش النافذة */
+  try{await woUpdate(id,{status:o.status,eta:t,replied_at:new Date().toISOString()});o.eta=t}catch(e){toast('الميعاد ماتسجلش: '+((e&&e.message)||''))}
+  closeModal();showPage('weborders');
+  if(wa){if(!win)location.href=wa}else{try{await navigator.clipboard.writeText(msg);toast('العميل مالوش رقم — الرسالة اتنسخت')}catch(e){toast('العميل مالوش رقم موبايل')}}}}
 async function woUpdate(id,patch){let c=window.mkSB;if(!c)throw new Error('مفيش اتصال');
  let r=await c.from('web_orders').update(patch).eq('id',id).select('id');
  if(r.error&&/column/i.test(r.error.message||''))r=await c.from('web_orders').update({status:patch.status}).eq('id',id).select('id');
@@ -1579,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-7';
+const APP_VER='2026-10-06-8';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
