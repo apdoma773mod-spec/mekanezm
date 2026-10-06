@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 #mkStat{position:fixed;top:calc(env(safe-area-inset-top,0px) + 3px);left:50%;transform:translateX(-50%);z-index:30;font:700 11px Cairo,Tahoma,sans-serif;padding:2px 10px;border-radius:99px;background:#ffffffd9;color:#718087;pointer-events:none;border:1px solid #e4eaed}
 </style>
 </head>
-<body>
+<body><script>window.MK_T=!!window.MK_FORCE_T||(function(){try{return localStorage.getItem('mk_mode')==='T'}catch(e){return false}})();</script>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
@@ -873,7 +873,7 @@ fi.onchange=async()=>{
   }catch(e){console.error(e);toast('تعذر قراءة الملف')}
 };
 window.openImpDaily=()=>{if(typeof XLSX==='undefined')return toast('مكتبة الإكسل ما اتحملتش — اتأكد من النت');fi.click()};
-window.__imp={parseAoa,groupRows};
+window.__imp={parseAoa,groupRows,state:()=>IMP};
 })();
 
 </script>
@@ -924,7 +924,7 @@ const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
 function stat(t){$('mkStat').textContent=t}
 function isEmpty(d){return !d||!['products','sales','purchases','contacts','expenses','returns','payments'].some(k=>(d[k]||[]).length)}
-function showLogin(){$('mkLogin').classList.add('show');stat('')}
+function showLogin(){if(window.MK_T)return;$('mkLogin').classList.add('show');stat('')}
 function hideLogin(){$('mkLogin').classList.remove('show')}
 function dirty(){return lsGet('mk_dirty')==='1'&&!(lsGet('mk_cloud_ver')==null&&isEmpty(db))}
 function applyCloud(row){
@@ -968,7 +968,7 @@ async function push(){
 }
 window.cloudPush=()=>{clearTimeout(window._pt);window._pt=setTimeout(push,800)};
 window.cloudFlush=async()=>{clearTimeout(window._pt);await push();while(pushing)await new Promise(r=>setTimeout(r,100))};
-async function startSync(user){
+async function startSync(user){if(window.MK_T)return;
   uid=user.id;synced=false;stat('⏳ مزامنة…');
   let r;try{r=await fetchRow()}catch(e){r={error:e}}
   if(r.error){stat('📴 أوفلاين — شغال على نسخة الجهاز');clearTimeout(retryT);retryT=setTimeout(()=>startSync(user),15000);return}
@@ -1133,7 +1133,7 @@ function openInvoiceModal(id){
  ${invActions('sale',key,G)}
  <div id="invOut" style="margin-top:14px"><button id="invBtn" class="primary" style="width:100%;padding:14px" onclick="convertInvoice('${r.id}')">تحويل إلى PDF</button></div>`)}
 function openPurchaseView(id){let r=db.purchases.find(x=>x.id===id);if(!r)return;let key=r.gid||r.id,G=invGroup('purchase',key),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),T=sumBy(G,x=>x.total),pd=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),sold=soldAfter(G);
- openModal(`<div class="modal-head"><h2>فاتورة شراء ${esc(r.pno||'')}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="card" style="background:var(--tint2);border:0;line-height:2"><div>المورد: <b>${esc(r.person||'—')}</b>${r.phone?` — <span dir="ltr">${esc(r.phone)}</span>`:''}</div><div>التاريخ: <b>${esc(r.date)}</b></div></div><div class="table-wrap"><table class="table"><thead><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${GI.map(x=>`<tr><td>${esc(x.product)}</td><td>${x.qty}</td><td>${money(x.price!=null?x.price:(x.qty?x.total/x.qty:0))}</td><td>${money(x.total)}</td></tr>`).join('')}${SH?`<tr><td>🚚 ${SHIP}</td><td></td><td></td><td>${money(SH)}</td></tr>`:''}</tbody></table></div><div style="font-size:18px;margin-top:10px;line-height:1.9">الإجمالي: <b>${money(T)}</b><br><small>المدفوع للمورد: <b>${money(pd)}</b>${rem>0?` — المتبقي ليه: <b style="color:var(--danger)">${money(rem)}</b>`:''}</small></div>${r.note?`<p>${esc(r.note)}</p>`:''}${invActions('purchase',key,G)}${sold.length?`<p style="color:var(--muted);font-size:12px;margin:6px 0 0">في أصناف من الفاتورة دي اتباع منها (${sold.map(p=>esc(p.name)).join('، ')})، فمينفعش تتلغي — تقدر تعدّل بس.</p>`:''}`)}
+ openModal(`<div class="modal-head"><h2>فاتورة شراء ${esc(r.pno||'')}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="card" style="background:var(--tint2);border:0;line-height:2"><div>المورد: <b>${esc(r.person||'—')}</b>${r.phone?` — <span dir="ltr">${esc(r.phone)}</span>`:''}</div><div>التاريخ: <b>${esc(r.date)}</b></div></div><div class="table-wrap"><table class="table"><thead><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${GI.map(x=>`<tr><td>${esc(x.product)}</td><td>${x.qty}</td><td>${money(x.price!=null?x.price:(x.qty?x.total/x.qty:0))}</td><td>${money(x.total)}</td></tr>`).join('')}${SH?`<tr><td>🚚 ${SHIP}</td><td></td><td></td><td>${money(SH)}</td></tr>`:''}</tbody></table></div><div style="font-size:18px;margin-top:10px;line-height:1.9">الإجمالي: <b>${money(T)}</b><br><small>المدفوع للمورد: <b>${money(pd)}</b>${rem>0?` — المتبقي ليه: <b style="color:var(--danger)">${money(rem)}</b>`:''}</small></div>${r.note?`<p>${esc(r.note)}</p>`:''}${invActions('purchase',key,G)}${sold.length?`<p class="own" style="color:var(--muted);font-size:12px;margin:6px 0 0">في أصناف من الفاتورة دي اتباع منها (${sold.map(p=>esc(p.name)).join('، ')})، فمينفعش تتلغي — تقدر تعدّل بس.</p>`:''}`)}
 function invItems(G){let P=G.filter(x=>!x.ship);return (P.length?esc(P[0].product)+(P.length>1?` <span class="badge">+${P.length-1} صنف</span>`:''):'—')+(G.some(x=>x.ship)?' <span class="badge">🚚 نقل</span>':'')}
 function renderInvLists(){
  let sg=invFilter(groupInv(db.sales,r=>r.no||r.id),'salesQ',r=>r.no||''),pg=invFilter(groupInv(db.purchases,r=>r.gid||r.id),'purchasesQ',r=>r.pno||'');
@@ -1499,12 +1499,12 @@ const _rtQ=renderTables;renderTables=function(){_rtQ();renderQuotes()};
    الدخول بيفضل لحد آخر اليوم أو لحد ما يدوس «خروج». */
 const users=()=>db.settings.users||(db.settings.users=[]);
 const lsG=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsS=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
-function curUser(){try{let s=JSON.parse(lsG('mk_user')||'null');if(!s||s.day!==isoToday())return null;return users().find(u=>u.id===s.id)||null}catch(e){return null}}
+function curUser(){if(window.MK_T)return window.mkT_user||null;try{let s=JSON.parse(lsG('mk_user')||'null');if(!s||s.day!==isoToday())return null;return users().find(u=>u.id===s.id)||null}catch(e){return null}}
 function isEmp(){let u=curUser();return !!u&&u.role==='emp'}
 const userName=()=>(curUser()||{}).name||'';
 const EMP_OK=['dashboard','sales','purchases','quotes','weborders'];
 async function pinHash(p){let b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('mekanizm|'+p));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
-function applyRole(){let u=curUser();document.body.classList.toggle('emp',isEmp());
+function applyRole(){if(window.MK_T){if(window.mkT_applyRole)window.mkT_applyRole();return}let u=curUser();document.body.classList.toggle('emp',isEmp());
  let b=document.getElementById('whoBtn');if(b)b.textContent=u?'👤 '+u.name+' — خروج':'👤';
  let w=document.getElementById('mkWho');
  if(w){let was=w.classList.contains('show');w.classList.toggle('show',!u);
@@ -1531,11 +1531,11 @@ async function whoGo(){let u=users().find(x=>x.id===val('wUser')),p=val('wPin');
  lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+u.name)}
 async function whoSetup(){let n=val('wName'),a=val('wPin');if(n.length<2)return wErr.textContent='اكتب الاسم';if(!/^\d{4,}$/.test(a))return wErr.textContent='الرقم السري 4 أرقام على الأقل';if(a!==val('wPin2'))return wErr.textContent='الرقمين مش زي بعض';
  let u={id:crypto.randomUUID(),name:n,role:'admin',pin:await pinHash(a)};users().push(u);save();lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+n)}
-function whoOut(){if(!curUser())return applyRole();ask('خروج '+userName()+'؟\nالجهاز هيرجع لشاشة اختيار موظف أو مدير.','خروج','رجوع').then(ok=>{if(!ok)return;lsS('mk_user',null);closeModal();applyRole()})}
+function whoOut(){if(window.MK_T)return window.mkT_out();if(!curUser())return applyRole();ask('خروج '+userName()+'؟\nالجهاز هيرجع لشاشة اختيار موظف أو مدير.','خروج','رجوع').then(ok=>{if(!ok)return;lsS('mk_user',null);closeModal();applyRole()})}
 /* إدارة المستخدمين (للمدير) */
-function renderUsers(){let b=document.getElementById('usersBody');if(!b)return;
+function renderUsers(){if(window.MK_T)return window.mkT_renderUsers&&window.mkT_renderUsers();let b=document.getElementById('usersBody');if(!b)return;
  b.innerHTML=users().map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)"><div><b>${esc(u.name)}</b> <span class="badge ${u.role==='admin'?'green':''}">${u.role==='admin'?'مدير':'موظف'}</span>${curUser()&&curUser().id===u.id?' <small style="color:var(--muted)">(إنت)</small>':''}</div><div style="display:flex;gap:6px"><button class="secondary" onclick="userForm('${u.id}')">تعديل</button><button class="secondary danger" onclick="userDel('${u.id}')">حذف</button></div></div>`).join('')||'<div class="empty">مفيش مستخدمين</div>'}
-function userForm(id){let u=id?users().find(x=>x.id===id):null;
+function userForm(id){if(window.MK_T)return window.mkT_userForm(id);let u=id?users().find(x=>x.id===id):null;
  openModal(`<div class="modal-head"><h2>${u?'تعديل '+esc(u.name):'إضافة مستخدم'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <form id="uF"><div class="form"><div class="field"><label>الاسم</label><input id="uName" required value="${esc(u?u.name:'')}"></div><div class="field"><label>النوع</label><select id="uRole"><option value="emp" ${!u||u.role==='emp'?'selected':''}>موظف</option><option value="admin" ${u&&u.role==='admin'?'selected':''}>مدير</option></select></div>
  <div class="field"><label>${u?'رقم سري جديد (سيبه فاضي لو مش هتغيره)':'الرقم السري (4 أرقام على الأقل)'}</label><input id="uPin" type="password" inputmode="numeric" autocomplete="off" ${u?'':'required'}></div></div><div id="uErr" class="werr" style="color:var(--danger)"></div>
@@ -1546,7 +1546,7 @@ function userForm(id){let u=id?users().find(x=>x.id===id):null;
   if(u&&u.role==='admin'&&r!=='admin'&&users().filter(x=>x.role==='admin').length<2)return uErr.textContent='لازم يفضل مدير واحد على الأقل';
   if(u){u.name=n;u.role=r;if(p)u.pin=await pinHash(p)}else users().push({id:crypto.randomUUID(),name:n,role:r,pin:await pinHash(p)});
   save();closeModal();applyRole();toast('تم الحفظ')}}
-async function userDel(id){let u=users().find(x=>x.id===id);if(!u)return;
+async function userDel(id){if(window.MK_T)return window.mkT_userDel(id);let u=users().find(x=>x.id===id);if(!u)return;
  if(u.role==='admin'&&users().filter(x=>x.role==='admin').length<2)return toast('لازم يفضل مدير واحد على الأقل');
  if(curUser()&&curUser().id===id)return toast('مينفعش تحذف نفسك وانت داخل');
  if(!await ask('حذف '+u.name+'؟','حذف','رجوع'))return;db.settings.users=users().filter(x=>x.id!==id);save();applyRole();toast('تم الحذف')}
@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-05-8';
+const APP_VER='2026-10-06-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1601,5 +1601,414 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
  window.addEventListener('focus',check);setInterval(check,10*60000);setTimeout(check,5000)})();
 </script>
+<script>
+/* =====================================================================
+   ميكانيزم — النظام الجديد (المرحلة 1): السيستم بيقرا ويكتب من جداول Supabase الحقيقية.
+   - كل واحد بحسابه (مدير / موظف) والصلاحيات على السيرفر نفسه.
+   - الفواتير والدفعات والمرتجعات بتتسجل على السيرفر مرة واحدة كاملة.
+   - تحديث لحظي بين الأجهزة، والفواتير الجديدة بتتحفظ على الجهاز لو مفيش نت لحد ما يرجع.
+   ===================================================================== */
+(function(){
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- النظام القديم: لو المدير حوّل، الجهاز يتحول لوحده ---------- */
+if(!window.MK_T){
+  setTimeout(async()=>{try{if(!navigator.onLine||!window.mkSB)return;let r=await window.mkSB.rpc('mk_tables_on');
+   if(r.data===true){LS.set('mk_mode','T');toast('🚀 السيستم اتحوّل للنظام الجديد — جاري إعادة التحميل');setTimeout(()=>location.reload(),1500)}}catch(e){}},3000);
+  return;
+}
+
+const sb=window.mkSB||null;
+const TEST=!!window.MK_FORCE_T;
+const T={user:null,snap:null,members:[],ch:null,loading:false,ready:false};
+window.mkT=T;
+const isUuid=s=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s||''));
+const isoOf=d=>String(d||'').slice(0,10);
+const arDate=d=>{let s=isoOf(d);if(!s)return '';let [y,m,dd]=s.split('-');return new Date(+y,+m-1,+dd).toLocaleDateString('ar-EG')};
+const stamp=t=>t?new Date(t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'}):undefined;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const netErr=e=>!navigator.onLine||/Failed to fetch|NetworkError|network|Load failed|fetch/i.test(String(e&&e.message||e));
+const ERRS={need_person:'اكتب اسم العميل/المورد عشان نسجل الباقي أو الرصيد عليه',paid_gt_total:'المدفوع أكبر من إجمالي الفاتورة',admin_only:'العملية دي للمدير بس',
+ not_member:'حسابك مش متفعّل في السيستم',no_items:'أضف صنف واحد على الأقل',not_found:'مش موجود (ممكن يكون اتمسح من جهاز تاني)',bad_amount:'اكتب المبلغ صح',
+ name_taken:'في حد متسجل بنفس الاسم',bad_name:'اكتب الاسم صح',bad_pin:'الرقم السري لازم يكون 6 أرقام على الأقل',last_admin:'لازم يفضل مدير واحد على الأقل',cannot_delete_self:'مينفعش تحذف نفسك'};
+function errMsg(e){let m=String(e&&(e.message||e.error)||e||'');
+ if(/^sold_after:/.test(m))return 'مينفعش تتلغي — الأصناف دي اتباع منها بعد الشراء: '+m.split(':').slice(1).join(':');
+ if(/^sold_item_removed:/.test(m))return 'مينفعش تشيل «'+m.split(':').slice(1).join(':')+'» من فاتورة الشراء لأنه اتباع منه — غيّر الكمية بس';
+ if(/^bad_qty:/.test(m))return 'اكتب الكمية لـ '+m.split(':').slice(1).join(':');
+ if(/Invalid login credentials/i.test(m))return 'الرقم السري غلط';
+ return ERRS[m]||m||'حصل خطأ'}
+async function rpc(fn,args){let {data,error}=await sb.rpc(fn,args||{});if(error)throw error;return data}
+async function fetchAll(t,order,cols){let out=[],from=0,N=1000;
+ for(;;){let {data,error}=await sb.from(t).select(cols||'*').order(order||'id',{ascending:true}).range(from,from+N-1);if(error)throw error;out=out.concat(data||[]);if(!data||data.length<N)break;from+=N}
+ return out}
+async function fetchIn(t,col,ids){ids=[...new Set(ids.filter(Boolean))];let out=[];for(let i=0;i<ids.length;i+=200){let {data,error}=await sb.from(t).select('*').in(col,ids.slice(i,i+200));if(error)throw error;out=out.concat(data||[])}return out}
+
+/* ---------- تحويل الجداول لنفس شكل البيانات اللي السيستم بيستخدمه ---------- */
+const mapProduct=(p,cost)=>({id:p.id,code:p.code||'',name:p.name,cat:p.cat||'',unit:p.unit||'قطعة',qty:+p.qty||0,price:+p.price||0,min:+p.min||0,cost:cost!=null?+cost:0});
+const mapContact=c=>({id:c.id,name:c.name,type:c.type,phone:c.phone||'',addr:c.addr||'',note:c.note||'',balance:+c.balance||0});
+const mapPay=p=>({id:p.id,cid:p.contact_id,name:p.name,date:p.date_txt||arDate(p.date),iso:isoOf(p.date),amount:+p.amount||0,note:p.note||''});
+const mapRet=r=>({id:r.id,date:r.date_txt||arDate(r.date),iso:isoOf(r.date),cost:r.cost!=null?+r.cost:undefined,type:r.type,product:r.product_name,pid:r.product_id,person:r.person||'',qty:+r.qty||0,total:+r.total||0,note:r.note||''});
+const mapExp=x=>({id:x.id,date:x.date_txt||arDate(x.date),iso:isoOf(x.date),note:x.note||'',cat:x.cat||'عام',amount:+x.amount||0});
+const mapQuote=q=>({id:q.id,no:q.no,date:q.date_txt||arDate(q.date),iso:isoOf(q.date),person:q.person||'',phone:q.phone||'',addr:q.addr||'',note:q.note||'',ship:+q.ship||0,items:q.items||[],total:+q.total||0,status:q.status||'open',invNo:q.inv_no||undefined,by:q.created_by_name||'',edited:stamp(q.edited_at)});
+function invRows(inv,items,icost){let sale=inv.kind==='sale',left=+inv.paid||0;
+ let L=(items||[]).slice().sort((a,b)=>a.pos-b.pos).map(i=>({id:i.id,product:i.product_name,pid:i.product_id||'',qty:+i.qty,price:+i.price,total:+i.total,cost:icost&&icost[i.id]!=null?+icost[i.id]:undefined}));
+ if(+inv.ship>0)L.push({id:inv.id+'~ship',product:SHIP,ship:true,qty:1,price:+inv.ship,total:+inv.ship,cost:0});
+ L.forEach(r=>{Object.assign(r,{gid:inv.id,_c:inv.created_at,date:inv.date_txt||arDate(inv.date),iso:isoOf(inv.date),person:inv.person||'',phone:inv.phone||'',addr:inv.addr||'',note:inv.note||'',by:inv.created_by_name||'',edited:stamp(inv.edited_at),editedBy:inv.edited_by_name||undefined});
+  if(sale)r.no=inv.no;else r.pno=inv.no;let pr=Math.min(r.total,Math.max(0,left));left=r2(left-pr);r.paid=r2(pr);r.rem=r2(r.total-pr)});
+ return L}
+const byNewest=(a,b)=>String(b._c||'').localeCompare(String(a._c||''));
+function snapAll(){T.snap={products:new Map(db.products.map(p=>[p.id,clone(p)])),contacts:new Map(db.contacts.map(c=>[c.id,clone(c)])),
+ expenses:new Map(db.expenses.map(x=>[x.id,clone(x)])),quotes:new Map((db.quotes||[]).map(q=>[q.id,clone(q)])),
+ company:JSON.stringify({name:db.settings.companyName||'',phone:db.settings.phone||'',address:db.settings.address||''}),theme:JSON.stringify(db.theme||{})}}
+
+async function loadAll(){if(!sb||!T.user)return;T.loading=true;stat('⏳ جاري تحميل البيانات…');
+ try{let admin=T.user.role==='admin',J={products:fetchAll('mk_products'),contacts:fetchAll('mk_contacts'),invoices:fetchAll('mk_invoices','created_at'),items:fetchAll('mk_invoice_items'),quotes:fetchAll('mk_quotes','created_at'),settings:fetchAll('mk_settings','key')};
+  if(admin)Object.assign(J,{pcost:fetchAll('mk_product_costs','product_id'),icost:fetchAll('mk_item_costs','item_id'),payments:fetchAll('mk_payments','created_at'),returns:fetchAll('mk_returns','created_at'),expenses:fetchAll('mk_expenses','created_at'),members:fetchAll('mk_members','created_at'),voided:fetchAll('mk_voided','at')});
+  let R={};await Promise.all(Object.keys(J).map(async k=>{R[k]=await J[k]}));
+  let pc={};(R.pcost||[]).forEach(x=>pc[x.product_id]=x.cost);let ic=null;if(R.icost){ic={};R.icost.forEach(x=>ic[x.item_id]=x.cost)}
+  let itemsBy={};R.items.forEach(i=>{(itemsBy[i.invoice_id]=itemsBy[i.invoice_id]||[]).push(i)});
+  let invs=R.invoices.slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+  db.products=R.products.map(p=>mapProduct(p,pc[p.id]));
+  db.contacts=R.contacts.map(mapContact);
+  db.sales=[];db.purchases=[];invs.forEach(inv=>{let rows=invRows(inv,itemsBy[inv.id],ic);(inv.kind==='sale'?db.sales:db.purchases).push(...rows)});
+  let pays=(R.payments||[]).slice().reverse();db.payments=pays.filter(p=>p.dir==='in').map(mapPay);db.supPays=pays.filter(p=>p.dir==='out').map(mapPay);
+  db.returns=(R.returns||[]).slice().reverse().map(mapRet);db.expenses=(R.expenses||[]).slice().reverse().map(mapExp);
+  db.quotes=R.quotes.slice().reverse().map(mapQuote);
+  db.voided=(R.voided||[]).slice().reverse().map(v=>({kind:v.kind,label:v.label,at:stamp(v.at),rows:v.data}));
+  let S={};R.settings.forEach(s=>S[s.key]=s.value);let co=S.company||{};
+  db.settings=Object.assign(db.settings||{},{companyName:co.name||'MEKANIZM | ميكانيزم',phone:co.phone||'',address:co.address||''});
+  db.theme=Object.assign({},DEFT,S.theme||{});
+  T.members=R.members||T.members||[];
+  if(admin){LS.set('mk_t_staff',JSON.stringify(T.members.filter(m=>m.active&&m.email).map(m=>({name:m.name,role:m.role,email:m.email}))))}
+  snapAll();T.ready=true;cacheDb();
+  try{applyTheme()}catch(e){}renderAll();stat('☁️ متصل');
+ }catch(e){console.error(e);stat(netErr(e)?'📴 أوفلاين — شغال على نسخة الجهاز':'⚠️ '+errMsg(e))}
+ finally{T.loading=false}}
+/* نسخة على الجهاز للفتح من غير نت — بحساب كل مستخدم لوحده (عشان الموظف مايشوفش بيانات المدير) */
+let cacheT=null;
+function cacheDb(){clearTimeout(cacheT);cacheT=setTimeout(()=>{if(!T.user)return;try{localStorage.setItem('mk_t_db_'+T.user.id,JSON.stringify(db))}catch(e){console.warn('cache',e)}},400)}
+/* في النسخة التجريبية مانلمسش بيانات النظام القديم اللي على نفس الجهاز */
+function wipeOtherCaches(uid){try{Object.keys(localStorage).forEach(k=>{if(k.startsWith('mk_t_db_')&&k!=='mk_t_db_'+uid)localStorage.removeItem(k)})}catch(e){}if(!TEST)LS.set(KEY,null)}
+function emptyDb(){let th=db.theme;db={products:[],sales:[],purchases:[],contacts:[],expenses:[],returns:[],payments:[],supPays:[],quotes:[],voided:[],settings:{companyName:db.settings&&db.settings.companyName||'MEKANIZM | ميكانيزم',phone:'',address:''},theme:th}}
+function stat(t){let e=document.getElementById('mkStat');if(e)e.textContent=t}
+
+/* ---------- تحديث جزء من البيانات (بعد عملية، أو لما جهاز تاني يعدّل) ---------- */
+async function refreshInvoices(ids){ids=[...new Set(ids.filter(Boolean))];if(!ids.length)return;
+ let invs=await fetchIn('mk_invoices','id',ids),items=await fetchIn('mk_invoice_items','invoice_id',ids),ic=null;
+ if(T.user.role==='admin'){ic={};(await fetchIn('mk_item_costs','item_id',items.map(i=>i.id))).forEach(x=>ic[x.item_id]=x.cost)}
+ let set=new Set(ids);db.sales=db.sales.filter(r=>!set.has(r.gid));db.purchases=db.purchases.filter(r=>!set.has(r.gid));
+ invs.forEach(inv=>{let rows=invRows(inv,items.filter(i=>i.invoice_id===inv.id),ic);let arr=inv.kind==='sale'?db.sales:db.purchases;arr.push(...rows)});
+ db.sales.sort(byNewest);db.purchases.sort(byNewest)}
+async function refreshProducts(ids){ids=[...new Set(ids.filter(Boolean))];if(!ids.length)return;
+ let rows=await fetchIn('mk_products','id',ids),pc={};if(T.user.role==='admin')(await fetchIn('mk_product_costs','product_id',ids)).forEach(x=>pc[x.product_id]=x.cost);
+ let got=new Set(rows.map(r=>r.id));
+ rows.forEach(r=>{let old=db.products.find(p=>p.id===r.id),n=mapProduct(r,pc[r.id]!=null?pc[r.id]:old&&old.cost);if(old)Object.assign(old,n);else db.products.push(n);T.snap.products.set(r.id,clone(n))});
+ ids.forEach(id=>{if(!got.has(id)){db.products=db.products.filter(p=>p.id!==id);T.snap.products.delete(id)}})}
+async function refreshContacts(ids){ids=[...new Set(ids.filter(Boolean))];if(!ids.length)return;
+ let rows=await fetchIn('mk_contacts','id',ids),got=new Set(rows.map(r=>r.id));
+ rows.forEach(r=>{let n=mapContact(r),old=db.contacts.find(c=>c.id===r.id);if(old)Object.assign(old,n);else db.contacts.unshift(n);T.snap.contacts.set(r.id,clone(n))});
+ ids.forEach(id=>{if(!got.has(id)){db.contacts=db.contacts.filter(c=>c.id!==id);T.snap.contacts.delete(id)}})}
+async function refreshTable(t){if(T.user.role!=='admin'&&t!=='mk_quotes'&&t!=='mk_settings')return;
+ let rows=await fetchAll(t,t==='mk_settings'?'key':'created_at');
+ if(t==='mk_payments'){let p=rows.slice().reverse();db.payments=p.filter(x=>x.dir==='in').map(mapPay);db.supPays=p.filter(x=>x.dir==='out').map(mapPay)}
+ if(t==='mk_returns')db.returns=rows.slice().reverse().map(mapRet);
+ if(t==='mk_expenses'){db.expenses=rows.slice().reverse().map(mapExp);T.snap.expenses=new Map(db.expenses.map(x=>[x.id,clone(x)]))}
+ if(t==='mk_quotes'){db.quotes=rows.slice().reverse().map(mapQuote);T.snap.quotes=new Map(db.quotes.map(q=>[q.id,clone(q)]))}
+ if(t==='mk_voided')db.voided=rows.slice().reverse().map(v=>({kind:v.kind,label:v.label,at:stamp(v.at),rows:v.data}));
+ if(t==='mk_settings'){let S={};rows.forEach(s=>S[s.key]=s.value);let co=S.company||{};Object.assign(db.settings,{companyName:co.name||db.settings.companyName,phone:co.phone||'',address:co.address||''});db.theme=Object.assign({},DEFT,S.theme||{});
+  T.snap.company=JSON.stringify({name:db.settings.companyName||'',phone:db.settings.phone||'',address:db.settings.address||''});T.snap.theme=JSON.stringify(db.theme);try{applyTheme()}catch(e){}}
+ if(t==='mk_members'){T.members=rows;LS.set('mk_t_staff',JSON.stringify(rows.filter(m=>m.active&&m.email).map(m=>({name:m.name,role:m.role,email:m.email}))))}}
+function done(){cacheDb();renderAll()}
+
+/* ---------- الحفظ: التعديلات البسيطة (منتجات، عملاء، مصروفات، عروض أسعار، إعدادات) بتترفع لوحدها ---------- */
+let syncT=null,syncing=false,again=false;
+function scheduleSync(){clearTimeout(syncT);syncT=setTimeout(diffSync,500)}
+async function upsert(t,rows,conflict){for(let i=0;i<rows.length;i+=400){let {error}=await sb.from(t).upsert(rows.slice(i,i+400),{onConflict:conflict||'id'});if(error)throw error}}
+async function delIn(t,col,ids){for(let i=0;i<ids.length;i+=200){let {error}=await sb.from(t).delete().in(col,ids.slice(i,i+200));if(error)throw error}}
+async function diffSync(){if(!T.ready||!T.user||!sb)return;if(syncing){again=true;return}if(!navigator.onLine){stat('📴 أوفلاين — هيتحفظ لما النت يرجع');return}
+ syncing=true;let admin=T.user.role==='admin';
+ try{let S=T.snap,n=0;
+  if(admin){
+   // المنتجات
+   let up=[],cost=[],seen=new Set();
+   db.products.forEach(p=>{if(!isUuid(p.id))p.id=crypto.randomUUID();seen.add(p.id);let o=S.products.get(p.id),row={id:p.id,code:String(p.code||''),name:String(p.name||'').trim()||'بدون اسم',cat:p.cat||'',unit:p.unit||'قطعة',qty:+p.qty||0,price:+p.price||0,min:+p.min||0};
+    if(!o||['code','name','cat','unit','qty','price','min'].some(k=>String(o[k]??'')!==String(row[k]??'')))up.push(row);
+    if(!o||(+o.cost||0)!==(+p.cost||0))cost.push({product_id:p.id,cost:+p.cost||0})});
+   let del=[...S.products.keys()].filter(id=>!seen.has(id));
+   if(up.length)await upsert('mk_products',up);if(cost.length)await upsert('mk_product_costs',cost,'product_id');if(del.length)await delIn('mk_products','id',del);
+   n+=up.length+cost.length+del.length;
+   // العملاء والموردين (الرصيد بيتحسب على السيرفر — بيترفع بس لما العميل يتضاف جديد)
+   let cu=[],cs=new Set();
+   db.contacts.forEach(c=>{if(!isUuid(c.id))c.id=crypto.randomUUID();cs.add(c.id);let o=S.contacts.get(c.id),row={id:c.id,name:String(c.name||'').trim()||'بدون اسم',type:c.type==='مورد'?'مورد':'عميل',phone:c.phone||'',addr:c.addr||'',note:c.note||''};
+    if(!o)cu.push(Object.assign(row,{balance:+c.balance||0}));else if(['name','type','phone','addr','note'].some(k=>String(o[k]??'')!==String(row[k]??'')))cu.push(row)});
+   let cd=[...S.contacts.keys()].filter(id=>!cs.has(id));
+   for(let r of cu){let {error}=r.balance!==undefined?await sb.from('mk_contacts').insert(r):await sb.from('mk_contacts').update(r).eq('id',r.id);if(error)throw error}
+   if(cd.length)await delIn('mk_contacts','id',cd);n+=cu.length+cd.length;
+   // المصروفات
+   let eu=db.expenses.filter(x=>{if(!isUuid(x.id))x.id=crypto.randomUUID();return !S.expenses.has(x.id)}).map(x=>({id:x.id,note:x.note||'',cat:x.cat||'عام',amount:+x.amount||0,date:x.iso||isoToday(),date_txt:x.date||'',created_by_name:userName()}));
+   let ed=[...S.expenses.keys()].filter(id=>!db.expenses.some(x=>x.id===id));
+   if(eu.length)await upsert('mk_expenses',eu);if(ed.length)await delIn('mk_expenses','id',ed);n+=eu.length+ed.length;
+   // الإعدادات والمظهر
+   let co=JSON.stringify({name:db.settings.companyName||'',phone:db.settings.phone||'',address:db.settings.address||''}),th=JSON.stringify(db.theme||{});
+   if(co!==S.company){await upsert('mk_settings',[{key:'company',value:JSON.parse(co)}],'key');n++}
+   if(th!==S.theme){await upsert('mk_settings',[{key:'theme',value:JSON.parse(th)}],'key');n++}
+  }
+  // عروض الأسعار (الموظف كمان)
+  let qu=(db.quotes||[]).filter(q=>{if(!isUuid(q.id))q.id=crypto.randomUUID();let o=S.quotes.get(q.id);return !o||JSON.stringify(o)!==JSON.stringify(q)})
+   .map(q=>({id:q.id,no:q.no,date:q.iso||isoToday(),date_txt:q.date||'',person:q.person||'',phone:q.phone||'',addr:q.addr||'',note:q.note||'',ship:+q.ship||0,items:q.items||[],total:+q.total||0,status:q.status||'open',inv_no:q.invNo||null,created_by_name:q.by||'',edited_at:q.edited?new Date().toISOString():null}));
+  let qd=admin?[...S.quotes.keys()].filter(id=>!(db.quotes||[]).some(q=>q.id===id)):[];
+  if(qu.length)await upsert('mk_quotes',qu);if(qd.length)await delIn('mk_quotes','id',qd);n+=qu.length+qd.length;
+  snapAll();cacheDb();if(n)stat('☁️ تم الحفظ');
+ }catch(e){console.error('sync',e);stat(netErr(e)?'📴 أوفلاين — هيتحفظ لما النت يرجع':'⚠️ ماتحفظش: '+errMsg(e));if(!netErr(e))toast('ماتحفظش: '+errMsg(e))}
+ finally{syncing=false;if(again){again=false;scheduleSync()}}}
+
+/* save الأصلية كانت بتكتب الملف كله — هنا بنرفع اللي اتغير بس */
+save=function(){cacheDb();scheduleSync();renderAll()};
+saveTheme=function(){cacheDb();scheduleSync()};
+window.cloudPush=scheduleSync;window.cloudFlush=async()=>{clearTimeout(syncT);await diffSync()};
+
+/* ---------- الفواتير على السيرفر ---------- */
+const OB='mk_t_outbox';
+const outbox=()=>{try{return JSON.parse(LS.get(OB)||'[]')}catch(e){return []}};
+function obPush(x){let o=outbox();o.push(x);LS.set(OB,JSON.stringify(o));stat('📴 '+o.length+' عملية مستنية النت')}
+async function obFlush(){let o=outbox();if(!o.length||!navigator.onLine||!T.user||!sb)return;let left=[],fails=[];
+ for(let x of o){try{await rpc(x.fn,x.args)}catch(e){if(netErr(e)){left.push(x)}else fails.push((x.label||'')+': '+errMsg(e))}}
+ LS.set(OB,left.length?JSON.stringify(left):null);
+ if(fails.length)alert('العمليات دي ماتسجلتش على السيرفر:\n'+fails.join('\n'));
+ if(o.length!==left.length){toast('✔ اترفع '+(o.length-left.length)+' عملية كانت متسجلة من غير نت');await loadAll()}}
+const linesPayload=L=>L.map(x=>({product_id:x.p?x.p.id:null,name:x.name,qty:x.q,price:x.pr}));
+function busy(f,t){let b=f&&f.querySelector('.modal-foot .primary');if(b){b.disabled=!!t;if(t){b.dataset.t=b.textContent;b.textContent=t}else if(b.dataset.t)b.textContent=b.dataset.t}}
+async function afterInvoice(id,extraProducts,extraContacts){await refreshInvoices([id]);
+ let rows=db.sales.concat(db.purchases).filter(r=>r.gid===id),pids=rows.map(r=>r.pid).concat(extraProducts||[]);
+ let inv=(await fetchIn('mk_invoices','id',[id]))[0];
+ await Promise.all([refreshProducts(pids),refreshContacts([inv&&inv.contact_id].concat(extraContacts||[])),T.user.role==='admin'?refreshTable('mk_payments'):null]);
+ if(rows.some(r=>!r.ship&&!r.pid))await loadAll();done();return rows}
+
+const _localSubmit=submitTransaction;
+submitTransaction=async function(ev,type){ev.preventDefault();let f=ev.target,isSale=type==='sale',woId=f.dataset.wo||'',qtId=f.dataset.qt||'',L=readLines();if(!L)return;
+ if(!L.length)return toast('أضف صنف واحد على الأقل');
+ if(isSale){let s=shortList(L);if(s.length&&!warnOk(s))return}
+ let ship=shipVal(),tot=r2(sumBy(L,x=>x.q*x.pr)+ship),person=txPerson.value.trim(),pv=val('txPaid'),pd=pv===''?tot:+pv;
+ if(pd>tot+0.001)return toast('المدفوع أكبر من إجمالي الفاتورة');
+ if(tot-pd>0.001&&!person)return toast(isSale?'اكتب اسم العميل عشان نسجل الباقي عليه':'اكتب اسم المورد عشان نسجل الباقي ليه');
+ let p={kind:type,person,phone:val('txPhone'),addr:val('txAddr'),note:txNote.value,ship,paid:pd,source:woId?'web':qtId?'quote':'',web_order_id:woId||null,quote_id:qtId||null,items:linesPayload(L)};
+ busy(f,'جاري الحفظ…');
+ try{let r=await rpc('mk_save_invoice',{p});if(qtId)await refreshTable('mk_quotes');let rows=await afterInvoice(r.id);
+  toast(isSale?'تم تسجيل البيع '+r.no:'تم تسجيل الشراء '+r.no);
+  if(rows[0])isSale?openInvoiceModal(rows[0].id):openPurchaseView(rows[0].id);else closeModal();
+  if(woId&&isSale)woSet(woId,'done',r.no)}
+ catch(e){busy(f,null);
+  if(netErr(e)){obPush({fn:'mk_save_invoice',args:{p},label:(isSale?'فاتورة بيع ':'فاتورة شراء ')+(person||'')});
+   T.local=true;try{_localSubmit.call(null,{preventDefault(){},target:f},type)}finally{T.local=false}
+   snapAll();toast('📴 مفيش نت — الفاتورة اتحفظت على الجهاز وهتترفع لوحدها لما النت يرجع (رقمها النهائي هيتحدد ساعتها)')}
+  else toast(errMsg(e))}};
+
+submitInvEdit=async function(ev,kind,key){ev.preventDefault();let f=ev.target,isSale=kind==='sale',G=invGroup(kind,key);if(!G.length){closeModal();return toast('الفاتورة مش موجودة')}
+ let L=readLines();if(!L)return;if(!L.length)return toast('الفاتورة لازم يبقى فيها صنف واحد على الأقل. لو عايز تلغيها استخدم زرار «إلغاء الفاتورة»');
+ if(isSale){let back=new Map();G.forEach(r=>{let p=findP(r);if(p)back.set(p.id,(back.get(p.id)||0)+(+r.qty||0))});let s=shortList(L,back);if(s.length&&!warnOk(s))return}
+ let id=G[0].gid,oldP=G.map(r=>r.pid),oldC=(findContact(G[0].person,ctypeOf(kind))||{}).id;
+ let p={id,kind,person:txPerson.value.trim(),phone:val('txPhone'),addr:val('txAddr'),note:txNote.value,ship:shipVal(),extra:+val('txExtra')||0,items:linesPayload(L)};
+ busy(f,'جاري الحفظ…');
+ try{let r=await rpc('mk_save_invoice',{p});let rows=await afterInvoice(r.id,oldP,[oldC]);ED=null;toast('تم تعديل الفاتورة');
+  if(rows[0])isSale?openInvoiceModal(rows[0].id):openPurchaseView(rows[0].id)}
+ catch(e){busy(f,null);toast(netErr(e)?'محتاج نت عشان تعدّل الفاتورة':errMsg(e))}};
+
+cancelInv=async function(kind,key){let isSale=kind==='sale',G=invGroup(kind,key);if(!G.length)return;
+ let r=G[0],label=isSale?invNo(r):(r.pno||''),nm=(r.person||'').trim(),P=r2(sumBy(G,paidOf)),rem=r2(sumBy(G,x=>x.rem||0));
+ let msg=`إلغاء الفاتورة ${label} نهائياً؟\n`+(isSale?'الأصناف هترجع للمخزون.':'الأصناف هتتخصم من المخزون.')
+  +(P>0?(nm?(isSale?`\nالمدفوع (${money(P)}) هيتسجل رصيد لـ ${nm}.`:`\nالمدفوع للمورد (${money(P)}) هيتسجل رصيد ليك عند ${nm}.`):`\nالمدفوع (${money(P)}) هيتشال من الخزنة.`):'')+(rem>0?`\nوالمتبقي (${money(rem)}) هيتشال من الحساب.`:'');
+ if(!await ask(msg,'إلغاء الفاتورة','رجوع'))return isSale?openInvoiceModal(r.id):openPurchaseView(r.id);
+ let pids=G.map(x=>x.pid),cid=(findContact(nm,ctypeOf(kind))||{}).id;
+ try{await rpc('mk_void_invoice',{p_id:r.gid});db.sales=db.sales.filter(x=>x.gid!==r.gid);db.purchases=db.purchases.filter(x=>x.gid!==r.gid);
+  await Promise.all([refreshProducts(pids),refreshContacts([cid]),refreshTable('mk_payments'),refreshTable('mk_voided')]);closeModal();done();toast('تم إلغاء الفاتورة '+label)}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تلغي الفاتورة':errMsg(e));if(!netErr(e)&&/sold_after/.test(String(e.message)))openPurchaseView(r.id)}};
+
+/* الدفعات والمرتجعات */
+submitPayment=async function(ev,id){ev.preventDefault();let a=+payAmt.value;if(!(a>0))return toast('اكتب المبلغ');
+ try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:payNote.value});await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل الدفعة');openContactFile(id)}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تسجل الدفعة':errMsg(e))}};
+submitSupPay=async function(ev,id){ev.preventDefault();let a=+spAmt.value;if(!(a>0))return toast('اكتب المبلغ');
+ try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:spNote.value.trim()});await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل السداد');openContactFile(id)}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تسجل السداد':errMsg(e))}};
+submitReturn=async function(ev){ev.preventDefault();let type=rtType.value,p=db.products.find(x=>x.id===rtProduct.value),q=+rtQty.value,price=+rtPrice.value;
+ if(!p)return toast('اختر منتجاً');if(!(q>0))return toast('اكتب الكمية');
+ try{await rpc('mk_save_return',{p:{type,product_id:p.id,qty:q,price,person:rtPerson.value,note:rtNote.value}});await Promise.all([refreshProducts([p.id]),refreshTable('mk_returns')]);closeModal();done();toast('تم تسجيل المرتجع')}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تسجل المرتجع':errMsg(e))}};
+
+/* تغيير اسم عميل بينزل على كل فواتيره */
+const _sce=saveContactEdit;
+saveContactEdit=async function(ev,id){let c=db.contacts.find(x=>x.id===id);if(!c)return ev.preventDefault();let nm=ecName.value.trim(),ty=ecType.value;
+ if(nm===String(c.name).trim()&&ty===c.type)return _sce(ev,id);
+ ev.preventDefault();if(!nm)return toast('اكتب الاسم');
+ try{await rpc('mk_rename_contact',{p_id:id,p_name:nm,p_type:ty});Object.assign(c,{phone:ecPhone.value.trim(),addr:ecAddr.value.trim(),note:ecNote.value.trim()});
+  await loadAll();scheduleSync();toast('تم حفظ البيانات');openContactFile(id)}
+ catch(e){toast(netErr(e)?'محتاج نت':errMsg(e))}};
+
+/* عروض الأسعار: الرقم من السيرفر */
+const _sq=submitQuote;
+submitQuote=async function(ev,id){if(!id&&navigator.onLine){ev.preventDefault();try{let no=await rpc('mk_next_no',{p_kind:'quote'});db.settings.qNo=(+String(no).replace(/\D/g,''))-1}catch(e){}return _sq({preventDefault(){}},id)}return _sq(ev,id)};
+
+/* استيراد يومية الإكسيل: كل فاتورة بتتسجل على السيرفر */
+window.impGo=async function(){let I=window.__imp&&window.__imp.state&&window.__imp.state();if(!I)return toast('افتح الملف تاني');
+ let R=I.rows,ok=R.filter(r=>r.pid);if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
+ let G=window.__imp.groupRows(R,I.mode).map(g=>({...g,idx:g.idx.filter(i=>R[i].pid)})).filter(g=>g.idx.length);
+ if(G.some(g=>!VN(g.cust)&&g.idx.some(i=>R[i].pay==='credit')))return toast('فيه فاتورة آجل من غير اسم عميل — اكتب الاسم');
+ let iso=I.iso||isoToday();if(!confirm('هيتسجل '+G.length+' فاتورة بتاريخ '+iso+' على السيرفر. متأكد؟'))return;
+ let n=0,errs=[];stat('⏳ جاري الاستيراد…');
+ for(let g of G){let nm=(g.cust||'').trim(),items=g.idx.map(i=>({product_id:R[i].pid,name:(db.products.find(p=>p.id===R[i].pid)||{}).name||R[i].prod,qty:R[i].qty,price:R[i].price})),
+   paid=r2(sumBy(g.idx.filter(i=>R[i].pay!=='credit'),i=>R[i].qty*R[i].price)),note=g.idx.map(i=>R[i].note).filter(Boolean).join(' - ');
+  try{await rpc('mk_save_invoice',{p:{kind:'sale',person:nm||'يومية',no_contact:!nm,date:iso,paid,note,source:'import',items}});n++}catch(e){errs.push((nm||'يومية')+': '+errMsg(e))}}
+ closeModal();await loadAll();toast('تم استيراد '+n+' فاتورة');if(errs.length)alert('فواتير ماتسجلتش:\n'+errs.join('\n'))};
+
+/* عمليات المسح الشامل: مقفولة في النظام الجديد (البيانات على السيرفر) */
+['clearOps','clearTrial','resetData','restore'].forEach(k=>{window[k]=function(e){if(e&&e.target)e.target.value='';alert('العملية دي مقفولة في النظام الجديد عشان بياناتك على السيرفر. لو محتاجها كلمني.')}});
+
+/* طلبات الموقع: في النسخة التجريبية مانلمسش الطلبات الحقيقية */
+if(TEST){woSet=async function(){toast('🧪 نسخة تجريبية — حالة طلب الموقع مااتغيرتش')};woCancel=async function(){toast('🧪 نسخة تجريبية — مينفعش ترفض طلبات حقيقية من هنا')}}
+
+/* ---------- تحديث لحظي من الأجهزة التانية ---------- */
+let rtQ={inv:new Set(),prod:new Set(),cont:new Set(),tbl:new Set(),full:false},rtT=null;
+function rtAdd(k,v){if(v===true)rtQ.full=true;else if(k==='tbl')rtQ.tbl.add(v);else if(v)rtQ[k].add(v);clearTimeout(rtT);rtT=setTimeout(rtRun,900)}
+async function rtRun(){let q=rtQ;rtQ={inv:new Set(),prod:new Set(),cont:new Set(),tbl:new Set(),full:false};if(!T.ready)return;
+ try{if(q.full||q.inv.size>40||q.prod.size>200)return await loadAll();
+  if(q.inv.size)await refreshInvoices([...q.inv]);if(q.prod.size)await refreshProducts([...q.prod]);if(q.cont.size)await refreshContacts([...q.cont]);
+  for(let t of q.tbl)await refreshTable(t);done()}catch(e){console.warn('rt',e)}}
+function subscribe(){if(!sb||!sb.channel)return;try{if(T.ch)sb.removeChannel(T.ch)}catch(e){}
+ let ch=sb.channel('mk-live-'+Date.now()),on=(table,fn)=>ch.on('postgres_changes',{event:'*',schema:'public',table},fn);
+ on('mk_invoices',p=>{let id=(p.new&&p.new.id)||(p.old&&p.old.id);if(p.eventType==='DELETE'){db.sales=db.sales.filter(r=>r.gid!==id);db.purchases=db.purchases.filter(r=>r.gid!==id);rtAdd('tbl','mk_voided')}else rtAdd('inv',id)});
+ on('mk_products',p=>rtAdd('prod',(p.new&&p.new.id)||(p.old&&p.old.id)));
+ on('mk_contacts',p=>rtAdd('cont',(p.new&&p.new.id)||(p.old&&p.old.id)));
+ ['mk_payments','mk_returns','mk_expenses','mk_quotes','mk_settings'].forEach(t=>on(t,()=>rtAdd('tbl',t)));
+ on('web_orders',()=>{try{loadOrders(true)}catch(e){}});
+ ch.subscribe();T.ch=ch}
+
+/* ---------- الدخول: موظف أو مدير، كل واحد بحسابه ---------- */
+const staff=()=>{try{return JSON.parse(LS.get('mk_t_staff')||'[]')}catch(e){return []}};
+function who(){return document.getElementById('mkWho')}
+function showWho(html){let w=who();if(!w)return;w.innerHTML=html;w.classList.add('show')}
+function chooser(){let s=staff();
+ if(!s.length)return emailForm('أول مرة على الجهاز ده: ادخل بالإيميل وكلمة السر بتوعك (المدير).');
+ showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${TEST?'🧪 نسخة تجريبية — ':''}اختار طريقة الدخول</p><button type="button" onclick="mkT_role('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="mkT_role('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button>
+ <p style="margin:14px 0 0;text-align:center"><a href="#" onclick="mkT_email();return false" style="color:#718087;font-size:13px">الدخول بالإيميل</a></p></div>`)}
+window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.length)return toast(role==='emp'?'مفيش موظفين متسجلين — المدير يضيفهم من الإعدادات':'مفيش مدير متسجل على الجهاز ده — ادخل بالإيميل');
+ showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
+ <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
+ <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off"><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
+ let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
+function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
+ <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<div id="wErr" class="werr"></div></div>`);
+ let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
+window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();
+async function signIn(email,pass){let e=document.getElementById('wErr');if(!email||!pass){if(e)e.textContent='اكتب البيانات';return}
+ if(!sb){if(e)e.textContent='مفيش نت — لازم نت عشان تدخل أول مرة';return}
+ if(e)e.textContent='جاري الدخول…';let b=document.getElementById('wGo');if(b)b.disabled=true;
+ try{let r=await sb.auth.signInWithPassword({email,password:pass});if(r.error)throw r.error;await enter(r.data.user)}
+ catch(x){if(e)e.textContent=netErr(x)?'مفيش نت — لازم نت عشان تدخل':errMsg(x);if(b)b.disabled=false}}
+async function enter(u){
+ let {data:m,error}=await sb.from('mk_members').select('*').eq('user_id',u.id).maybeSingle();if(error)throw error;
+ if(!m||!m.active){
+  // صاحب البيانات القديمة ولسه مانقلش؟
+  let {data:own}=await sb.from('app_state').select('owner').eq('owner',u.id).maybeSingle();
+  if(own&&!m)return migrateScreen();
+  await sb.auth.signOut({scope:'local'});throw new Error(m?'الحساب ده موقوف':'حسابك مش متسجل في السيستم — المدير يضيفك');
+ }
+ if(m.role==='admin'&&!m.email&&u.email){await sb.from('mk_members').update({email:u.email}).eq('user_id',u.id);m.email=u.email}
+ T.user={id:u.id,name:m.name,role:m.role,email:m.email||u.email};window.mkT_user=T.user;
+ LS.set('mk_t_user',JSON.stringify(Object.assign({day:isoToday()},T.user)));wipeOtherCaches(u.id);
+ let s=staff();if(!s.some(x=>x.email===T.user.email)){s.push({name:m.name,role:m.role,email:T.user.email});LS.set('mk_t_staff',JSON.stringify(s))}
+ emptyDb();mkT_applyRole();showPage('dashboard');await loadAll();subscribe();await obFlush();try{loadOrders(true)}catch(e){}toast('أهلاً '+m.name)}
+function migrateScreen(){showWho(`<div class="mkbox"><h2>🚀 النظام الجديد</h2><p>بياناتك لسه على النظام القديم. الخطوة دي بتنقل نسخة منها للجداول الجديدة — النظام القديم وبياناته مش هيتلمسوا.</p>
+ <button type="button" id="wMig">نقل البيانات</button><div id="wErr" class="werr"></div></div>`);
+ wMig.onclick=async()=>{wMig.disabled=true;wErr.textContent='⏳ جاري النقل… (ممكن ياخد دقيقة)';
+  try{let r=await rpc('mk_migrate',{p_force:true});wErr.style.color='#159447';wErr.textContent='✔ اتنقل: '+r.products+' منتج، '+r.invoices+' فاتورة، '+r.contacts+' عميل/مورد';
+   let u=(await sb.auth.getUser()).data.user;setTimeout(()=>enter(u).catch(x=>{wErr.style.color='';wErr.textContent=errMsg(x)}),1200)}
+  catch(x){wMig.disabled=false;wErr.textContent=errMsg(x)}}}
+
+window.mkT_applyRole=function(){let u=T.user;document.body.classList.toggle('emp',!!u&&u.role==='emp');
+ let b=document.getElementById('whoBtn');if(b)b.textContent=u?'👤 '+u.name+' — خروج':'👤';
+ let w=who();if(w){if(u)w.classList.remove('show');else if(!w.classList.contains('show'))chooser()}
+ mkT_renderUsers()};
+window.mkT_out=async function(){if(!await ask('خروج '+(T.user?T.user.name:'')+'؟\nالجهاز هيرجع لشاشة اختيار موظف أو مدير.','خروج','رجوع'))return;
+ let uid=T.user&&T.user.id;
+ try{await window.cloudFlush()}catch(e){}
+ if(outbox().length&&!confirm('في '+outbox().length+' عملية لسه ماترفعتش (مفيش نت). لو خرجت هتفضل محفوظة وهترفع لما حد يدخل والنت موجود. تكمل؟'))return;
+ try{if(T.ch)sb.removeChannel(T.ch)}catch(e){}T.ch=null;
+ clearTimeout(cacheT);T.user=null;window.mkT_user=null;
+ if(uid)LS.set('mk_t_db_'+uid,null);
+ try{await sb.auth.signOut({scope:'local'})}catch(e){}
+ if(uid)LS.set('mk_t_db_'+uid,null);T.user=null;window.mkT_user=null;T.ready=false;LS.set('mk_t_user',null);emptyDb();closeModal();renderAll();mkT_applyRole()};
+
+/* ---------- المستخدمين (للمدير): حسابات حقيقية عن طريق Edge Function ---------- */
+window.mkT_renderUsers=function(){let b=document.getElementById('usersBody');if(!b)return;
+ let L=T.members||[];
+ b.innerHTML=(L.length?L.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)"><div><b>${esc(u.name)}</b> <span class="badge ${u.role==='admin'?'green':''}">${u.role==='admin'?'مدير':'موظف'}</span>${u.active?'':' <span class="badge red">موقوف</span>'}${T.user&&T.user.id===u.user_id?' <small style="color:var(--muted)">(إنت)</small>':''}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">${T.user&&T.user.id===u.user_id?`<button class="secondary" onclick="mkT_myPin()">رقمي السري</button>`:`<button class="secondary" onclick="mkT_userForm('${u.user_id}')">تعديل</button><button class="secondary" onclick="mkT_toggle('${u.user_id}')">${u.active?'إيقاف':'تفعيل'}</button><button class="secondary danger" onclick="mkT_userDel('${u.user_id}')">حذف</button>`}</div></div>`).join(''):'<div class="empty">مفيش مستخدمين</div>')
+ +'<p style="color:var(--muted);font-size:12px;margin:8px 0 0">الرقم السري 6 أرقام على الأقل. إيقاف الموظف بيقفل حسابه فوراً من غير ما تمسحه.</p>'};
+async function fn(body){let {data,error}=await sb.functions.invoke('mk-users',{body});
+ if(error){let m=error.message||'';try{let j=await error.context.json();m=j.error||m}catch(e){}
+  if(/not found|404|Failed to send/i.test(m))throw new Error('خطوة Supabase لسه ماتعملتش (Edge Function اسمها mk-users)');throw new Error(m)}
+ if(data&&data.error)throw new Error(data.error);return data}
+window.mkT_userForm=function(id){let u=id?T.members.find(x=>x.user_id===id):null;
+ openModal(`<div class="modal-head"><h2>${u?'تعديل '+esc(u.name):'إضافة موظف أو مدير'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <form id="uF"><div class="form"><div class="field"><label>الاسم</label><input id="uName" required value="${esc(u?u.name:'')}"></div><div class="field"><label>النوع</label><select id="uRole"><option value="emp" ${!u||u.role==='emp'?'selected':''}>موظف</option><option value="admin" ${u&&u.role==='admin'?'selected':''}>مدير</option></select></div>
+ <div class="field full"><label>${u?'رقم سري جديد (سيبه فاضي لو مش هتغيره)':'الرقم السري (6 أرقام على الأقل)'}</label><input id="uPin" type="password" inputmode="numeric" autocomplete="new-password" ${u?'':'required'}></div></div><div id="uErr" class="werr" style="color:var(--danger)"></div>
+ <div class="modal-foot"><button class="primary">حفظ</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`);
+ uF.onsubmit=async ev=>{ev.preventDefault();let n=val('uName'),r=val('uRole'),p=val('uPin');if(n.length<2)return uErr.textContent='اكتب الاسم';if(p&&!/^\d{6,12}$/.test(p))return uErr.textContent='الرقم السري 6 أرقام على الأقل';
+  busy(uF,'جاري الحفظ…');
+  try{if(!u)await fn({action:'create',name:n,role:r,pin:p});
+   else{let {error}=await sb.from('mk_members').update({name:n,role:r}).eq('user_id',id);if(error)throw error;if(p)await fn({action:'set_pin',user_id:id,pin:p})}
+   await refreshTable('mk_members');closeModal();mkT_renderUsers();toast('تم الحفظ')}
+  catch(x){busy(uF,null);uErr.textContent=errMsg(x)}}};
+window.mkT_toggle=async function(id){let u=T.members.find(x=>x.user_id===id);if(!u)return;
+ if(u.active&&u.role==='admin'&&T.members.filter(x=>x.role==='admin'&&x.active).length<2)return toast('لازم يفضل مدير واحد على الأقل');
+ let {error}=await sb.from('mk_members').update({active:!u.active}).eq('user_id',id);if(error)return toast(errMsg(error));await refreshTable('mk_members');mkT_renderUsers();toast(u.active?'تم إيقاف '+u.name:'تم تفعيل '+u.name)};
+window.mkT_userDel=async function(id){let u=T.members.find(x=>x.user_id===id);if(!u)return;if(!await ask('حذف '+u.name+' نهائياً؟\n(لو عايز توقفه مؤقتاً استخدم «إيقاف»)','حذف','رجوع'))return showPage('settings');
+ try{await fn({action:'delete',user_id:id});await refreshTable('mk_members');mkT_renderUsers();toast('تم الحذف')}catch(x){toast(errMsg(x))}showPage('settings')};
+window.mkT_myPin=function(){openModal(`<div class="modal-head"><h2>تغيير رقمي السري</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <form id="mpF"><div class="form"><div class="field full"><label>الرقم السري الجديد (6 أرقام على الأقل)</label><input id="mp1" type="password" inputmode="numeric" autocomplete="new-password" required></div><div class="field full"><label>اكتبه تاني</label><input id="mp2" type="password" inputmode="numeric" autocomplete="new-password" required></div></div><div id="mpErr" class="werr" style="color:var(--danger)"></div>
+ <div class="modal-foot"><button class="primary">حفظ</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`);
+ mpF.onsubmit=async ev=>{ev.preventDefault();let a=val('mp1');if(!/^\d{6,12}$/.test(a))return mpErr.textContent='6 أرقام على الأقل';if(a!==val('mp2'))return mpErr.textContent='الرقمين مش زي بعض';
+  let {error}=await sb.auth.updateUser({password:a});if(error)return mpErr.textContent=errMsg(error);closeModal();toast('تم تغيير الرقم السري — من النهارده ادخل بيه')}};
+
+/* ---------- التحويل النهائي (من النسخة التجريبية) ---------- */
+function switchCard(){let sg=document.querySelector('#settings .grid2');if(!sg||document.getElementById('swCard'))return;
+ sg.insertAdjacentHTML('beforeend',`<div class="card own" id="swCard"><h3>🚀 النظام الجديد</h3><p style="color:var(--muted);line-height:1.9;margin-top:0">${TEST?'دي نسخة تجريبية على نسخة من بياناتك. النظام القديم لسه شغال عادي.<br>':''}«تحديث النسخة التجريبية» بينقل آخر بيانات من النظام القديم (وبيمسح أي حاجة اتعملت هنا للتجربة).<br>«التحويل النهائي» بينقل آخر بيانات ويحوّل كل الأجهزة والموقع للنظام الجديد.</p>
+ <div class="btnrow"><button class="secondary" onclick="mkT_remigrate(false)">🔄 تحديث النسخة التجريبية</button><button class="primary" onclick="mkT_remigrate(true)">🚀 التحويل النهائي</button></div><div id="swMsg" style="font-size:13px;margin-top:8px;color:var(--muted)"></div></div>`)}
+window.mkT_remigrate=async function(final){if(!T.user||T.user.role!=='admin')return;
+ if(!await ask(final?'التحويل النهائي:\n1) هينقل آخر بيانات من النظام القديم (أي حاجة اتعملت في النسخة التجريبية هتتمسح).\n2) كل الأجهزة والموقع هيشتغلوا على النظام الجديد.\nاتأكد إن محدش بيسجل فواتير على النظام القديم دلوقتي. تكمل؟':'هتتنقل آخر بيانات من النظام القديم، وأي حاجة اتعملت هنا للتجربة هتتمسح. تكمل؟',final?'حوّل':'نقل','رجوع'))return showPage('settings');
+ showPage('settings');let m=document.getElementById('swMsg');if(m)m.textContent='⏳ جاري النقل…';
+ try{let r=await rpc('mk_migrate',{p_force:true});if(final)await rpc('mk_switch',{p_on:true});
+  if(m)m.innerHTML=`✔ اتنقل: ${r.products} منتج، ${r.invoices} فاتورة، ${r.items} صنف في الفواتير، ${r.contacts} عميل/مورد، ${r.payments} دفعة${final?'<br><b>🚀 تم التحويل — افتح السيستم العادي (index) من كل الأجهزة</b>':''}`;
+  await loadAll();if(final){LS.set('mk_mode','T')}}
+ catch(e){if(m)m.textContent='⚠️ '+errMsg(e)}};
+
+/* ---------- التشغيل ---------- */
+(function boot(){
+ document.head.insertAdjacentHTML('beforeend','<style>#mkLogin,#mkConf{display:none!important}</style>');
+ if(TEST)document.body.insertAdjacentHTML('afterbegin','<div style="background:#fff4e5;color:#8a4b00;text-align:center;font:700 13px Cairo,Tahoma,sans-serif;padding:6px;border-bottom:1px solid #f0b46a">🧪 نسخة تجريبية للنظام الجديد — طلبات الموقع مقفولة هنا، والنظام القديم شغال عادي</div>');
+ switchCard();
+ let cu=null;try{cu=JSON.parse(LS.get('mk_t_user')||'null')}catch(e){}
+ // نسخة الجهاز (للفتح السريع ومن غير نت)
+ if(cu){try{let c=JSON.parse(localStorage.getItem('mk_t_db_'+cu.id)||'null');if(c)db=c}catch(e){}}
+ else emptyDb();
+ // اليوم خلص؟ لازم يدخل تاني
+ if(cu&&cu.day!==isoToday()&&navigator.onLine&&sb){LS.set('mk_t_user',null);sb.auth.signOut({scope:'local'}).catch(()=>{});cu=null;emptyDb()}
+ /* نسخة الجهاز هي نقطة المقارنة: أي تعديل من غير نت بيترفع لما النت يرجع */
+ if(cu){T.user={id:cu.id,name:cu.name,role:cu.role,email:cu.email};window.mkT_user=T.user;snapAll();T.ready=db.products.length>0}
+ mkT_applyRole();try{applyTheme()}catch(e){}renderAll();
+ if(!sb){stat('📴 أوفلاين — شغال على نسخة الجهاز');return}
+ sb.auth.getSession().then(async({data})=>{let s=data&&data.session;
+  if(!s){if(T.user&&!navigator.onLine){stat('📴 أوفلاين — شغال على نسخة الجهاز');return}T.user=null;window.mkT_user=null;LS.set('mk_t_user',null);emptyDb();renderAll();mkT_applyRole();return}
+  if(!T.user||T.user.id!==s.user.id){try{await enter(s.user)}catch(e){toast(errMsg(e));chooser()}return}
+  if(T.ready)await diffSync();await obFlush();await loadAll();subscribe();
+  // لو المدير رجّع النظام القديم (طوارئ)
+  if(!TEST){try{if((await rpc('mk_tables_on'))===false){LS.set('mk_mode','old');location.reload()}}catch(e){}}
+ }).catch(()=>stat('📴 أوفلاين — شغال على نسخة الجهاز'));
+ window.addEventListener('online',async()=>{if(!T.user)return;await diffSync();await obFlush();await loadAll();subscribe()});
+ sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT'&&T.user&&navigator.onLine){T.user=null;window.mkT_user=null;LS.set('mk_t_user',null);emptyDb();renderAll();mkT_applyRole()}});
+})();
+})();
+</script>
+
 </body>
 </html>
