@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-5';
+const APP_VER='2026-10-06-6';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2274,6 +2274,105 @@ const _ss=saveSettings;saveSettings=function(){let e=document.getElementById('co
 })();
 const _spC=showPage;showPage=function(id){_spC(id);if(id==='count'){let s=document.getElementById('cntCat');if(s){let cats=[...new Set(db.products.map(p=>p.cat||'').filter(Boolean))].sort();s.innerHTML='<option value="">كل التصنيفات</option>'+cats.map(c=>`<option ${CF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}renderCount()}};
 const _raP=renderAll;renderAll=function(){_raP();let e=document.getElementById('companyOwner');if(e&&document.activeElement!==e)e.value=db.settings.ownerPhone||''};
+})();
+</script>
+
+<style>
+.sp-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;margin-top:6px}
+.sp-imgs div{position:relative;border:2px solid var(--border);border-radius:10px;overflow:hidden;aspect-ratio:1;background:#f3f5f6}
+.sp-imgs div.main{border-color:var(--blue)}
+.sp-imgs img{width:100%;height:100%;object-fit:cover}
+.sp-imgs button{position:absolute;top:3px;width:26px;height:26px;border-radius:50%;padding:0;font-size:13px;background:#fffe;box-shadow:0 1px 4px #0003}
+.sp-imgs .x{left:3px;color:#c0392b}.sp-imgs .m{right:3px}
+.web-dot{display:inline-block;margin-right:6px;font-size:13px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — المرحلة 3: نشر المنتجات على الموقع من السيستم + تنبيه طلبات الموقع
+   ===================================================================== */
+(function(){
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const SBURL='https://tkzfjeizvanfptnqvrmr.supabase.co';
+const uid7=()=>Math.random().toString(36).slice(2,9);
+let SITE=null;   // {data, version}
+async function loadSite(){let {data,error}=await sbx().from('site_content').select('data,version').eq('id','main').maybeSingle();if(error)throw error;SITE=data||{data:{theme:{},sections:[],products:[]},version:0};SITE.data.sections=SITE.data.sections||[];SITE.data.products=SITE.data.products||[];return SITE}
+/* حفظ آمن: لو حد عدّل الموقع في نفس الوقت بنعيد التحميل ونطبّق التعديل تاني */
+async function saveSite(mut){for(let t=0;t<4;t++){await loadSite();let d=JSON.parse(JSON.stringify(SITE.data));mut(d);
+  let r=SITE.version?await sbx().from('site_content').update({data:d,version:SITE.version+1,updated_at:new Date().toISOString()}).eq('id','main').eq('version',SITE.version).select('version')
+   :await sbx().from('site_content').insert({id:'main',data:d,version:1}).select('version');
+  if(r.error)throw r.error;if(r.data&&r.data.length){SITE={data:d,version:r.data[0].version};return true}}
+ throw new Error('في تعديل تاني على الموقع في نفس اللحظة — جرّب تاني')}
+/* رفع صورة: بتتصغّر لـ 1400 بكسل وتتحفظ WebP (أو JPEG) */
+function shrinkFile(f,mx){mx=mx||1400;return new Promise((res,rej)=>{let r=new FileReader();r.onerror=rej;r.onload=()=>{let im=new Image();im.onerror=rej;im.onload=()=>{let k=Math.min(1,mx/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  c.toBlob(b=>{if(b&&b.type==='image/webp')return res(b);c.toBlob(j=>j?res(j):rej(new Error('الصورة مااتحولتش')),'image/jpeg',.82)},'image/webp',.8)};im.src=r.result};r.readAsDataURL(f)})}
+async function uploadImg(f){let b=await shrinkFile(f),ext=b.type==='image/webp'?'webp':'jpg',path='img/'+Date.now().toString(36)+'-'+uid7()+'.'+ext;
+ let {error}=await sbx().storage.from('site-images').upload(path,b,{contentType:b.type,cacheControl:'31536000',upsert:false});if(error)throw error;
+ return SBURL+'/storage/v1/object/public/site-images/'+path}
+const siteProdOf=p=>SITE&&p.code?SITE.data.products.find(x=>String(x.code||'')===String(p.code)):null;
+window.mkSite={loadSite,saveSite,uploadImg,get:()=>SITE};
+
+/* ---------- 🌐 شاشة «الموقع» للصنف ---------- */
+let SP=null;
+window.openSiteProduct=async function(pid){if(!isAdmin())return;let p=db.products.find(x=>x.id===pid);if(!p)return;
+ if(!String(p.code||'').trim())return toast('الصنف ده مالوش كود — اكتب كود الأول (الموقع والطلبات بيشتغلوا بالكود)');
+ try{await loadSite()}catch(e){return toast('محتاج نت عشان تفتح بيانات الموقع')}
+ let sp=siteProdOf(p);SP={pid,code:String(p.code),on:!!sp,name:sp?sp.name:p.name,desc:sp?sp.desc||'':'',sec:sp?sp.sec:'',imgs:sp?(sp.imgs&&sp.imgs.length?sp.imgs.slice():(sp.img?[sp.img]:[])):[],top:!!(sp&&sp.top),video:sp&&sp.video||'',spid:sp&&sp.id};
+ drawSP()};
+function drawSP(){let secs=SITE.data.sections;
+ openModal(`<div class="modal-head"><h2>🌐 على الموقع</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <label class="chk" style="font-size:16px;margin-bottom:10px"><input type="checkbox" id="spOn" ${SP.on?'checked':''}> <b>يظهر على الموقع</b></label>
+ <div class="form"><div class="field full"><label>الاسم على الموقع</label><input id="spName" value="${esc(SP.name)}"></div>
+ <div class="field"><label>القسم</label><select id="spSec"><option value="">— اختار القسم —</option>${secs.map(s=>`<option value="${esc(s.id)}" ${s.id===SP.sec?'selected':''}>${esc(s.name)}</option>`).join('')}<option value="__new">＋ قسم جديد…</option></select></div>
+ <div class="field"><label>الكود</label><input value="${esc(SP.code)}" disabled></div>
+ <div class="field full"><label>الوصف / المواصفات (كل معلومة في سطر، مثلاً «المقاس: 45 سم»)</label><textarea id="spDesc" rows="4" style="padding:11px;border:1px solid var(--border);border-radius:10px">${esc(SP.desc)}</textarea></div>
+ <div class="field full"><label>رابط فيديو (اختياري — يوتيوب أو غيره)</label><input id="spVideo" dir="ltr" value="${esc(SP.video)}" placeholder="https://..."></div>
+ <div class="field full"><label class="chk"><input type="checkbox" id="spTop" ${SP.top?'checked':''}> ⭐ مميز (يظهر في «الأكثر طلباً»)</label></div>
+ <div class="field full"><label>الصور (أول صورة هي اللي بتظهر في الكارت)</label><div class="sp-imgs" id="spImgs"></div>
+  <button type="button" class="secondary" style="margin-top:8px" onclick="document.getElementById('spFile').click()">＋ إضافة صور</button><input type="file" id="spFile" accept="image/*" multiple hidden><div id="spUp" style="font-size:13px;color:var(--muted);margin-top:4px"></div></div></div>
+ <div class="modal-foot"><button class="primary" id="spSave">حفظ على الموقع</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ let keep=()=>{SP.on=spOn.checked;SP.name=spName.value;SP.desc=spDesc.value;SP.video=spVideo.value.trim();SP.top=spTop.checked;if(spSec.value!=='__new')SP.sec=spSec.value};
+ let imgs=()=>{spImgs.innerHTML=SP.imgs.map((u,i)=>`<div class="${i?'':'main'}"><img src="${esc(u)}" loading="lazy"><button type="button" class="x" data-x="${i}">✕</button>${i?`<button type="button" class="m" data-m="${i}" title="خليها الصورة الأساسية">⭐</button>`:''}</div>`).join('')||'<small style="color:var(--muted)">مفيش صور لسه</small>'};imgs();
+ spImgs.onclick=e=>{let x=e.target.closest('[data-x]'),m=e.target.closest('[data-m]');if(x){SP.imgs.splice(+x.dataset.x,1);imgs()}if(m){let i=+m.dataset.m;SP.imgs.unshift(SP.imgs.splice(i,1)[0]);imgs()}};
+ spSec.onchange=async()=>{if(spSec.value!=='__new')return;keep();let n=prompt('اسم القسم الجديد');if(!n||!n.trim()){spSec.value=SP.sec;return}
+  let id=uid7();try{await saveSite(d=>{d.sections.push({id,name:n.trim()})});SP.sec=id;drawSP();toast('✔ القسم اتعمل')}catch(e){toast(String(e.message||e))}};
+ spFile.onchange=async()=>{let fs=[...spFile.files];spFile.value='';if(!fs.length)return;keep();spSave.disabled=true;
+  for(let k=0;k<fs.length;k++){spUp.textContent=`⏳ جاري رفع الصورة ${k+1} من ${fs.length}…`;try{SP.imgs.push(await uploadImg(fs[k]))}catch(e){toast('صورة مارفعتش: '+(e.message||e))}imgs()}
+  spUp.textContent='';spSave.disabled=false};
+ spSave.onclick=async()=>{keep();if(SP.on&&!SP.sec)return toast('اختار القسم');if(SP.on&&!SP.name.trim())return toast('اكتب الاسم');
+  spSave.disabled=true;spSave.textContent='جاري الحفظ…';
+  try{await saveSite(d=>{let i=d.products.findIndex(x=>String(x.code||'')===SP.code);
+    if(!SP.on){if(i>-1)d.products.splice(i,1);return}
+    let o=i>-1?d.products[i]:{id:SP.spid||uid7(),code:SP.code};
+    Object.assign(o,{name:SP.name.trim(),desc:SP.desc.trim(),sec:SP.sec,imgs:SP.imgs,img:SP.imgs[0]||'',top:SP.top});if(SP.video)o.video=SP.video;else delete o.video;
+    if(i>-1)d.products[i]=o;else d.products.push(o)});
+   closeModal();toast(SP.on?'✔ اتنشر على الموقع':'✔ اتشال من الموقع');markWeb()}
+  catch(e){spSave.disabled=false;spSave.textContent='حفظ على الموقع';toast('ماتحفظش: '+(e.message||e))}}}
+
+/* زرار في شاشة المنتج */
+const _op3=openProduct;
+openProduct=function(id){_op3(id);if(!id||!isAdmin())return;let p=db.products.find(x=>x.id===id),f=document.querySelector('#modal .modal-foot');if(!f||!p)return;
+ let on=!!siteProdOf(p);f.insertAdjacentHTML('beforeend',`<button type="button" class="secondary" onclick="openSiteProduct('${id}')">🌐 ${SITE?(on?'على الموقع ✔':'انشر على الموقع'):'الموقع'}</button>`)};
+/* علامة 🌐 جنب المنتجات المنشورة في قايمة المنتجات */
+function markWeb(){if(!SITE)return;let codes=new Set(SITE.data.products.map(x=>String(x.code||'')));
+ document.querySelectorAll('#productsBody tr.prow').forEach(tr=>{let m=/openProduct\('([^']+)'\)/.exec(tr.getAttribute('onclick')||'');if(!m)return;let p=db.products.find(x=>x.id===m[1]);let td=tr.children[1];if(!p||!td)return;
+  let has=td.querySelector('.web-dot');if(codes.has(String(p.code||''))&&p.code){if(!has)td.insertAdjacentHTML('beforeend','<span class="web-dot" title="على الموقع">🌐</span>')}else if(has)has.remove()})}
+const _rp3=renderProducts;renderProducts=function(){_rp3();markWeb()};
+const _sp3=showPage;showPage=function(id){_sp3(id);if(id==='products'&&isAdmin()&&sbx())loadSite().then(markWeb).catch(()=>{})};
+
+/* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
+let lastNew=null;
+function ding(){try{let c=new (window.AudioContext||window.webkitAudioContext)();[0,.25,.5].forEach(t=>{let o=c.createOscillator(),g=c.createGain();o.frequency.value=880+t*400;g.gain.value=.2;o.connect(g);g.connect(c.destination);o.start(c.currentTime+t);o.stop(c.currentTime+t+.18)});setTimeout(()=>c.close(),1200)}catch(e){}}
+const _wb=woBadge;
+woBadge=function(){_wb();let L=(typeof WO!=='undefined'&&WO.list)||[],news=L.filter(o=>o.status==='new');let n=news.length;
+ document.title=(n?'('+n+') ':'')+'MEKANIZM | نظام المخزون';
+ if(lastNew!==null&&n>lastNew){let o=news[0];ding();try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+  toast('🛒 طلب جديد من الموقع'+(o?' — '+o.customer_name:''));
+  try{if(window.Notification&&Notification.permission==='granted')new Notification('🛒 طلب جديد من الموقع',{body:o?(o.customer_name+' — '+(o.items||[]).length+' صنف'):'',tag:'mk-order'})}catch(e){}}
+ lastNew=n};
+(function(){let t=document.querySelector('#weborders .title-row');
+ if(t&&window.Notification&&Notification.permission!=='granted')t.insertAdjacentHTML('afterend','<button class="secondary" id="notifBtn" style="margin-bottom:12px" onclick="Notification.requestPermission().then(p=>{if(p===\'granted\'){toast(\'✔ التنبيهات اتفعلت\');this.remove()}else toast(\'المتصفح رفض التنبيهات — هتفضل تسمع صوت وانت فاتح السيستم\')})">🔔 فعّل تنبيهات الطلبات على الجهاز ده</button>')})();
 })();
 </script>
 
