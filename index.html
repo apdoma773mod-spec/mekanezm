@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-8';
+const APP_VER='2026-10-06-9';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2265,6 +2265,55 @@ function renderExpenses(){let b=document.getElementById('expensesBody');if(!b)re
  let L=db.expenses.slice().sort((a,b)=>String(b.iso||'').localeCompare(String(a.iso||'')));
  b.innerHTML=L.length?L.map(e=>`<tr><td style="white-space:nowrap"><b>${esc(e.date||arD(e.iso))}</b></td><td>${esc(e.note)}</td><td>${esc(e.cat)}</td><td>${money(e.amount)}</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty">لا توجد مصروفات.</div></td></tr>'}
 const _rtE=renderTables;renderTables=function(){_rtE();renderExpenses()};
+
+/* ---------- 🖨️ الطباعة: التقارير، الجرد، المنتجات، الفواتير ---------- */
+function printA4(title,body,opt){opt=opt||{};let T=db.theme||{},H=T.invHeader||'#087f8c',shop=esc(db.settings.companyName||'ميكانيزم');
+ printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(title)}</title><style>@page{size:A4 ${opt.landscape?'landscape':'portrait'};margin:12mm}*{font-family:Cairo,Tahoma,sans-serif;box-sizing:border-box}body{margin:0;color:#18343a;font-size:11pt}
+ .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid ${H};padding-bottom:6px;margin-bottom:10px}.hd b{font-size:17pt;color:${H}}.hd small{color:#555}
+ h1{font-size:15pt;margin:4px 0 10px}table{width:100%;border-collapse:collapse;margin:6px 0 12px}th{background:${H};color:#fff;padding:6px;font-size:10pt;text-align:right}td{padding:5px 6px;border-bottom:1px solid #ddd;font-size:10pt;vertical-align:top}tr:nth-child(even) td{background:#f6f8f9}
+ .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}.stats div{border:1px solid #ddd;border-radius:6px;padding:6px}.stats small{display:block;color:#666;font-size:9pt}.stats b{font-size:12pt}
+ .ft{margin-top:14px;color:#777;font-size:9pt;text-align:center}.box{display:inline-block;width:60px;height:18px;border:1px solid #999;border-radius:3px}thead{display:table-header-group}tr{page-break-inside:avoid}</style></head><body>
+ <div class="hd"><div><b>${shop}</b><br><small>${esc(db.settings.address||'')}${db.settings.phone?' • '+esc(db.settings.phone):''}</small></div><div style="text-align:left"><small>${esc(new Date().toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}${userName()?'<br>'+esc(userName()):''}</small></div></div>
+ <h1>${esc(title)}</h1>${body}<div class="ft">${shop}</div><script>window.onload=function(){setTimeout(function(){print()},500)}<\/script></body></html>`)}
+window.mkPrintA4=printA4;
+const tbl=(heads,rows)=>`<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+/* التقارير */
+window.printReports=function(){let st=[...document.querySelectorAll('#reports .stat')].filter(s=>s.offsetParent!==null).map(s=>`<div><small>${esc(s.querySelector('small').textContent)}</small><b>${esc(s.querySelector('strong').textContent)}</b></div>`).join('');
+ let per=document.querySelector('#periodBody'),ph=per?per.closest('table').outerHTML:'',low=db.products.filter(p=>p.qty<=p.min);
+ printA4('التقرير العام',`<div class="stats">${st}</div><h3>تقرير الفترات</h3>${ph}${low.length?`<h3>أصناف تحت حد التنبيه (${low.length})</h3>`+tbl(['الصنف','الكود','المتاح','الحد'],low.map(p=>[esc(p.name),esc(p.code),p.qty,p.min])):''}`)};
+
+/* المنتجات (بنفس البحث والفلتر اللي على الشاشة) */
+window.printProducts=function(){let q=(val('productSearch')||'').toLowerCase(),f=val('stockFilter')||'all',adm=isAdmin();
+ let L=db.products.filter(p=>(p.name+' '+p.code).toLowerCase().includes(q)).filter(p=>f==='all'||(f==='out'&&p.qty<=0)||(f==='low'&&p.qty>0&&p.qty<=p.min));
+ openModal(`<div class="modal-head"><h2>🖨️ طباعة المنتجات</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin-top:0">هيتطبع <b>${L.length}</b> صنف (حسب البحث والفلتر اللي على الشاشة).</p>
+ <label class="chk"><input type="checkbox" id="ppPrice" checked> سعر البيع</label>${adm?'<label class="chk"><input type="checkbox" id="ppCost"> سعر الشراء</label><label class="chk"><input type="checkbox" id="ppVal"> قيمة المخزون</label>':''}
+ <div class="modal-foot"><button class="primary" id="ppGo">🖨️ طباعة</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ ppGo.onclick=()=>{let pr=ppPrice.checked,co=adm&&ppCost.checked,va=adm&&ppVal.checked,h=['#','الكود','الصنف','التصنيف','الكمية'];if(pr)h.push('سعر البيع');if(co)h.push('سعر الشراء');if(va)h.push('القيمة');
+  let rows=L.map((p,i)=>{let r=[i+1,esc(p.code),esc(p.name),esc(p.cat||''),p.qty+' '+esc(p.unit||'')];if(pr)r.push(money(p.price));if(co)r.push(money(p.cost));if(va)r.push(money(p.qty*p.cost));return r});
+  closeModal();printA4('قائمة المنتجات ('+L.length+' صنف)',tbl(h,rows)+(va?`<p><b>إجمالي قيمة المخزون: ${money(sumBy(L,p=>p.qty*p.cost))}</b></p>`:''))}};
+
+/* ورقة الجرد (فاضية للعدّ باليد) + نتيجة الجرد */
+window.printCountSheet=function(){let q=VN(CF.q).split(' ').filter(Boolean),L=db.products.filter(p=>(!CF.cat||p.cat===CF.cat)&&q.every(w=>VN(p.name+' '+p.code).includes(w)));
+ printA4('ورقة جرد'+(CF.cat?' — '+CF.cat:''),`<p>التاريخ: ........................ &nbsp;&nbsp; القائم بالجرد: ................................</p>`+tbl(['#','الكود','الصنف','الوحدة','في السيستم','العدد الفعلي','ملاحظات'],L.map((p,i)=>[i+1,esc(p.code),esc(p.name),esc(p.unit||''),p.qty,'<span class="box"></span>',''])))};
+let lastCount=null;
+const _cr=countResult;countResult=function(r){lastCount=r;_cr(r);let f=document.querySelector('#modal .table-wrap');if(f)f.insertAdjacentHTML('afterend','<div class="btnrow" style="margin-top:10px"><button class="secondary" onclick="printCountResult()">🖨️ طباعة نتيجة الجرد</button></div>')};
+window.printCountResult=function(){let r=lastCount;if(!r)return;let rows=(r.rows||[]);
+ printA4('نتيجة الجرد '+(r.no||''),`<div class="stats"><div><small>أصناف اتعدّت</small><b>${r.items}</b></div><div><small>قيمة العجز</small><b>${money(r.short_value)}</b></div><div><small>قيمة الزيادة</small><b>${money(r.excess_value)}</b></div><div><small>الصافي</small><b>${money((+r.excess_value||0)-(+r.short_value||0))}</b></div></div>`+
+  tbl(['الصنف','الكود','كان','اتعدّ','الفرق','القيمة'],rows.map(x=>[esc(x.name),esc(x.code||''),x.before,x.counted,(x.diff>0?'+':'')+x.diff,money(Math.abs(x.diff)*(x.cost||0))])))};
+
+/* فاتورة البيع A4 + فاتورة الشراء */
+window.printInvoiceA4=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;
+ printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:A4;margin:0}body{margin:0}.pg{width:210mm;min-height:297mm;overflow:hidden}.pg>div{transform-origin:top right;transform:scale(${(210/794*3.7795).toFixed(4)})}</style></head><body><div class="pg">${invoiceHTML(r)}</div><script>window.onload=function(){setTimeout(function(){print()},700)}<\/script></body></html>`)};
+window.printPurchase=function(id){let r=db.purchases.find(x=>x.id===id);if(!r)return;let G=invGroup('purchase',r.gid||r.id),adm=isAdmin(),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total);
+ let rows=GI.map(x=>adm?[esc(x.product),x.qty,money(x.price),money(x.total)]:[esc(x.product),x.qty]);
+ printA4('فاتورة شراء '+(r.pno||''),`<p>المورد: <b>${esc(r.person||'—')}</b> &nbsp;&nbsp; التاريخ: <b>${esc(r.date)}</b>${r.by?' &nbsp;&nbsp; سجّلها: '+esc(r.by):''}</p>`+tbl(adm?['الصنف','العدد','السعر','الإجمالي']:['الصنف','العدد'],rows)+(adm?`${SH?`<p>مصاريف النقل: ${money(SH)}</p>`:''}<p><b>الإجمالي: ${money(sumBy(G,x=>x.total))}</b> — المدفوع: ${money(sumBy(G,paidOf))} — المتبقي: ${money(sumBy(G,x=>x.rem||0))}</p>`:''))};
+const _oim3=openInvoiceModal;openInvoiceModal=function(id){_oim3(id);let b=document.querySelector('#modal [onclick^="printReceipt"]');if(b)b.insertAdjacentHTML('beforebegin',`<button class="secondary" style="flex:1" onclick="printInvoiceA4('${id}')">🖨️ طباعة A4</button>`)};
+const _opv3=openPurchaseView;openPurchaseView=function(id){_opv3(id);let m=document.querySelector('#modal');if(m)m.insertAdjacentHTML('beforeend',`<div class="btnrow" style="margin-top:10px"><button class="secondary" onclick="printPurchase('${id}')">🖨️ طباعة</button></div>`)};
+setTimeout(function(){let rt=document.querySelector('#reports .title-row');if(rt)rt.insertAdjacentHTML('beforeend','<button class="secondary" onclick="printReports()">🖨️ طباعة التقرير</button>');
+ let pt=document.querySelector('#products .title-row .btnrow');if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary" onclick="printProducts()">🖨️ طباعة</button>');
+ let ct=document.querySelector('#count .title-row .btnrow');if(ct)ct.insertAdjacentHTML('afterbegin','<button class="secondary" onclick="printCountSheet()">🖨️ ورقة جرد</button>')},0);
 
 /* ---------- الإعدادات: رقم واتساب المالك ---------- */
 const _ss=saveSettings;saveSettings=function(){let e=document.getElementById('companyOwner');if(e)db.settings.ownerPhone=e.value.trim();_ss()};
