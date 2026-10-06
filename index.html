@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-07-3';
+const APP_VER='2026-10-07-4';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3090,6 +3090,99 @@ let rtT=null;
   try{sbx().channel('mk-daybook').on('postgres_changes',{event:'*',schema:'public',table:'mk_daybook'},()=>{clearTimeout(rtT);rtT=setTimeout(dbLoad,700)}).subscribe()}catch(e){}
   setInterval(()=>{let pg=document.getElementById('daybook');if(pg&&pg.classList.contains('active'))dbRender();if(navigator.onLine)dbCommitIfDue()},30000);return}
  if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
+})();
+</script>
+
+<style>
+.dtsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.dtsum div{background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;padding:12px}
+.dtsum small{display:block;color:var(--muted);font-size:12px}.dtsum b{font-size:19px}
+.dtc{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.dtc .amt{font-size:22px;font-weight:800;color:var(--danger,#c0392b);white-space:nowrap}
+.dtc .meta{color:var(--muted);font-size:13px;line-height:1.8}
+.dtage{display:inline-block;border-radius:8px;padding:1px 8px;font-size:12px;font-weight:700;background:#eef1f2}
+.dtage.a30{background:#fff4e5;color:#8a4b00}.dtage.a60{background:#fdecea;color:#b3261e}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 💰 تذكير الديون: العملاء اللي عليهم فلوس + رسالة واتساب جاهزة + سجل آخر تذكير
+   ===================================================================== */
+(function(){
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const DAY=86400000;
+const daysAgo=iso=>iso?Math.max(0,Math.floor((Date.now()-new Date(String(iso).slice(0,10)+'T00:00:00').getTime())/DAY)):null;
+const arDay=iso=>iso?new Date(String(iso).slice(0,10)+'T00:00:00').toLocaleDateString('ar-EG',{day:'numeric',month:'long'}):'';
+const agoTxt=n=>n==null?'':n===0?'النهارده':n===1?'إمبارح':n===2?'من يومين':n<=10?`من ${n} أيام`:`من ${n} يوم`;
+const DEF_TPL='السلام عليكم أستاذ {الاسم} 👋\nمعاك {المحل}.\nحابين نفكّر حضرتك إن الحساب عندنا {المبلغ}{من}.\nتقدر تدفع كاش في المحل أو إنستاباي / تحويل — وقت ما يناسبك.\nشكراً لتعاملك معانا 🙏';
+let REM={},TPL=DEF_TPL,dtF='all',dtSort='amount',dtQ='';
+
+async function loadRem(){if(!sbx())return;try{let {data}=await sbx().from('mk_settings').select('key,value').in('key',['debt_reminders','debt_template']);
+ (data||[]).forEach(r=>{if(r.key==='debt_reminders')REM=r.value||{};if(r.key==='debt_template'&&r.value&&r.value.text)TPL=r.value.text})}catch(e){}}
+async function saveSetting(key,value){let {error}=await sbx().from('mk_settings').upsert([{key,value}],{onConflict:'key'});if(error)throw error}
+
+/* من إمتى عليه الفلوس: بنمشي على فواتيره الآجل من الأحدث للأقدم لحد ما نغطي رصيده */
+function debtInfo(c){let bal=+c.balance||0,G=new Map();
+ db.sales.filter(r=>r.person===c.name&&r.no).forEach(r=>{let g=G.get(r.no);if(!g){g={no:r.no,iso:r.iso,rem:0,total:0,id:r.id};G.set(r.no,g)}g.rem=r2(g.rem+(+r.rem||0));g.total=r2(g.total+(+r.total||0))});
+ let inv=[...G.values()].filter(g=>g.rem>0).sort((a,b)=>String(b.iso).localeCompare(String(a.iso))),left=bal,since=null,open=[];
+ for(const g of inv){if(left<=0.009)break;open.push(g);since=g.iso;left=r2(left-g.rem)}
+ let pays=(db.payments||[]).filter(p=>p.cid===c.id).sort((a,b)=>String(b.iso).localeCompare(String(a.iso)));
+ return {bal,since,old:left>0.009,open,lastPay:pays[0]||null,days:daysAgo(since)}}
+function debtors(){return db.contacts.filter(c=>c.type==='عميل'&&(+c.balance||0)>0.009).map(c=>Object.assign({c},debtInfo(c)))}
+
+function msgFor(x,withInv){let shop=db.settings.companyName||'ميكانيزم';
+ let t=TPL.replace(/\{الاسم\}/g,x.c.name).replace(/\{المحل\}/g,shop).replace(/\{المبلغ\}/g,money(x.bal)).replace(/\{من\}/g,x.since?' من '+arDay(x.since):'');
+ if(withInv&&x.open.length)t+='\n\nالفواتير:\n'+x.open.slice().reverse().map(g=>`• ${g.no} — ${arDay(g.iso)} — ${money(g.rem)}`).join('\n');
+ return t}
+
+/* ---------- 💬 ذكّره ---------- */
+window.dtRemind=function(cid){let x=debtors().find(d=>d.c.id===cid);if(!x)return;let r=REM[cid];
+ openModal(`<div class="modal-head"><h2>💬 تذكير ${esc(x.c.name)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin-top:0">عليه <b style="color:var(--danger)">${money(x.bal)}</b>${x.since?' من '+arDay(x.since)+' ('+agoTxt(x.days)+')':''}${r?`<br><small style="color:var(--muted)">آخر تذكير: ${agoTxt(daysAgo(r.at))}${r.by?' — '+esc(r.by):''}</small>`:''}</p>
+ ${x.c.phone?'':'<p style="color:var(--danger)">⚠️ العميل مالوش رقم — الرسالة هتتنسخ وتبعتها انت</p>'}
+ <label class="chk"><input type="checkbox" id="dtInv" ${x.open.length?'checked':''}> ضيف أرقام الفواتير</label>
+ <textarea id="dtMsg" rows="9" style="width:100%;margin-top:8px;padding:11px;border:1px solid var(--border);border-radius:12px;font:inherit;line-height:1.7"></textarea>
+ <div class="modal-foot"><button class="primary" id="dtGo">💬 ابعت على الواتساب</button><button class="secondary" id="dtTpl">💾 خلّيها الرسالة الأساسية</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ const fill=()=>{dtMsg.value=msgFor(x,dtInv.checked)};fill();dtInv.onchange=fill;
+ dtTpl.onclick=async()=>{let v=dtMsg.value;let s=msgFor(x,false);/* نرجّع النص لقالب بالمتغيرات */
+  let t=v.split(x.c.name).join('{الاسم}').split(money(x.bal)).join('{المبلغ}').split(db.settings.companyName||'ميكانيزم').join('{المحل}');if(x.since)t=t.split(' من '+arDay(x.since)).join('{من}');t=t.replace(/\n\nالفواتير:[\s\S]*$/,'');
+  try{await saveSetting('debt_template',{text:t});TPL=t;toast('✔ اتحفظت كرسالة أساسية لكل العملاء')}catch(e){toast('ماتحفظتش: '+(e.message||e))}};
+ dtGo.onclick=async()=>{let t=dtMsg.value,d=String(x.c.phone||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);
+  let w=d?window.open('https://wa.me/'+d+'?text='+encodeURIComponent(t),'_blank'):null;
+  if(!d){try{await navigator.clipboard.writeText(t);toast('الرسالة اتنسخت')}catch(e){}}
+  REM[cid]={at:new Date().toISOString(),by:userName()||'',amount:x.bal};try{await saveSetting('debt_reminders',REM)}catch(e){toast('التذكير ماتسجلش: '+(e.message||e))}
+  closeModal();renderDebts();if(d&&!w)location.href='https://wa.me/'+d+'?text='+encodeURIComponent(t)}};
+
+/* ---------- الصفحة ---------- */
+function renderDebts(){let el=document.getElementById('dtBody');if(!el)return;
+ let L=debtors(),tot=r2(sumBy(L,x=>x.bal)),o30=L.filter(x=>x.old||(x.days||0)>=30),o60=L.filter(x=>x.old||(x.days||0)>=60),q=VN(dtQ);
+ document.querySelectorAll('#dtTabs button[data-f]').forEach(b=>b.className=b.dataset.f===dtF?'primary':'secondary');
+ let F=L.filter(x=>dtF==='all'||(dtF==='30'&&(x.old||(x.days||0)>=30))||(dtF==='60'&&(x.old||(x.days||0)>=60))||(dtF==='norem'&&(!REM[x.c.id]||daysAgo(REM[x.c.id].at)>=7)))
+  .filter(x=>!q||VN(x.c.name+' '+(x.c.phone||'')).includes(q))
+  .sort((a,b)=>dtSort==='age'?((b.old?1e6:(b.days||0))-(a.old?1e6:(a.days||0))):b.bal-a.bal);
+ el.innerHTML=`<div class="dtsum"><div><small>إجمالي الديون عند العملاء</small><b style="color:var(--danger)">${money(tot)}</b></div><div><small>عدد العملاء</small><b>${L.length}</b></div><div><small>أقدم من 30 يوم</small><b>${money(sumBy(o30,x=>x.bal))}</b> <small>${o30.length} عميل</small></div><div><small>أقدم من 60 يوم</small><b>${money(sumBy(o60,x=>x.bal))}</b> <small>${o60.length} عميل</small></div></div>`
+ +(F.length?F.map(x=>{let r=REM[x.c.id],cls=x.old||(x.days||0)>=60?'a60':(x.days||0)>=30?'a30':'';
+  return `<div class="card" style="margin-bottom:10px"><div class="dtc"><div style="min-width:0;flex:1"><b style="font-size:17px">${esc(x.c.name)}</b>${x.c.phone?` — <a href="tel:${esc(x.c.phone)}" dir="ltr">${esc(x.c.phone)}</a>`:''}
+   <div class="meta">${x.since?`<span class="dtage ${cls}">⏳ عليه ${agoTxt(x.days)}</span> (${arDay(x.since)})${x.old?' + رصيد قديم':''}`:'<span class="dtage a60">رصيد قديم</span>'}${x.open.length?` • ${x.open.length} فاتورة`:''}
+   <br>${x.lastPay?`آخر دفعة: ${money(x.lastPay.amount)} ${agoTxt(daysAgo(x.lastPay.iso))}`:'مفيش دفعات متسجلة'}${r?` • 💬 اتفكّر ${agoTxt(daysAgo(r.at))}`:''}</div></div>
+   <div class="amt">${money(x.bal)}</div></div>
+   <div class="btnrow" style="margin-top:8px"><button class="primary" onclick="dtRemind('${x.c.id}')">💬 ذكّره</button><button class="secondary" onclick="openPayment('${x.c.id}')">💵 سجّل دفعة</button><button class="secondary" onclick="openContactFile('${x.c.id}')">📄 كشف الحساب</button></div></div>`}).join('')
+  :'<div class="card"><div class="empty">'+(L.length?'مفيش عملاء هنا':'مفيش ديون على العملاء 👌')+'</div></div>');
+ let b=document.getElementById('dtBanner');if(b){b.style.display=o30.length&&isAdmin()?'':'none';b.innerHTML=`💰 عندك <b>${o30.length}</b> عميل عليهم فلوس من أكتر من 30 يوم (${money(sumBy(o30,x=>x.bal))}) — اضغط للتذكير`}}
+window.renderDebts=renderDebts;
+window.dtSet=function(k,v){if(k==='f')dtF=v;if(k==='s')dtSort=v;if(k==='q')dtQ=v;renderDebts()};
+(function(){let c=document.querySelector('aside nav [data-page="contacts"]');
+ if(c)c.insertAdjacentHTML('afterend','<button data-page="debts" class="own" onclick="showPage(\'debts\')"><span style="width:1.15em;text-align:center">💰</span> <span>الديون والتذكير</span></button>');
+ let mn=document.querySelector('main');
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="debts" class="page"><div class="title-row"><div class="title"><h1>💰 الديون والتذكير</h1><p>العملاء اللي عليهم فلوس — ذكّرهم برسالة واتساب جاهزة</p></div></div>
+  <div class="toolbar" id="dtTabs"><button data-f="all" onclick="dtSet('f','all')">الكل</button><button data-f="30" onclick="dtSet('f','30')">أكتر من 30 يوم</button><button data-f="60" onclick="dtSet('f','60')">أكتر من 60 يوم</button><button data-f="norem" onclick="dtSet('f','norem')">مااتفكّروش من أسبوع</button></div>
+  <div class="toolbar"><input class="search" placeholder="ابحث بالاسم أو التليفون..." oninput="dtSet('q',this.value)"><select class="search" style="max-width:170px" onchange="dtSet('s',this.value)"><option value="amount">الأكبر مبلغ</option><option value="age">الأقدم</option></select></div><div id="dtBody"></div></section>`);
+ let ban=document.getElementById('woBanner');
+ if(ban)ban.insertAdjacentHTML('beforebegin','<button id="dtBanner" class="own" onclick="showPage(\'debts\')" style="display:none;width:100%;margin-bottom:14px;background:#fdecea;color:#8c1d18;border:1px solid #f1a9a3;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
+const _spT=showPage;showPage=function(id){_spT(id);if(id==='debts'){renderDebts();loadRem().then(renderDebts)}};
+const _rdT=renderDashboard;renderDashboard=function(){_rdT();renderDebts()};
+(function wait(n){if(window.mkT_user&&sbx()){loadRem().then(renderDebts);return}if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
 
