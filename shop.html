@@ -605,7 +605,15 @@ pvClose=function(back){_pc(back);seoHome();if(/[?&]p=/.test(location.search)){tr
 let opened=false;
 const _r3=render;render=function(){_r3();if(opened||admin)return;let id=new URLSearchParams(location.search).get('p');if(id&&byId(S.products,id)){opened=true;pvOpen(id,true)}};
 window.addEventListener('popstate',()=>{if(!/[?&]p=/.test(location.search)&&!/^#p=/.test(location.hash)&&document.getElementById('pv').classList.contains('on'))pvClose(false)});
-seoHome();
+/* ---------- 🛒 شريط «كمّل الطلب» ثابت تحت أول ما العميل يضيف منتج ---------- */
+document.head.insertAdjacentHTML('beforeend','<style>#goCart{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:12;display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--accent);color:#fff;border:0;border-radius:16px;padding:14px 18px;font:800 16px Cairo,Tahoma,sans-serif;box-shadow:0 8px 24px #0004}#goCart.on{display:flex}body.pvon #goCart{display:none}#wa.on{bottom:calc(140px + env(safe-area-inset-bottom,0px))}.mc [data-a="cs"]{font-size:17px;padding:13px 18px;font-weight:800}</style>');
+document.body.insertAdjacentHTML('beforeend','<button id="goCart" type="button"><span id="goCartT"></span><span>كمّل الطلب ←</span></button>');
+document.getElementById('goCart').onclick=()=>cartOpen();
+const _cu=cartUI;cartUI=function(){_cu();let n=cartN(),g=document.getElementById('goCart');if(!g)return;g.classList.toggle('on',n>0&&!admin);document.getElementById('goCartT').textContent='🛒 عندك '+n+' في طلبك'};
+/* بعد «أضف للطلب» من الكارت: رسالة توضح الخطوة الجاية */
+document.addEventListener('click',e=>{if(e.target.closest('[data-a="ad"],[data-pv="add"]'))setTimeout(()=>{let t=document.getElementById('goCartT');if(t){let g=document.getElementById('goCart');g.animate&&g.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:350})}},50)},true);
+
+seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();
 })();
 </script>
