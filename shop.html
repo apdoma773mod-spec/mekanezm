@@ -532,4 +532,82 @@ const _pvCartUI=cartUI;cartUI=function(){_pvCartUI();if(PV.id)pvBar()};
 if(/^#p=/.test(location.hash))render();
 </script>
 
+<style>
+.trust{display:flex;gap:8px;overflow-x:auto;padding:4px 16px 10px;scrollbar-width:none}
+.trust span{flex:none;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:700}
+.wk{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.wkc{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 3px 14px #0001;cursor:pointer}
+.wkc img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.wkc div{padding:10px 12px}.wkc b{display:block;font-size:15px}.wkc small{display:block;color:var(--mut);font-size:12px;margin-top:2px}.wkc span{display:inline-block;margin-top:6px;font-size:12px;color:var(--accent);font-weight:700}
+.rv{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:none}
+.rvc{flex:0 0 min(300px,82%);scroll-snap-align:start;background:var(--card);border-radius:18px;padding:16px;box-shadow:0 3px 14px #0001}
+.rvc .st{color:#f5a623;font-size:18px;letter-spacing:2px}.rvc p{margin:8px 0;line-height:1.8;font-size:14px}.rvc b{font-size:14px}.rvc small{color:var(--mut)}
+.infobox{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 3px 14px #0001;line-height:1.9}
+.infobox table{width:100%;border-collapse:collapse;margin:6px 0}.infobox td{padding:7px 4px;border-bottom:1px solid var(--line);font-size:14px}
+#wkv{position:fixed;inset:0;z-index:25;background:#000e;display:flex;flex-direction:column}
+#wkv .wkt{display:flex;justify-content:space-between;align-items:center;color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
+#wkv .wkt button{background:#fff2;color:#fff;border:0;width:40px;height:40px;border-radius:50%;font-size:18px}
+#wkv .wks{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;direction:ltr}
+#wkv .wks img{flex:0 0 100%;width:100%;height:100%;object-fit:contain;scroll-snap-align:center}
+#wkv .wkd{color:#ddd;padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));font-size:14px;line-height:1.8}
+.pvvid iframe,.pvvid video{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — الموقع (المرحلة 3): أعمالنا، آراء العملاء، التوصيل والاستبدال، فيديو المنتج، روابط تظهر في جوجل
+   ===================================================================== */
+(function(){
+const stars=n=>{n=Math.max(1,Math.min(5,+n||5));return '★'.repeat(n)+'☆'.repeat(5-n)};
+const BASE=()=>location.origin+location.pathname;
+/* ---------- أقسام الصفحة الرئيسية ---------- */
+function worksHTML(){let W=(S.works||[]).filter(w=>w.imgs&&w.imgs.length);if(!W.length)return '';
+ return `<section id="works"><div class="sh"><h2>🏗️ من أعمالنا</h2></div><div class="wk">${W.map((w,i)=>`<div class="wkc" data-wk="${i}"><img src="${esc(w.imgs[0])}" loading="lazy" alt="${esc(w.title)}"><div><b>${esc(w.title)}</b>${w.desc?`<small>${esc(w.desc)}</small>`:''}<span>📷 ${w.imgs.length} صور</span></div></div>`).join('')}</div></section>`}
+function reviewsHTML(){let R=(S.reviews||[]).filter(r=>r.text);if(!R.length)return '';
+ return `<section id="reviews"><div class="sh"><h2>⭐ آراء عملائنا</h2></div><div class="rv">${R.map(r=>`<div class="rvc"><div class="st">${stars(r.stars)}</div><p>${esc(r.text)}</p><b>${esc(r.name||'عميل')}</b>${r.area?` <small>— ${esc(r.area)}</small>`:''}</div>`).join('')}</div></section>`}
+function infoHTML(){let D=(S.delivery||[]).filter(x=>x.area),pol=String(S.policy||'').trim(),note=String(S.deliveryNote||'').trim();if(!D.length&&!pol&&!note)return '';
+ return `<section id="info"><div class="sh"><h2>🚚 التوصيل والاستبدال</h2></div><div class="infobox">${note?`<div>${esc(note)}</div>`:''}
+ ${D.length?`<table>${D.map(x=>`<tr><td><b>${esc(x.area)}</b></td><td>${x.fee===''||x.fee==null?'':(+x.fee?esc(x.fee)+' ج.م':'مجاناً')}</td><td style="color:var(--mut)">${esc(x.days||'')}</td></tr>`).join('')}</table>`:''}
+ ${pol?`<div style="margin-top:8px"><b>🔁 سياسة الاستبدال والاسترجاع</b><div style="white-space:pre-line;font-size:14px">${esc(pol)}</div></div>`:''}</div></section>`}
+function trustHTML(){let t=(S.trust||[]).filter(Boolean);if(!t.length){t=[];if((S.delivery||[]).length)t.push('🚚 توصيل');if(String(S.policy||'').trim())t.push('🔁 استبدال');if((S.works||[]).length)t.push('🏗️ أعمال حقيقية');if((S.reviews||[]).length)t.push('⭐ آراء عملاء')}
+ return t.length?`<div class="trust">${t.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
+const _pm=pubMain;
+pubMain=function(){_pm();let m=$('main');if(!m)return;m.insertAdjacentHTML('afterbegin',trustHTML());m.insertAdjacentHTML('beforeend',worksHTML()+reviewsHTML()+infoHTML());
+ let fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.x){fl.dataset.x=1;if((S.works||[]).length)fl.insertAdjacentHTML('beforeend','<a href="#works">أعمالنا</a>');if((S.delivery||[]).length||S.policy)fl.insertAdjacentHTML('beforeend','<a href="#info">التوصيل والاستبدال</a>')}};
+/* عرض صور الشغلانة */
+document.addEventListener('click',e=>{let c=e.target.closest('[data-wk]');if(c){let w=(S.works||[]).filter(w=>w.imgs&&w.imgs.length)[+c.dataset.wk];if(!w)return;
+  document.body.insertAdjacentHTML('beforeend',`<div id="wkv"><div class="wkt"><b>${esc(w.title)}</b><button type="button" data-wkx>✕</button></div><div class="wks">${w.imgs.map(u=>`<img src="${esc(u)}" alt="">`).join('')}</div>${w.desc?`<div class="wkd">${esc(w.desc)}</div>`:''}</div>`);return}
+ if(e.target.closest('[data-wkx]')){let v=document.getElementById('wkv');if(v)v.remove()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){let v=document.getElementById('wkv');if(v)v.remove()}});
+
+/* ---------- فيديو المنتج ---------- */
+function embed(u){u=String(u||'').trim();if(!u)return '';let m=u.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);
+ if(m)return `<iframe src="https://www.youtube-nocookie.com/embed/${m[1]}" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+ if(/\.(mp4|webm|mov)(\?|$)/i.test(u))return `<video src="${esc(u)}" controls preload="metadata" playsinline></video>`;
+ return `<a class="pvask" style="display:block;text-align:center;padding:12px;border-radius:24px;text-decoration:none;font-weight:700" target="_blank" rel="noopener" href="${esc(u)}">▶️ شوف الفيديو</a>`}
+
+/* ---------- روابط تظهر في جوجل: ?p=كود الصنف + عنوان ووصف وصورة لكل منتج ---------- */
+function meta(sel,attr,val){let e=document.head.querySelector(sel);if(!e){e=document.createElement(sel.startsWith('link')?'link':'meta');let m=sel.match(/\[(\w+(?::\w+)?)="([^"]+)"\]/);if(m)e.setAttribute(m[1],m[2]);document.head.appendChild(e)}e.setAttribute(attr,val)}
+const HOME={title:document.title,desc:(document.head.querySelector('meta[name="description"]')||{}).content||''};
+function ld(obj){let s=document.getElementById('mk-ld');if(!s){s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld';document.head.appendChild(s)}s.textContent=JSON.stringify(obj)}
+function seoHome(){document.title=HOME.title;meta('meta[name="description"]','content',HOME.desc);meta('link[rel="canonical"]','href',BASE());
+ ld({'@context':'https://schema.org','@type':'HardwareStore',name:S.name||'ميكانيزم',description:S.tagline||'',telephone:S.phone||'',image:S.logo||undefined,url:BASE(),address:S.address?{'@type':'PostalAddress',streetAddress:S.address,addressCountry:'EG'}:undefined})}
+function seoProduct(p){let im=(p.imgs&&p.imgs[0])||p.img||'',sec=byId(S.sections,p.sec)||{},d=(p.desc||'').replace(/\s+/g,' ').slice(0,155)||((sec.name?sec.name+' — ':'')+(S.name||'ميكانيزم'));
+ document.title=p.name+' | '+(S.name||'ميكانيزم');meta('meta[name="description"]','content',d);meta('meta[property="og:title"]','content',p.name);meta('meta[property="og:description"]','content',d);if(im)meta('meta[property="og:image"]','content',im);
+ meta('link[rel="canonical"]','href',BASE()+'?p='+encodeURIComponent(p.id));
+ ld({'@context':'https://schema.org','@type':'Product',name:p.name,description:p.desc||undefined,image:(p.imgs&&p.imgs.length?p.imgs:(im?[im]:undefined)),sku:p.code||undefined,category:sec.name||undefined,brand:{'@type':'Brand',name:S.name||'ميكانيزم'}})}
+const _po=pvOpen;
+pvOpen=function(id,noPush){_po(id,noPush);let p=byId(S.products,id);if(!p)return;seoProduct(p);
+ try{history.replaceState(history.state,'',location.pathname+'?p='+encodeURIComponent(id))}catch(e){}
+ if(p.video){let box=document.querySelector('#pv .pvi .pvprice')||document.querySelector('#pv .pvi h1');if(box&&!document.querySelector('#pv .pvvid'))box.insertAdjacentHTML('afterend',`<div class="pvbox pvvid"><h2>🎬 فيديو</h2>${embed(p.video)}</div>`)}};
+const _pc=pvClose;
+pvClose=function(back){_pc(back);seoHome();if(/[?&]p=/.test(location.search)){try{history.replaceState(null,'',location.pathname)}catch(e){}}};
+/* فتح منتج من رابط ?p= (أو الرابط القديم #p=) */
+let opened=false;
+const _r3=render;render=function(){_r3();if(opened||admin)return;let id=new URLSearchParams(location.search).get('p');if(id&&byId(S.products,id)){opened=true;pvOpen(id,true)}};
+window.addEventListener('popstate',()=>{if(!/[?&]p=/.test(location.search)&&!/^#p=/.test(location.hash)&&document.getElementById('pv').classList.contains('on'))pvClose(false)});
+seoHome();
+if(new URLSearchParams(location.search).get('p'))render();
+})();
+</script>
+
 </body></html>

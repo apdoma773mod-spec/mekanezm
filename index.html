@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"><meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <meta name="theme-color" id="metaTheme" content="#087f8c">
@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-6';
+const APP_VER='2026-10-06-7';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2360,6 +2360,56 @@ function markWeb(){if(!SITE)return;let codes=new Set(SITE.data.products.map(x=>S
   let has=td.querySelector('.web-dot');if(codes.has(String(p.code||''))&&p.code){if(!has)td.insertAdjacentHTML('beforeend','<span class="web-dot" title="على الموقع">🌐</span>')}else if(has)has.remove()})}
 const _rp3=renderProducts;renderProducts=function(){_rp3();markWeb()};
 const _sp3=showPage;showPage=function(id){_sp3(id);if(id==='products'&&isAdmin()&&sbx())loadSite().then(markWeb).catch(()=>{})};
+
+/* ---------- 🌐 إدارة محتوى الموقع: أعمالنا، آراء العملاء، التوصيل والاستبدال، جوجل ---------- */
+const SHOP_URL='https://apdoma773mod-spec.github.io/mekanezm/shop.html';
+function imgsEditor(arr,elId,onChange){let el=document.getElementById(elId);
+ let draw=()=>{el.innerHTML=arr.map((u,i)=>`<div class="${i?'':'main'}"><img src="${esc(u)}" loading="lazy"><button type="button" class="x" data-x="${i}">✕</button>${i?`<button type="button" class="m" data-m="${i}">⭐</button>`:''}</div>`).join('')||'<small style="color:var(--muted)">مفيش صور لسه</small>'};
+ el.onclick=e=>{let x=e.target.closest('[data-x]'),m=e.target.closest('[data-m]');if(x){arr.splice(+x.dataset.x,1);draw()}if(m){arr.unshift(arr.splice(+m.dataset.m,1)[0]);draw()}};draw();return draw}
+async function pickUpload(input,arr,draw,msgEl,btn){let fs=[...input.files];input.value='';if(!fs.length)return;if(btn)btn.disabled=true;
+ for(let k=0;k<fs.length;k++){msgEl.textContent=`⏳ جاري رفع الصورة ${k+1} من ${fs.length}…`;try{arr.push(await uploadImg(fs[k]))}catch(e){toast('صورة مارفعتش: '+(e.message||e))}draw()}msgEl.textContent='';if(btn)btn.disabled=false}
+window.openSiteAdmin=async function(tab){if(!isAdmin())return;tab=tab||'works';try{await loadSite()}catch(e){return toast('محتاج نت عشان تفتح بيانات الموقع')}
+ let d=SITE.data,W=d.works||[],R=d.reviews||[],D=d.delivery||[],T=[['works','🏗️ أعمالنا'],['reviews','⭐ آراء العملاء'],['delivery','🚚 التوصيل والاستبدال'],['seo','🔍 جوجل']],body='';
+ if(tab==='works')body=`<p style="color:var(--muted);margin-top:0">صور مطابخ ودريسنج ركّبتوا فيها منتجاتكم — أكتر حاجة بتبني ثقة العميل.</p>${W.map((w,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">${w.imgs&&w.imgs[0]?`<img src="${esc(w.imgs[0])}" style="width:64px;height:64px;object-fit:cover;border-radius:10px">`:''}<div style="flex:1;min-width:0"><b>${esc(w.title)}</b><br><small style="color:var(--muted)">${(w.imgs||[]).length} صور</small></div><button class="secondary" onclick="siteWork(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('works',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش أعمال</div>'}<button class="primary" style="margin-top:12px" onclick="siteWork(-1)">＋ شغلانة جديدة</button>`;
+ if(tab==='reviews')body=`<p style="color:var(--muted);margin-top:0">اكتب آراء عملاء حقيقيين (بإذنهم). بتظهر في الصفحة الرئيسية.</p>${R.map((r,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><b>${esc(r.name)}</b> <span style="color:#f5a623">${'★'.repeat(+r.stars||5)}</span><br><small style="color:var(--muted)">${esc(String(r.text||'').slice(0,80))}</small></div><button class="secondary" onclick="siteReview(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('reviews',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش آراء</div>'}<button class="primary" style="margin-top:12px" onclick="siteReview(-1)">＋ رأي جديد</button>`;
+ if(tab==='delivery')body=`<div class="field"><label>جملة عن التوصيل (اختياري)</label><input id="sdNote" value="${esc(d.deliveryNote||'')}" placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام"></div>
+  <h3 style="margin:14px 0 6px">المناطق</h3><div id="sdRows">${(D.length?D:[{area:'',fee:'',days:''}]).map(x=>`<div class="sdr" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;margin-bottom:6px"><input placeholder="المنطقة" value="${esc(x.area||'')}"><input placeholder="المصاريف" inputmode="decimal" value="${esc(x.fee??'')}"><input placeholder="المدة (مثلاً يوم)" value="${esc(x.days||'')}"><button type="button" class="secondary danger" onclick="this.parentNode.remove()">✕</button></div>`).join('')}</div>
+  <button type="button" class="secondary" onclick="sdAdd()">＋ منطقة</button>
+  <div class="field" style="margin-top:14px"><label>🔁 سياسة الاستبدال والاسترجاع</label><textarea id="sdPol" rows="5" style="padding:11px;border:1px solid var(--border);border-radius:10px" placeholder="مثلاً: الاستبدال خلال 14 يوم من الاستلام والمنتج بحالته وبالكرتونة...">${esc(d.policy||'')}</textarea></div>
+  <button class="primary" style="margin-top:12px" id="sdSave">حفظ</button>`;
+ if(tab==='seo')body=`<p style="line-height:1.9;margin-top:0">كل منتج على الموقع بقى ليه رابط خاص (زي <span dir="ltr">shop.html?p=...</span>) فيه اسمه ووصفه وصورته — جوجل يقدر يقرأه ويظهره في البحث.</p>
+  <p style="line-height:1.9">عشان جوجل يعرف كل الروابط: نزّل الملف ده وارفعه على GitHub جنب shop.html، وبعدين قدّمه في Google Search Console — وكرّرها كل ما تضيف منتجات كتير جديدة.</p>
+  <div class="btnrow"><button class="primary" onclick="siteSitemap()">⬇️ تنزيل sitemap.xml</button></div>
+  <p style="color:var(--muted);font-size:13px;margin-top:10px">المنتجات المنشورة دلوقتي: <b>${(d.products||[]).length}</b></p>`;
+ openModal(`<div class="modal-head"><h2>🌐 محتوى الموقع</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="btnrow" style="margin-bottom:12px">${T.map(([k,t])=>`<button class="${k===tab?'primary':'secondary'}" onclick="openSiteAdmin('${k}')">${t}</button>`).join('')}</div>${body}
+ <p style="margin:14px 0 0"><a href="${SHOP_URL}" target="_blank" rel="noopener">↗️ افتح الموقع</a></p>`);
+ if(tab==='delivery')sdSave.onclick=async()=>{let rows=[...document.querySelectorAll('#sdRows .sdr')].map(r=>{let i=r.querySelectorAll('input');return {area:i[0].value.trim(),fee:i[1].value.trim(),days:i[2].value.trim()}}).filter(x=>x.area);
+  sdSave.disabled=true;try{await saveSite(x=>{x.delivery=rows;x.deliveryNote=val('sdNote');x.policy=sdPol.value.trim()});toast('✔ اتحفظ على الموقع');openSiteAdmin('delivery')}catch(e){sdSave.disabled=false;toast(e.message||e)}}};
+window.siteDel=async function(key,i){if(!await ask('حذف من الموقع؟','حذف','رجوع'))return openSiteAdmin(key);try{await saveSite(d=>{(d[key]=d[key]||[]).splice(i,1)});toast('اتحذف')}catch(e){toast(e.message||e)}openSiteAdmin(key)};
+window.siteWork=function(i){let w=i>-1?JSON.parse(JSON.stringify(SITE.data.works[i])):{id:uid7(),title:'',desc:'',imgs:[]};
+ openModal(`<div class="modal-head"><h2>🏗️ ${i>-1?'تعديل شغلانة':'شغلانة جديدة'}</h2><button class="close" onclick="openSiteAdmin('works')"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field full"><label>العنوان</label><input id="swT" value="${esc(w.title)}" placeholder="مثلاً: مطبخ أكريليك — الشيخ زايد"></div>
+ <div class="field full"><label>وصف قصير (اختياري)</label><input id="swD" value="${esc(w.desc||'')}" placeholder="مثلاً: مفصلات بلوم + مجر سفلي سوفت كلوز"></div>
+ <div class="field full"><label>الصور (أول صورة هي الغلاف)</label><div class="sp-imgs" id="swI"></div><button type="button" class="secondary" style="margin-top:8px" onclick="document.getElementById('swF').click()">＋ إضافة صور</button><input type="file" id="swF" accept="image/*" multiple hidden><div id="swU" style="font-size:13px;color:var(--muted)"></div></div></div>
+ <div class="modal-foot"><button class="primary" id="swS">حفظ</button><button type="button" class="secondary" onclick="openSiteAdmin('works')">رجوع</button></div>`);
+ let draw=imgsEditor(w.imgs,'swI');swF.onchange=()=>pickUpload(swF,w.imgs,draw,swU,swS);
+ swS.onclick=async()=>{w.title=swT.value.trim();w.desc=swD.value.trim();if(!w.title)return toast('اكتب العنوان');if(!w.imgs.length)return toast('ضيف صورة واحدة على الأقل');swS.disabled=true;
+  try{await saveSite(d=>{d.works=d.works||[];let k=d.works.findIndex(x=>x.id===w.id);if(k>-1)d.works[k]=w;else d.works.unshift(w)});toast('✔ اتحفظ');openSiteAdmin('works')}catch(e){swS.disabled=false;toast(e.message||e)}}};
+window.siteReview=function(i){let r=i>-1?Object.assign({},SITE.data.reviews[i]):{id:uid7(),name:'',area:'',stars:5,text:''};
+ openModal(`<div class="modal-head"><h2>⭐ ${i>-1?'تعديل رأي':'رأي جديد'}</h2><button class="close" onclick="openSiteAdmin('reviews')"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field"><label>اسم العميل</label><input id="srN" value="${esc(r.name)}"></div><div class="field"><label>المنطقة (اختياري)</label><input id="srA" value="${esc(r.area||'')}"></div>
+ <div class="field"><label>التقييم</label><select id="srS">${[5,4,3].map(n=>`<option value="${n}" ${+r.stars===n?'selected':''}>${'★'.repeat(n)}</option>`).join('')}</select></div>
+ <div class="field full"><label>الرأي</label><textarea id="srT" rows="4" style="padding:11px;border:1px solid var(--border);border-radius:10px">${esc(r.text)}</textarea></div></div>
+ <div class="modal-foot"><button class="primary" id="srV">حفظ</button><button type="button" class="secondary" onclick="openSiteAdmin('reviews')">رجوع</button></div>`);
+ srV.onclick=async()=>{Object.assign(r,{name:srN.value.trim(),area:srA.value.trim(),stars:+srS.value,text:srT.value.trim()});if(!r.name||!r.text)return toast('اكتب الاسم والرأي');srV.disabled=true;
+  try{await saveSite(d=>{d.reviews=d.reviews||[];let k=d.reviews.findIndex(x=>x.id===r.id);if(k>-1)d.reviews[k]=r;else d.reviews.unshift(r)});toast('✔ اتحفظ');openSiteAdmin('reviews')}catch(e){srV.disabled=false;toast(e.message||e)}}};
+window.siteSitemap=function(){let d=SITE.data,day=isoToday(),u=[SHOP_URL].concat((d.products||[]).map(p=>SHOP_URL+'?p='+encodeURIComponent(p.id)));
+ let xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+u.map(x=>`  <url><loc>${x.replace(/&/g,'&amp;')}</loc><lastmod>${day}</lastmod></url>`).join('\n')+'\n</urlset>\n';
+ saveFile('sitemap.xml',new Blob([xml],{type:'application/xml'})).then(ok=>ok&&toast('✔ اتنزل sitemap.xml — ارفعه على GitHub'))};
+window.sdAdd=function(){let r=document.getElementById('sdRows');r.insertAdjacentHTML('beforeend','<div class="sdr" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;margin-bottom:6px"><input placeholder="المنطقة"><input placeholder="المصاريف" inputmode="decimal"><input placeholder="المدة (مثلاً يوم)"><button type="button" class="secondary danger" onclick="this.parentNode.remove()">✕</button></div>')};
+(function(){let nv=document.querySelector('aside nav [data-page="weborders"]');if(nv)nv.insertAdjacentHTML('afterend','<button class="own" onclick="openSiteAdmin()"><span style="width:1.15em;text-align:center">🌐</span> <span>محتوى الموقع</span></button>');
+ let pt=document.querySelector('#products .title-row .btnrow');if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary own" onclick="openSiteAdmin()">🌐 محتوى الموقع</button>')})();
 
 /* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
 let lastNew=null;
