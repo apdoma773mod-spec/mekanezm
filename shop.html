@@ -656,6 +656,16 @@ const _pm2=pubMain;pubMain=function(){_pm2();const c=document.getElementById('ca
  setTimeout(()=>{const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.rq){fl.dataset.rq=1;fl.insertAdjacentHTML('beforeend','<a href="#" data-req onclick="return false">📷 اطلب منتج مش موجود</a>')}},0)};
 const _dp=drawProds;drawProds=function(){_dp();const e=document.querySelector('#prods .empty');if(e&&!e.querySelector('[data-req]'))e.insertAdjacentHTML('beforeend','<div style="margin-top:12px">'+REQ_BTN+'</div>')};
 
+/* ---------- 📞 أرقام المحل + 📒 كتالوج الواتساب ---------- */
+const PH2=()=>(Array.isArray(S.phones)?S.phones:['01042383986','01042466087']).filter(x=>String(x||'').trim());
+const catUrl=()=>{if(S.catalog===false)return '';let ph=String(S.phone||'').replace(/\D/g,'');if(ph[0]==='0')ph='20'+ph.slice(1);return ph?'https://wa.me/c/'+ph:''};
+document.head.insertAdjacentHTML('beforeend','<style>.catbtn{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 16px 10px;background:#25D366;color:#fff;text-decoration:none;font-weight:800;border-radius:16px;padding:12px}.fc .ph2 a{display:block}</style>');
+function contactBits(){const fc=document.querySelector('#ft .fc');if(fc&&!fc.querySelector('.ph2')){const nums=PH2();let blk=[...fc.children].find(c=>c.querySelector('b')&&/تواصل/.test(c.querySelector('b').textContent));
+  const html=`<div class="ph2">${nums.map(n=>`<a href="tel:${esc(n.replace(/\s/g,''))}">📞 ${esc(n)}</a>`).join('')}${catUrl()?`<a href="${catUrl()}" target="_blank" rel="noopener">📒 كتالوج الواتساب</a>`:''}</div>`;
+  if(blk)blk.insertAdjacentHTML('beforeend',html);else fc.insertAdjacentHTML('beforeend',`<div><b>تواصل معنا</b>${html}</div>`)}
+ const m=$('main');if(m&&!admin&&catUrl()&&!document.getElementById('catHome')){const t=m.querySelector('.trust');(t||m.firstElementChild||m).insertAdjacentHTML(t?'afterend':'beforebegin',`<a id="catHome" class="catbtn" href="${catUrl()}" target="_blank" rel="noopener">📒 شوف كتالوجنا على واتساب</a>`)}}
+const _pm3=pubMain;pubMain=function(){_pm3();setTimeout(contactBits,0)};
+
 seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();
 })();

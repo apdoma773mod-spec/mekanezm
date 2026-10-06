@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-10';
+const APP_VER='2026-10-06-11';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2435,7 +2435,14 @@ function imgsEditor(arr,elId,onChange){let el=document.getElementById(elId);
 async function pickUpload(input,arr,draw,msgEl,btn){let fs=[...input.files];input.value='';if(!fs.length)return;if(btn)btn.disabled=true;
  for(let k=0;k<fs.length;k++){msgEl.textContent=`⏳ جاري رفع الصورة ${k+1} من ${fs.length}…`;try{arr.push(await uploadImg(fs[k]))}catch(e){toast('صورة مارفعتش: '+(e.message||e))}draw()}msgEl.textContent='';if(btn)btn.disabled=false}
 window.openSiteAdmin=async function(tab){if(!isAdmin())return;tab=tab||'works';try{await loadSite()}catch(e){return toast('محتاج نت عشان تفتح بيانات الموقع')}
- let d=SITE.data,W=d.works||[],R=d.reviews||[],D=d.delivery||[],T=[['works','🏗️ أعمالنا'],['reviews','⭐ آراء العملاء'],['delivery','🚚 التوصيل والاستبدال'],['seo','🔍 جوجل']],body='';
+ let d=SITE.data,W=d.works||[],R=d.reviews||[],D=d.delivery||[],T=[['works','🏗️ أعمالنا'],['reviews','⭐ آراء العملاء'],['delivery','🚚 التوصيل والاستبدال'],['contact','📞 التواصل'],['seo','🔍 جوجل']],body='';
+ if(tab==='contact'){let P=Array.isArray(d.phones)?d.phones:['01042383986','01042466087'];
+  body=`<div class="form"><div class="field full"><label>رقم الواتساب الأساسي (اللي عليه الكتالوج)</label><input id="scWa" dir="ltr" value="${esc(d.phone||'')}"></div>
+  <div class="field"><label>رقم المحل 1</label><input id="scP1" dir="ltr" value="${esc(P[0]||'')}"></div><div class="field"><label>رقم المحل 2</label><input id="scP2" dir="ltr" value="${esc(P[1]||'')}"></div>
+  <div class="field full"><label>ساعات العمل</label><input id="scH" value="${esc(d.hours||'')}" placeholder="مثلاً: يومياً من 10 الصبح لـ 10 بالليل — الجمعة إجازة"></div>
+  <div class="field full"><label>لينك المحل على خرائط جوجل (اختياري)</label><input id="scMap" dir="ltr" value="${esc(d.mapUrl||'')}" placeholder="https://maps.app.goo.gl/..."></div>
+  <div class="field full"><label class="chk"><input type="checkbox" id="scCat" ${d.catalog===false?'':'checked'}> زرار «📒 شوف كتالوجنا على واتساب» في الموقع</label></div></div>
+  <button class="primary" style="margin-top:12px" id="scSave">حفظ</button>`}
  if(tab==='works')body=`<p style="color:var(--muted);margin-top:0">صور مطابخ ودريسنج ركّبتوا فيها منتجاتكم — أكتر حاجة بتبني ثقة العميل.</p>${W.map((w,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">${w.imgs&&w.imgs[0]?`<img src="${esc(w.imgs[0])}" style="width:64px;height:64px;object-fit:cover;border-radius:10px">`:''}<div style="flex:1;min-width:0"><b>${esc(w.title)}</b><br><small style="color:var(--muted)">${(w.imgs||[]).length} صور</small></div><button class="secondary" onclick="siteWork(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('works',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش أعمال</div>'}<button class="primary" style="margin-top:12px" onclick="siteWork(-1)">＋ شغلانة جديدة</button>`;
  if(tab==='reviews')body=`<p style="color:var(--muted);margin-top:0">اكتب آراء عملاء حقيقيين (بإذنهم). بتظهر في الصفحة الرئيسية.</p>${R.map((r,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><b>${esc(r.name)}</b> <span style="color:#f5a623">${'★'.repeat(+r.stars||5)}</span><br><small style="color:var(--muted)">${esc(String(r.text||'').slice(0,80))}</small></div><button class="secondary" onclick="siteReview(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('reviews',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش آراء</div>'}<button class="primary" style="margin-top:12px" onclick="siteReview(-1)">＋ رأي جديد</button>`;
  if(tab==='delivery')body=`<div class="field"><label>جملة عن التوصيل (اختياري)</label><input id="sdNote" value="${esc(d.deliveryNote||'')}" placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام"></div>
@@ -2450,6 +2457,8 @@ window.openSiteAdmin=async function(tab){if(!isAdmin())return;tab=tab||'works';t
  openModal(`<div class="modal-head"><h2>🌐 محتوى الموقع</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <div class="btnrow" style="margin-bottom:12px">${T.map(([k,t])=>`<button class="${k===tab?'primary':'secondary'}" onclick="openSiteAdmin('${k}')">${t}</button>`).join('')}</div>${body}
  <p style="margin:14px 0 0"><a href="${SHOP_URL}" target="_blank" rel="noopener">↗️ افتح الموقع</a></p>`);
+ if(tab==='contact')scSave.onclick=async()=>{scSave.disabled=true;
+  try{await saveSite(x=>{x.phone=val('scWa')||x.phone;x.phones=[val('scP1'),val('scP2')].filter(Boolean);x.hours=val('scH');x.mapUrl=val('scMap');x.catalog=scCat.checked});toast('✔ اتحفظ على الموقع');openSiteAdmin('contact')}catch(e){scSave.disabled=false;toast(e.message||e)}};
  if(tab==='delivery')sdSave.onclick=async()=>{let rows=[...document.querySelectorAll('#sdRows .sdr')].map(r=>{let i=r.querySelectorAll('input');return {area:i[0].value.trim(),fee:i[1].value.trim(),days:i[2].value.trim()}}).filter(x=>x.area);
   sdSave.disabled=true;try{await saveSite(x=>{x.delivery=rows;x.deliveryNote=val('sdNote');x.policy=sdPol.value.trim()});toast('✔ اتحفظ على الموقع');openSiteAdmin('delivery')}catch(e){sdSave.disabled=false;toast(e.message||e)}}};
 window.siteDel=async function(key,i){if(!await ask('حذف من الموقع؟','حذف','رجوع'))return openSiteAdmin(key);try{await saveSite(d=>{(d[key]=d[key]||[]).splice(i,1)});toast('اتحذف')}catch(e){toast(e.message||e)}openSiteAdmin(key)};
