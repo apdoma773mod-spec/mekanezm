@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-07-2';
+const APP_VER='2026-10-07-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2285,8 +2285,9 @@ window.openClosing=async function(day){day=day||isoToday();let s;
  const row=(t,v,c)=>`<tr><td>${t}</td><td style="${c?'color:'+c:''}">${money(v)}</td></tr>`;
  openModal(`<div class="modal-head"><h2>🔒 تقفيل اليومية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <div class="form"><div class="field"><label>اليوم</label><input type="date" id="clDay" value="${esc(s.day)}" onchange="openClosing(this.value)"></div><div class="field"><label>الفلوس اللي في الدرج فعلاً</label><input id="clCash" inputmode="decimal" placeholder="عدّ الدرج واكتب المبلغ"></div></div>
+ ${s.daybook_open?`<div style="margin-top:10px;padding:12px;border-radius:12px;background:#fff4e5;color:#8a4b00">📒 في <b>${s.daybook_open}</b> سطر في يومية المحل لسه متصفّوش — مش داخلين في الحساب.<div class="btnrow" style="margin-top:8px"><button class="primary" onclick="clDayPost('${esc(s.day)}')">🧮 صفّي اليومية الأول</button></div></div>`:''}
  <div class="table-wrap" style="margin-top:10px"><table class="table cl-t" style="min-width:0"><tbody>
-  <tr><td>عدد فواتير البيع</td><td>${s.sales_count}</td></tr>${row('إجمالي المبيعات',s.sales_total)}${row('اتحصّل من المبيعات (نقدي)',s.sales_paid,'var(--green)')}${row('آجل على العملاء',s.sales_credit,'var(--danger)')}
+  <tr><td>عدد فواتير البيع</td><td>${s.sales_count}</td></tr>${row('إجمالي المبيعات',s.sales_total)}${row('اتحصّل من المبيعات',s.sales_paid,'var(--green)')}${s.insta?row('📱 منهم إنستاباي (مش في الدرج)',s.insta,'#5b3aa6'):''}${s.transfer?row('🏦 منهم تحويل (مش في الدرج)',s.transfer,'#1d5fb3'):''}${row('آجل على العملاء',s.sales_credit,'var(--danger)')}
   ${row('تحصيل من عملاء (دفعات)',s.collections,'var(--green)')}${row('مدفوع للموردين في فواتير الشراء',s.purchases_paid,'var(--danger)')}${row('سداد لموردين',s.supplier_payments,'var(--danger)')}
   ${row('مصروفات',s.expenses,'var(--danger)')}${row('مرتجعات بيع (فلوس رجعت للعملاء)',s.returns_sale,'var(--danger)')}${s.returns_purchase?row('مرتجعات شراء',s.returns_purchase,'var(--green)'):''}
   <tr style="background:var(--tint2);font-size:17px"><td><b>المفروض في الدرج (حركة اليوم)</b></td><td><b>${money(s.cash_expected)}</b></td></tr>
@@ -2299,10 +2300,11 @@ window.openClosing=async function(day){day=day||isoToday();let s;
  <div class="modal-foot"><button class="primary" id="clSave">حفظ التقفيل وإرساله للمالك</button><button type="button" class="secondary" id="clWa">💬 إرسال على الواتساب بس</button>${isAdmin()?'<button type="button" class="secondary" onclick="closingHistory()">السجل</button>':''}</div>`);
  let diff=()=>{let v=val('clCash'),r=document.getElementById('clDiffRow');if(v===''){r.style.display='none';return null}let d=r2(+v-s.cash_expected);r.style.display='';clDiff.innerHTML=`<b style="color:${d<0?'var(--danger)':d>0?'var(--green)':'inherit'}">${d>0?'+':''}${money(d)}${d<0?' (عجز)':d>0?' (زيادة)':' ✔'}</b>`;return d};
  clCash.oninput=diff;
- let msg=()=>{let c=val('clCash'),d=diff();return `🔒 تقفيل يومية ${db.settings.companyName||'ميكانيزم'}\n📅 ${s.day}${userName()?' — '+userName():''}\n\n🧾 فواتير البيع: ${s.sales_count}\n💵 المبيعات: ${money(s.sales_total)}\n✅ نقدي: ${money(s.sales_paid)}\n⏳ آجل: ${money(s.sales_credit)}\n➕ تحصيل: ${money(s.collections)}\n➖ موردين: ${money(n2(s.purchases_paid)+n2(s.supplier_payments))}\n➖ مصروفات: ${money(s.expenses)}\n➖ مرتجعات: ${money(s.returns_sale)}\n\n💰 المفروض في الدرج: ${money(s.cash_expected)}`+(c!==''?`\n💼 الموجود فعلاً: ${money(+c)}\n${d<0?'🔴 عجز':d>0?'🟢 زيادة':'✔ مظبوط'}: ${money(Math.abs(d))}`:'')+(val('clNote')?`\n📝 ${val('clNote')}`:'')};
+ let msg=()=>{let c=val('clCash'),d=diff();return `🔒 تقفيل يومية ${db.settings.companyName||'ميكانيزم'}\n📅 ${s.day}${userName()?' — '+userName():''}\n\n🧾 فواتير البيع: ${s.sales_count}\n💵 المبيعات: ${money(s.sales_total)}\n✅ اتحصّل: ${money(s.sales_paid)}${s.insta?'\n📱 منهم إنستاباي: '+money(s.insta):''}${s.transfer?'\n🏦 منهم تحويل: '+money(s.transfer):''}\n⏳ آجل: ${money(s.sales_credit)}\n➕ تحصيل: ${money(s.collections)}\n➖ موردين: ${money(n2(s.purchases_paid)+n2(s.supplier_payments))}\n➖ مصروفات: ${money(s.expenses)}\n➖ مرتجعات: ${money(s.returns_sale)}\n\n💰 المفروض في الدرج: ${money(s.cash_expected)}`+(c!==''?`\n💼 الموجود فعلاً: ${money(+c)}\n${d<0?'🔴 عجز':d>0?'🟢 زيادة':'✔ مظبوط'}: ${money(Math.abs(d))}`:'')+(val('clNote')?`\n📝 ${val('clNote')}`:'')};
  let wa=()=>{let ph=String(ownerWa()).replace(/\D/g,'');if(ph[0]==='0')ph='20'+ph.slice(1);window.open('https://wa.me/'+(ph||'')+'?text='+encodeURIComponent(msg()),'_blank')};
  clWa.onclick=wa;
  clSave.onclick=async()=>{clSave.disabled=true;try{let c=val('clCash');await A().rpc('mk_save_closing',{p_day:s.day,p_cash_actual:c===''?null:+c,p_note:val('clNote')});toast('✔ التقفيل اتحفظ');wa()}catch(e){clSave.disabled=false;toast(A().errMsg(e))}}};
+window.clDayPost=async function(day){try{let {data,error}=await window.mkSB.rpc('mk_daybook_post',{p_day:day,p_person:null});if(error)throw error;await A().loadAll();toast('✔ اليومية اتصفّت: '+(data||[]).map(x=>x.no).join('، '));if(window.dbLoad)dbLoad();openClosing(day)}catch(e){toast(A().errMsg(e))}};
 window.closingHistory=async function(){try{let r=await window.mkSB.from('mk_closings').select('*').order('at',{ascending:false}).limit(40);let L=r.data||[];
  openModal(`<div class="modal-head"><h2>سجل تقفيل اليومية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="table-wrap"><table class="table"><thead><tr><th>اليوم</th><th>المبيعات</th><th>المفروض</th><th>الموجود</th><th>الفرق</th><th>بواسطة</th></tr></thead><tbody>${L.map(c=>`<tr><td>${esc(String(c.day).slice(0,10))}</td><td>${money(c.data&&c.data.sales_total)}</td><td>${money(c.cash_expected)}</td><td>${c.cash_actual==null?'—':money(c.cash_actual)}</td><td style="color:${(+c.cash_diff||0)<0?'var(--danger)':'inherit'}">${c.cash_diff==null?'—':money(c.cash_diff)}</td><td>${esc(c.by_name)}</td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">لسه مفيش</div></td></tr>'}</tbody></table></div>`)}catch(e){toast('محتاج نت')}};
 
@@ -2884,6 +2886,210 @@ openInvoiceModal=function(id){_oimS(id);let r=db.sales.find(x=>x.id===id);if(!r|
 let shT=null;
 function shLive(){try{sbx().channel('mk-ship').on('postgres_changes',{event:'*',schema:'public',table:'mk_shipments'},()=>{clearTimeout(shT);shT=setTimeout(loadShips,800)}).subscribe()}catch(e){}}
 (function wait(n){if(window.mkT_user&&sbx()){loadShips();shLive();setInterval(()=>{if(navigator.onLine&&!document.hidden)loadShips()},120000);return}if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
+})();
+</script>
+
+<style>
+#daybook .dbent{position:sticky;top:0;z-index:5;background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 4px 16px #0001}
+#daybook .dbrow1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#daybook .dbrow1 .who{flex:1;min-width:160px;position:relative}
+#daybook .dbrow1 .who input{width:100%;font-size:16px;padding:11px;border:1px solid var(--border);border-radius:12px}
+.dbpays{display:flex;gap:6px;flex-wrap:wrap}
+.dbpays button{padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text,#18343a);font-size:14px}
+.dbpays button.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+#daybook .dbsr{display:flex;gap:6px;margin-top:10px}
+#daybook .dbsr input{flex:1;min-width:0;font-size:17px;padding:13px;border:2px solid var(--blue);border-radius:12px}
+#daybook .dbsr button{flex:none;width:52px;font-size:22px;padding:0;border-radius:12px}
+#dbBox{display:none;max-height:50vh;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff;box-shadow:0 8px 24px #0002}
+#dbBox div{padding:13px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:16px}
+.dbg{background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+.dbg.done{opacity:.75}
+.dbgh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--tint2,#eef6f7)}
+.dbgh b{font-size:17px}.dbgh small{display:block;color:var(--muted);font-size:12px}
+.dbl{display:grid;grid-template-columns:minmax(0,2.2fr) 54px 74px 84px 86px 64px;gap:6px;align-items:center;padding:9px 12px;border-top:1px solid var(--border);cursor:pointer;font-size:14px}
+.dbl.hd{cursor:default;font-size:12px;color:var(--muted);background:#fafcfc}
+.dbl .st{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-4px}
+.dbl.pay{background:#f3fbf6}
+.dbbadge{display:inline-block;border-radius:8px;padding:1px 7px;font-size:12px;background:#eef1f2}
+.dbbadge.credit{background:#fdecea;color:#b3261e}.dbbadge.insta{background:#efe9fb;color:#5b3aa6}.dbbadge.transfer{background:#e8f1fd;color:#1d5fb3}.dbbadge.cash{background:#e6f6ec;color:#1e7a3c}
+.dbfoot{position:sticky;bottom:0;background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;box-shadow:0 -4px 16px #0001;margin-top:8px}
+.dbfoot .t{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}.dbfoot .t b{font-size:15px}
+@media(max-width:900px){
+ .dbl{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+ .dbl.hd{display:none}
+ .dbl>.c-q,.dbl>.c-p,.dbl>.c-pay,.dbl>.c-ow{display:none}
+ .dbl>.c-t{text-align:left}
+ .dbl .mob{display:block!important;grid-column:1/-1;font-size:13px;color:var(--muted)}
+}
+.dbl .mob{display:none}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 📒 يومية المحل: اكتب كل بيعة على طول → المخزن بيتخصم بعد 5 دقايق → «صفّي» يعمل فواتير بيع لكل عميل
+   ===================================================================== */
+(function(){
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const A=()=>window.mkT&&window.mkT.api;
+const PAYS=[['cash','💵 نقدي'],['insta','📱 إنستاباي'],['transfer','🏦 تحويل'],['credit','⏳ آجل']];
+const payName=k=>(PAYS.find(x=>x[0]===k)||['',''])[1];
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let DB={day:isoToday(),rows:[],owed:[],loaded:false,err:''},ENT={get person(){let e=document.getElementById('dbPerson');return e?e.value.trim():''},pay:LS.get('mk_db_pay')||'cash'};
+const lineTot=r=>r2((+r.qty||0)*(+r.price||0));
+const due=r=>!r.committed_at&&!r.posted_at&&Date.now()-new Date(r.created_at).getTime()>=5*60000;
+const minsLeft=r=>Math.max(0,Math.ceil((5*60000-(Date.now()-new Date(r.created_at).getTime()))/60000));
+function dbErr(e){let m=String(e&&(e.message||e)||'');
+ if(/relation|does not exist|schema cache|Could not find the function/i.test(m))return 'محتاج تشغّل ملف اليومية (daybook.sql) في Supabase الأول';
+ if(m==='need_person')return 'اكتب اسم العميل — الآجل والدفعة لازم يبقى ليهم اسم';
+ if(/^pay_gt_total:/.test(m))return 'الدفعة أكبر من حساب '+m.split(':').slice(1).join(':')+' — قلّلها أو سجّلها من دفعات العميل';
+ if(m==='posted')return 'السطر ده اتصفّى خلاص — عدّله من الفاتورة';
+ if(m==='bad_owed')return '«باقي له» لازم يبقى أقل من أو يساوي العدد';
+ return A()&&A().errMsg?A().errMsg(e):m}
+async function rpc(fn,args){let {data,error}=await sbx().rpc(fn,args||{});if(error)throw error;return data}
+
+/* ---------- البيانات ---------- */
+async function dbLoad(){if(!sbx()||!window.mkT_user)return;
+ try{let r=await sbx().from('mk_daybook').select('*').eq('day',DB.day).order('created_at',{ascending:true}).limit(1000);if(r.error)throw r.error;DB.rows=r.data||[];
+  try{DB.owed=(await rpc('mk_daybook_owed'))||[]}catch(e){DB.owed=[]}DB.err='';DB.loaded=true}
+ catch(e){DB.err=dbErr(e)}
+ dbRender();dbBadge()}
+window.dbLoad=dbLoad;
+function dbBadge(){let open=DB.day===isoToday()?DB.rows.filter(r=>!r.posted_at).length:0,c=document.getElementById('dbCount');if(c){c.textContent=open;c.style.display=open?'':'none'}}
+async function dbCommitIfDue(){if(!DB.rows.some(due))return;try{let n=await rpc('mk_daybook_commit');if(n){await dbLoad();await A().refreshProducts(DB.rows.map(r=>r.product_id));A().done()}}catch(e){}}
+
+/* ---------- الإضافة ---------- */
+async function dbAdd(o){o=Object.assign({day:DB.day,person:ENT.person,pay:ENT.pay},o);
+ try{let r=await rpc('mk_daybook_add',{p:o});DB.rows.push(r);dbRender();dbBadge();return r}catch(e){toast(dbErr(e));return null}}
+/* مسحة باركود: نفس الصنف لنفس العميل → زوّد العدد */
+async function dbScanAdd(code){let p=window.findByCode&&findByCode(code);if(!p){toast('باركود مش متسجل: '+code);return false}
+ let last=DB.rows.slice().reverse().find(r=>!r.posted_at&&r.kind==='item'&&r.product_id===p.id&&r.person===ENT.person&&r.pay===ENT.pay);
+ if(last){try{let r=await rpc('mk_daybook_update',{p_id:last.id,p:{qty:+last.qty+1}});Object.assign(last,r);dbRender()}catch(e){toast(dbErr(e))}}
+ else await dbAdd({product_id:p.id,qty:1,price:+p.price||0});
+ return p.name}
+
+/* ---------- كارت الصنف (جديد أو تعديل) ---------- */
+function card(html){window.closeLineCard&&closeLineCard();let b=document.getElementById('lcBox');if(b)b.remove();document.body.insertAdjacentHTML('beforeend',`<div id="lcBox"><div class="lc">${html}</div></div>`);
+ document.getElementById('lcBox').addEventListener('click',e=>{if(e.target.id==='lcBox')closeCard()})}
+function closeCard(){let b=document.getElementById('lcBox');if(b)b.remove()}
+function payChips(id,cur,noCredit){return `<div class="dbpays" id="${id}">${PAYS.filter(x=>!(noCredit&&x[0]==='credit')).map(([k,t])=>`<button type="button" data-p="${k}" class="${k===cur?'on':''}">${t}</button>`).join('')}</div>`}
+function wireChips(id){let el=document.getElementById(id);el.onclick=e=>{let b=e.target.closest('[data-p]');if(!b)return;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};return ()=>{let b=el.querySelector('.on');return b?b.dataset.p:''}}
+function itemCard(o){let p=o.product_id?db.products.find(x=>x.id===o.product_id):null,row=o.row,edit=!!row;
+ let name=row?row.name:(p?p.name:o.name),q0=row?+row.qty:1,pr0=row?+row.price:(p?+p.price||0:''),ow0=row?+row.owed||0:0;
+ card(`<div class="lch"><div><b>${esc(name)}</b><small>${p?`المتاح: ${p.qty} ${esc(p.unit||'')}${p.code?' • كود '+esc(p.code):''}`:'صنف غير مسجل'}</small></div><button type="button" class="close" id="lcX">✕</button></div>
+  <label>العدد</label><div class="lcq"><button type="button" id="lcM">−</button><input id="lcQ" type="number" inputmode="decimal" min="0.01" step="0.01" value="${q0}"><button type="button" id="lcP">＋</button></div>
+  <label>السعر</label><input id="lcPr" type="number" inputmode="decimal" min="0" step="0.01" value="${pr0}" placeholder="اكتب السعر">
+  <div class="lct">الإجمالي: <b id="lcT">0</b></div>
+  <label>📦 باقي له (قطع لسه ماخدهاش — اختياري)</label><input id="lcOw" type="number" inputmode="decimal" min="0" step="1" value="${ow0||''}" placeholder="0" style="font-size:18px;padding:10px;border:2px solid var(--border);border-radius:14px;text-align:center">
+  ${edit?`<label>العميل</label><input id="lcWho" value="${esc(row.person)}" placeholder="من غير اسم = بيعة نقدي" style="font-size:16px;padding:10px;border:1px solid var(--border);border-radius:12px"><label>الدفع</label>${payChips('lcPay',row.pay)}`
+   :`<div style="font-size:14px;color:var(--muted);text-align:center">لـ <b>${esc(ENT.person||'بيعة من غير اسم')}</b> • ${payName(ENT.pay)}</div>`}
+  <div id="lcW" class="lcw"></div>
+  <div class="lcf"><button type="button" class="primary" id="lcOk">✔ ${edit?'حفظ التعديل':'ضيف لليومية'}</button>${edit?'<button type="button" class="secondary danger" id="lcDel">حذف السطر</button>':''}<button type="button" class="secondary" id="lcNo">إلغاء</button></div>`);
+ const Q=document.getElementById('lcQ'),P=document.getElementById('lcPr'),OW=document.getElementById('lcOw');
+ const upd=()=>{let q=+Q.value||0;document.getElementById('lcT').textContent=money(r2(q*(+P.value||0)));document.getElementById('lcW').textContent=p&&!edit&&q-(+OW.value||0)>(+p.qty||0)?`⚠️ الكمية أكبر من المتاح (${p.qty})`:''};
+ Q.oninput=P.oninput=OW.oninput=upd;upd();
+ document.getElementById('lcM').onclick=()=>{Q.value=Math.max(1,r2((+Q.value||1)-1));upd()};document.getElementById('lcP').onclick=()=>{Q.value=r2((+Q.value||0)+1);upd()};
+ document.getElementById('lcX').onclick=document.getElementById('lcNo').onclick=closeCard;
+ let getPay=edit?wireChips('lcPay'):null;
+ let del=document.getElementById('lcDel');if(del)del.onclick=async()=>{del.disabled=true;try{await rpc('mk_daybook_delete',{p_id:row.id});DB.rows=DB.rows.filter(x=>x.id!==row.id);closeCard();dbRender();dbBadge();if(row.committed_at)afterStock([row.product_id])}catch(e){del.disabled=false;toast(dbErr(e))}};
+ document.getElementById('lcOk').onclick=async()=>{let q=+Q.value,ow=+OW.value||0;if(!(q>0))return toast('اكتب العدد');if(P.value==='')return toast('اكتب السعر');if(ow>q)return toast('«باقي له» أكبر من العدد');
+  let b=document.getElementById('lcOk');b.disabled=true;
+  if(edit){try{let r=await rpc('mk_daybook_update',{p_id:row.id,p:{qty:q,price:+P.value,owed:ow,person:val('lcWho'),pay:getPay()}});Object.assign(row,r);closeCard();dbRender();if(row.committed_at)afterStock([row.product_id])}catch(e){b.disabled=false;toast(dbErr(e))}return}
+  let r=await dbAdd({product_id:o.product_id||null,name,qty:q,price:+P.value,owed:ow});if(!r){b.disabled=false;return}closeCard();toast('✔ '+name+' × '+q);focusSearch()};
+ setTimeout(()=>Q.select(),50)}
+/* 💰 دفعة: العميل دفع جزء من حسابه */
+function payCard(row){let edit=!!row;
+ card(`<div class="lch"><div><b>💰 دفعة من العميل</b><small>لو العميل دفع جزء بس من حساب الأصناف اللي خدها — الباقي يروح آجل على حسابه</small></div><button type="button" class="close" id="lcX">✕</button></div>
+  <label>اسم العميل</label><input id="lcWho" value="${esc(edit?row.person:ENT.person)}" placeholder="لازم اسم" style="font-size:17px;padding:11px;border:2px solid var(--border);border-radius:12px">
+  <label>المبلغ اللي دفعه</label><input id="lcPr" type="number" inputmode="decimal" min="0" step="0.01" value="${edit?+row.price:''}" placeholder="0">
+  <label>دفع إزاي</label>${payChips('lcPay',edit?row.pay:(ENT.pay==='credit'?'cash':ENT.pay),true)}
+  <div class="lcf"><button type="button" class="primary" id="lcOk">✔ ${edit?'حفظ التعديل':'سجّل الدفعة'}</button>${edit?'<button type="button" class="secondary danger" id="lcDel">حذف</button>':''}<button type="button" class="secondary" id="lcNo">إلغاء</button></div>`);
+ let getPay=wireChips('lcPay');document.getElementById('lcX').onclick=document.getElementById('lcNo').onclick=closeCard;
+ let del=document.getElementById('lcDel');if(del)del.onclick=async()=>{try{await rpc('mk_daybook_delete',{p_id:row.id});DB.rows=DB.rows.filter(x=>x.id!==row.id);closeCard();dbRender()}catch(e){toast(dbErr(e))}};
+ document.getElementById('lcOk').onclick=async()=>{let who=val('lcWho'),a=+val('lcPr');if(!who)return toast('اكتب اسم العميل');if(!(a>0))return toast('اكتب المبلغ');
+  let b=document.getElementById('lcOk');b.disabled=true;
+  try{if(edit){let r=await rpc('mk_daybook_update',{p_id:row.id,p:{price:a,person:who,pay:getPay()}});Object.assign(row,r)}else{let r=await rpc('mk_daybook_add',{p:{kind:'pay',day:DB.day,person:who,price:a,pay:getPay()}});DB.rows.push(r)}
+   closeCard();dbRender();toast('✔ دفعة '+money(a)+' من '+who)}catch(e){b.disabled=false;toast(dbErr(e))}};
+ setTimeout(()=>{let e=document.getElementById(edit||ENT.person?'lcPr':'lcWho');e&&e.focus()},50)}
+async function afterStock(pids){try{await A().refreshProducts(pids.filter(Boolean));A().done()}catch(e){}}
+function focusSearch(){let s=document.getElementById('dbSearch');if(s&&window.innerWidth>=900)s.focus()}
+
+/* ---------- 🧮 التصفية ---------- */
+window.dbPost=async function(person){let L=DB.rows.filter(r=>!r.posted_at&&(person==null||r.person===person));if(!L.length)return;
+ let groups=[...new Set(L.filter(r=>r.kind==='item').map(r=>r.person))];
+ if(!groups.length)return toast('مفيش أصناف تتصفّى — الدفعات لوحدها بتستنى أصناف العميل');
+ if(!await ask(person==null?`تصفية اليومية؟\nهيتعمل ${groups.length} فاتورة بيع (فاتورة لكل عميل، واللي من غير اسم في فاتورة «يومية»).`:`تصفية ${person||'البيع من غير اسم'}؟\nهتتعمل فاتورة بيع بالأصناف دي.`,'🧮 صفّي','رجوع'))return;
+ try{let out=await rpc('mk_daybook_post',{p_day:DB.day,p_person:person==null?null:person});
+  await dbLoad();let ids=(out||[]).map(x=>x.id);await A().refreshInvoices(ids);await A().refreshProducts(L.map(r=>r.product_id).filter(Boolean));A().done();
+  toast('✔ اتعمل '+(out||[]).length+' فاتورة: '+(out||[]).map(x=>x.no).join('، '))}
+ catch(e){toast(dbErr(e))}};
+window.dbDeliver=async function(id){let r=DB.owed.find(x=>x.id===id)||DB.rows.find(x=>x.id===id);if(!r)return;
+ if(!await ask(`سلّمت ${r.person||'العميل'} ${r.owed} من «${r.name}»؟\nالكمية دي هتتخصم من المخزن.`,'✔ سلّمت','رجوع'))return;
+ try{await rpc('mk_daybook_deliver',{p_id:id});await dbLoad();afterStock([r.product_id]);toast('✔ اتسلّم')}catch(e){toast(dbErr(e))}};
+
+/* ---------- العرض ---------- */
+function groupSums(L){let it=L.filter(r=>r.kind==='item'),tot=r2(sumBy(it,lineTot)),s={tot,cash:0,insta:0,transfer:0,paid:0};
+ L.forEach(r=>{if(r.pay!=='credit'){s[r.pay]=r2(s[r.pay]+lineTot(r));s.paid=r2(s.paid+lineTot(r))}});s.credit=r2(Math.max(0,tot-s.paid));return s}
+function rowHTML(r){let pay=r.kind==='pay',st=r.posted_at?`🧾 ${esc(r.invoice_no||'')}`:r.committed_at?'✔ اتخصم من المخزن':(r.product_id?`⏳ هيتخصم من المخزن بعد ${minsLeft(r)} دقيقة — تقدر تعدّله`:'⏳ تقدر تعدّله');
+ let ow=+r.owed>0?(r.delivered_at?`<span class="dbbadge">📦 ${r.owed} اتسلّم</span>`:`<span class="dbbadge credit">📦 باقي له ${r.owed}</span>`):'';
+ return `<div class="dbl${pay?' pay':''}" data-row="${r.id}"><div><b>${pay?'💰 دفعة':esc(r.name)}</b></div><div class="c-q">${pay?'':r.qty}</div><div class="c-p">${pay?'':money(r.price)}</div><div class="c-t"><b>${money(lineTot(r))}</b></div><div class="c-pay"><span class="dbbadge ${r.pay}">${payName(r.pay)}</span></div><div class="c-ow">${ow}</div>
+  <div class="mob">${pay?'':`${r.qty} × ${money(r.price)} • `}<span class="dbbadge ${r.pay}">${payName(r.pay)}</span> ${ow}</div>
+  <div class="st">${st} • ${esc(new Date(r.created_at).toLocaleTimeString('ar-EG',{hour:'numeric',minute:'2-digit'}))}${r.created_by?' • '+esc(r.created_by):''}</div></div>`}
+function dbRender(){let el=document.getElementById('dbBody');if(!el)return;
+ if(DB.err){el.innerHTML=`<div class="card"><p style="color:var(--danger);margin:0">${esc(DB.err)}</p></div>`;return}
+ let G=new Map();DB.rows.forEach(r=>{if(!G.has(r.person))G.set(r.person,[]);G.get(r.person).push(r)});
+ let groups=[...G.entries()].map(([p,L])=>({p,L,open:L.some(r=>!r.posted_at)})).sort((a,b)=>(b.open?1:0)-(a.open?1:0));
+ let hd='<div class="dbl hd"><div>الصنف</div><div>العدد</div><div>السعر</div><div>الإجمالي</div><div>الدفع</div><div>باقي له</div></div>';
+ el.innerHTML=(groups.length?groups.map(g=>{let s=groupSums(g.L.filter(r=>!r.posted_at||!g.open)),inv=[...new Set(g.L.filter(r=>r.invoice_no).map(r=>r.invoice_no))];
+  return `<div class="dbg${g.open?'':' done'}"><div class="dbgh"><div><b>${g.p?'👤 '+esc(g.p):'🛒 بيع من غير اسم'}</b><small>${money(s.tot)}${s.cash?' • نقدي '+money(s.cash):''}${s.insta?' • إنستاباي '+money(s.insta):''}${s.transfer?' • تحويل '+money(s.transfer):''}${s.credit?' • آجل '+money(s.credit):''}${inv.length?' • 🧾 '+inv.join('، '):''}</small></div>
+   <div class="btnrow">${g.open&&g.p?`<button class="secondary" onclick="dbPayFor(${JSON.stringify(g.p).replace(/"/g,'&quot;')})">💰 دفعة</button>`:''}${g.open&&g.L.some(r=>!r.posted_at&&r.kind==='item')?`<button class="primary" onclick="dbPost(${JSON.stringify(g.p).replace(/"/g,'&quot;')})">🧮 صفّي</button>`:''}</div></div>
+   ${hd}${g.L.map(rowHTML).join('')}</div>`}).join(''):`<div class="card"><div class="empty">${DB.loaded?'لسه مفيش بيع في اليومية دي — اكتب أول صنف فوق 👆':'جاري التحميل...'}</div></div>`);
+ let open=DB.rows.filter(r=>!r.posted_at),S=groupSums(DB.rows),f=document.getElementById('dbFoot');
+ if(f)f.innerHTML=`<div class="t"><span>الإجمالي <b>${money(S.tot)}</b></span><span>💵 <b>${money(S.cash)}</b></span><span>📱 <b>${money(S.insta)}</b></span><span>🏦 <b>${money(S.transfer)}</b></span><span>⏳ <b>${money(r2(sumBy([...G.values()],L=>groupSums(L).credit)))}</b></span></div>${open.some(r=>r.kind==='item')?`<button class="primary" onclick="dbPost(null)">🧮 صفّي اليومية كلها (${open.length})</button>`:(DB.rows.length?'<span style="color:var(--green);font-weight:700">✔ اليومية متصفّية</span>':'')}`;
+ let ow=document.getElementById('dbOwed');
+ if(ow)ow.innerHTML=DB.owed.length?`<h3 style="margin:18px 0 8px">📦 باقي للعملاء (${DB.owed.length})</h3>${DB.owed.map(r=>`<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><b>${esc(r.person||'من غير اسم')}</b> — ${esc(r.name)} × <b>${r.owed}</b><div style="color:var(--muted);font-size:12px">${esc(String(r.day))}${r.invoice_no?' • فاتورة '+esc(r.invoice_no):''}</div></div><button class="primary" onclick="dbDeliver('${r.id}')">✔ سلّمت</button></div>`).join('')}`:'';
+ let dd=document.getElementById('dbDayLbl');if(dd)dd.textContent=DB.day===isoToday()?'النهارده':new Date(DB.day).toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})}
+window.dbRender=dbRender;
+window.dbPayFor=function(p){payCard(null);let w=document.getElementById('lcWho');if(w){w.value=p;setTimeout(()=>document.getElementById('lcPr').focus(),60)}};
+
+/* ---------- الصفحة ---------- */
+(function(){
+ let s=document.querySelector('aside nav [data-page="sales"]');
+ if(s)s.insertAdjacentHTML('beforebegin','<button data-page="daybook" onclick="showPage(\'daybook\')"><span style="width:1.15em;text-align:center">📒</span> <span>يومية المحل</span> <span id="dbCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
+ let mn=document.querySelector('main');
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="daybook" class="page"><div class="title-row"><div class="title"><h1>📒 يومية المحل — <span id="dbDayLbl">النهارده</span></h1><p>اكتب كل بيعة على طول، وفي الآخر «صفّي» تتعمل فواتير البيع لوحدها</p></div><div class="btnrow"><input type="date" id="dbDay" class="search" style="max-width:170px" value="${isoToday()}"><button class="secondary" onclick="dbLoad()">🔄</button></div></div>
+  <div class="dbent"><div class="dbrow1"><div class="who"><input id="dbPerson" placeholder="👤 العميل (فاضي = بيعة من غير اسم)" autocomplete="off"></div>${payChips('dbPay',ENT.pay)}</div>
+   <div class="dbsr"><input id="dbSearch" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off"><button type="button" class="secondary" id="dbScan" title="امسح باركود">📷</button><button type="button" class="secondary" id="dbPayBtn" title="دفعة من العميل">💰</button></div><div id="dbBox"></div></div>
+  <div id="dbBody"></div><div id="dbFoot" class="dbfoot"></div><div id="dbOwed"></div></section>`);
+ let da=document.querySelector('#dashboard .dash-acts');
+ if(da)da.insertAdjacentHTML('beforebegin','<button onclick="showPage(\'daybook\')" style="width:100%;margin-bottom:14px;background:var(--blue);color:#fff;border:0;border-radius:16px;padding:16px;font-size:18px;font-weight:800;text-align:right;display:flex;justify-content:space-between;align-items:center">📒 يومية المحل — اكتب بيعة بسرعة <span>←</span></button>');
+ const P=document.getElementById('dbPerson'),S=document.getElementById('dbSearch'),B=document.getElementById('dbBox');if(!P)return;
+ if(typeof namePicker==='function')namePicker(P,()=>'عميل');
+ document.getElementById('dbPay').onclick=e=>{let b=e.target.closest('[data-p]');if(!b)return;ENT.pay=b.dataset.p;LS.set('mk_db_pay',ENT.pay);document.querySelectorAll('#dbPay button').forEach(x=>x.classList.toggle('on',x===b));if(ENT.pay==='credit'&&!P.value.trim()){toast('الآجل محتاج اسم العميل');P.focus()}};
+ document.getElementById('dbDay').onchange=e=>{DB.day=e.target.value||isoToday();DB.loaded=false;dbRender();dbLoad()};
+ const SY={'3d':'ثري دي','2d':'تو دي','سمت':'ساميت','سامت':'ساميت'};
+ S.oninput=()=>{let q=VN(S.value).split(' ').filter(Boolean).flatMap(w=>(SY[w]||w).split(' '));if(!q.length){B.style.display='none';return}
+  let L=db.products.filter(p=>{let n=VN(p.name+' '+(p.code||'')+' '+(p.barcode||''));return q.every(w=>n.includes(w))}).sort((a,b)=>(VN(b.name).startsWith(q[0])?1:0)-(VN(a.name).startsWith(q[0])?1:0)).slice(0,12);
+  B.innerHTML=L.map(p=>`<div data-id="${p.id}">${esc(p.name)} <small style="color:#7a8a8f">(${p.qty} ${esc(p.unit||'')})</small></div>`).join('')+`<div data-new="1" style="color:var(--blue);font-weight:700">＋ «${esc(S.value.trim())}» صنف غير مسجل</div>`;B.style.display='block'};
+ B.onclick=e=>{let nw=e.target.closest('[data-new]'),d=e.target.closest('[data-id]');if(!nw&&!d)return;let nm=S.value.trim();S.value='';B.style.display='none';S.blur();
+  if(ENT.pay==='credit'&&!ENT.person){toast('الآجل محتاج اسم العميل');P.focus();return}
+  itemCard(nw?{name:nm}:{product_id:d.dataset.id})};
+ S.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();let v=S.value.trim();if(v&&window.findByCode&&findByCode(v)){dbScanAdd(v);S.value='';B.style.display='none'}});
+ S.addEventListener('focus',()=>{if(window.innerWidth<900)setTimeout(()=>S.scrollIntoView({block:'start',behavior:'smooth'}),250)});
+ document.addEventListener('click',e=>{if(!e.target.closest('#daybook .dbsr')&&!e.target.closest('#dbBox'))B.style.display='none'});
+ document.getElementById('dbScan').onclick=()=>window.mkScan&&mkScan(c=>{dbScanAdd(c);return (findByCode(c)||{}).name||false},{multi:true,title:'امسح الأصناف — كل مسحة = قطعة'});
+ document.getElementById('dbPayBtn').onclick=()=>payCard(null);
+ document.getElementById('dbBody').addEventListener('click',e=>{let l=e.target.closest('[data-row]');if(!l||e.target.closest('button'))return;let r=DB.rows.find(x=>x.id===l.dataset.row);if(!r)return;
+  if(r.posted_at){let s=db.sales.find(x=>x.no===r.invoice_no);if(s)openInvoiceModal(s.id);else toast('اتصفّى في فاتورة '+(r.invoice_no||''));return}
+  r.kind==='pay'?payCard(r):itemCard({product_id:r.product_id,row:r})});
+})();
+const _spD=showPage;showPage=function(id){_spD(id);if(id==='daybook'){dbRender();dbLoad()}};
+
+/* ---------- تشغيل: تحديث + خصم المخزن بعد 5 دقايق + تحديث لحظي بين الأجهزة ---------- */
+let rtT=null;
+(function wait(n){if(window.mkT_user&&sbx()){dbLoad();
+  try{sbx().channel('mk-daybook').on('postgres_changes',{event:'*',schema:'public',table:'mk_daybook'},()=>{clearTimeout(rtT);rtT=setTimeout(dbLoad,700)}).subscribe()}catch(e){}
+  setInterval(()=>{let pg=document.getElementById('daybook');if(pg&&pg.classList.contains('active'))dbRender();if(navigator.onLine)dbCommitIfDue()},30000);return}
+ if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
 
