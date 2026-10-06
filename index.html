@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-2';
+const APP_VER='2026-10-06-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1980,6 +1980,7 @@ function switchCard(){let sg=document.querySelector('#settings .grid2');if(!sg||
  sg.insertAdjacentHTML('beforeend',`<div class="card own" id="swCard"><h3>🚀 النظام الجديد</h3><p style="color:var(--muted);line-height:1.9;margin-top:0">${TEST?'دي نسخة تجريبية على نسخة من بياناتك. النظام القديم لسه شغال عادي.<br>':''}«تحديث النسخة التجريبية» بينقل آخر بيانات من النظام القديم (وبيمسح أي حاجة اتعملت هنا للتجربة).<br>«التحويل النهائي» بينقل آخر بيانات ويحوّل كل الأجهزة والموقع للنظام الجديد.</p>
  <div class="btnrow"><button class="secondary" onclick="mkT_remigrate(false)">🔄 تحديث النسخة التجريبية</button><button class="primary" onclick="mkT_remigrate(true)">🚀 التحويل النهائي</button></div><div id="swMsg" style="font-size:13px;margin-top:8px;color:var(--muted)"></div></div>`)}
 window.mkT_remigrate=async function(final){if(!T.user||T.user.role!=='admin')return;
+ try{if((await rpc('mk_tables_on'))===true)return alert('السيستم اتحوّل خلاص — النقل من القديم مقفول عشان مايمسحش الشغل الجديد.')}catch(e){return toast('محتاج نت')}
  if(!await ask(final?'التحويل النهائي:\n1) هينقل آخر بيانات من النظام القديم (أي حاجة اتعملت في النسخة التجريبية هتتمسح).\n2) كل الأجهزة والموقع هيشتغلوا على النظام الجديد.\nاتأكد إن محدش بيسجل فواتير على النظام القديم دلوقتي. تكمل؟':'هتتنقل آخر بيانات من النظام القديم، وأي حاجة اتعملت هنا للتجربة هتتمسح. تكمل؟',final?'حوّل':'نقل','رجوع'))return showPage('settings');
  showPage('settings');let m=document.getElementById('swMsg');if(m)m.textContent='⏳ جاري النقل…';
  try{let r=await rpc('mk_migrate',{p_force:true});if(final)await rpc('mk_switch',{p_on:true});
@@ -1991,7 +1992,8 @@ window.mkT_remigrate=async function(final){if(!T.user||T.user.role!=='admin')ret
 (function boot(){
  document.head.insertAdjacentHTML('beforeend','<style>#mkLogin,#mkConf{display:none!important}</style>');
  if(TEST)document.body.insertAdjacentHTML('afterbegin','<div style="background:#fff4e5;color:#8a4b00;text-align:center;font:700 13px Cairo,Tahoma,sans-serif;padding:6px;border-bottom:1px solid #f0b46a">🧪 نسخة تجريبية للنظام الجديد — طلبات الموقع مقفولة هنا، والنظام القديم شغال عادي</div>');
- switchCard();
+ /* زرار النقل/التحويل خطر بعد التحويل (بيمسح الشغل الجديد) — بيظهر بس لو السيستم لسه ماتحولش */
+ if(sb)sb.rpc('mk_tables_on').then(r=>{if(r.data===false)switchCard()}).catch(()=>{});
  let cu=null;try{cu=JSON.parse(LS.get('mk_t_user')||'null')}catch(e){}
  // نسخة الجهاز (للفتح السريع ومن غير نت)
  if(cu){try{let c=JSON.parse(localStorage.getItem('mk_t_db_'+cu.id)||'null');if(c)db=c}catch(e){}}
