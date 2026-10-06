@@ -1579,7 +1579,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-1';
+const APP_VER='2026-10-06-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1944,10 +1944,15 @@ window.mkT_renderUsers=function(){let b=document.getElementById('usersBody');if(
  b.innerHTML=(L.length?L.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)"><div><b>${esc(u.name)}</b> <span class="badge ${u.role==='admin'?'green':''}">${u.role==='admin'?'مدير':'موظف'}</span>${u.active?'':' <span class="badge red">موقوف</span>'}${T.user&&T.user.id===u.user_id?' <small style="color:var(--muted)">(إنت)</small>':''}</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">${T.user&&T.user.id===u.user_id?`<button class="secondary" onclick="mkT_myPin()">رقمي السري</button>`:`<button class="secondary" onclick="mkT_userForm('${u.user_id}')">تعديل</button><button class="secondary" onclick="mkT_toggle('${u.user_id}')">${u.active?'إيقاف':'تفعيل'}</button><button class="secondary danger" onclick="mkT_userDel('${u.user_id}')">حذف</button>`}</div></div>`).join(''):'<div class="empty">مفيش مستخدمين</div>')
  +'<p style="color:var(--muted);font-size:12px;margin:8px 0 0">الرقم السري 6 أرقام على الأقل. إيقاف الموظف بيقفل حسابه فوراً من غير ما تمسحه.</p>'};
-async function fn(body){let {data,error}=await sb.functions.invoke('mk-users',{body});
- if(error){let m=error.message||'';try{let j=await error.context.json();m=j.error||m}catch(e){}
-  if(/not found|404|Failed to send/i.test(m))throw new Error('خطوة Supabase لسه ماتعملتش (Edge Function اسمها mk-users)');throw new Error(m)}
- if(data&&data.error)throw new Error(data.error);return data}
+/* خدمة الموظفين على Supabase (اتنشرت باسم smart-function، و mk-users احتياطي) */
+async function fn(body){let last='';
+ for(let name of ['smart-function','mk-users']){let {data,error}=await sb.functions.invoke(name,{body});
+  if(!error){if(data&&data.error)throw new Error(data.error);return data}
+  let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||j.msg||j.message||m}catch(e){}
+  if(st===404||/not found/i.test(m)){last=m;continue}
+  if(st===401)throw new Error('Supabase رفض الدخول للخدمة — اقفل «Verify JWT» في إعدادات الـ function واضغط Save');
+  throw new Error(m)}
+ throw new Error('خدمة إضافة الموظفين مش موجودة على Supabase ('+last+')')}
 window.mkT_userForm=function(id){let u=id?T.members.find(x=>x.user_id===id):null;
  openModal(`<div class="modal-head"><h2>${u?'تعديل '+esc(u.name):'إضافة موظف أو مدير'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <form id="uF"><div class="form"><div class="field"><label>الاسم</label><input id="uName" required value="${esc(u?u.name:'')}"></div><div class="field"><label>النوع</label><select id="uRole"><option value="emp" ${!u||u.role==='emp'?'selected':''}>موظف</option><option value="admin" ${u&&u.role==='admin'?'selected':''}>مدير</option></select></div>
