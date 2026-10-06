@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-06-11';
+const APP_VER='2026-10-07-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2049,6 +2049,12 @@ T.api={rpc,fetchAll,fetchIn,refreshProducts,refreshContacts,refreshInvoices,refr
 .cnt-foot{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;z-index:2}
 .cl-t td:last-child{text-align:left;font-weight:700}
 @media(max-width:900px){.cnt-row{grid-template-columns:minmax(0,1fr) 54px 76px 54px}}
+#mkPrint{position:fixed;inset:0;z-index:200000;background:#525659;display:flex;flex-direction:column}
+#mkPrint .mkpbar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;box-shadow:0 2px 8px #0003;font-family:Cairo,Tahoma,sans-serif}
+#mkPrint .mkpbar button{padding:10px 16px;border-radius:12px;font-size:15px;font-weight:700;border:1px solid var(--border);background:#fff;color:#18343a}
+#mkPrint #mkpGo{background:var(--blue,#087f8c);color:#fff;border-color:transparent}
+#mkPrint iframe{flex:1;width:100%;border:0;background:#fff}
+@media print{body.mkp-on>*:not(#mkPrint){display:none!important}body.mkp-on #mkPrint{position:static;background:#fff}body.mkp-on .mkpbar{display:none}body.mkp-on #mkpF{height:100vh}}
 </style>
 <script>
 /* =====================================================================
@@ -2062,7 +2068,15 @@ const loadJS=src=>new Promise((res,rej)=>{if(document.querySelector('script[src=
 const beep=()=>{try{let c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator(),g=c.createGain();o.frequency.value=1100;g.gain.value=.15;o.connect(g);g.connect(c.destination);o.start();setTimeout(()=>{o.stop();c.close()},110)}catch(e){}};
 const n2=v=>r2(+v||0);
 const ownerWa=()=>db.settings.ownerPhone||db.settings.phone||'';
-function printHTML(html){let w=window.open('','_blank');if(!w){toast('اسمح بالنوافذ المنبثقة عشان الطباعة');return}w.document.open();w.document.write(html);w.document.close();w.focus()}
+/* الطباعة جوه السيستم نفسه (مش نافذة جديدة) — عشان على أيقونة الآيفون يبقى فيه زرار رجوع */
+function closePrint(){let x=document.getElementById('mkPrint');if(x)x.remove();document.body.classList.remove('mkp-on')}
+function printHTML(html){closePrint();
+ document.body.insertAdjacentHTML('beforeend','<div id="mkPrint"><div class="mkpbar"><button type="button" id="mkpBack">→ رجوع</button><b>معاينة الطباعة</b><button type="button" id="mkpGo">🖨️ اطبع</button></div><iframe id="mkpF" title="طباعة"></iframe></div>');
+ document.body.classList.add('mkp-on');let f=document.getElementById('mkpF');f.srcdoc=html;
+ document.getElementById('mkpBack').onclick=closePrint;
+ document.getElementById('mkpGo').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('الطباعة مااشتغلتش')}}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('mkPrint'))closePrint()});
+window.mkPrintHTML=printHTML;window.mkClosePrint=closePrint;
 const PRINT_HEAD='<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap">';
 
 /* ---------- 📷 ماسح الباركود بالكاميرا ---------- */
@@ -2445,11 +2459,16 @@ window.openSiteAdmin=async function(tab){if(!isAdmin())return;tab=tab||'works';t
   <button class="primary" style="margin-top:12px" id="scSave">حفظ</button>`}
  if(tab==='works')body=`<p style="color:var(--muted);margin-top:0">صور مطابخ ودريسنج ركّبتوا فيها منتجاتكم — أكتر حاجة بتبني ثقة العميل.</p>${W.map((w,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">${w.imgs&&w.imgs[0]?`<img src="${esc(w.imgs[0])}" style="width:64px;height:64px;object-fit:cover;border-radius:10px">`:''}<div style="flex:1;min-width:0"><b>${esc(w.title)}</b><br><small style="color:var(--muted)">${(w.imgs||[]).length} صور</small></div><button class="secondary" onclick="siteWork(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('works',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش أعمال</div>'}<button class="primary" style="margin-top:12px" onclick="siteWork(-1)">＋ شغلانة جديدة</button>`;
  if(tab==='reviews')body=`<p style="color:var(--muted);margin-top:0">اكتب آراء عملاء حقيقيين (بإذنهم). بتظهر في الصفحة الرئيسية.</p>${R.map((r,i)=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><b>${esc(r.name)}</b> <span style="color:#f5a623">${'★'.repeat(+r.stars||5)}</span><br><small style="color:var(--muted)">${esc(String(r.text||'').slice(0,80))}</small></div><button class="secondary" onclick="siteReview(${i})">تعديل</button><button class="secondary danger" onclick="siteDel('reviews',${i})">حذف</button></div>`).join('')||'<div class="empty">لسه مفيش آراء</div>'}<button class="primary" style="margin-top:12px" onclick="siteReview(-1)">＋ رأي جديد</button>`;
- if(tab==='delivery')body=`<div class="field"><label>جملة عن التوصيل (اختياري)</label><input id="sdNote" value="${esc(d.deliveryNote||'')}" placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام"></div>
+ if(tab==='delivery'){let L0=d.shipLocal||{},G0=d.shipGov||{};body=`<div class="field"><label>جملة عن التوصيل (اختياري)</label><input id="sdNote" value="${esc(d.deliveryNote||'')}" placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام"></div>
+  <h3 style="margin:14px 0 6px">🚚 زرار «محتاجه شحن؟» في صفحة المنتج</h3>
+  <div class="form"><div class="field"><label>🛵 توصيل القاهرة والجيزة — المصاريف</label><input id="slFee" value="${esc(L0.fee||'')}" placeholder="مثلاً: من 50 لـ 100 ج.م حسب المنطقة"></div><div class="field"><label>المدة</label><input id="slDays" value="${esc(L0.days||'')}" placeholder="مثلاً: في نفس اليوم أو تاني يوم"></div>
+  <div class="field full"><label>ملاحظة</label><input id="slNote" value="${esc(L0.note||'')}" placeholder="مثلاً: مندوب بيوصّلك لحد باب البيت"></div>
+  <div class="field"><label>📦 شحن للمحافظات — المصاريف</label><input id="sgFee" value="${esc(G0.fee||'')}" placeholder="مثلاً: حسب الوزن والمحافظة"></div><div class="field"><label>المدة</label><input id="sgDays" value="${esc(G0.days||'')}" placeholder="مثلاً: من 2 لـ 4 أيام"></div>
+  <div class="field full"><label>ملاحظة</label><input id="sgNote" value="${esc(G0.note||'')}" placeholder="مثلاً: مع شركات شحن موثوقة — الدفع عند الاستلام"></div></div>
   <h3 style="margin:14px 0 6px">المناطق</h3><div id="sdRows">${(D.length?D:[{area:'',fee:'',days:''}]).map(x=>`<div class="sdr" style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;margin-bottom:6px"><input placeholder="المنطقة" value="${esc(x.area||'')}"><input placeholder="المصاريف" inputmode="decimal" value="${esc(x.fee??'')}"><input placeholder="المدة (مثلاً يوم)" value="${esc(x.days||'')}"><button type="button" class="secondary danger" onclick="this.parentNode.remove()">✕</button></div>`).join('')}</div>
   <button type="button" class="secondary" onclick="sdAdd()">＋ منطقة</button>
   <div class="field" style="margin-top:14px"><label>🔁 سياسة الاستبدال والاسترجاع</label><textarea id="sdPol" rows="5" style="padding:11px;border:1px solid var(--border);border-radius:10px" placeholder="مثلاً: الاستبدال خلال 14 يوم من الاستلام والمنتج بحالته وبالكرتونة...">${esc(d.policy||'')}</textarea></div>
-  <button class="primary" style="margin-top:12px" id="sdSave">حفظ</button>`;
+  <button class="primary" style="margin-top:12px" id="sdSave">حفظ</button>`}
  if(tab==='seo')body=`<p style="line-height:1.9;margin-top:0">كل منتج على الموقع بقى ليه رابط خاص (زي <span dir="ltr">shop.html?p=...</span>) فيه اسمه ووصفه وصورته — جوجل يقدر يقرأه ويظهره في البحث.</p>
   <p style="line-height:1.9">عشان جوجل يعرف كل الروابط: نزّل الملف ده وارفعه على GitHub جنب shop.html، وبعدين قدّمه في Google Search Console — وكرّرها كل ما تضيف منتجات كتير جديدة.</p>
   <div class="btnrow"><button class="primary" onclick="siteSitemap()">⬇️ تنزيل sitemap.xml</button></div>
@@ -2460,7 +2479,7 @@ window.openSiteAdmin=async function(tab){if(!isAdmin())return;tab=tab||'works';t
  if(tab==='contact')scSave.onclick=async()=>{scSave.disabled=true;
   try{await saveSite(x=>{x.phone=val('scWa')||x.phone;x.phones=[val('scP1'),val('scP2')].filter(Boolean);x.hours=val('scH');x.mapUrl=val('scMap');x.catalog=scCat.checked});toast('✔ اتحفظ على الموقع');openSiteAdmin('contact')}catch(e){scSave.disabled=false;toast(e.message||e)}};
  if(tab==='delivery')sdSave.onclick=async()=>{let rows=[...document.querySelectorAll('#sdRows .sdr')].map(r=>{let i=r.querySelectorAll('input');return {area:i[0].value.trim(),fee:i[1].value.trim(),days:i[2].value.trim()}}).filter(x=>x.area);
-  sdSave.disabled=true;try{await saveSite(x=>{x.delivery=rows;x.deliveryNote=val('sdNote');x.policy=sdPol.value.trim()});toast('✔ اتحفظ على الموقع');openSiteAdmin('delivery')}catch(e){sdSave.disabled=false;toast(e.message||e)}}};
+  sdSave.disabled=true;try{await saveSite(x=>{x.delivery=rows;x.deliveryNote=val('sdNote');x.policy=sdPol.value.trim();x.shipLocal={fee:val('slFee'),days:val('slDays'),note:val('slNote')};x.shipGov={fee:val('sgFee'),days:val('sgDays'),note:val('sgNote')}});toast('✔ اتحفظ على الموقع');openSiteAdmin('delivery')}catch(e){sdSave.disabled=false;toast(e.message||e)}}};
 window.siteDel=async function(key,i){if(!await ask('حذف من الموقع؟','حذف','رجوع'))return openSiteAdmin(key);try{await saveSite(d=>{(d[key]=d[key]||[]).splice(i,1)});toast('اتحذف')}catch(e){toast(e.message||e)}openSiteAdmin(key)};
 window.siteWork=function(i){let w=i>-1?JSON.parse(JSON.stringify(SITE.data.works[i])):{id:uid7(),title:'',desc:'',imgs:[]};
  openModal(`<div class="modal-head"><h2>🏗️ ${i>-1?'تعديل شغلانة':'شغلانة جديدة'}</h2><button class="close" onclick="openSiteAdmin('works')"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -2534,6 +2553,276 @@ woBadge=function(){_wb();let L=(typeof WO!=='undefined'&&WO.list)||[],news=L.fil
  lastNew=n};
 (function(){let t=document.querySelector('#weborders .title-row');
  if(t&&window.Notification&&Notification.permission!=='granted')t.insertAdjacentHTML('afterend','<button class="secondary" id="notifBtn" style="margin-bottom:12px" onclick="Notification.requestPermission().then(p=>{if(p===\'granted\'){toast(\'✔ التنبيهات اتفعلت\');this.remove()}else toast(\'المتصفح رفض التنبيهات — هتفضل تسمع صوت وانت فاتح السيستم\')})">🔔 فعّل تنبيهات الطلبات على الجهاز ده</button>')})();
+})();
+</script>
+
+<style>
+/* ---------- القايمة الجانبية على الموبايل (زي الكمبيوتر) ---------- */
+#navBtn{display:none}
+aside .navhd{display:none}
+@media(max-width:900px){
+ #navBtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--tint2,#eef6f7);color:var(--text,#18343a);font-size:22px;margin-left:8px;flex:none;padding:0}
+ aside{display:block!important;position:fixed;top:0;right:0;bottom:0;width:min(290px,84vw);transform:translateX(110%);transition:transform .22s ease;z-index:100000;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:-8px 0 30px #0003;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ body.navon aside{transform:none}
+ body.navon #navBg{display:block}
+ aside .navhd{display:flex;align-items:center;justify-content:space-between;margin:0 4px 6px;font-weight:800;font-size:17px}
+ aside .navhd button{width:40px;height:40px;border-radius:50%;padding:0;font-size:18px;background:var(--tint2,#eef6f7)}
+}
+#navBg{display:none;position:fixed;inset:0;background:#0007;z-index:99999}
+/* ---------- الشحن والتوصيل ---------- */
+.delopt{display:flex;gap:6px;flex-wrap:wrap}
+.delopt label{display:flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px}
+.delopt label:has(input:checked){border-color:var(--blue);background:var(--tint2,#eef6f7);font-weight:700}
+.shsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.shsum div{background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;padding:12px}
+.shsum small{display:block;color:var(--muted);font-size:12px}.shsum b{font-size:18px}
+.shc .shh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.shc .mut{color:var(--muted);font-size:12px}
+.shc .ln{margin-top:6px;line-height:1.7}
+.steps{display:flex;gap:4px;margin:10px 0 4px}
+.steps span{flex:1;height:7px;border-radius:4px;background:var(--border)}
+.steps span.on{background:var(--blue)}
+.stepl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);gap:4px}
+.stepl span{flex:1;text-align:center}.stepl span.on{color:var(--blue);font-weight:700}
+.badge.st-paid{background:#e6f6ec;color:#1e7a3c}.badge.st-delivered{background:#fff4e5;color:#8a4b00}.badge.st-returned,.badge.st-cancelled{background:#fdecea;color:#b3261e}
+.shc.hl{outline:3px solid var(--blue)}
+.shinv{border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:8px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — القايمة الجانبية على الموبايل + إدارة الشحن والتوصيل (ملصق A4 ومتابعة لحد التحصيل)
+   ===================================================================== */
+(function(){
+/* ---------- ☰ القايمة الجانبية ---------- */
+const navClose=()=>document.body.classList.remove('navon');
+(function(){let brand=document.querySelector('header.top .brand'),as=document.querySelector('aside');if(!brand||!as)return;
+ brand.insertAdjacentHTML('afterbegin','<button type="button" id="navBtn" aria-label="القايمة">☰</button>');
+ as.insertAdjacentHTML('afterbegin','<div class="navhd"><span>ميكانيزم</span><button type="button" id="navX" aria-label="قفل">✕</button></div>');
+ document.body.insertAdjacentHTML('beforeend','<div id="navBg"></div>');
+ document.getElementById('navBtn').onclick=e=>{e.stopPropagation();document.body.classList.add('navon')};
+ document.getElementById('navX').onclick=navClose;document.getElementById('navBg').onclick=navClose;
+ as.addEventListener('click',e=>{if(e.target.closest('nav button,button.own'))setTimeout(navClose,60)})})();
+
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const A=()=>window.mkT&&window.mkT.api;
+const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const GOVS=['القاهرة','الجيزة','الإسكندرية','القليوبية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','الفيوم','بني سويف','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
+const CARRIERS=['بوسطة Bosta','أرامكس Aramex','J&T Express','البريد المصري','سبيدي','مندوب المحل','أوبر Uber','إن درايف inDrive'];
+const FLOW={ship:['new','printed','handed','out','delivered','paid'],delivery:['new','printed','out','delivered','paid']};
+const CLOSED=['paid','returned','cancelled'];
+function stLabel(s,k){return {new:'جديدة',printed:'اتطبع الملصق',handed:k==='ship'?'اتسلمت لشركة الشحن':'اتسلمت للمندوب',out:k==='ship'?'اتشحنت — في الطريق':'خرجت مع المندوب',delivered:'العميل استلم',paid:'اتحاسبنا ✔',returned:'مرتجع',cancelled:'ملغية'}[s]||s}
+const STEP_SHORT={new:'جديدة',printed:'الملصق',handed:'الشركة',out:'في الطريق',delivered:'استلم',paid:'اتحاسبنا'};
+const kindIc=k=>k==='ship'?'📦 شحن':'🛵 توصيل';
+const govOpts=v=>'<option value="">— اختار —</option>'+GOVS.map(g=>`<option ${g===v?'selected':''}>${g}</option>`).join('');
+const waTo=(ph,t)=>{let d=String(ph||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);return d?'https://wa.me/'+d+'?text='+encodeURIComponent(t):''};
+const fmtT=t=>t?new Date(t).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}):'';
+const shopName=()=>db.settings.companyName||'ميكانيزم';
+function shopPhones(){let site=window.mkSite&&window.mkSite.get&&window.mkSite.get(),P=(site&&site.data&&Array.isArray(site.data.phones))?site.data.phones:['01042383986','01042466087'];return [...new Set([db.settings.phone].concat(P).map(x=>String(x||'').trim()).filter(Boolean))]}
+function invInfo(no){let G=no?invGroup('sale',no):[];if(!G.length)return null;let r0=G[0];
+ return {r0,total:r2(sumBy(G,x=>x.total)),rem:r2(sumBy(G,x=>x.rem||0)),content:G.filter(x=>!x.ship).map(x=>x.product+' × '+x.qty).join('، ')}}
+
+/* ---------- البيانات ---------- */
+let SHP=[],shTab='open',shKind='',shQ='',shLoaded=false,shErr='';
+async function loadShips(){if(!sbx()||!window.mkT_user)return;
+ let {data,error}=await sbx().from('mk_shipments').select('*').order('created_at',{ascending:false}).limit(500);
+ if(error){shErr=/relation|does not exist|schema cache/i.test(error.message||'')?'محتاج تشغّل ملف الشحن (shipping.sql) في Supabase الأول':error.message;renderShips();return}
+ SHP=data||[];shErr='';shLoaded=true;renderShips();shBadge()}
+window.loadShips=loadShips;
+function shBadge(){let open=SHP.filter(s=>!CLOSED.includes(s.status)),wait=open.filter(s=>s.status==='delivered'),c=document.getElementById('shCount');
+ if(c){c.textContent=open.length;c.style.display=open.length?'':'none'}
+ let b=document.getElementById('shBanner');if(b){b.style.display=open.length?'':'none';b.innerHTML=`🚚 عندك <b>${open.length}</b> شحنة شغالة${wait.length?` — منهم <b>${wait.length}</b> مستنيين التحصيل`:''} — اضغط للمتابعة`}}
+const logAdd=(s,st)=>(s.log||[]).concat([{s:st,at:new Date().toISOString(),by:userName()||''}]);
+async function shUpdate(id,patch){let s=SHP.find(x=>x.id===id);patch.updated_at=new Date().toISOString();
+ if(patch.status&&s&&patch.status!==s.status){patch.log=logAdd(s,patch.status);patch.closed_at=CLOSED.includes(patch.status)?new Date().toISOString():null}
+ let {data,error}=await sbx().from('mk_shipments').update(patch).eq('id',id).select();if(error)throw error;data=data&&data[0];if(!data)throw new Error('مفيش صلاحية تعديل الشحنة');
+ let i=SHP.findIndex(x=>x.id===id);if(i>-1)SHP[i]=data;renderShips();shBadge();return data}
+async function shInsert(o){o.created_by=userName()||'';o.log=[{s:'new',at:new Date().toISOString(),by:o.created_by}];
+ let {data,error}=await sbx().from('mk_shipments').insert(o).select();if(error)throw error;data=data&&data[0];if(!data)throw new Error('الشحنة ماتسجلتش');SHP.unshift(data);renderShips();shBadge();return data}
+const shErrMsg=e=>{let m=String(e&&e.message||e||'');return /relation|does not exist|schema cache/i.test(m)?'محتاج تشغّل ملف الشحن (shipping.sql) في Supabase الأول':/fetch|network/i.test(m)?'محتاج نت':m};
+
+/* ---------- 🖨️ ملصق الشحن A4 ---------- */
+window.shipLabel=function(id){let s=SHP.find(x=>x.id===id);if(!s)return;
+ let st=db.settings||{},T=db.theme||{},logo=T.logo||'',H=T.invHeader||'#087f8c',n=Math.max(1,+s.pieces||1),day=new Date(s.created_at||Date.now()).toLocaleDateString('ar-EG'),ph=shopPhones();
+ let who=s.kind==='ship'?(s.carrier||''):(s.driver||s.carrier||'');
+ let page=i=>`<div class="pg"><div class="hd">${logo?`<img src="${logo}" class="lg" alt="">`:''}<div class="cn">${esc(shopName())}</div>${ph.length?`<div class="cp" dir="ltr">${ph.map(esc).join('  •  ')}</div>`:''}${st.address?`<div class="ca">${esc(st.address)}</div>`:''}</div>
+  <div class="tag"><span>${s.kind==='ship'?'📦 شحن':'🛵 توصيل'}</span>${n>1?`<span>طرد ${i} من ${n}</span>`:''}</div>
+  <div class="to"><div class="lb">إلى — المستلم</div><div class="nm">${esc(s.name||'—')}</div><div class="ph" dir="ltr">${esc(s.phone||'')}${s.phone2?'  /  '+esc(s.phone2):''}</div>${s.gov||s.area?`<div class="gv">${esc([s.gov,s.area].filter(Boolean).join(' — '))}</div>`:''}${s.address?`<div class="ad">${esc(s.address)}</div>`:''}</div>
+  <div class="gr"><div><small>رقم الشحنة</small><b dir="ltr">${esc(s.no)}</b></div><div><small>الفاتورة</small><b dir="ltr">${esc(s.inv_no||'—')}</b></div><div><small>التاريخ</small><b>${esc(day)}</b></div><div><small>${s.kind==='ship'?'شركة الشحن':'المندوب'}</small><b>${esc(who||'—')}</b></div>${s.tracking?`<div style="grid-column:span 2"><small>رقم البوليصة</small><b dir="ltr">${esc(s.tracking)}</b></div>`:''}</div>
+  <div class="cod${+s.cod>0?'':' ok'}">${+s.cod>0?`<small>المطلوب تحصيله عند الاستلام</small><b>${money(s.cod)}</b>`:'<b>✔ مدفوع — لا يُحصَّل أي مبلغ</b>'}</div>
+  ${s.content?`<div class="ct"><small>المحتويات</small><div>${esc(s.content)}</div></div>`:''}${s.note?`<div class="nt">📝 ${esc(s.note)}</div>`:''}
+  <div class="sp"></div><div class="bcw"><svg class="bc" data-v="${esc(s.no)}"></svg></div><div class="ft">⚠️ يرجى التعامل بحرص • ${esc(shopName())}</div></div>`;
+ let pages='';for(let i=1;i<=n;i++)pages+=page(i);
+ window.mkPrintHTML(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"><title>ملصق ${esc(s.no)}</title>
+ <style>@page{size:A4;margin:8mm}*{font-family:Cairo,Tahoma,sans-serif;box-sizing:border-box}body{margin:0;color:#000}
+ .pg{height:279mm;overflow:hidden;page-break-after:always;border:2.5px solid #000;border-radius:5mm;padding:7mm;display:flex;flex-direction:column;gap:4mm}.pg:last-child{page-break-after:auto}
+ .hd{text-align:center;border-bottom:3px solid ${H};padding-bottom:3mm}.lg{max-height:42mm;max-width:140mm;object-fit:contain;display:block;margin:0 auto 2mm}.cn{font-size:26pt;font-weight:800;line-height:1.2;color:${H}}.cp{font-size:15pt;font-weight:700}.ca{font-size:12pt;color:#333}
+ .tag{display:flex;justify-content:space-between;font-size:18pt;font-weight:800}.tag span{background:#000;color:#fff;border-radius:3mm;padding:1mm 5mm}
+ .to{border:2px solid #000;border-radius:4mm;padding:4mm 6mm}.lb{font-size:12pt;color:#444;font-weight:700}.nm{font-size:30pt;font-weight:800;line-height:1.25}.ph{font-size:24pt;font-weight:800;text-align:right}.gv{font-size:21pt;font-weight:800}.ad{font-size:16pt;line-height:1.5}
+ .gr{display:grid;grid-template-columns:1fr 1fr;gap:2mm}.gr div{border:1px solid #999;border-radius:3mm;padding:2mm 4mm}.gr small,.ct small,.cod small{display:block;font-size:10pt;color:#555}.gr b{font-size:15pt}
+ .cod{border:3px dashed #000;border-radius:4mm;padding:3mm 6mm;text-align:center}.cod b{font-size:28pt;font-weight:800}.cod.ok b{font-size:18pt}
+ .ct{font-size:13pt;border:1px solid #999;border-radius:3mm;padding:2mm 4mm;max-height:40mm;overflow:hidden}.nt{font-size:13pt}.sp{flex:1}.bcw{text-align:center}.bc{width:70mm;height:20mm}.ft{text-align:center;font-size:11pt;color:#333}</style>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script></head><body>${pages}
+ <script>window.onload=function(){document.querySelectorAll('svg.bc').forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:'CODE128',displayValue:true,fontSize:14,margin:0,height:50})}catch(e){x.outerHTML='<b>'+x.dataset.v+'</b>'}});setTimeout(function(){print()},700)}<\/script></body></html>`);
+ if(s.status==='new')shUpdate(id,{status:'printed'}).catch(()=>{})};
+
+/* ---------- ✏️ شحنة جديدة / تعديل ---------- */
+let SE=null;
+window.shipNew=function(invNo,woId){let I=invInfo(invNo),c=I&&findContact(I.r0.person,'عميل');
+ shipEdit(null,{kind:'ship',inv_no:invNo||'',web_order_id:woId||null,name:I?I.r0.person:'',phone:(I&&I.r0.phone)||(c&&c.phone)||'',address:(I&&I.r0.addr)||(c&&c.addr)||'',cod:I?I.rem:0,content:I?I.content:''})};
+window.shipEdit=function(id,preset){let s=id?SHP.find(x=>x.id===id):null;if(id&&!s)return;SE=Object.assign({kind:'ship',status:'new',pieces:1,cod:0,fee:0},s||preset||{});
+ let carriers=[...new Set(CARRIERS.concat(SHP.map(x=>x.carrier).filter(Boolean)))];
+ openModal(`<div class="modal-head"><h2>🚚 ${s?'شحنة '+esc(s.no):'شحنة جديدة'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field full"><label>النوع</label><div class="delopt">${[['ship','📦 شحن لمحافظة (شركة شحن)'],['delivery','🛵 توصيل القاهرة والجيزة (مندوب/أوبر)']].map(([v,t])=>`<label><input type="radio" name="seK" value="${v}" ${SE.kind===v?'checked':''}> ${t}</label>`).join('')}</div></div>
+ <div class="field"><label>اسم العميل</label><input id="seName" value="${esc(SE.name||'')}"></div><div class="field"><label>الفاتورة (اختياري)</label><input id="seInv" dir="ltr" value="${esc(SE.inv_no||'')}" placeholder="MK-0001"></div>
+ <div class="field"><label>الموبايل</label><input id="sePh" type="tel" dir="ltr" value="${esc(SE.phone||'')}"></div><div class="field"><label>موبايل تاني (اختياري)</label><input id="sePh2" type="tel" dir="ltr" value="${esc(SE.phone2||'')}"></div>
+ <div class="field"><label>المحافظة</label><select id="seGov">${govOpts(SE.gov||'')}</select></div><div class="field"><label>المنطقة / المدينة</label><input id="seArea" value="${esc(SE.area||'')}"></div>
+ <div class="field full"><label>العنوان بالتفصيل</label><textarea id="seAddr" rows="2" style="padding:11px;border:1px solid var(--border);border-radius:10px">${esc(SE.address||'')}</textarea></div>
+ <div class="field"><label id="seCarL">شركة الشحن</label><input id="seCar" list="seCars" value="${esc(SE.carrier||'')}"><datalist id="seCars">${carriers.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div><div class="field" id="seTrF"><label>رقم البوليصة / التتبع</label><input id="seTr" dir="ltr" value="${esc(SE.tracking||'')}"></div>
+ <div class="field" id="seDrF"><label>اسم المندوب</label><input id="seDr" value="${esc(SE.driver||'')}"></div><div class="field" id="seDpF"><label>موبايل المندوب</label><input id="seDp" type="tel" dir="ltr" value="${esc(SE.driver_phone||'')}"></div>
+ <div class="field"><label>💰 المطلوب تحصيله من العميل</label><input id="seCod" inputmode="decimal" value="${+SE.cod||0}"></div><div class="field"><label>مصاريف الشحن علينا (اختياري)</label><input id="seFee" inputmode="decimal" value="${+SE.fee||''}" placeholder="0"></div>
+ <div class="field"><label>عدد الطرود (كل طرد ليه ملصق)</label><input id="sePcs" type="number" min="1" max="50" value="${+SE.pieces||1}"></div>${s?`<div class="field"><label>الحالة</label><select id="seSt">${(FLOW[SE.kind]||FLOW.ship).concat(['returned','cancelled']).map(x=>`<option value="${x}" ${x===SE.status?'selected':''}>${stLabel(x,SE.kind)}</option>`).join('')}</select></div>`:''}
+ <div class="field full"><label>المحتويات</label><input id="seCt" value="${esc(SE.content||'')}"></div><div class="field full"><label>ملاحظات (بتتطبع على الملصق)</label><input id="seNt" value="${esc(SE.note||'')}" placeholder="مثلاً: قابل للكسر — كلّم العميل قبل الوصول"></div></div>
+ <div class="modal-foot"><button class="primary" id="seSaveP">💾 حفظ واطبع الملصق</button><button class="secondary" id="seSave">حفظ</button>${s&&isAdmin()?'<button class="secondary danger" id="seDel">حذف</button>':''}<button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ const kindUI=()=>{let k=(document.querySelector('input[name=seK]:checked')||{}).value||'ship';seCarL.textContent=k==='ship'?'شركة الشحن':'شركة التوصيل (اختياري)';seTrF.style.display=k==='ship'?'':'none';seDrF.style.display=seDpF.style.display=k==='delivery'?'':'none';
+  if(k==='delivery'&&!seGov.value)seGov.value='الجيزة'};
+ document.querySelectorAll('input[name=seK]').forEach(r=>r.onchange=kindUI);kindUI();
+ seName.addEventListener('change',()=>{let c=findContact(seName.value,'عميل');if(c){if(!sePh.value&&c.phone)sePh.value=c.phone;if(!seAddr.value&&c.addr)seAddr.value=c.addr}});
+ seInv.addEventListener('change',()=>{let I=invInfo(seInv.value.trim());if(!I)return;if(!seName.value)seName.value=I.r0.person||'';if(!sePh.value&&I.r0.phone)sePh.value=I.r0.phone;if(!seAddr.value&&I.r0.addr)seAddr.value=I.r0.addr;if(!seCt.value)seCt.value=I.content;if(!(+seCod.value))seCod.value=I.rem});
+ const go=async print=>{let k=(document.querySelector('input[name=seK]:checked')||{}).value||'ship';
+  let o={kind:k,name:seName.value.trim(),inv_no:seInv.value.trim()||null,phone:sePh.value.trim(),phone2:sePh2.value.trim(),gov:seGov.value,area:seArea.value.trim(),address:seAddr.value.trim(),carrier:seCar.value.trim(),tracking:k==='ship'?seTr.value.trim():'',driver:k==='delivery'?seDr.value.trim():'',driver_phone:k==='delivery'?seDp.value.trim():'',cod:r2(+seCod.value||0),fee:r2(+seFee.value||0),pieces:Math.min(50,Math.max(1,parseInt(sePcs.value)||1)),content:seCt.value.trim(),note:seNt.value.trim()};
+  if(!o.name)return toast('اكتب اسم العميل');if(o.phone.replace(/\D/g,'').length<8)return toast('اكتب موبايل العميل');if(k==='ship'&&!o.gov)return toast('اختار المحافظة');if(k==='ship'&&!o.address)return toast('اكتب العنوان');
+  let st=document.getElementById('seSt');if(st)o.status=st.value;if(!s&&SE.web_order_id)o.web_order_id=SE.web_order_id;
+  seSave.disabled=seSaveP.disabled=true;
+  try{let r=s?await shUpdate(s.id,o):await shInsert(o);closeModal();toast('✔ الشحنة اتحفظت '+r.no);if(print)shipLabel(r.id)}catch(e){seSave.disabled=seSaveP.disabled=false;toast('ماتحفظتش: '+shErrMsg(e))}};
+ seSave.onclick=()=>go(false);seSaveP.onclick=()=>go(true);
+ let d=document.getElementById('seDel');if(d)d.onclick=async()=>{if(!await ask('حذف الشحنة '+s.no+' نهائياً؟','حذف','رجوع'))return shipEdit(s.id);
+  let {error}=await sbx().from('mk_shipments').delete().eq('id',s.id);if(error)return toast(shErrMsg(error));SHP=SHP.filter(x=>x.id!==s.id);renderShips();shBadge();toast('اتحذفت')}};
+
+/* ---------- ⏭️ الخطوة الجاية ---------- */
+const nextOf=s=>{let f=FLOW[s.kind]||FLOW.ship,i=f.indexOf(s.status);return i>-1&&i<f.length-1?f[i+1]:null};
+const NEXT_BTN={printed:'🖨️ اطبع الملصق',handed:'📦 سلّمتها لشركة الشحن',out:null,delivered:'✅ العميل استلم',paid:'💰 اتحاسبنا'};
+const nextBtn=(s,n)=>n==='out'?(s.kind==='ship'?'🚚 اتشحنت':'🛵 خرجت مع المندوب'):NEXT_BTN[n];
+window.shipStep=async function(id){let s=SHP.find(x=>x.id===id);if(!s)return;let n=nextOf(s);if(!n)return;
+ if(n==='printed')return shipLabel(id);
+ if(n==='paid')return shipPaid(id);
+ if((n==='handed'&&s.kind==='ship'&&!s.carrier)||(n==='out'&&s.kind==='delivery'&&!s.driver&&!s.carrier))return shipWho(id,n);
+ try{await shUpdate(id,{status:n});toast('✔ '+stLabel(n,s.kind));if(n==='out'||n==='handed')shipNotifyAsk(id)}catch(e){toast(shErrMsg(e))}};
+function shipWho(id,n){let s=SHP.find(x=>x.id===id),ship=s.kind==='ship',carriers=[...new Set(CARRIERS.concat(SHP.map(x=>x.carrier).filter(Boolean)))];
+ openModal(`<div class="modal-head"><h2>${ship?'📦 سلّمتها لمين؟':'🛵 مين المندوب؟'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field"><label>${ship?'شركة الشحن':'شركة التوصيل (اختياري)'}</label><input id="swC" list="swCs" value="${esc(s.carrier||'')}"><datalist id="swCs">${carriers.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+ ${ship?`<div class="field"><label>رقم البوليصة / التتبع</label><input id="swT" dir="ltr" value="${esc(s.tracking||'')}"></div>`:`<div class="field"><label>اسم المندوب</label><input id="swD" value="${esc(s.driver||'')}"></div><div class="field"><label>موبايل المندوب</label><input id="swP" type="tel" dir="ltr" value="${esc(s.driver_phone||'')}"></div>`}
+ <div class="field"><label>مصاريف الشحن علينا (اختياري)</label><input id="swF" inputmode="decimal" value="${+s.fee||''}"></div></div>
+ <div class="modal-foot"><button class="primary" id="swGo">✔ تمام</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ swGo.onclick=async()=>{let p={status:n,carrier:val('swC'),fee:r2(+val('swF')||0)};if(ship)p.tracking=val('swT');else{p.driver=val('swD');p.driver_phone=val('swP')}
+  if(ship&&!p.carrier)return toast('اكتب اسم شركة الشحن');swGo.disabled=true;
+  try{await shUpdate(id,p);closeModal();toast('✔ '+stLabel(n,s.kind));shipNotifyAsk(id)}catch(e){swGo.disabled=false;toast(shErrMsg(e))}}}
+/* 💰 التحصيل: يقفل المتابعة + (اختياري) يسجّل الدفعة على حساب العميل ومصاريف الشحن كمصروف */
+function shipPaid(id){let s=SHP.find(x=>x.id===id),I=invInfo(s.inv_no),c=findContact((I&&I.r0.person)||s.name,'عميل'),adm=isAdmin();
+ openModal(`<div class="modal-head"><h2>💰 تحصيل الشحنة ${esc(s.no)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin-top:0">العميل: <b>${esc(s.name)}</b>${s.carrier?` — مع <b>${esc(s.carrier)}</b>`:''}</p>
+ <div class="form"><div class="field"><label>المبلغ اللي العميل دفعه</label><input id="spA" inputmode="decimal" value="${+s.cod||0}"></div>${adm?`<div class="field"><label>مصاريف الشحن اللي اتخصمت (اختياري)</label><input id="spF" inputmode="decimal" value="${+s.fee||''}"></div>`:''}</div>
+ ${c?`<label class="chk" style="margin-top:8px"><input type="checkbox" id="spPay" ${+s.cod>0&&(+c.balance||0)>0?'checked':''}> سجّل المبلغ دفعة على حساب <b>${esc(c.name)}</b> (عليه دلوقتي ${money(c.balance||0)})</label>`:'<p style="color:var(--muted);font-size:13px">العميل مش متسجل في العملاء — الدفعة مش هتتسجل على حساب.</p>'}
+ ${adm?'<label class="chk"><input type="checkbox" id="spExp" checked> سجّل مصاريف الشحن كمصروف في الخزنة</label>':''}
+ <div class="modal-foot"><button class="primary" id="spGo">✔ اتحاسبنا — اقفل المتابعة</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ spGo.onclick=async()=>{let amt=r2(+val('spA')||0),fee=adm?r2(+val('spF')||0):+s.fee||0,pay=document.getElementById('spPay'),ex=document.getElementById('spExp');spGo.disabled=true;
+  try{if(pay&&pay.checked&&amt>0){await A().rpc('mk_add_payment',{p_contact:c.id,p_amount:amt,p_note:'تحصيل شحنة '+s.no+(s.inv_no?' — فاتورة '+s.inv_no:'')});await A().refreshContacts([c.id]);if(adm)await A().refreshTable('mk_payments');A().done()}}
+  catch(e){spGo.disabled=false;return toast('الدفعة ماتسجلتش: '+(A().errMsg?A().errMsg(e):shErrMsg(e)))}
+  if(ex&&ex.checked&&fee>0){db.expenses.unshift({id:crypto.randomUUID(),date:today(),iso:isoToday(),note:'مصاريف شحن '+s.no+' — '+s.name,cat:'شحن',amount:fee});save()}
+  try{await shUpdate(id,{status:'paid',fee});closeModal();toast('✔ الشحنة اتقفلت — اتحاسبنا')}catch(e){spGo.disabled=false;toast(shErrMsg(e))}}}
+/* 💬 بلّغ العميل على الواتساب */
+function shipMsg(s){let h=`أهلاً ${s.name} 👋\n`,shop=shopName();
+ if(s.status==='out'||s.status==='handed'){if(s.kind==='ship')return h+`طلبك من ${shop} اتشحن 📦${s.carrier?' مع '+s.carrier:''}`+(s.tracking?`\nرقم البوليصة: ${s.tracking}`:'')+(+s.cod>0?`\nالمطلوب عند الاستلام: ${money(s.cod)}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+  return h+`طلبك من ${shop} خرج مع المندوب 🛵`+(s.driver?`\nالمندوب: ${s.driver}`:'')+(s.driver_phone?` — ${s.driver_phone}`:'')+(+s.cod>0?`\nالمطلوب عند الاستلام: ${money(s.cod)}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`}
+ if(s.status==='delivered'||s.status==='paid')return h+`نتمنى يكون طلبك من ${shop} وصلك سليم ✅\nشكراً لثقتك — ولو محتاج أي حاجة إحنا موجودين.`;
+ return h+`طلبك من ${shop} بيتجهّز للـ${s.kind==='ship'?'شحن 📦':'توصيل 🛵'} — هنبلّغك أول ما يخرج.`}
+window.shipNotify=function(id){let s=SHP.find(x=>x.id===id);if(!s)return;let wa=waTo(s.phone,shipMsg(s));if(!wa)return toast('العميل مالوش رقم');let w=window.open(wa,'_blank');if(!w)location.href=wa};
+async function shipNotifyAsk(id){let s=SHP.find(x=>x.id===id);if(!s||!s.phone)return;if(await ask('تبعت للعميل رسالة واتساب إن طلبه خرج؟','💬 ابعت','لأ'))shipNotify(id)}
+
+/* ---------- 📋 صفحة الشحن والتوصيل ---------- */
+function shFilter(){let q=VN(shQ);return SHP.filter(s=>(shTab==='open'?!CLOSED.includes(s.status)&&s.status!=='delivered':shTab==='collect'?s.status==='delivered':shTab==='done'?s.status==='paid':(s.status==='returned'||s.status==='cancelled'))
+ &&(!shKind||s.kind===shKind)&&(!q||VN([s.no,s.name,s.phone,s.inv_no,s.gov,s.area,s.tracking,s.carrier].join(' ')).includes(q)))}
+function renderShips(){let el=document.getElementById('shBody');if(!el)return;
+ if(shErr){el.innerHTML=`<div class="card"><p style="color:var(--danger);margin:0">${esc(shErr)}</p></div>`;return}
+ let open=SHP.filter(s=>!CLOSED.includes(s.status)),moving=open.filter(s=>s.status==='handed'||s.status==='out'),wait=open.filter(s=>s.status==='delivered');
+ document.querySelectorAll('#shTabs button[data-t]').forEach(b=>b.className=b.dataset.t===shTab?'primary':'secondary');
+ let sum=`<div class="shsum"><div><small>شحنات شغالة</small><b>${open.length}</b></div><div><small>في الطريق (مع الشركة/المندوب)</small><b>${moving.length}</b> <small>${money(sumBy(moving,s=>+s.cod||0))}</small></div><div><small>استلمت ومستنية التحصيل</small><b>${wait.length}</b> <small>${money(sumBy(wait,s=>+s.cod||0))}</small></div></div>`;
+ let L=shFilter();
+ el.innerHTML=sum+(L.length?L.map(s=>{let f=FLOW[s.kind]||FLOW.ship,i=f.indexOf(s.status),n=nextOf(s),last=(s.log||[]).slice(-1)[0];
+  return `<div class="card shc" id="sh-${s.id}" style="margin-bottom:12px"><div class="shh"><div><b style="font-size:17px">${esc(s.name)}</b> ${s.phone?`— <a href="tel:${esc(s.phone)}" dir="ltr">${esc(s.phone)}</a>`:''}<div class="mut">${esc(s.no)} • ${esc(fmtT(s.created_at))}${s.inv_no?' • فاتورة '+esc(s.inv_no):''}</div></div><div><span class="badge">${kindIc(s.kind)}</span> <span class="badge st-${s.status}">${esc(stLabel(s.status,s.kind))}</span></div></div>
+  ${s.gov||s.area||s.address?`<div class="ln">📍 ${esc([s.gov,s.area].filter(Boolean).join(' — '))}${s.address?' — '+esc(s.address):''}</div>`:''}
+  ${s.carrier||s.tracking?`<div class="ln">🚚 ${esc(s.carrier||'')}${s.tracking?` — بوليصة <b dir="ltr">${esc(s.tracking)}</b>`:''}</div>`:''}${s.driver?`<div class="ln">🛵 ${esc(s.driver)}${s.driver_phone?` — <a href="tel:${esc(s.driver_phone)}" dir="ltr">${esc(s.driver_phone)}</a>`:''}</div>`:''}
+  <div class="ln">${+s.cod>0?`💰 المطلوب تحصيله: <b>${money(s.cod)}</b>`:'✔ مدفوع — مفيش تحصيل'}${+s.fee>0?` <span class="mut">• مصاريف الشحن ${money(s.fee)}</span>`:''}${+s.pieces>1?` <span class="mut">• ${s.pieces} طرود</span>`:''}</div>
+  ${i>-1?`<div class="steps">${f.map((x,k)=>`<span class="${k<=i?'on':''}"></span>`).join('')}</div><div class="stepl">${f.map((x,k)=>`<span class="${k<=i?'on':''}">${STEP_SHORT[x]}</span>`).join('')}</div>`:''}
+  ${last?`<div class="mut" style="margin-top:4px">آخر تحديث: ${esc(stLabel(last.s,s.kind))}${last.by?' — '+esc(last.by):''} • ${esc(fmtT(last.at))}</div>`:''}
+  <div class="btnrow" style="margin-top:10px">${n?`<button class="primary" onclick="shipStep('${s.id}')">${nextBtn(s,n)}</button>`:''}<button class="secondary" onclick="shipLabel('${s.id}')">🖨️ الملصق</button>${s.phone?`<button class="secondary" onclick="shipNotify('${s.id}')">💬 بلّغ العميل</button>`:''}<button class="secondary" onclick="shipEdit('${s.id}')">✏️ تعديل</button></div></div>`}).join('')
+  :`<div class="card"><div class="empty">${shLoaded?'مفيش شحنات هنا':'جاري التحميل...'}</div></div>`)}
+window.renderShips=renderShips;
+window.shSet=function(k,v){if(k==='t')shTab=v;if(k==='k')shKind=v;if(k==='q')shQ=v;renderShips()};
+window.shipGo=function(id){showPage('shipping');let s=SHP.find(x=>x.id===id);if(s){shTab=CLOSED.includes(s.status)?(s.status==='paid'?'done':'other'):s.status==='delivered'?'collect':'open';renderShips()}
+ setTimeout(()=>{let c=document.getElementById('sh-'+id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.add('hl');setTimeout(()=>c.classList.remove('hl'),2000)}},150)};
+(function(){let wo=document.querySelector('aside nav [data-page="weborders"]');
+ if(wo)wo.insertAdjacentHTML('afterend','<button data-page="shipping" onclick="showPage(\'shipping\')"><span style="width:1.15em;text-align:center">🚚</span> <span>الشحن والتوصيل</span> <span id="shCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
+ let mn=document.querySelector('main');
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="shipping" class="page"><div class="title-row"><div class="title"><h1>🚚 الشحن والتوصيل</h1><p>متابعة كل طلب من طباعة الملصق لحد ما نتحاسب</p></div><div class="btnrow"><button class="primary" onclick="shipNew()">＋ شحنة جديدة</button><button class="secondary" onclick="loadShips()">🔄 تحديث</button></div></div>
+  <div class="toolbar" id="shTabs"><button data-t="open" onclick="shSet('t','open')">شغالة</button><button data-t="collect" onclick="shSet('t','collect')">مستنية التحصيل</button><button data-t="done" onclick="shSet('t','done')">خلصت</button><button data-t="other" onclick="shSet('t','other')">مرتجع / ملغي</button></div>
+  <div class="toolbar"><input class="search" placeholder="ابحث بالاسم، التليفون، رقم الشحنة أو البوليصة..." oninput="shSet('q',this.value)"><select class="search" style="max-width:150px" onchange="shSet('k',this.value)"><option value="">شحن + توصيل</option><option value="ship">📦 شحن بس</option><option value="delivery">🛵 توصيل بس</option></select></div><div id="shBody"></div></section>`);
+ let ban=document.getElementById('woBanner');
+ if(ban)ban.insertAdjacentHTML('beforebegin','<button id="shBanner" onclick="showPage(\'shipping\')" style="display:none;width:100%;margin-bottom:14px;background:#eefaf3;color:#1e6b3c;border:1px solid #9fd8b4;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
+const _spS=showPage;showPage=function(id){_spS(id);navClose();if(id==='shipping'){renderShips();loadShips()}};
+
+/* ---------- 🧾 فاتورة البيع: اختيار «من المحل / توصيل / شحن» ---------- */
+let autoPaid=false;
+const delVal=()=>(document.querySelector('input[name=txDel]:checked')||{}).value||'';
+function delChanged(){let v=delVal(),on=!!v,g=document.getElementById('txGov');
+ ['txGovF','txAreaF','txDelHint'].forEach(k=>{let e=document.getElementById(k);if(e)e.style.display=on?'':'none'});
+ if(v==='delivery'&&g&&!['القاهرة','الجيزة'].includes(g.value))g.value='الجيزة';
+ let p=document.getElementById('txPaid');
+ if(on&&p&&!paidTouched){p.value='0';paidTouched=true;autoPaid=true;updRem()}
+ else if(!on&&autoPaid){paidTouched=false;autoPaid=false;updRem()}}
+window.delChanged=delChanged;
+const _otS=openTransaction;
+openTransaction=function(type,preset){autoPaid=false;_otS(type,preset);if(type!=='sale')return;let a=document.getElementById('txAddr');if(!a||document.getElementById('txDelF'))return;
+ a.closest('.field').insertAdjacentHTML('afterend',`<div class="field full" id="txDelF"><label>🚚 الاستلام</label><div class="delopt">${[['','🏪 من المحل'],['delivery','🛵 توصيل (القاهرة والجيزة)'],['ship','📦 شحن لمحافظة']].map(([v,t],i)=>`<label><input type="radio" name="txDel" value="${v}" ${i?'':'checked'} onchange="delChanged()"> ${t}</label>`).join('')}</div></div>
+ <div class="field" id="txGovF" style="display:none"><label>المحافظة</label><select id="txGov">${govOpts('')}</select></div><div class="field" id="txAreaF" style="display:none"><label>المنطقة / المدينة</label><input id="txArea"></div>
+ <div class="field full" id="txDelHint" style="display:none;color:var(--muted);font-size:13px">📌 الشحنة هتتسجل في «الشحن والتوصيل» وتطبع الملصق على طول. «المدفوع الآن» اتحط صفر عشان الدفع عند الاستلام — غيّره لو العميل دفع.</div>`)};
+const _stS=submitTransaction;
+submitTransaction=async function(ev,type){let k=type==='sale'?delVal():'';
+ if(!k)return _stS.call(this,ev,type);
+ let d={kind:k,name:(val('txPerson')||'').trim(),phone:(val('txPhone')||'').trim(),gov:val('txGov')||'',area:(val('txArea')||'').trim(),address:(val('txAddr')||'').trim()};
+ if(!d.name){ev.preventDefault();return toast('اكتب اسم العميل — الشحنة محتاجاه')}
+ if(d.phone.replace(/\D/g,'').length<8){ev.preventDefault();return toast('اكتب تليفون العميل — شركة الشحن/المندوب هيكلمه')}
+ if(k==='ship'&&!d.gov){ev.preventDefault();return toast('اختار المحافظة')}
+ if(k==='ship'&&!d.address){ev.preventDefault();return toast('اكتب عنوان العميل')}
+ let before=new Set(db.sales.map(r=>r.id)),wo=(ev.target&&ev.target.dataset&&ev.target.dataset.wo)||null;
+ await _stS.call(this,ev,type);
+ let row=db.sales.find(r=>!before.has(r.id)&&!r.ship);if(!row)return;
+ if(!row.gid||!navigator.onLine)return toast('📴 الشحنة هتتسجل لما النت يرجع — افتح الفاتورة واضغط «🚚 شحن / توصيل»');
+ let I=invInfo(row.no);
+ try{await shInsert(Object.assign(d,{inv_no:row.no,web_order_id:wo,cod:I?I.rem:0,content:I?I.content:''}));openInvoiceModal(row.id)}
+ catch(e){toast('الفاتورة اتسجلت، بس الشحنة لأ: '+shErrMsg(e))}};
+/* طلب الموقع → الفاتورة: طريقة الاستلام اللي العميل اختارها بتتنقل لوحدها */
+const _woiS=woInvoice;
+woInvoice=function(id){_woiS(id);let o=(typeof WO!=='undefined'?WO.list:[]).find(x=>x.id===id),s=o&&o.ship;if(!s||!s.method||s.method==='pickup')return;
+ let r=document.querySelector(`input[name=txDel][value="${s.method}"]`);if(r){r.checked=true;delChanged()}
+ let g=document.getElementById('txGov');if(g&&s.gov)g.value=s.gov;let a=document.getElementById('txArea');if(a&&s.area)a.value=s.area;let ad=document.getElementById('txAddr');if(ad&&s.address)ad.value=s.address};
+const shipLine=s=>!s||!s.method?'':s.method==='ship'?'📦 شحن لـ '+(s.gov||'')+(s.area?' — '+s.area:''):s.method==='delivery'?'🛵 توصيل — '+[s.gov,s.area].filter(Boolean).join(' — '):'🏪 هيستلم من المحل';
+const _roS=renderOrders;
+renderOrders=function(){_roS();let b=document.getElementById('woBody');if(!b||typeof WO==='undefined')return;
+ let L=WO.list.filter(o=>WO.tab==='new'?o.status==='new':WO.tab==='done'?woDoneSt(o):(o.status!=='new'&&!woDoneSt(o))),cards=[...b.children].filter(c=>c.classList.contains('card'));if(cards.length!==L.length)return;
+ L.forEach((o,i)=>{let sh=o.invoice_no&&SHP.find(x=>x.inv_no===o.invoice_no&&x.status!=='cancelled'),ln=shipLine(o.ship);if(!ln&&!sh)return;
+  let tb=cards[i].querySelector('.table-wrap');if(tb)tb.insertAdjacentHTML('beforebegin',`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--tint2,#eef6f7)">${ln?`<b>${esc(ln)}</b>${o.ship&&o.ship.address?`<br>📍 ${esc(o.ship.address)}`:''}`:''}${sh?`<div>🚚 ${esc(sh.no)}: <a href="#" onclick="shipGo('${sh.id}');return false">${esc(stLabel(sh.status,sh.kind))}</a></div>`:''}</div>`)})};
+/* شاشة الفاتورة: حالة الشحنة أو زرار «شحن / توصيل» */
+const _oimS=openInvoiceModal;
+openInvoiceModal=function(id){_oimS(id);let r=db.sales.find(x=>x.id===id);if(!r||!r.no)return;let o=document.getElementById('invOut');if(!o)return;
+ let s=SHP.find(x=>x.inv_no===r.no&&x.status!=='cancelled');
+ o.insertAdjacentHTML('beforebegin',s?`<div class="shinv">🚚 ${kindIc(s.kind)} <b>${esc(s.no)}</b> — <span class="badge st-${s.status}">${esc(stLabel(s.status,s.kind))}</span><div class="btnrow" style="margin-top:8px"><button class="primary" style="flex:1" onclick="shipLabel('${s.id}')">🖨️ اطبع ملصق الشحن</button><button class="secondary" onclick="closeModal();shipGo('${s.id}')">المتابعة</button></div></div>`
+  :`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="closeModal();shipNew('${esc(r.no)}')">🚚 شحن / توصيل للفاتورة دي</button></div>`)};
+
+/* ---------- تشغيل ---------- */
+let shT=null;
+function shLive(){try{sbx().channel('mk-ship').on('postgres_changes',{event:'*',schema:'public',table:'mk_shipments'},()=>{clearTimeout(shT);shT=setTimeout(loadShips,800)}).subscribe()}catch(e){}}
+(function wait(n){if(window.mkT_user&&sbx()){loadShips();shLive();setInterval(()=>{if(navigator.onLine&&!document.hidden)loadShips()},120000);return}if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
 

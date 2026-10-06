@@ -613,6 +613,73 @@ const _cu=cartUI;cartUI=function(){_cu();let n=cartN(),g=document.getElementById
 /* بعد «أضف للطلب» من الكارت: رسالة توضح الخطوة الجاية */
 document.addEventListener('click',e=>{if(e.target.closest('[data-a="ad"],[data-pv="add"]'))setTimeout(()=>{let t=document.getElementById('goCartT');if(t){let g=document.getElementById('goCart');g.animate&&g.animate([{transform:'scale(1)'},{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:350})}},50)},true);
 
+/* ---------- 🚚 الشحن والتوصيل: زرار في صفحة المنتج + اختيار طريقة الاستلام في الطلب ---------- */
+const GOVS=['القاهرة','الجيزة','الإسكندرية','القليوبية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','الفيوم','بني سويف','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
+document.head.insertAdjacentHTML('beforeend','<style>.shipbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;background:var(--card);border:2px solid var(--accent);color:var(--fg);border-radius:16px;padding:13px;font:800 16px Cairo,Tahoma,sans-serif;cursor:pointer}.shopt{display:grid;gap:8px;margin:4px 0}.shopt label{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;line-height:1.5}.shopt label:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}.shopt small{display:block;color:var(--mut);font-size:12px}.mc .shopt label{display:flex;flex-direction:row;align-items:flex-start;gap:10px;margin:0}.mc .shopt input{width:20px;height:20px;flex:none;margin:3px 0 0;padding:0;accent-color:var(--accent)}.mc .shopt span{flex:1;min-width:0}.shinfo{display:grid;gap:10px}.shinfo div{border:1px solid var(--line);border-radius:14px;padding:12px 14px;line-height:1.8}.shinfo b{font-size:16px}.mc select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}</style>');
+const SLOC=()=>S.shipLocal||{},SGOV=()=>S.shipGov||{};
+const shBits=o=>[o.fee?'💵 '+o.fee:'',o.days?'⏱️ '+o.days:''].filter(Boolean).map(esc).join(' • ');
+function shipInfoOpen(){const L=SLOC(),G=SGOV(),D=(S.delivery||[]).filter(x=>x.area);
+ $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>🚚 الشحن والتوصيل</h3><div class="shinfo">
+ <div><b>🛵 توصيل داخل القاهرة والجيزة</b><br>${esc(L.note||'مندوب بيوصّلك الطلب لحد باب البيت')}${shBits(L)?'<br>'+shBits(L):''}</div>
+ <div><b>📦 شحن لأي محافظة</b><br>${esc(G.note||'بنشحن لكل محافظات مصر مع شركات الشحن')}${shBits(G)?'<br>'+shBits(G):''}</div>
+ <div><b>🏪 استلام من المحل</b><br>${esc(S.address||'تقدر تيجي تستلم طلبك من المحل')}${S.hours?'<br>🕒 '+esc(S.hours):''}</div></div>
+ ${D.length?`<table style="width:100%;border-collapse:collapse;margin-top:6px">${D.map(x=>`<tr><td style="padding:6px 4px;border-bottom:1px solid var(--line)"><b>${esc(x.area)}</b></td><td style="padding:6px 4px;border-bottom:1px solid var(--line)">${x.fee===''||x.fee==null?'':(+x.fee?esc(x.fee)+' ج.م':'مجاناً')}</td><td style="padding:6px 4px;border-bottom:1px solid var(--line);color:var(--mut)">${esc(x.days||'')}</td></tr>`).join('')}</table>`:''}
+ <p class="mut" style="margin:0">اختار طريقة الاستلام وانت بتبعت الطلب 👌</p>
+ <div class="row"><a class="btn g" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أسأل عن الشحن/التوصيل')}">💬 اسأل على الواتساب</a><button data-a="cc">تمام</button></div></div></div>`}
+document.addEventListener('click',e=>{if(e.target.closest('[data-shipinfo]'))shipInfoOpen()});
+const SHK='mk_ship_pref';
+const shPref=()=>{try{return JSON.parse(localStorage.getItem(SHK)||'{}')||{}}catch(e){return {}}};
+function shRead(){const m=(document.querySelector('input[name=shm]:checked')||{}).value||'pickup',g=$('shGov'),a=$('shArea'),d=$('shAddr');
+ return {method:m,gov:m==='pickup'?'':(g?g.value:''),area:m==='pickup'?'':(a?a.value.trim():''),address:m==='pickup'?'':(d?d.value.trim():'')}}
+function shUI(){const m=(document.querySelector('input[name=shm]:checked')||{}).value||'pickup',box=$('shBox'),g=$('shGov'),ph=$('cph');if(!box)return;
+ box.style.display=m==='pickup'?'none':'';
+ if(g){const want=m==='delivery'?['القاهرة','الجيزة']:GOVS,cur=g.value;g.innerHTML='<option value="">— اختار المحافظة —</option>'+want.map(x=>`<option ${x===cur?'selected':''}>${x}</option>`).join('');if(m==='delivery'&&!want.includes(cur))g.value='الجيزة'}
+ const lb=ph&&ph.closest('label');if(lb&&lb.firstChild&&lb.firstChild.nodeType===3)lb.firstChild.textContent=m==='pickup'?'رقم موبايلك (اختياري)':'رقم موبايلك (مطلوب عشان المندوب يكلمك)'}
+function shBlock(){const p=shPref(),m=p.method||'pickup',L=SLOC(),G=SGOV();
+ return `<div id="shWrap"><b>🚚 هتستلم إزاي؟</b><div class="shopt">
+ <label><input type="radio" name="shm" value="pickup" ${m==='pickup'?'checked':''}><span>🏪 هاستلم من المحل</span></label>
+ <label><input type="radio" name="shm" value="delivery" ${m==='delivery'?'checked':''}><span>🛵 توصيل داخل القاهرة والجيزة${shBits(L)?`<small>${shBits(L)}</small>`:''}</span></label>
+ <label><input type="radio" name="shm" value="ship" ${m==='ship'?'checked':''}><span>📦 شحن لمحافظة تانية${shBits(G)?`<small>${shBits(G)}</small>`:''}</span></label></div>
+ <div id="shBox" style="display:none"><label>المحافظة<select id="shGov"><option value="${esc(p.gov||'')}">${esc(p.gov||'')}</option></select></label><label>المنطقة / المدينة<input id="shArea" maxlength="80" value="${esc(p.area||'')}"></label><label>العنوان بالتفصيل<textarea id="shAddr" rows="2" maxlength="300">${esc(p.address||'')}</textarea></label></div></div>`}
+const _co0=cartOpen;cartOpen=function(){_co0();const m=$('cmsg');if(!m||$('shWrap')||!Object.keys(cart).length)return;m.insertAdjacentHTML('beforebegin',shBlock());
+ const keep=()=>{try{localStorage.setItem(SHK,JSON.stringify(Object.assign(shRead(),{method:(document.querySelector('input[name=shm]:checked')||{}).value||'pickup',gov:($('shGov')||{}).value||'',area:(($('shArea')||{}).value||'').trim(),address:(($('shAddr')||{}).value||'').trim()})))}catch(e){}};
+ document.querySelectorAll('input[name=shm]').forEach(r=>r.addEventListener('change',()=>{shUI();keep()}));['shGov','shArea','shAddr'].forEach(k=>{const e=$(k);if(e){e.addEventListener('input',keep);e.addEventListener('change',keep)}});shUI()};
+const shLine=s=>s.method==='ship'?'📦 شحن لـ '+s.gov+(s.area?' — '+s.area:''):s.method==='delivery'?'🛵 توصيل — '+[s.gov,s.area].filter(Boolean).join(' — '):'🏪 هاستلم من المحل';
+/* إرسال الطلب ومعاه طريقة الاستلام */
+sendOrder=async function(btn){
+ const msg=$('cmsg'),nm=($('cn').value||'').trim(),ph=($('cph').value||'').trim(),sh=shRead();
+ const ids=Object.keys(cart).filter(i=>byId(S.products,i));
+ if(!ids.length)return;
+ if(nm.length<2){msg.textContent='اكتب اسمك الأول';return}
+ if(sh.method!=='pickup'){if(ph.replace(/\D/g,'').length<8){msg.textContent='اكتب رقم موبايلك عشان المندوب أو شركة الشحن يكلمك';return}
+  if(!sh.gov){msg.textContent='اختار المحافظة';return}if(sh.address.length<5){msg.textContent='اكتب العنوان بالتفصيل';return}}
+ const items=[],ls=[];
+ for(const i of ids){const p=byId(S.products,i);
+  if(!p.code){msg.textContent='المنتج ده مش متاح للطلب من الموقع، كلمنا على الواتساب';return}
+  items.push({code:String(p.code),qty:cart[i]});
+  ls.push('• كود:'+p.code+' | '+(p.name+(p.desc?' ('+p.desc+')':'')).replace(/\|/g,'/')+' | × '+cart[i])}
+ ls.push('');ls.push(shLine(sh));if(sh.address)ls.push('📍 '+sh.address);
+ try{localStorage.setItem(SHK,JSON.stringify(sh))}catch(e){}
+ btn.disabled=true;msg.textContent='جاري إرسال الطلب…';
+ const call=body=>fetch(SB_URL+'/rest/v1/rpc/place_order',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify(body)});
+ try{
+  let r=await call({p_name:nm,p_phone:ph||null,p_items:items,p_ship:sh});let t=await r.text(),j=null;try{j=JSON.parse(t)}catch(e){}
+  if(!r.ok&&j&&(j.code==='PGRST202'||/Could not find the function/i.test(j.message||''))){r=await call({p_name:nm,p_phone:ph||null,p_items:items});t=await r.text();j=null;try{j=JSON.parse(t)}catch(e){}}
+  if(r.ok&&typeof j==='string'){
+   cart={};cartUI();
+   $('modal').innerHTML='<div class="mb"><div class="mc"><h3>تم تسجيل طلبك ✔</h3><p>رقم طلبك: <b>'+esc(j.slice(0,8))+'</b></p><p>'+esc(shLine(sh))+'</p><p>هنتواصل معاك لتأكيد الطلب والسعر'+(sh.method==='pickup'?'':' ومصاريف '+(sh.method==='ship'?'الشحن':'التوصيل'))+'. تقدر كمان تبعتلنا نسخة على الواتساب.</p><div class="row"><a class="btn g" target="_blank" rel="noopener" href="'+waUrl(orderMsg(j,nm,ph,ls))+'">📲 ابعت على الواتساب</a><button data-a="cc">إغلاق</button></div></div></div>';
+   return}
+  const em=(j&&j.message)||'';
+  if(em==='invalid_name'){msg.textContent='الاسم مش صحيح'}
+  else if(em==='invalid_phone'||em==='need_phone'){msg.textContent='رقم الموبايل مش صحيح'}
+  else if(em==='invalid_ship'){msg.textContent='العنوان طويل أوي — اختصره شوية'}
+  else if(em==='too_many_requests'){msg.textContent='في ضغط دلوقتي، جرّب بعد شوية أو كلمنا على الواتساب'}
+  else{msg.textContent='تعذر تسجيل الطلب دلوقتي. تقدر تبعته على الواتساب.'}
+ }catch(e){msg.textContent='مفيش اتصال بالإنترنت، جرّب تاني'}
+ btn.disabled=false};
+/* زرار «محتاجه شحن؟» في صفحة المنتج */
+const _poS=pvOpen;pvOpen=function(id,noPush){_poS(id,noPush);const pvi=document.querySelector('#pv .pvi');if(!pvi||pvi.querySelector('[data-shipinfo]'))return;const pb=pvi.querySelector('.pvprice');(pb||pvi).insertAdjacentHTML(pb?'afterend':'beforeend','<button type="button" class="shipbtn" data-shipinfo>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>')};
+
 /* ---------- 📦 الطلب بالحجز للمنتج اللي مش متوفر ---------- */
 pvBar=function(){const p=byId(S.products,PV.id);if(!p)return;const ok=stockOk(p),n=cart[p.id]||0;
  $('pvbar').innerHTML=`<div class="pvq"><button data-pv="q+" aria-label="زيادة">+</button><b>${PV.q}</b><button data-pv="q-" aria-label="نقص">−</button></div><button class="pvadd${n?' done':''}" data-pv="add" style="${ok?'':'background:#b7791f'}">${n?`✔ في طلبك (${n}) — أضف كمان`:(ok?'➕ أضف للطلب':'📦 اطلبه — هيوصلك لما يتوفر')}</button>${n?'<button class="pvq" style="padding:0 14px;height:46px;font-weight:700" data-pv="cart">🛒 طلبي</button>':''}`};
