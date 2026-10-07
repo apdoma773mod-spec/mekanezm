@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-4';
+const APP_VER='2026-10-08-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4030,6 +4030,33 @@ const _spS=showPage;showPage=function(id){_spS(id);if(id==='products'&&isAdmin()
 (function(){let pt=document.querySelector('#products .title-row .btnrow');if(pt&&!document.getElementById('spNewBtn'))pt.insertAdjacentHTML('afterbegin','<button class="primary own" id="spNewBtn" onclick="spNew()">➕ منتج جديد على الموقع</button>')})();
 const _osa=window.openSiteAdmin;if(_osa)window.openSiteAdmin=async function(tab){await _osa.apply(this,arguments);let r=document.querySelector('#modal .btnrow');if(r&&!r.querySelector('[data-spn]'))r.insertAdjacentHTML('afterbegin','<button class="secondary" data-spn onclick="closeModal();spNew()">➕ منتج جديد</button>')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('spEd')){document.getElementById('spEd').remove();E=null}});
+})();
+</script>
+
+<script>
+/* =====================================================================
+   ميكانيزم — PDF أسرع: الفاتورة / عرض السعر بيترسموا في صفحة لوحدهم (مش بننسخ السيستم كله)
+   — قبل كده كانت بتطوّل جداً على الآيفون لما الأصناف والفواتير تكتر
+   ===================================================================== */
+(function(){
+async function renderIso(html){
+ const fr=document.createElement('iframe');fr.setAttribute('aria-hidden','true');
+ fr.style.cssText='position:fixed;left:-12000px;top:0;width:820px;height:1400px;border:0;opacity:0;pointer-events:none';
+ const links=[...document.querySelectorAll('link[rel="stylesheet"]')].map(l=>l.outerHTML).join('');
+ fr.srcdoc=`<!doctype html><html dir="rtl"><head><meta charset="utf-8">${links}<style>html,body{margin:0;padding:0;background:#fff}</style></head><body>${html}</body></html>`;
+ document.body.appendChild(fr);
+ try{await new Promise(r=>{fr.onload=r;setTimeout(r,5000)});
+  const d=fr.contentDocument;try{await withTimeout(d.fonts&&d.fonts.ready,2500)}catch(e){}
+  const el=d.body.firstElementChild;if(!el)throw new Error('empty');fr.style.height=(el.scrollHeight+40)+'px';
+  const cv=await withTimeout(html2canvas(el,{scale:PDFT.scale,backgroundColor:'#fff',useCORS:true,logging:false,imageTimeout:8000,windowWidth:820}),PDFT.render);
+  if(cv==='timeout')throw new Error('timeout');return cv}
+ finally{fr.remove()}}
+function toPdf(cv){const w=210,ih=cv.height*w/cv.width,pdf=new window.jspdf.jsPDF({unit:'mm',format:[w,Math.max(297,ih)]});pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,w,ih);return pdf}
+if(typeof buildInvoicePdf==='function')buildInvoicePdf=async function(r){if(typeof html2canvas==='undefined'||!window.jspdf)throw new Error('lib');
+ const cv=await renderIso(invoiceHTML(r));return {blob:toPdf(cv).output('blob'),img:cv.toDataURL('image/jpeg',.6)}};
+if(typeof htmlPdf==='function')htmlPdf=async function(html){if(typeof html2canvas==='undefined'||!window.jspdf)throw new Error('مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت');
+ try{return toPdf(await renderIso(html)).output('blob')}catch(e){throw new Error(e.message==='timeout'?'التحويل أخد وقت طويل، جرّب تاني':e.message)}};
+window.mkRenderIso=renderIso;
 })();
 </script>
 
