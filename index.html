@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-1';
+const APP_VER='2026-10-08-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3668,6 +3668,57 @@ submitTransaction=async function(ev,type){let f=ev&&ev.target,id=f&&f.dataset&&f
 setTimeout(()=>loadWa(true),5000);
 setInterval(()=>{if(document.visibilityState==='visible')loadWa(true)},30000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadWa(false)});
+})();
+</script>
+
+<style>
+.mkforgot{display:block;text-align:center;margin-top:12px;color:#087f8c;font-size:14px;font-weight:700;text-decoration:none}
+#mkRecover{position:fixed;inset:0;z-index:300000;background:#102b2fdd;display:flex;align-items:center;justify-content:center;padding:16px}
+#mkRecover .mkbox{background:#fff;border-radius:18px;padding:20px;width:min(420px,100%);font-family:Cairo,Tahoma,sans-serif}
+#mkRecover input{width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin:6px 0;font-size:16px;box-sizing:border-box}
+#mkRecover button{width:100%;padding:13px;border-radius:11px;border:0;background:#087f8c;color:#fff;font-size:16px;font-weight:700;margin-top:8px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 🔑 نسيت الرقم السري: لينك تغيير على إيميل الحساب + شاشة رقم سري جديد
+   ===================================================================== */
+(function(){
+const sbx=()=>window.mkSB;
+const BACK=location.origin+location.pathname;
+const msgEl=()=>document.getElementById('wErr');
+/* لينك «نسيت الرقم السري؟» تحت أي شاشة دخول */
+function addLink(){const w=document.getElementById('mkWho');if(!w)return;const pin=w.querySelector('#wPin');if(!pin||w.querySelector('.mkforgot'))return;
+ const box=pin.closest('.mkbox')||w;box.insertAdjacentHTML('beforeend','<a href="#" class="mkforgot">🔑 نسيت الرقم السري؟</a>');
+ box.querySelector('.mkforgot').onclick=e=>{e.preventDefault();const u=w.querySelector('#wUser'),em=w.querySelector('#wEmail');forgot((em&&em.value.trim())||(u&&u.value)||'')}}
+function forgot(email){const w=document.getElementById('mkWho');if(!w)return;
+ w.innerHTML=`<div class="mkbox"><h2>🔑 نسيت الرقم السري</h2><p>هنبعتلك لينك على إيميل حسابك. افتحه من الموبايل، ودوس اللينك، واكتب رقم سري جديد.</p>
+  <input id="fgEmail" type="email" placeholder="إيميل الحساب" value="${String(email).replace(/"/g,'&quot;')}" autocomplete="username">
+  <button type="button" id="fgGo">📩 ابعتلي اللينك</button><button type="button" class="alt" style="margin-top:8px" id="fgBack">رجوع</button><div id="wErr" class="werr"></div></div>`;
+ document.getElementById('fgBack').onclick=()=>{if(window.mkT_chooser)mkT_chooser()};
+ document.getElementById('fgGo').onclick=async()=>{const em=document.getElementById('fgEmail').value.trim(),m=msgEl(),b=document.getElementById('fgGo');
+  if(!/@/.test(em)){m.textContent='اكتب الإيميل';return}if(!sbx()){m.textContent='محتاج نت';return}
+  b.disabled=true;m.textContent='⏳ بنبعت…';
+  try{const {error}=await sbx().auth.resetPasswordForEmail(em,{redirectTo:BACK});if(error)throw error;
+   m.innerHTML='✅ بعتنالك رسالة على <b>'+em.replace(/</g,'&lt;')+'</b> — افتح الإيميل ودوس اللينك اللي فيها. (لو مش لاقيها بُص في الـ Spam)'}
+  catch(e){b.disabled=false;const t=String(e&&e.message||e);m.textContent=/rate|seconds|limit/i.test(t)?'استنى دقيقة وجرّب تاني':'ماتبعتتش: '+t}}}
+new MutationObserver(addLink).observe(document.body,{childList:true,subtree:true});addLink();
+
+/* رجع من لينك الإيميل → اكتب رقم سري جديد */
+let shown=false;
+function newPass(){if(shown)return;shown=true;
+ document.body.insertAdjacentHTML('beforeend',`<div id="mkRecover"><div class="mkbox"><h2 style="margin-top:0">🔑 رقم سري جديد</h2><p>اكتب الرقم السري الجديد (6 حروف أو أرقام على الأقل) واحفظه.</p>
+  <input id="rcP1" type="password" placeholder="الرقم السري الجديد" autocomplete="new-password"><input id="rcP2" type="password" placeholder="اكتبه تاني" autocomplete="new-password">
+  <button type="button" id="rcGo">💾 حفظ</button><div id="rcMsg" style="margin-top:8px;color:#b3261e;font-size:14px"></div></div></div>`);
+ document.getElementById('rcGo').onclick=async()=>{const a=document.getElementById('rcP1').value,b=document.getElementById('rcP2').value,m=document.getElementById('rcMsg'),btn=document.getElementById('rcGo');
+  if(a.length<6){m.textContent='لازم 6 حروف أو أرقام على الأقل';return}if(a!==b){m.textContent='الاتنين مش زي بعض';return}
+  btn.disabled=true;m.style.color='#555';m.textContent='⏳ بنحفظ…';
+  try{const {error}=await sbx().auth.updateUser({password:a});if(error)throw error;
+   m.style.color='#1e7a3c';m.textContent='✅ الرقم السري اتغيّر — بندخلك دلوقتي…';
+   try{history.replaceState(null,'',BACK)}catch(e){}setTimeout(()=>location.replace(BACK),1200)}
+  catch(e){btn.disabled=false;m.style.color='#b3261e';const t=String(e&&e.message||e);m.textContent=/expired|invalid|session/i.test(t)?'اللينك انتهى — اطلب لينك جديد من «نسيت الرقم السري»':'ماتحفظش: '+t}}}
+if(/type=recovery/.test(location.hash))newPass();
+(function wait(n){const c=sbx();if(c&&c.auth&&c.auth.onAuthStateChange){c.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY')newPass()});return}if(n<50)setTimeout(()=>wait(n+1),200)})(0);
+if(/error_code=otp_expired|error=access_denied/.test(location.hash))setTimeout(()=>{try{toast('اللينك انتهى أو اتستخدم قبل كده — اطلب لينك جديد')}catch(e){}},1500);
 })();
 </script>
 
