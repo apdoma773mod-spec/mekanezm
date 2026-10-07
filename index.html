@@ -3322,5 +3322,154 @@ setTimeout(()=>{try{renderCharts();roBanner()}catch(e){}},1500);
 })();
 </script>
 
+<style>
+#mkInv{position:fixed;inset:0;z-index:90;background:#f5f7f8;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;direction:rtl;padding:14px 14px 110px}
+#mkInv.show{display:block}
+#mkInv .ivh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+#mkInv h2{margin:0;font-size:20px}
+.ivrow{background:#fff;border:1px solid var(--border);border-radius:14px;padding:11px;margin-bottom:9px}
+.ivrow.off{opacity:.45}
+.ivt{font-weight:700;line-height:1.5}.ivt small{color:var(--muted);font-weight:400}
+.ivm{display:block;width:100%;text-align:right;margin:7px 0;padding:9px 11px;border-radius:11px;border:1px solid;font-size:15px;font-weight:700;line-height:1.5}
+.ivm.g{background:#eaf7ef;border-color:#9fd7b3;color:#0f6b34}.ivm.y{background:#fff7e6;border-color:#f0cf9b;color:#8a4b00}.ivm.r{background:#fdecea;border-color:#f1a9a3;color:#b3261e}
+.ivm small{display:block;font-weight:400;opacity:.85}
+.ivn{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}.ivn div{display:flex;flex-direction:column;gap:2px}.ivn small{color:var(--muted)}
+.ivn input{width:84px;padding:9px;border:1px solid var(--border);border-radius:10px;text-align:center;font-size:16px}
+.ivpk{margin-top:8px;border-top:1px dashed var(--border);padding-top:8px}
+.ivpk input{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:16px}
+.ivpk .opt{padding:10px;border-bottom:1px solid var(--border);cursor:pointer}.ivpk .opt small{color:var(--muted)}
+.ivbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;flex-wrap:wrap;z-index:91}
+.ivbar .primary{flex:1;min-width:180px}
+.ivbusy{position:fixed;inset:0;z-index:95;background:#102b2fcc;color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;font-weight:700;text-align:center;padding:20px}
+.ivbusy.show{display:flex}
+</style>
+<div id="mkInv"></div><div id="ivBusy" class="ivbusy"></div>
+<script>
+/* =====================================================================
+   ميكانيزم — 📷 قراءة فاتورة المورد بالكاميرا: البنود تنزل على فاتورة الشراء + مطابقة بالتشابه + حفظ أسماء المورد
+   ===================================================================== */
+(function(){
+const sbx=()=>window.mkSB;
+const LKEY='mk_inv_alias';
+let AL={},ALok=false,IV=null;
+const normSup=s=>VN(s||'').replace(/\s+/g,' ').trim()||'*';
+const normTxt=s=>VN(s||'').replace(/\s+/g,' ').trim();
+
+/* ---------- الأسماء المحفوظة: {المورد:{نص الفاتورة: كود الصنف}} ---------- */
+async function loadAl(){if(ALok)return;let a={};
+ try{a=JSON.parse(localStorage.getItem(LKEY)||'{}')||{}}catch(e){}
+ try{let c=sbx();if(c){let {data}=await c.from('mk_settings').select('value').eq('key','invoice_aliases').maybeSingle();
+  if(data&&data.value&&typeof data.value==='object'){for(const s in data.value){a[s]=Object.assign({},a[s]||{},data.value[s])}}}}catch(e){}
+ AL=a;ALok=true}
+async function saveAl(){try{localStorage.setItem(LKEY,JSON.stringify(AL))}catch(e){}
+ try{let c=sbx();if(!c)return;let {error}=await c.from('mk_settings').upsert([{key:'invoice_aliases',value:AL}],{onConflict:'key'});if(error)throw error}
+ catch(e){toast('الأسماء اتحفظت على الجهاز بس: '+(e.message||e))}}
+const aliasPid=(sup,text,code)=>{let ks=[normSup(sup),'*'];
+ for(const s of ks){let m=AL[s]||{};if(code&&m['#'+normTxt(code)]&&db.products.some(p=>p.id===m['#'+normTxt(code)]))return m['#'+normTxt(code)];
+  let k=normTxt(text);if(m[k]&&db.products.some(p=>p.id===m[k]))return m[k]}return null};
+
+/* ---------- المطابقة بالتشابه ---------- */
+const NUMR=/\d+(?:\.\d+)?/g;
+const bigrams=s=>{let o=[];for(let i=0;i<s.length-1;i++)o.push(s.slice(i,i+2));return o};
+function tokSim(x,y){if(x===y)return 1;if(Math.min(x.length,y.length)>=3&&(x.includes(y)||y.includes(x)))return .88;
+ if(x.length<2||y.length<2)return 0;let a=bigrams(x),b=bigrams(y),m=new Map();a.forEach(g=>m.set(g,(m.get(g)||0)+1));let h=0;b.forEach(g=>{if(m.get(g)>0){h++;m.set(g,m.get(g)-1)}});return 2*h/(a.length+b.length)}
+const wordsOf=s=>VN(s).split(/[^؀-ۿa-z0-9.]+/).filter(Boolean);
+function nameSim(a,b){let A=VN(a),B=VN(b);if(!A||!B)return 0;if(A===B)return 1;
+ let ta=wordsOf(A),tb=wordsOf(B),wa=ta.filter(x=>!/^\d/.test(x)),wb=tb.filter(x=>!/^\d/.test(x)),na=A.match(NUMR)||[],nb=B.match(NUMR)||[];
+ let pen=1;if(na.length&&nb.length){let sa=new Set(na),sb=new Set(nb),c=[...sa].filter(x=>sb.has(x)).length,u=new Set([...sa,...sb]).size;pen=c===0?.35:c<u?.78:1}else if(na.length!==nb.length)pen=.88;
+ if(!wa.length||!wb.length)return pen*(wa.length===wb.length?.6:.25);
+ const dir=(X,Y)=>X.reduce((t,x)=>t+Math.max(...Y.map(y=>tokSim(x,y))),0)/X.length;
+ let s1=dir(wa,wb),s2=dir(wb,wa);return (.6*Math.min(s1,s2)+.4*Math.max(s1,s2))*pen}
+function best(text,code){let out=[];
+ db.products.forEach(p=>{let s=nameSim(text,p.name);if(code&&p.code&&VN(code)===VN(p.code))s=1;if(s>.3)out.push({p,s})});
+ return out.sort((a,b)=>b.s-a.s).slice(0,5)}
+function matchRow(sup,it){let al=aliasPid(sup,it.text,it.code);
+ if(al)return {pid:al,conf:'g',src:'alias',score:1};
+ let c=best(it.text,it.code),t=c[0];
+ if(t&&t.s>=.82)return {pid:t.p.id,conf:'g',src:'fuzzy',score:t.s};
+ if(t&&t.s>=.55)return {pid:t.p.id,conf:'y',src:'fuzzy',score:t.s};
+ return {pid:null,conf:'r',src:'none',score:t?t.s:0,near:t?t.p.name:''}}
+
+/* ---------- الصورة: تصغير وتجهيز ---------- */
+function shrink(file,max=1800){return new Promise((res,rej)=>{let url=URL.createObjectURL(file),im=new Image();
+ im.onload=()=>{let k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',.86).split(',')[1])};
+ im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('الصورة مش بتتفتح'))};im.src=url})}
+const busy=t=>{let b=document.getElementById('ivBusy');b.textContent=t||'';b.classList.toggle('show',!!t)};
+
+/* ---------- زرار الكاميرا جوه فاتورة الشراء ---------- */
+function injectBtn(){let m=document.getElementById('modal');if(!m||m.querySelector('#ivBtn'))return;let s=m.querySelector('#txSearch');if(!s)return;
+ s.closest('.field').insertAdjacentHTML('beforebegin',`<div class="field full" id="ivBtn"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" style="flex:1;min-width:150px" onclick="ivStart(true)">📷 صوّر الفاتورة</button><button type="button" class="secondary" style="flex:1;min-width:150px" onclick="ivStart(false)">🖼️ من الصور</button></div><small style="color:var(--muted)">فاتورة المورد مطبوعة أو بخط اليد — البنود تنزل لوحدها وتراجعها</small></div>`)}
+const _otI=openTransaction;openTransaction=function(type){_otI.apply(this,arguments);if(type==='purchase')try{injectBtn()}catch(e){}};
+
+window.ivStart=function(cam){let f=document.createElement('input');f.type='file';f.accept='image/*';if(cam)f.setAttribute('capture','environment');
+ f.onchange=()=>{if(f.files&&f.files[0])ivRun(f.files[0])};f.click()};
+
+async function ivRun(file){
+ if(!sbx()){toast('قراءة الفواتير محتاجة نت وتسجيل دخول للسيستم');return}
+ busy('⏳ بقرا الفاتورة... ممكن تاخد نص دقيقة');
+ try{await loadAl();let img=await shrink(file);
+  let {data,error}=await sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
+  if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
+   if(st===404||/not found/i.test(m))m='دالة parse-invoice لسه مش متنشرة على Supabase';throw new Error(m)}
+  if(data&&data.error)throw new Error(data.error);
+  let items=((data&&data.items)||[]).filter(x=>x&&String(x.text||'').trim());
+  if(!items.length)throw new Error('ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب');
+  let sup=document.getElementById('txPerson'),supName=(sup&&sup.value.trim())||String(data.supplier||'').trim();
+  let sm=null;if(!(sup&&sup.value.trim())&&supName){let c=db.contacts.filter(c=>c.type==='مورد').map(c=>({c,s:nameSim(supName,c.name)})).sort((a,b)=>b.s-a.s)[0];if(c&&c.s>=.7)sm=c.c}
+  IV={sup:sm?sm.name:supName,supRaw:data.supplier||'',no:data.invoice_no||'',date:data.date||'',notes:data.notes||'',
+   items:items.map(x=>{let qty=+x.qty>0?+x.qty:1,price=+x.price>=0&&x.price!=null?+x.price:0;if(!(price>0)&&+x.total>0)price=r2(+x.total/qty);
+    let m=matchRow(sm?sm.name:supName,{text:String(x.text).trim(),code:x.code});return Object.assign({text:String(x.text).trim(),code:x.code||'',qty,price,inc:true,newName:String(x.text).trim(),open:false},m)})};
+  busy('');renderIv()}
+ catch(e){busy('');toast('❌ '+(e.message||e))}}
+
+/* ---------- شاشة المراجعة ---------- */
+const prodTxt=p=>`${esc(p.name)} <small>(${num(p.qty)} ${esc(p.unit||'')})</small>`;
+const num=n=>Number(n||0).toLocaleString('ar-EG',{maximumFractionDigits:2});
+function matchBtn(it,i){let p=it.pid&&db.products.find(x=>x.id===it.pid);
+ if(p)return `<button type="button" class="ivm ${it.conf}" onclick="ivOpen(${i})">${it.conf==='g'?'✓':'❓'} ${esc(p.name)}<small>${it.src==='alias'?'اسم محفوظ للمورد':it.conf==='g'?'مطابق بالتشابه':'اقتراح — راجعه'} • اضغط للتغيير</small></button>`;
+ if(it.pid===null&&!it.skip)return `<button type="button" class="ivm r" onclick="ivOpen(${i})">➕ صنف جديد: ${esc(it.newName)}<small>${it.near?'أقرب صنف: '+esc(it.near)+' (مختلف) — ':'مفيش صنف شبهه — '}اضغط تختار صنف موجود أو تعدّل الاسم</small></button>`;
+ return `<button type="button" class="ivm r" onclick="ivOpen(${i})">⏭ البند ده متجاهل<small>اضغط لو عايزه يرجع</small></button>`}
+function renderIv(){let el=document.getElementById('mkInv');if(!el||!IV)return;
+ let n=IV.items.filter(x=>x.inc&&!x.skip).length,tot=r2(sumBy(IV.items.filter(x=>x.inc&&!x.skip),x=>x.qty*x.price));
+ el.innerHTML=`<div class="ivh"><h2>📷 راجع بنود الفاتورة</h2><button type="button" class="secondary" onclick="ivClose()">رجوع</button></div>
+ <div class="card" style="margin-bottom:10px;line-height:1.9">${IV.supRaw||IV.sup?`المورد: <b>${esc(IV.sup||IV.supRaw)}</b>`:'<span style="color:var(--muted)">اسم المورد مش ظاهر</span>'}${IV.no?` • فاتورة <b>${esc(IV.no)}</b>`:''}${IV.date?` • ${esc(IV.date)}`:''}
+  <br><small style="color:var(--muted)">🟢 مطابق • 🟡 راجعه • 🔴 جديد أو مش لاقيله شبه. بعد ما تأكد، الأسماء بتتحفظ للمورد والفاتورة الجاية تنزل لوحدها.</small>${IV.notes?`<br><small style="color:#8a4b00">ملاحظة القراءة: ${esc(IV.notes)}</small>`:''}</div>`
+ +IV.items.map((it,i)=>`<div class="ivrow${it.inc?'':' off'}" data-i="${i}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="ivt">${esc(it.text)}${it.code?` <small>كود ${esc(it.code)}</small>`:''}</div><label class="chk"><input type="checkbox" ${it.inc?'checked':''} onchange="ivSet(${i},'inc',this.checked)"></label></div>
+  ${matchBtn(it,i)}<div class="ivn"><div><small>الكمية</small><input type="number" min="0" step="0.01" value="${it.qty}" oninput="ivSet(${i},'qty',+this.value,1)"></div><div><small>سعر الشراء</small><input type="number" min="0" step="0.01" value="${it.price}" oninput="ivSet(${i},'price',+this.value,1)"></div><div style="flex:1"><small>الإجمالي</small><b>${num(it.qty*it.price)}</b></div></div>
+  ${it.open?`<div class="ivpk"><input placeholder="ابحث عن صنف..." oninput="ivSearch(${i},this.value)" value="" autocomplete="off"><div id="ivres${i}">${pickList(i,'')}</div></div>`:''}</div>`).join('')
+ +`<div class="ivbar"><label class="chk" style="width:100%"><input type="checkbox" id="ivSave" checked> احفظ أسماء الأصناف للمورد ده (الفاتورة الجاية تنزل لوحدها)</label><button type="button" class="primary" onclick="ivApply()">✅ أضف ${n} صنف للفاتورة — ${num(tot)} ج.م</button><button type="button" class="secondary" onclick="ivClose()">إلغاء</button></div>`;
+ el.classList.add('show')}
+function pickList(i,q){let it=IV.items[i],c=q?db.products.map(p=>({p,s:nameSim(q,p.name)+(VN(p.name).includes(VN(q))?.5:0)})).sort((a,b)=>b.s-a.s).slice(0,8):best(it.text,it.code).concat([]);
+ return c.map(o=>`<div class="opt" onclick="ivChoose(${i},'${o.p.id}')">${esc(o.p.name)} <small>(${num(o.p.qty)} ${esc(o.p.unit||'')})</small></div>`).join('')
+ +`<div class="opt" style="color:var(--blue);font-weight:700" onclick="ivNew(${i})">➕ صنف جديد باسم «${esc(it.newName)}»</div><div class="opt" style="color:var(--danger)" onclick="ivSkip(${i})">⏭ تجاهل البند ده</div>`}
+window.ivOpen=i=>{IV.items[i].open=!IV.items[i].open;renderIv()};
+window.ivSearch=(i,q)=>{let r=document.getElementById('ivres'+i);if(r)r.innerHTML=pickList(i,q)};
+window.ivChoose=(i,pid)=>{let it=IV.items[i];it.pid=pid;it.conf='g';it.src='manual';it.skip=false;it.open=false;renderIv()};
+window.ivNew=i=>{let it=IV.items[i],n=prompt('اسم الصنف الجديد',it.newName);if(n===null)return;it.newName=n.trim()||it.newName;it.pid=null;it.skip=false;it.conf='r';it.open=false;renderIv()};
+window.ivSkip=i=>{let it=IV.items[i];it.skip=!it.skip;it.pid=it.skip?undefined:null;it.open=false;renderIv()};
+window.ivSet=(i,k,v,keep)=>{IV.items[i][k]=v;if(keep){let r=document.querySelector(`#mkInv .ivrow[data-i="${i}"] .ivn b`);if(r)r.textContent=num(IV.items[i].qty*IV.items[i].price);
+  let bar=document.querySelector('#mkInv .ivbar .primary');if(bar){let L=IV.items.filter(x=>x.inc&&!x.skip);bar.textContent=`✅ أضف ${L.length} صنف للفاتورة — ${num(r2(sumBy(L,x=>x.qty*x.price)))} ج.م`}}else renderIv()};
+window.ivClose=()=>{document.getElementById('mkInv').classList.remove('show');IV=null};
+
+/* ---------- تثبيت: البنود تنزل على فاتورة الشراء + حفظ الأسماء ---------- */
+window.ivApply=async function(){if(!IV)return;let L=IV.items.filter(x=>x.inc&&!x.skip&&x.qty>0);if(!L.length)return toast('مفيش بنود تتضاف');
+ if(!document.getElementById('txLines')){toast('افتح فاتورة شراء الأول');return}
+ let sup=document.getElementById('txPerson');if(sup&&!sup.value.trim()&&(IV.sup||IV.supRaw))sup.value=IV.sup||IV.supRaw;
+ let supKey=normSup(sup?sup.value:IV.sup),save=document.getElementById('ivSave').checked,added=0;
+ L.forEach(it=>{let pid=it.pid||'new';
+  if(pid==='new'){let ex=[...document.querySelectorAll('#txLines .txl')].find(d=>d.dataset.pid==='new'&&d.dataset.name===it.newName);
+   if(ex){let q=ex.querySelector('.lq');q.value=r2((+q.value||0)+it.qty);if(it.price)ex.querySelector('.lp').value=it.price;added++;return}
+   addItem('new',it.newName)}
+  else{let ex=document.querySelector(`#txLines .txl[data-pid="${pid}"]`);if(ex){let q=ex.querySelector('.lq');q.value=r2((+q.value||0)+it.qty);if(it.price)ex.querySelector('.lp').value=it.price;added++;if(save)remember(supKey,it,pid);return}addItem(pid)}
+  let d=document.getElementById('txLines').lastElementChild;if(d){d.querySelector('.lq').value=it.qty;let lp=d.querySelector('.lp');lp.value=it.price||'';lp.placeholder='اكتب السعر'}
+  added++;if(save&&pid!=='new')remember(supKey,it,pid)});
+ try{updRem()}catch(e){}
+ if(save)await saveAl();
+ ivClose();toast(`✔ اتضاف ${added} بند — راجع الأسعار واحفظ الفاتورة`)};
+function remember(sup,it,pid){let m=AL[sup]||(AL[sup]={});m[normTxt(it.text)]=pid;if(it.code)m['#'+normTxt(it.code)]=pid}
+})();
+</script>
+
 </body>
 </html>
