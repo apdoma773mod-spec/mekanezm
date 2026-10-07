@@ -974,7 +974,7 @@ async function startSync(user){if(window.MK_T)return;
   let r;try{r=await fetchRow()}catch(e){r={error:e}}
   if(r.error){stat('📴 أوفلاين — شغال على نسخة الجهاز');clearTimeout(retryT);retryT=setTimeout(()=>startSync(user),15000);return}
   const row=r.data,lv=lsGet('mk_cloud_ver'),d=dirty();
-  if(!row){cloudVer=null;synced=true;if(d||!isEmpty(db))push();else stat('☁️ متصل');return}
+  if(!row){cloudVer=null;synced=true;lsSet('mk_cloud_ver','0');if(document.getElementById('wWait'))setTimeout(whoStart,50);if(d||!isEmpty(db))push();else stat('☁️ متصل');return}
   if(lsGet(KEY)==null)return applyCloud(row);
   if(!d){
     if(String(row.version)!==lv||(isEmpty(db)&&!isEmpty(row.data)))return applyCloud(row);
@@ -1597,7 +1597,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-1';
+const APP_VER='2026-10-09-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
