@@ -866,4 +866,17 @@ setTimeout(addSoc,500);setTimeout(addSoc,2500);
 })();
 </script>
 
+<style>#shipHome{display:flex;align-items:center;gap:12px;margin:0 16px 12px;width:calc(100% - 32px);background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:12px 14px;font:inherit;color:var(--fg);text-align:right;cursor:pointer;box-shadow:0 3px 14px #0001}#shipHome .i{font-size:30px;flex:none}#shipHome b{display:block;font-size:15px}#shipHome small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}#shipHome .go{margin-right:auto;color:var(--accent);font-weight:800;font-size:13px;flex:none}</style>
+<script>
+/* ميكانيزم — شريط «توصيل القاهرة والجيزة • شحن لكل المحافظات» في الرئيسية */
+(function(){
+function addShip(){const m=$('main');if(!m||admin||document.getElementById('shipHome'))return;
+ const at=document.getElementById('catHome')||m.querySelector('.trust');const h='<button type="button" id="shipHome" data-shipinfo><span class="i">🚚</span><span><b>توصيل القاهرة والجيزة • شحن لكل المحافظات</b><small>اختار طريقة الاستلام وانت بتبعت طلبك</small></span><span class="go">التفاصيل ←</span></button>';
+ if(at)at.insertAdjacentHTML('afterend',h);else m.insertAdjacentHTML('afterbegin',h);
+ const t=document.getElementById('trkHome');if(t){document.getElementById('shipHome').insertAdjacentElement('afterend',t)}}
+const _pmH=pubMain;pubMain=function(){_pmH();setTimeout(addShip,20)};
+setTimeout(addShip,400);setTimeout(addShip,2000);
+})();
+</script>
+
 </body></html>
