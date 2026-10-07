@@ -742,6 +742,22 @@ document.addEventListener('click',e=>{const a=e.target.closest('a.plink');if(!a|
 const _dpL=drawProds;drawProds=function(){_dpL();linkify()};
 const _pmL=pubMain;pubMain=function(){_pmL();setTimeout(linkify,0)};
 const _rL=render;render=function(){_rL();setTimeout(linkify,0)};
+/* ---------- 📈 إحصائيات الموقع: Google Analytics + Facebook Pixel ----------
+   حط الكود هنا بين العلامتين. سيبهم فاضيين = مفيش تتبع.
+   GA: كود القياس بتاع GA4 شكله G-XXXXXXXXXX      FB: رقم البيكسل (أرقام بس) */
+(function(){const GA='',FB='';if(!GA&&!FB)return;
+ try{
+ if(GA){const s=document.createElement('script');s.async=1;s.src='https://www.googletagmanager.com/gtag/js?id='+encodeURIComponent(GA);document.head.appendChild(s);window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config',GA)}
+ if(FB){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init',FB);fbq('track','PageView')}
+ const ev=(g,f,gd,fd)=>{try{if(window.gtag)gtag('event',g,gd||{});if(window.fbq)fbq('track',f,fd||{})}catch(e){}};
+ const info=id=>{let p=null;try{p=byId(S.products,id)}catch(e){}return {id:String(id),name:p?p.name:'',price:p&&p.price?+p.price:undefined}};
+ const _pvA=pvOpen;pvOpen=function(id,np){_pvA(id,np);let p=info(id);ev('view_item','ViewContent',{items:[{item_id:p.id,item_name:p.name,price:p.price}]},{content_ids:[p.id],content_name:p.name,content_type:'product'})};
+ document.addEventListener('click',e=>{
+  let b=e.target.closest&&e.target.closest('[data-a="ad"]');if(b){let p=info(b.dataset.id);ev('add_to_cart','AddToCart',{items:[{item_id:p.id,item_name:p.name,price:p.price}]},{content_ids:[p.id],content_name:p.name,content_type:'product'});return}
+  let w=e.target.closest&&e.target.closest('a[href*="wa.me"],a[href*="whatsapp"],a[href^="tel:"]');if(w)ev('contact','Contact')},true);
+ const m=document.getElementById('modal');if(m)new MutationObserver(()=>{if(m.textContent.indexOf('تم تسجيل طلبك')>-1&&!m.dataset.tr){m.dataset.tr=1;ev('generate_lead','Lead')}else if(m.textContent.indexOf('تم تسجيل طلبك')<0)delete m.dataset.tr}).observe(m,{childList:true,subtree:true,characterData:true});
+ }catch(e){}
+})();
 seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();
 })();
