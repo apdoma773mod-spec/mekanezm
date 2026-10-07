@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-07-4';
+const APP_VER='2026-10-08-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2139,7 +2139,7 @@ openTransaction=function(type,preset){_ot2(type,preset);let s=document.getElemen
 function lineOf(pid){return pid&&pid!=='new'?document.querySelector(`#txLines .txl[data-pid="${pid}"]`):null}
 window.openLineCard=function(pid,nm,line){closeLineCard();line=line||lineOf(pid);if(line){pid=line.dataset.pid;nm=line.dataset.name||nm}
  let sale=TTYPE==='sale',p=pid==='new'?{name:nm||'صنف جديد',qty:0,unit:'قطعة',price:0,cost:0}:db.products.find(x=>x.id===pid);if(!p)return;
- let emp=typeof isEmp==='function'&&isEmp(),q0=line?(+line.querySelector('.lq').value||1):1,pr0=line?line.querySelector('.lp').value:(sale?p.price:(emp&&!sale?'':p.cost));
+ let emp=typeof isEmp==='function'&&isEmp(),q0=line?(+line.querySelector('.lq').value||1):1,pr0=line?line.querySelector('.lp').value:(sale?p.price:(emp&&!sale?'':p.cost));if(!(+pr0))pr0='';
  document.body.insertAdjacentHTML('beforeend',`<div id="lcBox"><div class="lc"><div class="lch"><div><b>${esc(p.name)}</b><small>${pid==='new'?'صنف غير مسجل':`المتاح: ${p.qty} ${esc(p.unit||'')}${p.code?' • كود '+esc(p.code):''}`}</small></div><button type="button" class="close" id="lcX">✕</button></div>
   <label>العدد</label><div class="lcq"><button type="button" id="lcM">−</button><input id="lcQ" type="number" inputmode="decimal" min="0.01" step="0.01" value="${q0}"><button type="button" id="lcP">＋</button></div>
   <label>${sale?'سعر البيع':'سعر الشراء'}</label><input id="lcPr" type="number" inputmode="decimal" min="0" step="0.01" value="${esc(pr0)}" placeholder="اكتب السعر">
@@ -2148,7 +2148,7 @@ window.openLineCard=function(pid,nm,line){closeLineCard();line=line||lineOf(pid)
  const Q=document.getElementById('lcQ'),P=document.getElementById('lcPr');
  const upd=()=>{let q=+Q.value||0,pr=+P.value||0;document.getElementById('lcT').textContent=money(r2(q*pr));
   document.getElementById('lcW').textContent=sale&&pid!=='new'&&q>(+p.qty||0)?`⚠️ الكمية أكبر من المتاح (${p.qty})`:''};
- Q.oninput=upd;P.oninput=upd;upd();
+ Q.oninput=upd;P.oninput=upd;upd();Q.onfocus=P.onfocus=function(){try{this.select()}catch(e){}};
  document.getElementById('lcM').onclick=()=>{Q.value=Math.max(1,r2((+Q.value||1)-1));upd()};document.getElementById('lcP').onclick=()=>{Q.value=r2((+Q.value||0)+1);upd()};
  document.getElementById('lcX').onclick=document.getElementById('lcNo').onclick=closeLineCard;
  let del=document.getElementById('lcDel');if(del)del.onclick=()=>{line.remove();closeLineCard();updRem()};
@@ -2974,7 +2974,7 @@ function closeCard(){let b=document.getElementById('lcBox');if(b)b.remove()}
 function payChips(id,cur,noCredit){return `<div class="dbpays" id="${id}">${PAYS.filter(x=>!(noCredit&&x[0]==='credit')).map(([k,t])=>`<button type="button" data-p="${k}" class="${k===cur?'on':''}">${t}</button>`).join('')}</div>`}
 function wireChips(id){let el=document.getElementById(id);el.onclick=e=>{let b=e.target.closest('[data-p]');if(!b)return;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};return ()=>{let b=el.querySelector('.on');return b?b.dataset.p:''}}
 function itemCard(o){let p=o.product_id?db.products.find(x=>x.id===o.product_id):null,row=o.row,edit=!!row;
- let name=row?row.name:(p?p.name:o.name),q0=row?+row.qty:1,pr0=row?+row.price:(p?+p.price||0:''),ow0=row?+row.owed||0:0;
+ let name=row?row.name:(p?p.name:o.name),q0=row?+row.qty:1,pr0=row?+row.price:(p?(+p.price||''):''),ow0=row?+row.owed||0:0;
  card(`<div class="lch"><div><b>${esc(name)}</b><small>${p?`المتاح: ${p.qty} ${esc(p.unit||'')}${p.code?' • كود '+esc(p.code):''}`:'صنف غير مسجل'}</small></div><button type="button" class="close" id="lcX">✕</button></div>
   <label>العدد</label><div class="lcq"><button type="button" id="lcM">−</button><input id="lcQ" type="number" inputmode="decimal" min="0.01" step="0.01" value="${q0}"><button type="button" id="lcP">＋</button></div>
   <label>السعر</label><input id="lcPr" type="number" inputmode="decimal" min="0" step="0.01" value="${pr0}" placeholder="اكتب السعر">
@@ -3399,29 +3399,27 @@ const busy=t=>{let b=document.getElementById('ivBusy');b.textContent=t||'';b.cla
 
 /* ---------- زرار الكاميرا جوه فاتورة الشراء ---------- */
 function injectBtn(){let m=document.getElementById('modal');if(!m||m.querySelector('#ivBtn'))return;let s=m.querySelector('#txSearch');if(!s)return;
- s.closest('.field').insertAdjacentHTML('beforebegin',`<div class="field full" id="ivBtn"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" style="flex:1;min-width:150px" onclick="ivStart(true)">📷 صوّر الفاتورة</button><button type="button" class="secondary" style="flex:1;min-width:150px" onclick="ivStart(false)">🖼️ من الصور</button></div><small style="color:var(--muted)">فاتورة المورد مطبوعة أو بخط اليد — البنود تنزل لوحدها وتراجعها</small></div>`)}
+ s.closest('.field').insertAdjacentHTML('beforebegin',`<div class="field full" id="ivBtn"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" style="flex:1;min-width:120px" onclick="ivStart('cam')">📷 صوّر الفاتورة</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('gal')">🖼️ من الصور</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('file')">📄 من الملفات</button></div><small style="color:var(--muted)">صورة أو PDF لفاتورة المورد — بتتقري في الخلفية، ولو جوجل زحمة بيعيد المحاولة لوحده، وتلاقيها في «📥 فواتير للمراجعة»</small><div id="ivQ"></div></div>`);
+ if(window.mkScanList)mkScanList()}
 const _otI=openTransaction;openTransaction=function(type){_otI.apply(this,arguments);if(type==='purchase')try{injectBtn()}catch(e){}};
 
-window.ivStart=function(cam){let f=document.createElement('input');f.type='file';f.accept='image/*';if(cam)f.setAttribute('capture','environment');
- f.onchange=()=>{if(f.files&&f.files[0])ivRun(f.files[0])};f.click()};
+window.ivStart=function(mode){let f=document.createElement('input');f.type='file';f.accept=mode==='file'?'image/*,application/pdf,.pdf':'image/*';if(mode==='cam'||mode===true)f.setAttribute('capture','environment');
+ f.onchange=()=>{if(f.files&&f.files[0]){if(window.mkScanAdd)mkScanAdd(f.files[0]);else toast('حدّث الصفحة')}};f.click()};
+window.ivShrink=shrink;
 
-async function ivRun(file){
- if(!sbx()){toast('قراءة الفواتير محتاجة نت وتسجيل دخول للسيستم');return}
- busy('⏳ بقرا الفاتورة... ممكن تاخد نص دقيقة');
- try{await loadAl();let img=await shrink(file);
-  let {data,error}=await sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
-  if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
-   if(st===404||/not found/i.test(m))m='دالة parse-invoice لسه مش متنشرة على Supabase';throw new Error(m)}
-  if(data&&data.error)throw new Error(data.error);
+/* بيانات الفاتورة اللي اتقرت (من الطابور) → شاشة المراجعة */
+window.ivShow=async function(data,job){
+ try{await loadAl();
   let items=((data&&data.items)||[]).filter(x=>x&&String(x.text||'').trim());
-  if(!items.length)throw new Error('ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب');
+  if(!items.length)throw new Error('ماقدرتش ألاقي أصناف في الفاتورة دي');
   let sup=document.getElementById('txPerson'),supName=(sup&&sup.value.trim())||String(data.supplier||'').trim();
   let sm=null;if(!(sup&&sup.value.trim())&&supName){let c=db.contacts.filter(c=>c.type==='مورد').map(c=>({c,s:nameSim(supName,c.name)})).sort((a,b)=>b.s-a.s)[0];if(c&&c.s>=.7)sm=c.c}
-  IV={sup:sm?sm.name:supName,supRaw:data.supplier||'',no:data.invoice_no||'',date:data.date||'',notes:data.notes||'',
+  IV={job:job||null,sup:sm?sm.name:supName,supRaw:data.supplier||'',no:data.invoice_no||'',date:data.date||'',notes:data.notes||'',
    items:items.map(x=>{let qty=+x.qty>0?+x.qty:1,price=+x.price>=0&&x.price!=null?+x.price:0;if(!(price>0)&&+x.total>0)price=r2(+x.total/qty);
     let m=matchRow(sm?sm.name:supName,{text:String(x.text).trim(),code:x.code});return Object.assign({text:String(x.text).trim(),code:x.code||'',qty,price,inc:true,newName:String(x.text).trim(),open:false},m)})};
   busy('');renderIv()}
- catch(e){busy('');toast('❌ '+(e.message||e))}}
+ catch(e){busy('');toast('❌ '+(e.message||e))}};
+
 
 /* ---------- شاشة المراجعة ---------- */
 const prodTxt=p=>`${esc(p.name)} <small>(${num(p.qty)} ${esc(p.unit||'')})</small>`;
@@ -3453,7 +3451,7 @@ window.ivSet=(i,k,v,keep)=>{IV.items[i][k]=v;if(keep){let r=document.querySelect
 window.ivClose=()=>{document.getElementById('mkInv').classList.remove('show');IV=null};
 
 /* ---------- تثبيت: البنود تنزل على فاتورة الشراء + حفظ الأسماء ---------- */
-window.ivApply=async function(){if(!IV)return;let L=IV.items.filter(x=>x.inc&&!x.skip&&x.qty>0);if(!L.length)return toast('مفيش بنود تتضاف');
+window.ivApply=async function(){if(!IV)return;let jid=IV.job;let L=IV.items.filter(x=>x.inc&&!x.skip&&x.qty>0);if(!L.length)return toast('مفيش بنود تتضاف');
  if(!document.getElementById('txLines')){toast('افتح فاتورة شراء الأول');return}
  let sup=document.getElementById('txPerson');if(sup&&!sup.value.trim()&&(IV.sup||IV.supRaw))sup.value=IV.sup||IV.supRaw;
  let supKey=normSup(sup?sup.value:IV.sup),save=document.getElementById('ivSave').checked,added=0;
@@ -3466,8 +3464,117 @@ window.ivApply=async function(){if(!IV)return;let L=IV.items.filter(x=>x.inc&&!x
   added++;if(save&&pid!=='new')remember(supKey,it,pid)});
  try{updRem()}catch(e){}
  if(save)await saveAl();
- ivClose();toast(`✔ اتضاف ${added} بند — راجع الأسعار واحفظ الفاتورة`)};
+ ivClose();toast(`✔ اتضاف ${added} بند — راجع الأسعار واحفظ الفاتورة`);if(jid&&window.mkScanUsed)mkScanUsed(jid)};
 function remember(sup,it,pid){let m=AL[sup]||(AL[sup]={});m[normTxt(it.text)]=pid;if(it.code)m['#'+normTxt(it.code)]=pid}
+})();
+</script>
+
+<style>
+.scl{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card,#fff)}
+.scl b{font-size:15px}.scl small{display:block;color:var(--muted);font-size:12px;line-height:1.6}
+.scl.done{border-color:#9fd7b3;background:#f2fbf5}.scl.failed{border-color:#f1a9a3;background:#fff6f5}
+.scl .btnrow{gap:6px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 📥 طابور فواتير الشراء بالصور: بتتقري في الخلفية + إعادة المحاولة لوحدها + «فواتير للمراجعة»
+   ===================================================================== */
+(function(){
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const TRANSIENT=/high demand|overload|unavailable|503|502|500|429|quota|rate.?limit|try again|temporar|timeout|timed out|fetch|network|load failed|internal|deadline|ECONN|abort/i;
+const BACK=[1,2,4,8,15,30,30,60,60,120,180,240];   // دقايق بين كل محاولة والتانية
+let SC=[],busyW=false,WAIT=null;
+const LOCAL=new Map();
+const loadJS=src=>new Promise((res,rej)=>{if(document.querySelector('script[src="'+src+'"]'))return res();let s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('مكتبة مااتحملتش — اتأكد من النت'));document.head.appendChild(s)});
+const busyEl=()=>document.getElementById('ivBusy');
+const busy=t=>{let b=busyEl();if(b){b.textContent=t||'';b.classList.toggle('show',!!t)}};
+function errTxt(e){let m=String(e&&(e.message||e.error||e)||'');
+ if(/mk_scans|relation|does not exist|schema cache|Bucket not found|bucket/i.test(m))return 'محتاج تشغّل ملف scans.sql في Supabase الأول';
+ return m||'حصل خطأ'}
+const b64toBlob=b=>{let s=atob(b),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return new Blob([a],{type:'image/jpeg'})};
+const blobTo64=bl=>new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(bl)});
+const ago=t=>{let m=Math.round((Date.now()-new Date(t).getTime())/60000);return m<1?'دلوقتي':m<60?`من ${m} دقيقة`:m<1440?`من ${Math.round(m/60)} ساعة`:new Date(t).toLocaleDateString('ar-EG',{day:'numeric',month:'short'})};
+const inMin=t=>Math.max(0,Math.ceil((new Date(t).getTime()-Date.now())/60000));
+
+/* PDF → صور صفحات */
+async function pdfPages(file){await loadJS('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+ window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ let pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,out=[];
+ for(let i=1;i<=Math.min(pdf.numPages,6);i++){let pg=await pdf.getPage(i),v1=pg.getViewport({scale:1}),k=Math.min(2.5,1800/Math.max(v1.width,v1.height)),v=pg.getViewport({scale:k});
+  let c=document.createElement('canvas');c.width=Math.round(v.width);c.height=Math.round(v.height);let g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
+  await pg.render({canvasContext:g,viewport:v}).promise;out.push(c.toDataURL('image/jpeg',.86).split(',')[1])}
+ return out}
+
+/* ---------- إضافة فاتورة للطابور ---------- */
+window.mkScanAdd=async function(file){
+ if(!sbx()||!navigator.onLine)return toast('محتاج نت');
+ busy('⏳ بجهّز الفاتورة…');
+ try{let pdf=/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||'');
+  let pages=pdf?await pdfPages(file):[await window.ivShrink(file)];if(!pages.length)throw new Error('الملف فاضي');
+  let id=crypto.randomUUID(),paths=[];
+  for(let i=0;i<pages.length;i++){busy(pages.length>1?`⏳ برفع صفحة ${i+1} من ${pages.length}…`:'⏳ برفع الصورة…');let p=`${id}/p${i+1}.jpg`;
+   let {error}=await sbx().storage.from('invoice-scans').upload(p,b64toBlob(pages[i]),{contentType:'image/jpeg',upsert:true});if(error)throw error;paths.push(p)}
+  let sup=((document.getElementById('txPerson')||{}).value||'').trim();
+  let {error}=await sbx().from('mk_scans').insert({id,pages:paths,supplier:sup,created_by:userName()||''});if(error)throw error;
+  LOCAL.set(id,pages);WAIT=id;busy('⏳ بقرا الفاتورة…');
+  await refresh();await tick(id);
+  if(WAIT===id){busy('');toast('📥 الفاتورة في الطابور — هتتقري لوحدها وتلاقيها في «فواتير للمراجعة»')}}
+ catch(e){busy('');toast('❌ '+errTxt(e))}};
+
+/* ---------- العامل: بياخد الفواتير المستنية ويقراها ---------- */
+async function tick(prefer){if(busyW||!sbx()||!window.mkT_user||!navigator.onLine)return;busyW=true;
+ try{for(let n=0;n<3;n++){let {data:job,error}=await sbx().rpc('mk_scan_claim');if(error||!job)break;await work(job)}}
+ catch(e){}finally{busyW=false;await refresh()}}
+async function callFn(img){let {data,error}=await sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
+ if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
+  if(st===404)m='دالة parse-invoice مش متنشرة';throw new Error(m)}
+ if(data&&data.error)throw new Error(data.error);return data||{}}
+const fin=(id,st,res,err,mins)=>sbx().rpc('mk_scan_finish',{p_id:id,p_status:st,p_result:res,p_error:err||'',p_retry_min:mins||0});
+async function work(job){
+ try{let pages=LOCAL.get(job.id);
+  if(!pages){pages=[];for(const p of job.pages||[]){let {data,error}=await sbx().storage.from('invoice-scans').download(p);if(error)throw error;pages.push(await blobTo64(data))}LOCAL.set(job.id,pages)}
+  let R={supplier:'',invoice_no:'',date:'',notes:'',items:[]};
+  for(const img of pages){let r=await callFn(img);R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[])}
+  if(!R.items.filter(x=>x&&String(x.text||'').trim()).length){await fin(job.id,'failed',null,'ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب',0);if(WAIT===job.id){WAIT=null;busy('');toast('❌ ماقدرتش ألاقي أصناف — صوّرها أوضح')}return}
+  await fin(job.id,'done',R,'',0);LOCAL.delete(job.id);
+  if(WAIT===job.id){WAIT=null;busy('');if(document.getElementById('txLines')&&TTYPE==='purchase')return openScan(job.id,R)}
+  toast('📥 فاتورة اتقرت ومستنية مراجعتك')}
+ catch(e){let m=errTxt(e);
+  if(TRANSIENT.test(m)&&(job.attempts||1)<=BACK.length){await fin(job.id,'pending',null,m,BACK[Math.max(0,(job.attempts||1)-1)]);
+   if(WAIT===job.id){WAIT=null;busy('');toast('⏳ جوجل زحمة دلوقتي — هعيد المحاولة لوحدي وهتلاقيها في «فواتير للمراجعة»')}}
+  else{await fin(job.id,'failed',null,m,0);if(WAIT===job.id){WAIT=null;busy('');toast('❌ '+m)}}}}
+
+/* ---------- القايمة ---------- */
+async function refresh(){if(!sbx()||!window.mkT_user)return;
+ try{let {data,error}=await sbx().from('mk_scans').select('*').order('created_at',{ascending:false}).limit(60);if(error)throw error;SC=(data||[]).filter(x=>x.status!=='used')}catch(e){SC=[]}
+ mkScanList()}
+function rowHTML(s){let n=(s.result&&s.result.items||[]).length,who=(s.result&&s.result.supplier)||s.supplier;
+ let st=s.status==='done'?`✅ اتقرت — ${n} بند`:s.status==='failed'?`❌ ماتقريتش: ${esc(s.error||'')}`:s.status==='working'?'⏳ بتتقري دلوقتي…':`⏳ مستنية${s.attempts?` — المحاولة ${s.attempts+1} ${inMin(s.next_at)?'بعد '+inMin(s.next_at)+' دقيقة':'دلوقتي'}`:''}${s.error?` <span style="color:#8a4b00">(${esc(String(s.error).slice(0,60))})</span>`:''}`;
+ return `<div class="scl ${s.status}"><div style="min-width:0;flex:1"><b>📄 فاتورة${who?' — '+esc(who):''}${(s.pages||[]).length>1?` (${s.pages.length} صفحات)`:''}</b><small>${st}<br>${ago(s.created_at)}${s.created_by?' • '+esc(s.created_by):''}</small></div>
+  <div class="btnrow">${s.status==='done'?`<button type="button" class="primary" onclick="mkScanOpen('${s.id}')">👀 راجعها</button>`:''}${s.status==='failed'||s.status==='pending'?`<button type="button" class="secondary" onclick="mkScanRetry('${s.id}')">🔄 حاول دلوقتي</button>`:''}<button type="button" class="secondary danger" onclick="mkScanDel('${s.id}')">🗑️</button></div></div>`}
+window.mkScanList=function(){let L=SC,done=L.filter(s=>s.status==='done').length,wait=L.filter(s=>s.status==='pending'||s.status==='working').length;
+ let html=L.length?`<div style="margin-top:6px"><b>📥 فواتير للمراجعة</b>${L.map(rowHTML).join('')}</div>`:'';
+ let q=document.getElementById('ivQ');if(q)q.innerHTML=html;
+ let pg=document.getElementById('scPage');if(pg)pg.innerHTML=L.length?`<div class="card" style="margin-bottom:12px">${html}</div>`:'';
+ let b=document.getElementById('scBanner');if(b){b.style.display=done?'':'none';b.innerHTML=`📥 عندك <b>${done}</b> فاتورة شراء اتقرت ومستنية مراجعتك${wait?` • و${wait} بتتقري`:''} — اضغط للمراجعة`}};
+function openScan(id,res){if(!document.getElementById('txLines')||TTYPE!=='purchase')openTransaction('purchase');
+ let s=SC.find(x=>x.id===id),sup=document.getElementById('txPerson');if(s&&sup&&!sup.value.trim()&&s.supplier)sup.value=s.supplier;
+ window.ivShow(res||(s&&s.result)||{},id)}
+window.mkScanOpen=id=>openScan(id);
+window.mkScanUsed=async function(id){try{await fin(id,'used',null,'',0);let s=SC.find(x=>x.id===id);if(s&&(s.pages||[]).length)await sbx().storage.from('invoice-scans').remove(s.pages)}catch(e){}refresh()};
+window.mkScanRetry=async function(id){try{let {error}=await sbx().from('mk_scans').update({status:'pending',attempts:0,error:'',next_at:new Date().toISOString()}).eq('id',id);if(error)throw error;toast('⏳ بحاول تاني…');await refresh();tick()}catch(e){toast(errTxt(e))}};
+window.mkScanDel=async function(id){if(!await ask('حذف الفاتورة دي من الطابور؟','حذف','رجوع'))return;let s=SC.find(x=>x.id===id);
+ try{await sbx().from('mk_scans').delete().eq('id',id);if(s&&(s.pages||[]).length)await sbx().storage.from('invoice-scans').remove(s.pages)}catch(e){toast(errTxt(e))}LOCAL.delete(id);refresh()};
+
+/* ---------- أماكن الظهور ---------- */
+(function(){let pt=document.querySelector('#purchases .title-row');if(pt)pt.insertAdjacentHTML('afterend','<div id="scPage"></div>');
+ let ban=document.getElementById('woBanner');if(ban)ban.insertAdjacentHTML('beforebegin','<button id="scBanner" onclick="showPage(\'purchases\')" style="display:none;width:100%;margin-bottom:14px;background:#eef6ff;color:#0b4a8b;border:1px solid #9cc3ef;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
+let rt=null;
+(function wait(n){if(window.mkT_user&&sbx()){refresh().then(()=>tick());
+  try{sbx().channel('mk-scans').on('postgres_changes',{event:'*',schema:'public',table:'mk_scans'},()=>{clearTimeout(rt);rt=setTimeout(refresh,800)}).subscribe()}catch(e){}
+  setInterval(()=>{if(navigator.onLine&&!document.hidden)tick()},40000);return}
+ if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
 

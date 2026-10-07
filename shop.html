@@ -763,4 +763,79 @@ if(new URLSearchParams(location.search).get('p'))render();
 })();
 </script>
 
+<style>
+.trk{display:grid;gap:0;margin:8px 0}
+.trk .st{display:flex;gap:10px;align-items:flex-start;position:relative;padding:0 0 14px}
+.trk .st:not(:last-child)::after{content:'';position:absolute;right:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.trk .st.on:not(:last-child)::after{background:var(--accent)}
+.trk .dot{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg);border:2px solid var(--line);color:var(--mut)}
+.trk .st.on .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+.trk .st.now .dot{box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 25%,transparent)}
+.trk b{display:block;font-size:15px}.trk small{color:var(--mut);font-size:12.5px}
+.trkcard{border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:8px 0}
+#trkHome{display:flex;align-items:center;gap:12px;margin:0 16px 12px;width:calc(100% - 32px);background:var(--card);border:2px dashed var(--accent);border-radius:16px;padding:12px 14px;font:inherit;color:var(--fg);text-align:right;cursor:pointer}
+#trkHome .i{font-size:28px}#trkHome b{display:block;font-size:15px}#trkHome small{color:var(--mut);font-size:12.5px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 📦 تتبّع الطلب: العميل يكتب رقم موبايله (ورقم الطلب لو معاه) ويشوف طلبه وصل لفين
+   ===================================================================== */
+(function(){
+const LK='mk_last_order';
+const last=()=>{try{return JSON.parse(localStorage.getItem(LK)||'null')}catch(e){return null}};
+const fmt=t=>t?new Date(t).toLocaleString('ar-EG',{weekday:'short',day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'';
+function steps(o){let s=o.shipment,m=o.method,L=[];
+ L.push({t:'استلمنا طلبك',d:fmt(o.created_at),on:true});
+ if(o.status==='cancelled'){L.push({t:'❌ الطلب اتلغى',d:'كلمنا على الواتساب لو محتاج أي حاجة',on:true,bad:true});return L}
+ L.push({t:o.eta?'اتأكد ✔':'بنراجع طلبك',d:o.eta?'الميعاد: '+o.eta:'هنكلمك على الواتساب نأكد معاك',on:!!(o.eta||o.invoiced)});
+ L.push({t:'اتجهّز',d:o.invoiced?'طلبك جاهز':'',on:!!o.invoiced});
+ if(m==='pickup'&&!s){L.push({t:'جاهز للاستلام من المحل',d:o.invoiced?'تقدر تيجي تستلمه':'',on:!!o.invoiced});return L}
+ let st=s?s.status:'',lg=s&&Array.isArray(s.log)?s.log:[],at=k=>{let x=lg.filter(e=>e.s===k).slice(-1)[0];return x?fmt(x.at):''};
+ let ship=(s?s.kind:m)==='ship',ord=['new','printed','handed','out','delivered','paid'],i=ord.indexOf(st);
+ if(ship){L.push({t:'اتسلّم لشركة الشحن',d:s&&s.carrier?s.carrier+(s.tracking?' — رقم البوليصة: '+s.tracking:''):'',on:i>=2,at:at('handed')});
+  L.push({t:'في الطريق ليك 🚚',d:o.gov?'لـ '+o.gov:'',on:i>=3,at:at('out')})}
+ else L.push({t:'خرج مع المندوب 🛵',d:s&&s.carrier?s.carrier:'',on:i>=3,at:at('out')});
+ if(st==='returned')L.push({t:'↩️ الطلب رجع',d:'كلمنا على الواتساب',on:true,bad:true});
+ else L.push({t:'وصلك ✅',d:'',on:i>=4,at:at('delivered')});
+ return L}
+function orderHTML(o){let L=steps(o),cur=L.map(x=>x.on).lastIndexOf(true);
+ return `<div class="trkcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>طلب رقم ${esc(o.ref)}</b><small class="mut">${o.method==='ship'?'📦 شحن':o.method==='delivery'?'🛵 توصيل':'🏪 استلام من المحل'}</small></div>
+  <div class="mut" style="font-size:13px;margin:4px 0 10px">${(o.items||[]).map(x=>esc(x.name)+' × '+esc(x.qty)).join('، ')}</div>
+  <div class="trk">${L.map((x,i)=>`<div class="st${x.on?' on':''}${i===cur?' now':''}"><div class="dot">${x.bad?'!':x.on?'✓':i+1}</div><div><b>${esc(x.t)}</b><small>${esc([x.d,x.at].filter(Boolean).join(' • '))}</small></div></div>`).join('')}</div></div>`}
+function trackOpen(ref,ph){const l=last()||{};ref=ref!=null?ref:(l.ref||'');ph=ph!=null?ph:(l.phone||'');
+ $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>📦 تتبّع طلبك</h3><p class="mut" style="margin:0">اكتب رقم الموبايل اللي طلبت بيه — ورقم الطلب لو معاك.</p>
+  <label>رقم الموبايل<input id="tkPh" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx" value="${esc(ph)}"></label>
+  <label>رقم الطلب (اختياري)<input id="tkRef" maxlength="12" dir="ltr" placeholder="مثلاً 3f9a12bc" value="${esc(ref)}"></label>
+  <p id="tkMsg" class="mut" style="margin:0"></p><div id="tkOut"></div>
+  <div class="row"><button class="pri" id="tkGo">🔍 شوف طلبي</button><button data-a="cc">إغلاق</button></div></div></div>`;
+ $('tkGo').onclick=async()=>{const p=$('tkPh').value.trim(),r=$('tkRef').value.trim(),m=$('tkMsg'),b=$('tkGo');
+  if(p.replace(/\D/g,'').length<8){m.textContent='اكتب رقم الموبايل';return}b.disabled=true;m.textContent='⏳ بندوّر على طلبك…';$('tkOut').innerHTML='';
+  try{const res=await fetch(SB_URL+'/rest/v1/rpc/track_order',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_ref:r,p_phone:p})});
+   const j=await res.json();if(!res.ok)throw new Error((j&&j.message)||'err');
+   const L=(j&&j.orders)||[];
+   if(!L.length){m.innerHTML=`مالقيناش طلب بالبيانات دي. اتأكد من الرقم، أو <a target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أعرف طلبي وصل لفين')}">كلمنا على الواتساب</a>.`}
+   else{m.textContent='';$('tkOut').innerHTML=L.map(orderHTML).join('')+`<a class="btn g" style="display:block;text-align:center;margin-top:6px" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بخصوص طلبي رقم '+L[0].ref)}">💬 اسألنا على الواتساب</a>`;
+    try{localStorage.setItem(LK,JSON.stringify({ref:r||L[0].ref,phone:p}))}catch(e){}}}
+  catch(e){m.textContent=/bad_phone/.test(e.message)?'رقم الموبايل مش صحيح':/bad_ref/.test(e.message)?'رقم الطلب قصير — اكتبه كله أو سيبه فاضي':'مفيش اتصال — جرّب تاني'}
+  b.disabled=false};
+ if(ph)setTimeout(()=>$('tkGo').click(),50)}
+window.trackOpen=trackOpen;
+document.addEventListener('click',e=>{if(e.target.closest('[data-track]')){e.preventDefault();trackOpen()}});
+/* بعد إرسال الطلب: نحفظ رقمه ونضيف زرار «تابع طلبك» */
+const _soT=sendOrder;sendOrder=async function(btn){const ph=(($('cph')||{}).value||'').trim();await _soT(btn);
+ const mc=document.querySelector('#modal .mc');if(!mc||!/تم تسجيل طلبك/.test(mc.textContent))return;
+ const b=mc.querySelector('p b');const ref=b?b.textContent.trim():'';
+ if(ref&&ph){try{localStorage.setItem(LK,JSON.stringify({ref,phone:ph}))}catch(e){}}
+ const row=mc.querySelector('.row');if(row&&!mc.querySelector('[data-track]'))row.insertAdjacentHTML('beforebegin','<button class="btn g" data-track style="width:100%">📦 تابع طلبك وصل لفين</button>')};
+/* زرار في الرئيسية + لينك في الفوتر + ?track */
+function addHome(){const m=$('main');if(!m||admin)return;
+ if(!document.getElementById('trkHome')){const at=document.getElementById('shipHome')||document.getElementById('catHome');const h='<button type="button" id="trkHome" data-track><span class="i">📦</span><span><b>تتبّع طلبك</b><small>اعرف طلبك وصل لفين برقم موبايلك</small></span></button>';
+  if(at)at.insertAdjacentHTML('afterend',h);else m.insertAdjacentHTML('afterbegin',h)}
+ const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.tk){fl.dataset.tk=1;fl.insertAdjacentHTML('beforeend','<a href="#" data-track>📦 تتبّع طلبك</a>')}}
+const _pmT=pubMain;pubMain=function(){_pmT();setTimeout(addHome,30)};
+setTimeout(addHome,300);
+const qs=new URLSearchParams(location.search);if(qs.has('track'))setTimeout(()=>trackOpen(qs.get('track')||'',null),800);
+})();
+</script>
+
 </body></html>
