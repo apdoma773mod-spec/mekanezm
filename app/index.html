@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <meta name="theme-color" id="metaTheme" content="#087f8c">
-<title>ميكانيزم | سيستم المخزون والمبيعات</title>
+<title>Mika Omnix | سيستم المخزون والمبيعات</title>
 <style>
 :root{--blue:#087f8c;--blue2:#075e68;--gold:#d5a928;--bg:#f5f7f8;--card:#fff;--text:#18343a;--muted:#718087;--danger:#c0392b;--green:#159447;--border:#e4eaed}
 *{box-sizing:border-box}body{margin:0;background-repeat:no-repeat;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -43,7 +43,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ميكانيزم">
+<meta name="apple-mobile-web-app-title" content="Mika Omnix">
 <style>
 #mkLogin,#mkConf{position:fixed;inset:0;z-index:99999;background:#f5f7f8;display:none;align-items:center;justify-content:center;padding:20px;font-family:Cairo,Tahoma,Arial,sans-serif;direction:rtl}
 #mkLogin.show,#mkConf.show{display:flex}
@@ -77,7 +77,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <style>svg.i{width:1.15em;height:1.15em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;flex:none}.ic svg.i{width:1em;height:1em}.mobile-nav svg.i{width:22px;height:22px}.icon-btn svg.i,.fab svg.i{width:1.1em;height:1.1em;vertical-align:middle}.fab,.icon-btn,.close{display:inline-flex;align-items:center;justify-content:center}</style>
 <div class="app">
 <header class="top">
-  <div class="brand"><img id="brandLogo" alt="" style="display:none;height:40px;max-width:90px;object-fit:contain"><div id="brandName">ميكانيزم</div></div>
+  <div class="brand"><img id="brandLogo" alt="" style="display:none;height:40px;max-width:90px;object-fit:contain"><div id="brandName">Mika Omnix</div></div>
   <div class="top-actions">
     <button class="icon-btn" onclick="openQuick()" title="إضافة"><svg class="i"><use href="#i-plus"/></svg></button>
     <button class="icon-btn" onclick="openVoice()" title="أمر صوتي">🎤</button>
@@ -252,7 +252,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <div id="toast" class="toast"></div>
 
 <div id="mkStat"></div>
-<div id="mkLogin"><div class="mkbox"><h2>ميكانيزم</h2><p>سيستم المخزون والمبيعات لمحلك</p>
+<div id="mkLogin"><div class="mkbox"><h2>Mika Omnix</h2><p>سيستم المخزون والمبيعات لمحلك</p>
 <input id="mkEmail" type="email" placeholder="الإيميل" autocomplete="username">
 <input id="mkPass" type="password" placeholder="كلمة السر" autocomplete="current-password">
 <button id="mkGo" type="button">دخول</button><div id="mkErr"></div></div></div>
@@ -264,7 +264,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <script>
 const KEY="mkapp_inventory_v1";
 let _seq=0;function cloudMark(){_seq++;try{localStorage.setItem('mk_dirty','1')}catch(e){}if(window.cloudPush)window.cloudPush()}
-const SEED={"products":[],"sales":[],"purchases":[],"contacts":[],"expenses":[],"returns":[],"payments":[],"settings":{"companyName":"","phone":"","invNo":0,"address":""},"theme":{}};
+const SEED={"products":[],"sales":[],"purchases":[],"contacts":[],"expenses":[],"returns":[],"payments":[],"settings":{"companyName":"","phone":"","invNo":0,"address":""},"theme":{"font":"Cairo"}};
 let db=JSON.parse(localStorage.getItem(KEY)||'null')||SEED||{products:[],sales:[],purchases:[],contacts:[],expenses:[],returns:[],settings:{companyName:"",phone:""}};
 db.returns=db.returns||[];db.payments=db.payments||[];db.contacts.forEach(c=>{c.id=c.id||crypto.randomUUID()});
 const money=n=>Number(n||0).toLocaleString('ar-EG',{maximumFractionDigits:2})+" ج.م";
@@ -342,7 +342,7 @@ async function saveFile(name,data){
  try{if(typeof claude!=='undefined'){let d=await claude.use('downloads');if(d){await d.save({filename:name,data});return true}}}catch(e){if(e&&e.code==='declined')return false}
  let a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.download=name;document.body.appendChild(a);a.click();a.remove();return true}
 function invoiceHTML(r){
- let G=r.no?db.sales.filter(x=>x.no===r.no):[r];if(!G.length)G=[r];let TT=G.reduce((s,x)=>s+x.total,0),paid=G.reduce((s,x)=>s+(x.paid!=null?x.paid:x.total),0),rem=G.reduce((s,x)=>s+(x.rem||0),0),T=db.theme,shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),price=r.price!=null?r.price:(r.qty?r.total/r.qty:0),unit=(db.products.find(p=>p.name===r.product)||{}).unit||'',
+ let G=r.no?db.sales.filter(x=>x.no===r.no):[r];if(!G.length)G=[r];let TT=G.reduce((s,x)=>s+x.total,0),paid=G.reduce((s,x)=>s+(x.paid!=null?x.paid:x.total),0),rem=G.reduce((s,x)=>s+(x.rem||0),0),T=db.theme,shop=esc(db.settings.companyName||''),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),price=r.price!=null?r.price:(r.qty?r.total/r.qty:0),unit=(db.products.find(p=>p.name===r.product)||{}).unit||'',
  H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
  wm=T.watermark&&T.logo?`<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`:'';
@@ -350,7 +350,7 @@ function invoiceHTML(r){
  ${T.logoInv&&T.logo?`
  <div style="position:relative;background:${H};line-height:0"><img src="${T.logo}" style="width:100%;display:block"></div>
  <div style="position:relative;background:${H};color:${HT};padding:14px 44px 16px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-  <div><div style="display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;line-height:1.3"><span>${shop}</span>${/[A-Za-z]/.test(shop)?'':'<span style="opacity:.5;font-weight:400">|</span><span dir="ltr" style="letter-spacing:1.5px">MEKANIZM</span>'}</div><div style="margin-top:4px;font-size:13px;opacity:.9;line-height:1.6">${addr}${ph?` &nbsp;•&nbsp; تليفون: <span dir="ltr">${ph}</span>`:''}</div></div>
+  <div><div style="display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;line-height:1.3"><span>${shop}</span>${/[A-Za-z]/.test(shop)?'':'<span style="opacity:.5;font-weight:400">|</span><span dir="ltr" style="letter-spacing:1.5px">Mika Omnix</span>'}</div><div style="margin-top:4px;font-size:13px;opacity:.9;line-height:1.6">${addr}${ph?` &nbsp;•&nbsp; تليفون: <span dir="ltr">${ph}</span>`:''}</div></div>
   <div style="font-size:20px;font-weight:800;white-space:nowrap">فاتورة بيع</div></div>
  `:`
  <div style="position:relative;background:${H};color:${HT};padding:34px 44px;display:flex;justify-content:space-between;align-items:center">
@@ -401,7 +401,7 @@ async function shareInvoice(){
  catch(e){if(e&&e.name==='AbortError')return}
  await saveInvoice();toast('المتصفح ده مش بيدعم المشاركة المباشرة — الملف اتحفظ على الجهاز، افتحه وابعته من الواتساب')}
 function whatsInvoice(){
- if(!lastInv)return;let r=lastInv.r,msg=`أهلاً ${r.person||''}\nدي فاتورتك رقم ${invNo(r)} من ${db.settings.companyName||'ميكانيزم'}\nالإجمالي: ${money(r.total)}\nشكراً لتعاملك معانا 🙏`,
+ if(!lastInv)return;let r=lastInv.r,msg=`أهلاً ${r.person||''}\nدي فاتورتك رقم ${invNo(r)} من ${db.settings.companyName||''}\nالإجمالي: ${money(r.total)}\nشكراً لتعاملك معانا 🙏`,
  a=document.createElement('a');a.href='https://wa.me/'+waNum(r.phone)+'?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('ابعت ملف الـ PDF مع الرسالة')}
 
 /* ===== المظهر والتخصيص ===== */
@@ -409,7 +409,7 @@ const DEFSTACK='-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-se
 const FONTS=[['default','الخط الافتراضي (الجهاز)'],['Cairo','القاهرة — Cairo'],['Tajawal','تجوال — Tajawal'],['Almarai','المراعي — Almarai'],['Noto Kufi Arabic','نوتو كوفي'],['Amiri','أميري (نسخ)'],['Changa','شانجا — Changa']];
 const DEFT={primary:'#087f8c',accent:'#d5a928',bg:'#f5f7f8',text:'#18343a',font:'default',invFont:'same',invSync:true,invHeader:'#087f8c',invAccent:'#d5a928',logo:'',bgImg:'',bgClarity:35,logoHeader:true,logoInv:true,watermark:false,topGap:62};
 db.theme=Object.assign({},DEFT,db.theme||{});
-const fontStack=k=>k==='default'||!k?DEFSTACK:`"${k}",${DEFSTACK}`;
+const fontStack=k=>k==='default'||!k?'"Cairo",'+DEFSTACK:`"${k}",${DEFSTACK}`;
 const hx=h=>{h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
 const toHex=a=>'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
 const mix=(h,t,w=[255,255,255])=>toHex(hx(h).map((v,i)=>v*t+w[i]*(1-t)));
@@ -440,7 +440,7 @@ function renderTheme(skip){
  if(f){f.value=T.font;document.getElementById('thInvFont').value=T.invFont;document.getElementById('fontSample').style.fontFamily=fontStack(T.font)}
  let lp=document.getElementById('logoPrev');if(lp)lp.innerHTML=T.logo?`<img src="${T.logo}" alt="">`:'مفيش لوجو';
  let bp=document.getElementById('bgPrev');if(bp)bp.innerHTML=T.bgImg?`<img src="${T.bgImg}" alt="" style="width:100%;height:100%;object-fit:cover">`:'خلفية سادة (بدون صورة)';
- let pr=document.getElementById('presets');if(pr&&!pr.children.length)pr.innerHTML=[['ميكانيزم','#087f8c','#d5a928'],['أزرق','#1e5fbf','#f59e0b'],['أخضر','#1f8a4c','#e0a800'],['بنفسجي','#6b3fa0','#e0a800'],['أحمر','#b3261e','#222222'],['أسود وذهبي','#1c1c1c','#d5a928']].map(p=>`<button class="preset" onclick="thPreset('${p[1]}','${p[2]}')"><i style="background:${p[1]}"></i><i style="background:${p[2]}"></i>${p[0]}</button>`).join('')}
+ let pr=document.getElementById('presets');if(pr&&!pr.children.length)pr.innerHTML=[['Mika Omnix','#087f8c','#d5a928'],['أزرق','#1e5fbf','#f59e0b'],['أخضر','#1f8a4c','#e0a800'],['بنفسجي','#6b3fa0','#e0a800'],['أحمر','#b3261e','#222222'],['أسود وذهبي','#1c1c1c','#d5a928']].map(p=>`<button class="preset" onclick="thPreset('${p[1]}','${p[2]}')"><i style="background:${p[1]}"></i><i style="background:${p[2]}"></i>${p[0]}</button>`).join('')}
 function thPreset(a,b){db.theme.primary=a;db.theme.accent=b;if(db.theme.invSync){db.theme.invHeader=a;db.theme.invAccent=b}saveTheme();applyTheme();renderTheme()}
 function procImage(file,max,type){return new Promise((ok,no)=>{let fr=new FileReader();fr.onerror=no;fr.onload=()=>{let im=new Image();im.onerror=no;im.onload=()=>{let k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);let x=c.getContext('2d');if(type==='jpeg'){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}x.drawImage(im,0,0,c.width,c.height);ok(c.toDataURL(type==='jpeg'?'image/jpeg':'image/png',.8))};im.src=fr.result};fr.readAsDataURL(file)})}
 async function thUpload(k,inp){let f=inp.files[0];inp.value='';if(!f)return;try{db.theme[k]=await procImage(f,k==='logo'?1200:1400,k==='logo'?'png':'jpeg');saveTheme();applyTheme();renderTheme();toast(k==='logo'?'تم تغيير اللوجو':'تم تغيير الخلفية')}catch(e){toast('الصورة غير صالحة')}}
@@ -1144,7 +1144,7 @@ function renderInvLists(){
 
 /* فاتورة الـ PDF: الأصناف + سطر النقل */
 function invoiceHTML(r){
- let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),T=db.theme,shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),
+ let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),T=db.theme,shop=esc(db.settings.companyName||''),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),
  H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
  wm=T.watermark&&T.logo?`<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`:'';
@@ -1152,7 +1152,7 @@ function invoiceHTML(r){
  ${T.logoInv&&T.logo?`
  <div style="position:relative;background:${H};line-height:0"><img src="${T.logo}" style="width:100%;display:block"></div>
  <div style="position:relative;background:${H};color:${HT};padding:14px 44px 16px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-  <div><div style="display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;line-height:1.3"><span>${shop}</span>${/[A-Za-z]/.test(shop)?'':'<span style="opacity:.5;font-weight:400">|</span><span dir="ltr" style="letter-spacing:1.5px">MEKANIZM</span>'}</div><div style="margin-top:4px;font-size:13px;opacity:.9;line-height:1.6">${addr}${ph?` &nbsp;•&nbsp; تليفون: <span dir="ltr">${ph}</span>`:''}</div></div>
+  <div><div style="display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;line-height:1.3"><span>${shop}</span>${/[A-Za-z]/.test(shop)?'':'<span style="opacity:.5;font-weight:400">|</span><span dir="ltr" style="letter-spacing:1.5px">Mika Omnix</span>'}</div><div style="margin-top:4px;font-size:13px;opacity:.9;line-height:1.6">${addr}${ph?` &nbsp;•&nbsp; تليفون: <span dir="ltr">${ph}</span>`:''}</div></div>
   <div style="font-size:20px;font-weight:800;white-space:nowrap">فاتورة بيع</div></div>
  `:`
  <div style="position:relative;background:${H};color:${HT};padding:34px 44px;display:flex;justify-content:space-between;align-items:center">
@@ -1304,7 +1304,7 @@ function contactReport(name,type,from,to){let nm=String(name||'').trim();if(!nm)
  <div class="btnrow"><button class="primary" id="crShare" onclick="crPdf(1)">مشاركة PDF</button><button class="secondary" onclick="crPdf(0)">حفظ PDF</button></div>${isC?'<label class="chk" style="margin-top:8px"><input type="checkbox" id="crPf"> إظهار الأرباح في الـ PDF (سيبها مقفولة لو هتبعته للعميل)</label>':''}<div id="crMsg" style="font-size:13px;color:var(--muted);margin-top:6px"></div>
  <h3 style="margin:16px 0 8px">الأصناف</h3><div class="table-wrap"><table class="table" style="min-width:320px"><thead><tr><th>الصنف</th><th>الكمية</th><th>الإجمالي</th>${isC?'<th>الربح</th>':''}</tr></thead><tbody>${CR.items.length?CR.items.map(o=>`<tr><td>${esc(o.n)}</td><td>${o.q}</td><td>${money(o.t)}</td>${isC?`<td style="color:${pfColor(o.pf)};font-weight:700">${money(o.pf)}</td>`:''}</tr>`).join(''):'<tr><td colspan="4"><div class="empty">مفيش أصناف في الفترة دي.</div></td></tr>'}</tbody></table></div>
  <h3 style="margin:16px 0 8px">الفواتير</h3><div class="table-wrap"><table class="table" style="min-width:420px"><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>${groups.length?groups.map(G=>{let r=G[0];return `<tr class="prow" onclick="${isC?'openInvoiceModal':'openPurchaseView'}('${r.id}')"><td><b>${esc(isC?invNo(r):(r.pno||'—'))}</b></td><td>${esc(r.date)}</td><td>${money(sumBy(G,x=>x.total))}</td><td>${money(sumBy(G,paidOf))}</td><td>${money(sumBy(G,x=>x.rem||0))}</td></tr>`}).join(''):'<tr><td colspan="5"><div class="empty">مفيش فواتير في الفترة دي.</div></td></tr>'}</tbody></table></div>`)}
-function crHTML(){let R=CR,S=R.S,T=db.theme,H=T.invHeader,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),shop=esc(db.settings.companyName||'ميكانيزم'),
+function crHTML(){let R=CR,S=R.S,T=db.theme,H=T.invHeader,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),shop=esc(db.settings.companyName||''),
  th=a=>`<tr style="background:${H};color:${HT}">${a.map(x=>`<th style="padding:10px;text-align:right">${x}</th>`).join('')}</tr>`,td=a=>`<tr style="border-bottom:1px solid #e4eaed">${a.map(x=>`<td style="padding:10px">${x}</td>`).join('')}</tr>`,
  box=(l,v)=>`<div style="background:${tint};border-radius:10px;padding:12px"><div style="font-size:13px;color:#718087">${l}</div><div style="font-size:19px;font-weight:800">${v}</div></div>`;
  return `<div style="width:794px;background:#fff;direction:rtl;font-family:${fam};color:${T.text};padding-bottom:30px">
@@ -1390,7 +1390,7 @@ function renderOrders(){let b=document.getElementById('woBody');if(!b)return;
  let L=WO.list.filter(o=>WO.tab==='new'?o.status==='new':WO.tab==='done'?woDoneSt(o):(o.status!=='new'&&!woDoneSt(o)));
  if(!L.length){b.innerHTML=`<div class="card"><div class="empty">${WO.loading?'جاري التحميل...':WO.tab==='new'?'مفيش طلبات جديدة.':'مفيش طلبات هنا.'}</div></div>`;return}
  b.innerHTML=L.map(o=>{let it=(o.items||[]).map(x=>({x,p:woProd(x.code)})),est=sumBy(it,y=>y.p?(+y.p.price||0)*(+y.x.qty||0):0),sid=String(o.id).slice(0,8),
-  wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name}، بخصوص طلبك رقم ${sid} من موقع ميكانيزم`):'',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no);
+  wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name}، بخصوص طلبك رقم ${sid} من موقع Mika Omnix`):'',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no);
   return `<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:18px">${esc(o.customer_name)}</b>${o.phone?` — <span dir="ltr">${esc(o.phone)}</span>`:''}<div style="color:var(--muted);font-size:12px">طلب رقم ${esc(sid)} • ${esc(new Date(o.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${woDoneSt(o)?'<span class="badge green">اتعملها فاتورة</span>':o.status==='new'?'<span class="badge red">جديد</span>':'<span class="badge">ملغي</span>'}</div>
   <div class="table-wrap" style="margin-top:10px"><table class="table" style="min-width:380px"><thead><tr><th>الصنف</th><th>المطلوب</th><th>في المخزن</th><th>سعر البيع</th></tr></thead><tbody>${it.map(y=>`<tr><td>${y.p?esc(y.p.name):`<span style="color:var(--danger)">كود ${esc(y.x.code)} مش موجود في السيستم</span>`}${y.x.backorder?' <span class="badge red">⏳ حجز — مش متوفر</span>':''}</td><td><b>${esc(y.x.qty)}</b></td><td style="color:${y.p&&(+y.p.qty||0)>=(+y.x.qty||0)?'inherit':'var(--danger)'}">${y.p?y.p.qty:'—'}</td><td>${y.p?money(y.p.price):'—'}</td></tr>`).join('')}</tbody></table></div>
   <div style="margin:8px 0">الإجمالي التقريبي: <b>${money(est)}</b></div>
@@ -1413,7 +1413,7 @@ function woEta(id){let o=WO.list.find(x=>x.id===id);if(!o)return;let back=(o.ite
  <div class="modal-foot"><button class="primary" id="etaGo">💬 ابعت للعميل على الواتساب</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
  etaGo.onclick=async()=>{let v=(document.querySelector('input[name=eta]:checked')||{}).value,t=v==='c'?val('etaC'):ETAS[+v];if(!t)return toast('اختار أو اكتب الميعاد');
   let sid=String(o.id).slice(0,8),names=(o.items||[]).map(x=>{let p=woProd(x.code);return (p?p.name:'كود '+x.code)+' × '+x.qty}).join('\n');
-  let msg=`أهلاً ${o.customer_name} 👋\nطلبك رقم ${sid} من ${db.settings.companyName||'ميكانيزم'} اتأكد ✅\n\n${names}\n\n📅 الاستلام: ${t}`+(val('etaN')?`\n${val('etaN')}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+  let msg=`أهلاً ${o.customer_name} 👋\nطلبك رقم ${sid} من ${db.settings.companyName||''} اتأكد ✅\n\n${names}\n\n📅 الاستلام: ${t}`+(val('etaN')?`\n${val('etaN')}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
   let wa=o.phone?waLinkTo(o.phone,msg):'',win=wa?window.open(wa,'_blank'):null;   /* بنفتح الواتساب قبل الحفظ عشان المتصفح مايمنعش النافذة */
   try{await woUpdate(id,{status:o.status,eta:t,replied_at:new Date().toISOString()});o.eta=t}catch(e){toast('الميعاد ماتسجلش: '+((e&&e.message)||''))}
   closeModal();showPage('weborders');
@@ -1483,7 +1483,7 @@ async function delQuote(id){let q=qts().find(x=>x.id===id);if(!q)return;if(!awai
 function renderQuotes(){let b=document.getElementById('qtBody');if(!b)return;let s=VN(val('qtQ')).split(' ').filter(Boolean),
  L=qts().filter(q=>{let h=VN([q.no,q.person,q.date,...q.items.map(x=>x.name)].join(' '));return s.every(w=>h.includes(w))});
  b.innerHTML=L.length?L.map(q=>`<tr class="prow" onclick="openQuoteView('${q.id}')"><td><b>${esc(q.no)}</b></td><td>${esc(q.date)}</td><td>${esc(q.person||'—')}</td><td>${esc(q.items[0]?q.items[0].name:'—')}${q.items.length>1?` <span class="badge">+${q.items.length-1}</span>`:''}</td><td>${money(q.total)}</td><td>${q.status==='converted'?'<span class="badge green">اتحول لفاتورة</span>':'<span class="badge">مفتوح</span>'}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty">مفيش عروض أسعار.</div></td></tr>'}
-function quoteHTML(q){let T=db.theme,H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),
+function quoteHTML(q){let T=db.theme,H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),shop=esc(db.settings.companyName||''),addr=esc(db.settings.address??''),ph=esc(db.settings.phone||''),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',sub=r2(q.total-(q.ship||0));
  return `<div style="width:794px;min-height:1000px;background:#fff;direction:rtl;font-family:${fam};color:${T.text};position:relative;overflow:hidden">
  <div style="background:${H};color:${HT};padding:30px 44px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center">${logo}<div><div style="font-size:34px;font-weight:800">${shop}</div><div style="margin-top:6px;font-size:14px;opacity:.9">${addr}${ph?` • تليفون: <span dir="ltr">${ph}</span>`:''}</div></div></div><div style="font-size:30px;font-weight:800;color:${A}">عرض سعر</div></div>
@@ -1532,11 +1532,11 @@ function applyRole(){if(window.MK_T){if(window.mkT_applyRole)window.mkT_applyRol
 /* شاشة الدخول */
 function whoStart(){let w=document.getElementById('mkWho');if(!w)return;
  /* جهاز جديد: نستنى بيانات السيرفر الأول عشان مانعملش مدير تاني بالغلط */
- if(!users().some(u=>u.role==='admin')&&lsG('mk_cloud_ver')==null&&navigator.onLine&&typeof supabase!=='undefined'){w.innerHTML='<div class="mkbox" id="wWait"><h2>ميكانيزم</h2><p>⏳ جاري تحميل البيانات من السيرفر...</p></div>';setTimeout(()=>{if(document.getElementById('wWait'))whoStart()},8000);return}
- if(!users().some(u=>u.role==='admin')){w.innerHTML=`<div class="mkbox"><h2>أهلاً بيك في ميكانيزم</h2><p>أول مرة: اعمل حساب المدير (إنت). الاسم والرقم السري ده هتدخل بيهم كل يوم.</p>
+ if(!users().some(u=>u.role==='admin')&&lsG('mk_cloud_ver')==null&&navigator.onLine&&typeof supabase!=='undefined'){w.innerHTML='<div class="mkbox" id="wWait"><h2>Mika Omnix</h2><p>⏳ جاري تحميل البيانات من السيرفر...</p></div>';setTimeout(()=>{if(document.getElementById('wWait'))whoStart()},8000);return}
+ if(!users().some(u=>u.role==='admin')){w.innerHTML=`<div class="mkbox"><h2>أهلاً بيك في Mika Omnix</h2><p>أول مرة: اعمل حساب المدير (إنت). الاسم والرقم السري ده هتدخل بيهم كل يوم.</p>
   <input id="wName" placeholder="اسم المدير" style="direction:rtl;text-align:right"><input id="wPin" type="password" inputmode="numeric" placeholder="رقم سري (4 أرقام على الأقل)"><input id="wPin2" type="password" inputmode="numeric" placeholder="اكتب الرقم السري تاني">
   <button type="button" onclick="whoSetup()">حفظ ودخول</button><div id="wErr" class="werr"></div></div>`;return}
- w.innerHTML=`<div class="mkbox"><h2>ميكانيزم</h2><p>اختار طريقة الدخول</p><button type="button" onclick="whoRole('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="whoRole('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button></div>`}
+ w.innerHTML=`<div class="mkbox"><h2>Mika Omnix</h2><p>اختار طريقة الدخول</p><button type="button" onclick="whoRole('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="whoRole('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button></div>`}
 function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u=>u.role===role);
  if(!L.length){w.querySelector('.mkbox').insertAdjacentHTML('beforeend','<div class="werr">مفيش موظفين متسجلين لسه — المدير يضيفهم من الإعدادات.</div>');return}
  w.innerHTML=`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
@@ -1597,7 +1597,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-2';
+const APP_VER='2026-10-09-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1637,7 +1637,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
 </style>
 <script>
 /* =====================================================================
-   ميكانيزم — المرحلة الرابعة: 📦 اقتراحات الطلب من الموردين + 📊 رسومات لوحة التحكم
+   Mika Omnix — المرحلة الرابعة: 📦 اقتراحات الطلب من الموردين + 📊 رسومات لوحة التحكم
    ===================================================================== */
 (function(){
 const DAY=86400000,pad=v=>String(v).padStart(2,'0');
@@ -1691,7 +1691,7 @@ function renderReorder(){let el=document.getElementById('roBody');if(!el)return;
 function roText(gi){let G=window.__roG||[],g=G[gi];if(!g)return null;let box=document.querySelector(`#roBody [data-g="${gi}"]`),lines=[];
  box.querySelectorAll('.rorow').forEach(r=>{if(!r.querySelector('input[type=checkbox]').checked)return;let q=Math.max(1,Math.round(+r.querySelector('.q').value||0)),s=g[1].find(x=>x.p.id===r.dataset.pid);if(s)lines.push(`• ${s.p.name} — ${q} ${s.p.unit||'قطعة'}`)});
  if(!lines.length){toast('اختار صنف واحد على الأقل');return null}
- let shop=db.settings.companyName||'ميكانيزم',who=g[0]?` أستاذ ${g[0]}`:'';
+ let shop=db.settings.companyName||'',who=g[0]?` أستاذ ${g[0]}`:'';
  return {text:`السلام عليكم${who} 👋\nمعاك ${shop}.\nمحتاجين نطلب الأصناف دي:\n\n${lines.join('\n')}\n\nياريت تأكدلي المتاح والسعر ومعاد التسليم. شكراً 🙏`,sup:g[0]}}
 window.roSend=function(gi){let t=roText(gi);if(!t)return;let ph=t.sup?supPhone(t.sup):'',w=window.open(waLink(ph,t.text),'_blank');if(!w)location.href=waLink(ph,t.text)};
 window.roCopy=async function(gi){let t=roText(gi);if(!t)return;try{await navigator.clipboard.writeText(t.text);toast('الطلب اتنسخ')}catch(e){toast('مقدرتش أنسخ')}};
@@ -1706,7 +1706,7 @@ const svgBars=(items,{h=170,color='var(--blue)',neg='#c0392b',lblEvery=1,fmt=mon
  let W=640,pl=8,pr=8,pt=14,pb=26,n=items.length,iw=W-pl-pr,bw=iw/n,mx=Math.max(1,...items.map(i=>i.v)),mn=Math.min(0,...items.map(i=>i.v)),span=mx-mn||1,
   y=v=>pt+(h-pt-pb)*(1-(v-mn)/span),z=y(0);
  let bars=items.map((it,i)=>{let x=W-pr-(i+1)*bw+bw*0.15,w=bw*0.7,top=y(Math.max(it.v,0)),bot=y(Math.min(it.v,0)),bh=Math.max(it.v?1.5:0,bot-top);
-  return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${it.v<0?neg:color}"><title>ميكانيزم | سيستم المخزون والمبيعات</title></rect>`
+  return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${w.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${it.v<0?neg:color}"><title>Mika Omnix | سيستم المخزون والمبيعات</title></rect>`
    +(i%lblEvery===0?`<text x="${(x+w/2).toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="11" fill="#718087">${esc(it.l)}</text>`:'')}).join('');
  return `<svg viewBox="0 0 ${W} ${h}" role="img"><line x1="${pl}" x2="${W-pr}" y1="${z.toFixed(1)}" y2="${z.toFixed(1)}" stroke="#d5dde0"/>${bars}</svg>`};
 const hBars=(rows,fmt)=>{let mx=Math.max(1,...rows.map(r=>r.v));return rows.map(r=>`<div class="hb"><span class="nmx" title="${esc(r.n)}">${esc(r.n)}</span><div class="bar"><i style="width:${Math.max(2,r.v/mx*100).toFixed(1)}%"></i></div><b>${fmt(r.v)}</b></div>`).join('')};
@@ -1757,7 +1757,7 @@ setTimeout(()=>{try{renderCharts();roBanner()}catch(e){}},1500);
 </script>
 <script>
 /* =====================================================================
-   ميكانيزم — PDF أسرع: الفاتورة / عرض السعر بيترسموا في صفحة لوحدهم (مش بننسخ السيستم كله)
+   Mika Omnix — PDF أسرع: الفاتورة / عرض السعر بيترسموا في صفحة لوحدهم (مش بننسخ السيستم كله)
    — قبل كده كانت بتطوّل جداً على الآيفون لما الأصناف والفواتير تكتر
    ===================================================================== */
 (function(){
@@ -1791,7 +1791,7 @@ window.mkRenderIso=renderIso;
 </style>
 <script>
 /* =====================================================================
-   ميكانيزم — 🔑 نسيت الرقم السري: لينك تغيير على إيميل الحساب + شاشة رقم سري جديد
+   Mika Omnix — 🔑 نسيت الرقم السري: لينك تغيير على إيميل الحساب + شاشة رقم سري جديد
    ===================================================================== */
 (function(){
 const sbx=()=>window.mkSB;
@@ -1858,14 +1858,14 @@ if(/error_code=otp_expired|error=access_denied/.test(location.hash))setTimeout((
 </div></div>
 <script>
 /* =====================================================================
-   ميكانيزم (أبلكيشن المشتركين) — تسجيل حساب جديد + فترة تجريبية + قفل وتحويل للواتساب
+   Mika Omnix (أبلكيشن المشتركين) — تسجيل حساب جديد + فترة تجريبية + قفل وتحويل للواتساب
    ===================================================================== */
 (function(){
-const WA='201119199659',sb=window.mkSB,$=id=>document.getElementById(id);
+const WA='201119199659',APP='Mika Omnix',sb=window.mkSB,$=id=>document.getElementById(id);
 let SUB=null;
 const waLink=(t)=>'https://wa.me/'+WA+'?text='+encodeURIComponent(t);
 function shopName(){try{return (db.settings&&db.settings.companyName)||''}catch(e){return ''}}
-function waMsg(){const s=SUB||{};return 'السلام عليكم، عايز أفعّل اشتراك سيستم ميكانيزم\nالمحل: '+(shopName()||s.shop||'-')+'\nالإيميل: '+(s.email||'-')}
+function waMsg(){const s=SUB||{};return 'السلام عليكم، عايز أفعّل اشتراك '+APP+'\nالمحل: '+(shopName()||s.shop||'-')+'\nالإيميل: '+(s.email||'-')}
 const fmt=d=>d?new Date(d).toLocaleDateString('ar-EG',{day:'numeric',month:'long',year:'numeric'}):'';
 
 /* ---- شاشة الدخول: دخول / حساب جديد ---- */
@@ -1913,7 +1913,7 @@ function show(s){const lock=$('subLock'),bar=$('subBar');
 window.mkSub=()=>SUB;window.mkSubCheck=check;
 
 /* ---- اسم المحل في الهيدر ---- */
-function brand(){const el=$('brandName');if(el){const n=shopName();el.textContent=n||'ميكانيزم'}}
+function brand(){const el=$('brandName');if(!el)return;const n=shopName();el.textContent='';if(n){el.append(n+' ');const s=document.createElement('span');s.textContent='| '+APP;el.append(s)}else el.textContent=APP}
 if(typeof renderAll==='function'){const _ra=renderAll;renderAll=function(){const x=_ra.apply(this,arguments);try{brand()}catch(e){}return x}}
 
 function boot(){document.body.insertAdjacentHTML('afterbegin','<div id="subBar"></div>');document.body.appendChild($('subLock'));
