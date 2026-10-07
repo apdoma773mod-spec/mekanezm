@@ -3578,5 +3578,98 @@ let rt=null;
 })();
 </script>
 
+<script>
+/* ===== طلبات واتساب (جدول wa_orders) — منفصلة عن طلبات الموقع ===== */
+(function(){
+let WA={list:[],tab:'new',err:'',loading:false,at:0,known:null};
+window.WA=WA;
+const STOP=new Set(['طلب','طلبيه','عايز','عاوز','محتاج','محتاجه','عايزه','من','فضلك','لو','سمحت','عدد','x','في','ياباشا','يا','باشا','مهندس','اخي','استاذ','لي','ليا','هات','هاتلي','ابعت','ابعتلي']);
+const NUMW={واحد:1,واحده:1,اتنين:2,اثنين:2,تنين:2,تلاته:3,ثلاثه:3,اربعه:4,اربع:4,خمسه:5,خمس:5,سته:6,سبعه:7,تمانيه:8,ثمانيه:8,تسعه:9,عشره:10,عشرين:20};
+const toks=s=>VN(s||'').split(' ').filter(Boolean);
+const bigrams=s=>{let a=new Set();for(let i=0;i<s.length-1;i++)a.add(s.slice(i,i+2));return a};
+const dice=(a,b)=>{if(a.length<2||b.length<2)return 0;let A=bigrams(a),B=bigrams(b),n=0;A.forEach(x=>{if(B.has(x))n++});return 2*n/(A.size+B.size)};
+function tokSim(a,b){if(a===b)return 1;if(a.length>=3&&b.length>=3&&(a.startsWith(b)||b.startsWith(a)))return .85;let d=dice(a,b);return d>=.6?d*.75:0}
+function score(lt,p){let pt=toks((p.name||'')+' '+(p.code||'')),code=VN(String(p.code||''));
+ if(!lt.length||!pt.length)return 0;
+ if(code&&lt.includes(code))return 1.5;
+ let sum=0,used=new Set();
+ lt.forEach(t=>{let best=0,bi=-1;pt.forEach((q,i)=>{let s=tokSim(t,q);if(s>best){best=s;bi=i}});sum+=best;if(bi>=0&&best>=.6)used.add(bi)});
+ return sum/lt.length*(.7+.3*used.size/pt.length)}
+function parseLines(body){
+ return String(body||'').split(/[\n\r،,+]+/).map(s=>s.trim()).filter(Boolean).map(seg=>{
+  let t=seg.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)),qty=1,m=t.match(/(\d+(?:\.\d+)?)/);
+  if(m){qty=+m[1];t=t.replace(m[0],' ')}
+  let ws=toks(t),keep=[];ws.forEach(w=>{if(!m&&NUMW[w]&&qty===1&&!keep.length&&ws.length>1){qty=NUMW[w];return}if(!STOP.has(w))keep.push(w)});
+  return {raw:seg,qty:qty>0?qty:1,words:keep}}).filter(l=>l.words.length)}
+function candidates(words){return (db.products||[]).map(p=>({p,s:score(words,p)})).filter(x=>x.s>=.3).sort((a,b)=>b.s-a.s).slice(0,6)}
+
+async function loadWa(force){let c=window.mkSB;if(!c||WA.loading)return;if(!force&&Date.now()-WA.at<20000)return renderWa();
+ WA.loading=true;
+ try{let s=(await c.auth.getSession()).data.session;if(!s){WA.err='سجّل دخول الأول عشان تشوف طلبات الواتساب';return}
+  let r=await c.from('wa_orders').select('*').order('created_at',{ascending:false}).limit(300);if(r.error)throw r.error;
+  let prev=WA.known;WA.list=r.data||[];WA.err='';WA.at=Date.now();
+  let ids=new Set(WA.list.filter(o=>o.status==='new').map(o=>o.id));
+  if(prev){let fresh=WA.list.filter(o=>o.status==='new'&&!prev.has(o.id));if(fresh.length){toast('📩 طلب جديد من الواتساب'+(fresh[0].customer_name?' — '+fresh[0].customer_name:''));waBeep()}}
+  WA.known=ids}
+ catch(e){WA.err='تعذر تحميل طلبات الواتساب: '+((e&&e.message)||'خطأ')}
+ finally{WA.loading=false;renderWa();waBadge()}}
+function waBeep(){try{let a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.08;o.start();setTimeout(()=>{o.stop();a.close()},350)}catch(e){}}
+function waBadge(){let n=WA.list.filter(o=>o.status==='new').length,c=document.getElementById('waCount'),b=document.getElementById('waBanner');
+ if(c){c.textContent=n;c.style.display=n?'':'none'}
+ if(b){b.style.display=n?'':'none';b.innerHTML=`📩 عندك <b>${n}</b> طلب جديد من الواتساب — اضغط للعرض`}}
+function renderWa(){let b=document.getElementById('waBody');if(!b)return;
+ document.querySelectorAll('#waTabs button').forEach(x=>x.className=x.dataset.t===WA.tab?'primary':'secondary');
+ if(WA.err){b.innerHTML=`<div class="card"><p style="color:var(--danger);margin-top:0">${esc(WA.err)}</p><p style="color:var(--muted);font-size:13px;margin:0">لو الرسالة فيها permission أو relation، يبقى أمر «طلبات-واتساب.sql» لسه ماتشغلش في Supabase.</p></div>`;return}
+ let L=WA.list.filter(o=>WA.tab==='new'?o.status==='new':WA.tab==='done'?o.status==='done':o.status==='cancelled');
+ if(!L.length){b.innerHTML=`<div class="card"><div class="empty">${WA.loading?'جاري التحميل...':WA.tab==='new'?'مفيش طلبات جديدة من الواتساب.':'مفيش طلبات هنا.'}</div></div>`;return}
+ b.innerHTML=L.map(o=>{let lines=parseLines(o.body),isNew=o.status==='new',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no),
+  wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name||''}، بخصوص طلبك على الواتساب`):'';
+  return `<div class="card" style="margin-bottom:12px" data-wa="${o.id}"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-size:18px">${esc(o.customer_name||'عميل واتساب')}</b>${o.phone?` — <span dir="ltr">${esc(o.phone)}</span>`:''}<div style="color:var(--muted);font-size:12px">${esc(new Date(o.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div>${o.status==='done'?'<span class="badge green">اتعملها فاتورة</span>':isNew?'<span class="badge red">جديد</span>':'<span class="badge">متجاهل</span>'}</div>
+  <div style="margin:10px 0;padding:10px;background:var(--bg,#f6f6f6);border-radius:10px;white-space:pre-wrap;border:1px solid var(--border)">${esc(o.body)}</div>
+  ${isNew?`<div class="table-wrap"><table class="table" style="min-width:420px"><thead><tr><th>اللي اتكتب</th><th style="width:80px">الكمية</th><th>الصنف في السيستم</th></tr></thead><tbody>${lines.map((l,i)=>{let c=candidates(l.words),top=c[0]&&c[0].s>=.55?c[0].p.id:'';
+   return `<tr data-i="${i}"><td>${esc(l.raw)}</td><td><input class="waq" type="number" min="0" step="any" value="${l.qty}" style="width:70px"></td><td><select class="wap" style="min-width:200px"><option value="">— مش متطابق / تجاهل —</option>${c.map(x=>`<option value="${x.p.id}" ${x.p.id===top?'selected':''}>${esc(x.p.name)}${x.p.qty!=null?` (مخزن ${esc(x.p.qty)})`:''}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table></div>
+  <div class="btnrow" style="margin-top:8px"><button class="primary" onclick="waInvoice('${o.id}')">🧾 افتح الفاتورة</button><button class="secondary danger" onclick="waIgnore('${o.id}')">تجاهل</button>${wa?`<a class="secondary" style="text-decoration:none;padding:10px 14px" target="_blank" rel="noopener" href="${wa}">💬 واتساب العميل</a>`:''}</div>`
+  :`<div class="btnrow">${o.status==='done'&&inv?`<button class="secondary" onclick="openInvoiceModal('${inv.id}')">فتح الفاتورة ${esc(o.invoice_no)}</button>`:''}</div>`}</div>`}).join('')}
+window.waInvoice=function(id){let o=WA.list.find(x=>x.id===id);if(!o)return;
+ let card=document.querySelector(`[data-wa="${id}"]`),rows=[...(card?card.querySelectorAll('tbody tr'):[])].map(tr=>({pid:tr.querySelector('.wap').value,q:+tr.querySelector('.waq').value||0})).filter(x=>x.pid&&x.q>0);
+ openTransaction('sale',{person:o.customer_name||''});let f=document.querySelector('#modal form');f.dataset.wa=id;
+ document.querySelector('#modal .modal-head h2').textContent='فاتورة من طلب واتساب';
+ let ph=document.getElementById('txPhone');if(ph&&o.phone)ph.value=o.phone;
+ let nt=document.getElementById('txNote');if(nt&&!nt.value)nt.value='طلب واتساب: '+String(o.body).replace(/\s+/g,' ').slice(0,200);
+ rows.forEach(x=>{addItem(x.pid);let d=document.querySelector(`#txLines .txl[data-pid="${x.pid}"]`);if(d)d.querySelector('.lq').value=x.q});
+ updRem();if(!rows.length)toast('مفيش أصناف متطابقة — ضيف الأصناف يدوي من الفاتورة')};
+async function waUpdate(id,patch){let c=window.mkSB;if(!c)throw new Error('مفيش اتصال');
+ let r=await c.from('wa_orders').update(patch).eq('id',id).select('id');if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('مفيش صلاحية تعديل الطلب')}
+window.waSet=async function(id,no){try{await waUpdate(id,{status:'done',invoice_no:no||null,handled_at:new Date().toISOString()});let o=WA.list.find(x=>x.id===id);if(o){o.status='done';o.invoice_no=no}if(WA.known)WA.known.delete(id);renderWa();waBadge()}
+ catch(e){toast('اتسجلت الفاتورة، بس حالة طلب الواتساب ماتغيرتش ('+((e&&e.message)||'خطأ')+')')}};
+window.waIgnore=async function(id){let o=WA.list.find(x=>x.id===id);if(!o)return;
+ if(!await ask(`تجاهل طلب ${o.customer_name||'الواتساب'}؟`,'تجاهل','رجوع'))return showPage('waorders');
+ try{await waUpdate(id,{status:'cancelled',handled_at:new Date().toISOString()});o.status='cancelled';if(WA.known)WA.known.delete(id)}catch(e){toast('تعذر التجاهل: '+((e&&e.message)||'خطأ'))}
+ showPage('waorders');waBadge()};
+window.loadWa=loadWa;window.renderWa=renderWa;
+
+/* واجهة: زرار القايمة + الصفحة + بانر الرئيسية */
+let nav=document.querySelector('aside nav [data-page="weborders"]')||document.querySelector('aside nav [data-page="sales"]');
+if(nav)nav.insertAdjacentHTML('afterend','<button data-page="waorders" onclick="showPage(\'waorders\')"><svg class="i"><use href="#i-file"/></svg> <span>طلبات الواتساب</span> <span id="waCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
+let mn=document.querySelector('main');
+if(mn)mn.insertAdjacentHTML('beforeend',`<section id="waorders" class="page"><div class="title-row"><div class="title"><h1>طلبات الواتساب</h1><p>الرسايل اللي فيها كلمة «طلب» على واتساب المحل — افتح الفاتورة، راجع الأصناف وحط الأسعار واحفظ</p></div><button class="secondary" onclick="loadWa(true)">🔄 تحديث</button></div>
+ <div class="toolbar" id="waTabs"><button data-t="new" onclick="WA.tab='new';renderWa()">جديدة</button><button data-t="done" onclick="WA.tab='done';renderWa()">اتعملها فاتورة</button><button data-t="other" onclick="WA.tab='other';renderWa()">متجاهلة</button></div><div id="waBody"></div></section>`);
+let da=document.querySelector('#dashboard .dash-acts');
+if(da)da.insertAdjacentHTML('beforebegin','<button id="waBanner" onclick="showPage(\'waorders\')" style="display:none;width:100%;margin-bottom:14px;background:#e8f7ee;color:#0b5b2b;border:1px solid #7bcf9a;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>');
+const _spg=showPage;showPage=function(id){_spg(id);if(id==='waorders')loadWa(true)};
+
+/* بعد حفظ الفاتورة من طلب واتساب: علّم الطلب «اتعملت فاتورة» */
+const _stWA=submitTransaction;
+submitTransaction=async function(ev,type){let f=ev&&ev.target,id=f&&f.dataset&&f.dataset.wa;
+ if(!id||type!=='sale')return _stWA.apply(this,arguments);
+ let before=new Set(db.sales.map(r=>r.id));await _stWA.apply(this,arguments);
+ let row=db.sales.find(r=>!before.has(r.id));if(row)waSet(id,row.no)};
+
+setTimeout(()=>loadWa(true),5000);
+setInterval(()=>{if(document.visibilityState==='visible')loadWa(true)},30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadWa(false)});
+})();
+</script>
+
 </body>
 </html>
