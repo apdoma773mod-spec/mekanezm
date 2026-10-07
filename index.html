@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-2';
+const APP_VER='2026-10-08-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3719,6 +3719,46 @@ function newPass(){if(shown)return;shown=true;
 if(/type=recovery/.test(location.hash))newPass();
 (function wait(n){const c=sbx();if(c&&c.auth&&c.auth.onAuthStateChange){c.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY')newPass()});return}if(n<50)setTimeout(()=>wait(n+1),200)})(0);
 if(/error_code=otp_expired|error=access_denied/.test(location.hash))setTimeout(()=>{try{toast('اللينك انتهى أو اتستخدم قبل كده — اطلب لينك جديد')}catch(e){}},1500);
+})();
+</script>
+
+<style>
+#waBody .wan{display:block;width:100%;min-width:200px;margin-top:6px;padding:8px 10px;border:1px dashed var(--blue,#087f8c);border-radius:10px;font-size:14px}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — طلبات الواتساب: خانة «اكتب الصنف بنفسك» + أيقونات واضحة لطلبات الموقع والواتساب
+   ===================================================================== */
+(function(){
+/* ---------- أيقونات ---------- */
+(function(){const defs=document.querySelector('svg defs');if(defs&&!document.getElementById('i-cart')){
+  defs.insertAdjacentHTML('beforeend','<symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6.2"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.6-4.4A8.4 8.4 0 1 1 20.5 11.6z"/><path d="M9 10.5h6M9 13.5h4"/></symbol>')}
+ const set=(pg,id)=>document.querySelectorAll(`[data-page="${pg}"] svg use`).forEach(u=>{u.setAttribute('href','#'+id);u.setAttributeNS('http://www.w3.org/1999/xlink','href','#'+id)});
+ const go=()=>{set('weborders','i-cart');set('waorders','i-chat')};go();setTimeout(go,1500);setTimeout(go,5000)})();
+
+/* ---------- خانة كتابة الصنف ---------- */
+function prodList(){let dl=document.getElementById('waProdList');if(!dl){dl=document.createElement('datalist');dl.id='waProdList';document.body.appendChild(dl)}
+ const n=(db.products||[]).length;if(dl.dataset.n!=String(n)){dl.innerHTML=(db.products||[]).map(p=>`<option value="${esc(p.name)}">`).join('');dl.dataset.n=n}}
+function addInputs(){const rows=document.querySelectorAll('#waBody tr[data-i]');if(!rows.length)return;prodList();
+ rows.forEach(tr=>{if(tr.querySelector('.wan'))return;const sel=tr.querySelector('.wap');if(!sel)return;
+  sel.insertAdjacentHTML('afterend','<input class="wan" list="waProdList" placeholder="✍️ أو اكتب اسم الصنف بنفسك" autocomplete="off">');
+  const inp=tr.querySelector('.wan');inp.addEventListener('input',()=>{if(inp.value.trim())sel.value=''});sel.addEventListener('change',()=>{if(sel.value)inp.value=''})})}
+new MutationObserver(addInputs).observe(document.body,{childList:true,subtree:true});
+
+/* ---------- افتح الفاتورة: الصنف المختار أو المكتوب (لو مش موجود يتضاف كصنف جديد) ---------- */
+window.waInvoice=function(id){const W=window.WA;let o=W&&W.list.find(x=>x.id===id);if(!o)return;
+ let card=document.querySelector(`[data-wa="${id}"]`);
+ let rows=[...(card?card.querySelectorAll('tbody tr'):[])].map(tr=>{let sel=tr.querySelector('.wap'),inp=tr.querySelector('.wan'),q=+((tr.querySelector('.waq')||{}).value)||0,name=inp?inp.value.trim():'';
+  let pid=sel?sel.value:'';if(!pid&&name){let p=(db.products||[]).find(x=>VN(x.name)===VN(name));if(p)pid=p.id}
+  return {pid,name,q}}).filter(x=>(x.pid||x.name)&&x.q>0);
+ openTransaction('sale',{person:o.customer_name||''});let f=document.querySelector('#modal form');if(f)f.dataset.wa=id;
+ let h=document.querySelector('#modal .modal-head h2');if(h)h.textContent='فاتورة من طلب واتساب';
+ let ph=document.getElementById('txPhone');if(ph&&o.phone)ph.value=o.phone;
+ let nt=document.getElementById('txNote');if(nt&&!nt.value)nt.value='طلب واتساب: '+String(o.body).replace(/\s+/g,' ').slice(0,200);
+ rows.forEach(x=>{if(x.pid){addItem(x.pid);let d=document.querySelector(`#txLines .txl[data-pid="${x.pid}"]`);if(d)d.querySelector('.lq').value=x.q}
+  else{addItem('new',x.name);let L=document.querySelectorAll('#txLines .txl'),d=L[L.length-1];if(d)d.querySelector('.lq').value=x.q}});
+ try{updRem()}catch(e){}
+ if(!rows.length)toast('مفيش أصناف — ضيف الأصناف من الفاتورة');else if(rows.some(x=>!x.pid))toast('في أصناف اتضافت كأصناف جديدة — راجع السعر')};
 })();
 </script>
 
