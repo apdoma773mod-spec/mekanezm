@@ -1,0 +1,26 @@
+# ينشر دالة قراءة الفواتير على Supabase من الملف supabase/functions/parse-invoice/index.ts
+# بيشتغل بزرار «Run workflow» من تبويب Actions، أو لوحده لما الملف يتغير.
+# المطلوب مرة واحدة: سر باسم SUPABASE_ACCESS_TOKEN في Settings → Secrets and variables → Actions
+name: Deploy parse-invoice
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/parse-invoice/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy function
+        run: |
+          [ -f supabase/config.toml ] || supabase init --force
+          supabase functions deploy parse-invoice --project-ref tkzfjeizvanfptnqvrmr --no-verify-jwt --use-api
