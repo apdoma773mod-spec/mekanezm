@@ -733,6 +733,15 @@ function contactBits(){const fc=document.querySelector('#ft .fc');if(fc&&!fc.que
  const m=$('main');if(m&&!admin&&catUrl()&&!document.getElementById('catHome')){const t=m.querySelector('.trust');(t||m.firstElementChild||m).insertAdjacentHTML(t?'afterend':'beforebegin',`<a id="catHome" class="catbtn" href="${catUrl()}" target="_blank" rel="noopener">📒 شوف كتالوجنا على واتساب</a>`)}}
 const _pm3=pubMain;pubMain=function(){_pm3();setTimeout(contactBits,0)};
 
+/* ---------- 🔗 اسم كل منتج بقى لينك حقيقي (?p=) — جوجل بيمشي عليه ويعرف المنتجات الجديدة لوحده ---------- */
+document.head.insertAdjacentHTML('beforeend','<style>a.plink{color:inherit;text-decoration:none}</style>');
+function linkify(){document.querySelectorAll('.card h3:not([data-lk])').forEach(h=>{const c=h.closest('.card'),d=c&&c.querySelector('[data-id]');if(!d)return;h.dataset.lk=1;
+ const a=document.createElement('a');a.className='plink';a.href='?p='+encodeURIComponent(d.dataset.id);a.dataset.pid=d.dataset.id;while(h.firstChild)a.appendChild(h.firstChild);h.appendChild(a)})}
+document.addEventListener('click',e=>{const a=e.target.closest('a.plink');if(!a||e.ctrlKey||e.metaKey)return;e.preventDefault();
+ setTimeout(()=>{const pv=document.getElementById('pv');if(!pv||!pv.classList.contains('on'))pvOpen(a.dataset.pid)},60)});
+const _dpL=drawProds;drawProds=function(){_dpL();linkify()};
+const _pmL=pubMain;pubMain=function(){_pmL();setTimeout(linkify,0)};
+const _rL=render;render=function(){_rL();setTimeout(linkify,0)};
 seoHome();cartUI();
 if(new URLSearchParams(location.search).get('p'))render();
 })();
