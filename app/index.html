@@ -2,6 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
 <script>(function(){const P='mkapp:',S=Storage.prototype,g=S.getItem,s=S.setItem,r=S.removeItem;S.getItem=function(k){return g.call(this,P+k)};S.setItem=function(k,v){return s.call(this,P+k,v)};S.removeItem=function(k){return r.call(this,P+k)}})();</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-512.png">
 <meta charset="utf-8"><meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -39,7 +41,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="data:image/png;base64,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">
+
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1597,7 +1599,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-3';
+const APP_VER='2026-10-09-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1618,6 +1620,279 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
     b.onclick=async()=>{b.textContent='جاري التحديث...';try{if(window.cloudFlush)await cloudFlush()}catch(e){}location.replace(location.pathname+'?v='+Date.now())};document.body.appendChild(b)}}catch(e){}}
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
  window.addEventListener('focus',check);setInterval(check,10*60000);setTimeout(check,5000)})();
+</script>
+
+<style>
+/* ---------- القايمة الجانبية على الموبايل (زي الكمبيوتر) ---------- */
+#navBtn{display:none}
+aside .navhd{display:none}
+@media(max-width:900px){
+ #navBtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:var(--tint2,#eef6f7);color:var(--text,#18343a);font-size:22px;margin-left:8px;flex:none;padding:0}
+ aside{display:block!important;position:fixed;top:0;right:0;bottom:0;width:min(290px,84vw);transform:translateX(110%);transition:transform .22s ease;z-index:100000;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:-8px 0 30px #0003;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ body.navon aside{transform:none}
+ body.navon #navBg{display:block}
+ aside .navhd{display:flex;align-items:center;justify-content:space-between;margin:0 4px 6px;font-weight:800;font-size:17px}
+ aside .navhd button{width:40px;height:40px;border-radius:50%;padding:0;font-size:18px;background:var(--tint2,#eef6f7)}
+}
+#navBg{display:none;position:fixed;inset:0;background:#0007;z-index:99999}
+/* ---------- الشحن والتوصيل ---------- */
+.delopt{display:flex;gap:6px;flex-wrap:wrap}
+.delopt label{display:flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px}
+.delopt label:has(input:checked){border-color:var(--blue);background:var(--tint2,#eef6f7);font-weight:700}
+.shsum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.shsum div{background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;padding:12px}
+.shsum small{display:block;color:var(--muted);font-size:12px}.shsum b{font-size:18px}
+.shc .shh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.shc .mut{color:var(--muted);font-size:12px}
+.shc .ln{margin-top:6px;line-height:1.7}
+.steps{display:flex;gap:4px;margin:10px 0 4px}
+.steps span{flex:1;height:7px;border-radius:4px;background:var(--border)}
+.steps span.on{background:var(--blue)}
+.stepl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);gap:4px}
+.stepl span{flex:1;text-align:center}.stepl span.on{color:var(--blue);font-weight:700}
+.badge.st-paid{background:#e6f6ec;color:#1e7a3c}.badge.st-delivered{background:#fff4e5;color:#8a4b00}.badge.st-returned,.badge.st-cancelled{background:#fdecea;color:#b3261e}
+.shc.hl{outline:3px solid var(--blue)}
+.shinv{border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:8px}
+</style>
+<script>
+/* =====================================================================
+   Mika Omnix — القايمة الجانبية على الموبايل + إدارة الشحن والتوصيل (ملصق A4 ومتابعة لحد التحصيل)
+   ===================================================================== */
+(function(){
+/* ---------- ☰ القايمة الجانبية ---------- */
+const navClose=()=>document.body.classList.remove('navon');
+(function(){let brand=document.querySelector('header.top .brand'),as=document.querySelector('aside');if(!brand||!as)return;
+ brand.insertAdjacentHTML('afterbegin','<button type="button" id="navBtn" aria-label="القايمة">☰</button>');
+ as.insertAdjacentHTML('afterbegin','<div class="navhd"><span>Mika Omnix</span><button type="button" id="navX" aria-label="قفل">✕</button></div>');
+ document.body.insertAdjacentHTML('beforeend','<div id="navBg"></div>');
+ document.getElementById('navBtn').onclick=e=>{e.stopPropagation();document.body.classList.add('navon')};
+ document.getElementById('navX').onclick=navClose;document.getElementById('navBg').onclick=navClose;
+ as.addEventListener('click',e=>{if(e.target.closest('nav button,button.own'))setTimeout(navClose,60)})})();
+
+if(!window.MK_T)return;
+const sbx=()=>window.mkSB;
+const A=()=>window.mkT&&window.mkT.api;
+const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const GOVS=['القاهرة','الجيزة','الإسكندرية','القليوبية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','الفيوم','بني سويف','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح','شمال سيناء','جنوب سيناء'];
+const CARRIERS=['بوسطة Bosta','أرامكس Aramex','J&T Express','البريد المصري','سبيدي','مندوب المحل','أوبر Uber','إن درايف inDrive'];
+const FLOW={ship:['new','printed','handed','out','delivered','paid'],delivery:['new','printed','out','delivered','paid']};
+const CLOSED=['paid','returned','cancelled'];
+function stLabel(s,k){return {new:'جديدة',printed:'اتطبع الملصق',handed:k==='ship'?'اتسلمت لشركة الشحن':'اتسلمت للمندوب',out:k==='ship'?'اتشحنت — في الطريق':'خرجت مع المندوب',delivered:'العميل استلم',paid:'اتحاسبنا ✔',returned:'مرتجع',cancelled:'ملغية'}[s]||s}
+const STEP_SHORT={new:'جديدة',printed:'الملصق',handed:'الشركة',out:'في الطريق',delivered:'استلم',paid:'اتحاسبنا'};
+const kindIc=k=>k==='ship'?'📦 شحن':'🛵 توصيل';
+const govOpts=v=>'<option value="">— اختار —</option>'+GOVS.map(g=>`<option ${g===v?'selected':''}>${g}</option>`).join('');
+const waTo=(ph,t)=>{let d=String(ph||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);return d?'https://wa.me/'+d+'?text='+encodeURIComponent(t):''};
+const fmtT=t=>t?new Date(t).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}):'';
+const shopName=()=>db.settings.companyName||'';
+function shopPhones(){let site=window.mkSite&&window.mkSite.get&&window.mkSite.get(),P=(site&&site.data&&Array.isArray(site.data.phones))?site.data.phones:[];return [...new Set([db.settings.phone].concat(P).map(x=>String(x||'').trim()).filter(Boolean))]}
+function invInfo(no){let G=no?invGroup('sale',no):[];if(!G.length)return null;let r0=G[0];
+ return {r0,total:r2(sumBy(G,x=>x.total)),rem:r2(sumBy(G,x=>x.rem||0)),content:G.filter(x=>!x.ship).map(x=>x.product+' × '+x.qty).join('، ')}}
+
+/* ---------- البيانات ---------- */
+let SHP=[],shTab='open',shKind='',shQ='',shLoaded=false,shErr='';
+async function loadShips(){if(!sbx()||!window.mkT_user)return;
+ let {data,error}=await sbx().from('mk_shipments').select('*').order('created_at',{ascending:false}).limit(500);
+ if(error){shErr=/relation|does not exist|schema cache/i.test(error.message||'')?'محتاج تشغّل ملف الشحن (shipping.sql) في Supabase الأول':error.message;renderShips();return}
+ SHP=data||[];shErr='';shLoaded=true;renderShips();shBadge()}
+window.loadShips=loadShips;
+function shBadge(){let open=SHP.filter(s=>!CLOSED.includes(s.status)),wait=open.filter(s=>s.status==='delivered'),c=document.getElementById('shCount');
+ if(c){c.textContent=open.length;c.style.display=open.length?'':'none'}
+ let b=document.getElementById('shBanner');if(b){b.style.display=open.length?'':'none';b.innerHTML=`🚚 عندك <b>${open.length}</b> شحنة شغالة${wait.length?` — منهم <b>${wait.length}</b> مستنيين التحصيل`:''} — اضغط للمتابعة`}}
+const logAdd=(s,st)=>(s.log||[]).concat([{s:st,at:new Date().toISOString(),by:userName()||''}]);
+async function shUpdate(id,patch){let s=SHP.find(x=>x.id===id);patch.updated_at=new Date().toISOString();
+ if(patch.status&&s&&patch.status!==s.status){patch.log=logAdd(s,patch.status);patch.closed_at=CLOSED.includes(patch.status)?new Date().toISOString():null}
+ let {data,error}=await sbx().from('mk_shipments').update(patch).eq('id',id).select();if(error)throw error;data=data&&data[0];if(!data)throw new Error('مفيش صلاحية تعديل الشحنة');
+ let i=SHP.findIndex(x=>x.id===id);if(i>-1)SHP[i]=data;renderShips();shBadge();return data}
+async function shInsert(o){o.created_by=userName()||'';o.log=[{s:'new',at:new Date().toISOString(),by:o.created_by}];
+ let {data,error}=await sbx().from('mk_shipments').insert(o).select();if(error)throw error;data=data&&data[0];if(!data)throw new Error('الشحنة ماتسجلتش');SHP.unshift(data);renderShips();shBadge();return data}
+const shErrMsg=e=>{let m=String(e&&e.message||e||'');return /relation|does not exist|schema cache/i.test(m)?'محتاج تشغّل ملف الشحن (shipping.sql) في Supabase الأول':/fetch|network/i.test(m)?'محتاج نت':m};
+
+/* ---------- 🖨️ ملصق الشحن A4 ---------- */
+const MK_LOGO='data:image/png;base64,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';
+window.shipLabel=function(id){let s=SHP.find(x=>x.id===id);if(!s)return;
+ let st=db.settings||{},n=Math.max(1,+s.pieces||1),day=new Date(s.created_at||Date.now()).toLocaleDateString('ar-EG'),ph=shopPhones();
+ let who=s.kind==='ship'?(s.carrier||''):(s.driver||s.carrier||'');
+ let page=i=>`<div class="pg"><div class="hd"><img src="${MK_LOGO}" class="lg" alt="${esc(shopName())}">${ph.length?`<div class="cp" dir="ltr">${ph.map(esc).join('   •   ')}</div>`:''}${st.address?`<div class="ca">${esc(st.address)}</div>`:''}</div>
+  <div class="to"><div class="lb"><span>المستلم</span><span class="tg">${s.kind==='ship'?'📦 شحن':'🛵 توصيل'}${n>1?` — طرد ${i} من ${n}`:''}</span></div>
+   <div class="nm">${esc(s.name||'—')}</div>
+   <div class="ph" dir="ltr">${esc(s.phone||'')}</div>${s.phone2?`<div class="ph2" dir="ltr">${esc(s.phone2)}</div>`:''}
+   ${s.gov||s.area?`<div class="gv">${esc([s.gov,s.area].filter(Boolean).join(' — '))}</div>`:''}${s.address?`<div class="ad">${esc(s.address)}</div>`:''}</div>
+  ${s.note?`<div class="nt">📝 ${esc(s.note)}</div>`:''}
+  <div class="sp"></div>
+  <div class="ft"><div class="gr"><span>شحنة <b dir="ltr">${esc(s.no)}</b></span>${s.inv_no?`<span>فاتورة <b dir="ltr">${esc(s.inv_no)}</b></span>`:''}<span>${esc(day)}</span>${who?`<span>${esc(who)}</span>`:''}${s.tracking?`<span>بوليصة <b dir="ltr">${esc(s.tracking)}</b></span>`:''}</div><svg class="bc" data-v="${esc(s.no)}"></svg></div></div>`;
+ let pages='';for(let i=1;i<=n;i++)pages+=page(i);
+ window.mkPrintHTML(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap"><title>Mika Omnix | سيستم المخزون والمبيعات</title>
+ <style>@page{size:A4;margin:8mm}*{font-family:Cairo,Tahoma,sans-serif;box-sizing:border-box}body{margin:0;color:#000}
+ .pg{height:279mm;overflow:hidden;page-break-after:always;border:3px solid #000;border-radius:5mm;padding:8mm;display:flex;flex-direction:column;gap:6mm}.pg:last-child{page-break-after:auto}
+ .hd{text-align:center;border-bottom:3px solid #000;padding-bottom:4mm}.lg{width:165mm;max-height:62mm;object-fit:contain;display:block;margin:0 auto 3mm}.cp{font-size:16pt;font-weight:800}.ca{font-size:13pt;font-weight:600}
+ .to{flex:1;border:4px solid #000;border-radius:5mm;padding:6mm 8mm;display:flex;flex-direction:column;justify-content:center;gap:4mm}
+ .lb{display:flex;justify-content:space-between;align-items:center;font-size:18pt;font-weight:800}.lb .tg{background:#000;color:#fff;border-radius:3mm;padding:0 5mm}
+ .nm{font-size:56pt;font-weight:900;line-height:1.2}.ph{font-size:50pt;font-weight:900;line-height:1.15;text-align:right;letter-spacing:1px}.ph2{font-size:34pt;font-weight:800;text-align:right}
+ .gv{font-size:42pt;font-weight:900;line-height:1.25}.ad{font-size:30pt;font-weight:700;line-height:1.45}
+ .nt{font-size:16pt;font-weight:700;border:2px dashed #000;border-radius:4mm;padding:3mm 5mm}.sp{display:none}
+ .ft{display:flex;align-items:center;justify-content:space-between;gap:5mm;border-top:2px solid #000;padding-top:3mm}.gr{display:flex;flex-wrap:wrap;gap:2mm 6mm;font-size:12pt;font-weight:600}.gr b{font-weight:800}.bc{width:60mm;height:18mm;flex:none}</style>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script></head><body>${pages}
+ <script>window.onload=function(){document.querySelectorAll('svg.bc').forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:'CODE128',displayValue:true,fontSize:13,margin:0,height:44})}catch(e){x.outerHTML='<b>'+x.dataset.v+'</b>'}});setTimeout(function(){print()},800)}<\/script></body></html>`);
+ if(s.status==='new')shUpdate(id,{status:'printed'}).catch(()=>{})};
+
+/* ---------- ✏️ شحنة جديدة / تعديل ---------- */
+let SE=null;
+window.shipNew=function(invNo,woId){let I=invInfo(invNo),c=I&&findContact(I.r0.person,'عميل');
+ shipEdit(null,{kind:'ship',inv_no:invNo||'',web_order_id:woId||null,name:I?I.r0.person:'',phone:(I&&I.r0.phone)||(c&&c.phone)||'',address:(I&&I.r0.addr)||(c&&c.addr)||'',cod:I?I.rem:0,content:I?I.content:''})};
+window.shipEdit=function(id,preset){let s=id?SHP.find(x=>x.id===id):null;if(id&&!s)return;SE=Object.assign({kind:'ship',status:'new',pieces:1,cod:0,fee:0},s||preset||{});
+ let carriers=[...new Set(CARRIERS.concat(SHP.map(x=>x.carrier).filter(Boolean)))];
+ openModal(`<div class="modal-head"><h2>🚚 ${s?'شحنة '+esc(s.no):'شحنة جديدة'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field full"><label>النوع</label><div class="delopt">${[['ship','📦 شحن لمحافظة (شركة شحن)'],['delivery','🛵 توصيل القاهرة والجيزة (مندوب/أوبر)']].map(([v,t])=>`<label><input type="radio" name="seK" value="${v}" ${SE.kind===v?'checked':''}> ${t}</label>`).join('')}</div></div>
+ <div class="field"><label>اسم العميل</label><input id="seName" value="${esc(SE.name||'')}"></div><div class="field"><label>الفاتورة (اختياري)</label><input id="seInv" dir="ltr" value="${esc(SE.inv_no||'')}" placeholder="MK-0001"></div>
+ <div class="field"><label>الموبايل</label><input id="sePh" type="tel" dir="ltr" value="${esc(SE.phone||'')}"></div><div class="field"><label>موبايل تاني (اختياري)</label><input id="sePh2" type="tel" dir="ltr" value="${esc(SE.phone2||'')}"></div>
+ <div class="field"><label>المحافظة</label><select id="seGov">${govOpts(SE.gov||'')}</select></div><div class="field"><label>المنطقة / المدينة</label><input id="seArea" value="${esc(SE.area||'')}"></div>
+ <div class="field full"><label>العنوان بالتفصيل</label><textarea id="seAddr" rows="2" style="padding:11px;border:1px solid var(--border);border-radius:10px">${esc(SE.address||'')}</textarea></div>
+ <div class="field"><label id="seCarL">شركة الشحن</label><input id="seCar" list="seCars" value="${esc(SE.carrier||'')}"><datalist id="seCars">${carriers.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div><div class="field" id="seTrF"><label>رقم البوليصة / التتبع</label><input id="seTr" dir="ltr" value="${esc(SE.tracking||'')}"></div>
+ <div class="field" id="seDrF"><label>اسم المندوب</label><input id="seDr" value="${esc(SE.driver||'')}"></div><div class="field" id="seDpF"><label>موبايل المندوب</label><input id="seDp" type="tel" dir="ltr" value="${esc(SE.driver_phone||'')}"></div>
+ <div class="field"><label>💰 المطلوب تحصيله من العميل</label><input id="seCod" inputmode="decimal" value="${+SE.cod||0}"></div><div class="field"><label>مصاريف الشحن علينا (اختياري)</label><input id="seFee" inputmode="decimal" value="${+SE.fee||''}" placeholder="0"></div>
+ <div class="field"><label>عدد الطرود (كل طرد ليه ملصق)</label><input id="sePcs" type="number" min="1" max="50" value="${+SE.pieces||1}"></div>${s?`<div class="field"><label>الحالة</label><select id="seSt">${(FLOW[SE.kind]||FLOW.ship).concat(['returned','cancelled']).map(x=>`<option value="${x}" ${x===SE.status?'selected':''}>${stLabel(x,SE.kind)}</option>`).join('')}</select></div>`:''}
+ <div class="field full"><label>المحتويات</label><input id="seCt" value="${esc(SE.content||'')}"></div><div class="field full"><label>ملاحظات (بتتطبع على الملصق)</label><input id="seNt" value="${esc(SE.note||'')}" placeholder="مثلاً: قابل للكسر — كلّم العميل قبل الوصول"></div></div>
+ <div class="modal-foot"><button class="primary" id="seSaveP">💾 حفظ واطبع الملصق</button><button class="secondary" id="seSave">حفظ</button>${s&&isAdmin()?'<button class="secondary danger" id="seDel">حذف</button>':''}<button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ const kindUI=()=>{let k=(document.querySelector('input[name=seK]:checked')||{}).value||'ship';seCarL.textContent=k==='ship'?'شركة الشحن':'شركة التوصيل (اختياري)';seTrF.style.display=k==='ship'?'':'none';seDrF.style.display=seDpF.style.display=k==='delivery'?'':'none';
+  if(k==='delivery'&&!seGov.value)seGov.value='الجيزة'};
+ document.querySelectorAll('input[name=seK]').forEach(r=>r.onchange=kindUI);kindUI();
+ seName.addEventListener('change',()=>{let c=findContact(seName.value,'عميل');if(c){if(!sePh.value&&c.phone)sePh.value=c.phone;if(!seAddr.value&&c.addr)seAddr.value=c.addr}});
+ seInv.addEventListener('change',()=>{let I=invInfo(seInv.value.trim());if(!I)return;if(!seName.value)seName.value=I.r0.person||'';if(!sePh.value&&I.r0.phone)sePh.value=I.r0.phone;if(!seAddr.value&&I.r0.addr)seAddr.value=I.r0.addr;if(!seCt.value)seCt.value=I.content;if(!(+seCod.value))seCod.value=I.rem});
+ const go=async print=>{let k=(document.querySelector('input[name=seK]:checked')||{}).value||'ship';
+  let o={kind:k,name:seName.value.trim(),inv_no:seInv.value.trim()||null,phone:sePh.value.trim(),phone2:sePh2.value.trim(),gov:seGov.value,area:seArea.value.trim(),address:seAddr.value.trim(),carrier:seCar.value.trim(),tracking:k==='ship'?seTr.value.trim():'',driver:k==='delivery'?seDr.value.trim():'',driver_phone:k==='delivery'?seDp.value.trim():'',cod:r2(+seCod.value||0),fee:r2(+seFee.value||0),pieces:Math.min(50,Math.max(1,parseInt(sePcs.value)||1)),content:seCt.value.trim(),note:seNt.value.trim()};
+  if(!o.name)return toast('اكتب اسم العميل');if(o.phone.replace(/\D/g,'').length<8)return toast('اكتب موبايل العميل');if(k==='ship'&&!o.gov)return toast('اختار المحافظة');if(k==='ship'&&!o.address)return toast('اكتب العنوان');
+  let st=document.getElementById('seSt');if(st)o.status=st.value;if(!s&&SE.web_order_id)o.web_order_id=SE.web_order_id;
+  seSave.disabled=seSaveP.disabled=true;
+  try{let r=s?await shUpdate(s.id,o):await shInsert(o);closeModal();toast('✔ الشحنة اتحفظت '+r.no);if(print)shipLabel(r.id)}catch(e){seSave.disabled=seSaveP.disabled=false;toast('ماتحفظتش: '+shErrMsg(e))}};
+ seSave.onclick=()=>go(false);seSaveP.onclick=()=>go(true);
+ let d=document.getElementById('seDel');if(d)d.onclick=async()=>{if(!await ask('حذف الشحنة '+s.no+' نهائياً؟','حذف','رجوع'))return shipEdit(s.id);
+  let {error}=await sbx().from('mk_shipments').delete().eq('id',s.id);if(error)return toast(shErrMsg(error));SHP=SHP.filter(x=>x.id!==s.id);renderShips();shBadge();toast('اتحذفت')}};
+
+/* ---------- ⏭️ الخطوة الجاية ---------- */
+const nextOf=s=>{let f=FLOW[s.kind]||FLOW.ship,i=f.indexOf(s.status);return i>-1&&i<f.length-1?f[i+1]:null};
+const NEXT_BTN={printed:'🖨️ اطبع الملصق',handed:'📦 سلّمتها لشركة الشحن',out:null,delivered:'✅ العميل استلم',paid:'💰 اتحاسبنا'};
+const nextBtn=(s,n)=>n==='out'?(s.kind==='ship'?'🚚 اتشحنت':'🛵 خرجت مع المندوب'):NEXT_BTN[n];
+window.shipStep=async function(id){let s=SHP.find(x=>x.id===id);if(!s)return;let n=nextOf(s);if(!n)return;
+ if(n==='printed')return shipLabel(id);
+ if(n==='paid')return shipPaid(id);
+ if((n==='handed'&&s.kind==='ship'&&!s.carrier)||(n==='out'&&s.kind==='delivery'&&!s.driver&&!s.carrier))return shipWho(id,n);
+ try{await shUpdate(id,{status:n});toast('✔ '+stLabel(n,s.kind));if(n==='out'||n==='handed')shipNotifyAsk(id)}catch(e){toast(shErrMsg(e))}};
+function shipWho(id,n){let s=SHP.find(x=>x.id===id),ship=s.kind==='ship',carriers=[...new Set(CARRIERS.concat(SHP.map(x=>x.carrier).filter(Boolean)))];
+ openModal(`<div class="modal-head"><h2>${ship?'📦 سلّمتها لمين؟':'🛵 مين المندوب؟'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div class="form"><div class="field"><label>${ship?'شركة الشحن':'شركة التوصيل (اختياري)'}</label><input id="swC" list="swCs" value="${esc(s.carrier||'')}"><datalist id="swCs">${carriers.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></div>
+ ${ship?`<div class="field"><label>رقم البوليصة / التتبع</label><input id="swT" dir="ltr" value="${esc(s.tracking||'')}"></div>`:`<div class="field"><label>اسم المندوب</label><input id="swD" value="${esc(s.driver||'')}"></div><div class="field"><label>موبايل المندوب</label><input id="swP" type="tel" dir="ltr" value="${esc(s.driver_phone||'')}"></div>`}
+ <div class="field"><label>مصاريف الشحن علينا (اختياري)</label><input id="swF" inputmode="decimal" value="${+s.fee||''}"></div></div>
+ <div class="modal-foot"><button class="primary" id="swGo">✔ تمام</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ swGo.onclick=async()=>{let p={status:n,carrier:val('swC'),fee:r2(+val('swF')||0)};if(ship)p.tracking=val('swT');else{p.driver=val('swD');p.driver_phone=val('swP')}
+  if(ship&&!p.carrier)return toast('اكتب اسم شركة الشحن');swGo.disabled=true;
+  try{await shUpdate(id,p);closeModal();toast('✔ '+stLabel(n,s.kind));shipNotifyAsk(id)}catch(e){swGo.disabled=false;toast(shErrMsg(e))}}}
+/* 💰 التحصيل: يقفل المتابعة + (اختياري) يسجّل الدفعة على حساب العميل ومصاريف الشحن كمصروف */
+function shipPaid(id){let s=SHP.find(x=>x.id===id),I=invInfo(s.inv_no),c=findContact((I&&I.r0.person)||s.name,'عميل'),adm=isAdmin();
+ openModal(`<div class="modal-head"><h2>💰 تحصيل الشحنة ${esc(s.no)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin-top:0">العميل: <b>${esc(s.name)}</b>${s.carrier?` — مع <b>${esc(s.carrier)}</b>`:''}</p>
+ <div class="form"><div class="field"><label>المبلغ اللي العميل دفعه</label><input id="spA" inputmode="decimal" value="${+s.cod||0}"></div>${adm?`<div class="field"><label>مصاريف الشحن اللي اتخصمت (اختياري)</label><input id="spF" inputmode="decimal" value="${+s.fee||''}"></div>`:''}</div>
+ ${c?`<label class="chk" style="margin-top:8px"><input type="checkbox" id="spPay" ${+s.cod>0&&(+c.balance||0)>0?'checked':''}> سجّل المبلغ دفعة على حساب <b>${esc(c.name)}</b> (عليه دلوقتي ${money(c.balance||0)})</label>`:'<p style="color:var(--muted);font-size:13px">العميل مش متسجل في العملاء — الدفعة مش هتتسجل على حساب.</p>'}
+ ${adm?'<label class="chk"><input type="checkbox" id="spExp" checked> سجّل مصاريف الشحن كمصروف في الخزنة</label>':''}
+ <div class="modal-foot"><button class="primary" id="spGo">✔ اتحاسبنا — اقفل المتابعة</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ spGo.onclick=async()=>{let amt=r2(+val('spA')||0),fee=adm?r2(+val('spF')||0):+s.fee||0,pay=document.getElementById('spPay'),ex=document.getElementById('spExp');spGo.disabled=true;
+  try{if(pay&&pay.checked&&amt>0){await A().rpc('mk_add_payment',{p_contact:c.id,p_amount:amt,p_note:'تحصيل شحنة '+s.no+(s.inv_no?' — فاتورة '+s.inv_no:'')});await A().refreshContacts([c.id]);if(adm)await A().refreshTable('mk_payments');A().done()}}
+  catch(e){spGo.disabled=false;return toast('الدفعة ماتسجلتش: '+(A().errMsg?A().errMsg(e):shErrMsg(e)))}
+  if(ex&&ex.checked&&fee>0){db.expenses.unshift({id:crypto.randomUUID(),date:today(),iso:isoToday(),note:'مصاريف شحن '+s.no+' — '+s.name,cat:'شحن',amount:fee});save()}
+  try{await shUpdate(id,{status:'paid',fee});closeModal();toast('✔ الشحنة اتقفلت — اتحاسبنا')}catch(e){spGo.disabled=false;toast(shErrMsg(e))}}}
+/* 💬 بلّغ العميل على الواتساب */
+function shipMsg(s){let h=`أهلاً ${s.name} 👋\n`,shop=shopName();
+ if(s.status==='out'||s.status==='handed'){if(s.kind==='ship')return h+`طلبك من ${shop} اتشحن 📦${s.carrier?' مع '+s.carrier:''}`+(s.tracking?`\nرقم البوليصة: ${s.tracking}`:'')+(+s.cod>0?`\nالمطلوب عند الاستلام: ${money(s.cod)}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+  return h+`طلبك من ${shop} خرج مع المندوب 🛵`+(s.driver?`\nالمندوب: ${s.driver}`:'')+(s.driver_phone?` — ${s.driver_phone}`:'')+(+s.cod>0?`\nالمطلوب عند الاستلام: ${money(s.cod)}`:'')+`\n\nلو عندك أي سؤال ردّ علينا هنا.`}
+ if(s.status==='delivered'||s.status==='paid')return h+`نتمنى يكون طلبك من ${shop} وصلك سليم ✅\nشكراً لثقتك — ولو محتاج أي حاجة إحنا موجودين.`;
+ return h+`طلبك من ${shop} بيتجهّز للـ${s.kind==='ship'?'شحن 📦':'توصيل 🛵'} — هنبلّغك أول ما يخرج.`}
+window.shipNotify=function(id){let s=SHP.find(x=>x.id===id);if(!s)return;let wa=waTo(s.phone,shipMsg(s));if(!wa)return toast('العميل مالوش رقم');let w=window.open(wa,'_blank');if(!w)location.href=wa};
+async function shipNotifyAsk(id){let s=SHP.find(x=>x.id===id);if(!s||!s.phone)return;if(await ask('تبعت للعميل رسالة واتساب إن طلبه خرج؟','💬 ابعت','لأ'))shipNotify(id)}
+
+/* ---------- 📋 صفحة الشحن والتوصيل ---------- */
+function shFilter(){let q=VN(shQ);return SHP.filter(s=>(shTab==='open'?!CLOSED.includes(s.status)&&s.status!=='delivered':shTab==='collect'?s.status==='delivered':shTab==='done'?s.status==='paid':(s.status==='returned'||s.status==='cancelled'))
+ &&(!shKind||s.kind===shKind)&&(!q||VN([s.no,s.name,s.phone,s.inv_no,s.gov,s.area,s.tracking,s.carrier].join(' ')).includes(q)))}
+function renderShips(){let el=document.getElementById('shBody');if(!el)return;
+ if(shErr){el.innerHTML=`<div class="card"><p style="color:var(--danger);margin:0">${esc(shErr)}</p></div>`;return}
+ let open=SHP.filter(s=>!CLOSED.includes(s.status)),moving=open.filter(s=>s.status==='handed'||s.status==='out'),wait=open.filter(s=>s.status==='delivered');
+ document.querySelectorAll('#shTabs button[data-t]').forEach(b=>b.className=b.dataset.t===shTab?'primary':'secondary');
+ let sum=`<div class="shsum"><div><small>شحنات شغالة</small><b>${open.length}</b></div><div><small>في الطريق (مع الشركة/المندوب)</small><b>${moving.length}</b> <small>${money(sumBy(moving,s=>+s.cod||0))}</small></div><div><small>استلمت ومستنية التحصيل</small><b>${wait.length}</b> <small>${money(sumBy(wait,s=>+s.cod||0))}</small></div></div>`;
+ let L=shFilter();
+ el.innerHTML=sum+(L.length?L.map(s=>{let f=FLOW[s.kind]||FLOW.ship,i=f.indexOf(s.status),n=nextOf(s),last=(s.log||[]).slice(-1)[0];
+  return `<div class="card shc" id="sh-${s.id}" style="margin-bottom:12px"><div class="shh"><div><b style="font-size:17px">${esc(s.name)}</b> ${s.phone?`— <a href="tel:${esc(s.phone)}" dir="ltr">${esc(s.phone)}</a>`:''}<div class="mut">${esc(s.no)} • ${esc(fmtT(s.created_at))}${s.inv_no?' • فاتورة '+esc(s.inv_no):''}</div></div><div><span class="badge">${kindIc(s.kind)}</span> <span class="badge st-${s.status}">${esc(stLabel(s.status,s.kind))}</span></div></div>
+  ${s.gov||s.area||s.address?`<div class="ln">📍 ${esc([s.gov,s.area].filter(Boolean).join(' — '))}${s.address?' — '+esc(s.address):''}</div>`:''}
+  ${s.carrier||s.tracking?`<div class="ln">🚚 ${esc(s.carrier||'')}${s.tracking?` — بوليصة <b dir="ltr">${esc(s.tracking)}</b>`:''}</div>`:''}${s.driver?`<div class="ln">🛵 ${esc(s.driver)}${s.driver_phone?` — <a href="tel:${esc(s.driver_phone)}" dir="ltr">${esc(s.driver_phone)}</a>`:''}</div>`:''}
+  <div class="ln">${+s.cod>0?`💰 المطلوب تحصيله: <b>${money(s.cod)}</b>`:'✔ مدفوع — مفيش تحصيل'}${+s.fee>0?` <span class="mut">• مصاريف الشحن ${money(s.fee)}</span>`:''}${+s.pieces>1?` <span class="mut">• ${s.pieces} طرود</span>`:''}</div>
+  ${i>-1?`<div class="steps">${f.map((x,k)=>`<span class="${k<=i?'on':''}"></span>`).join('')}</div><div class="stepl">${f.map((x,k)=>`<span class="${k<=i?'on':''}">${STEP_SHORT[x]}</span>`).join('')}</div>`:''}
+  ${last?`<div class="mut" style="margin-top:4px">آخر تحديث: ${esc(stLabel(last.s,s.kind))}${last.by?' — '+esc(last.by):''} • ${esc(fmtT(last.at))}</div>`:''}
+  <div class="btnrow" style="margin-top:10px">${n?`<button class="primary" onclick="shipStep('${s.id}')">${nextBtn(s,n)}</button>`:''}<button class="secondary" onclick="shipLabel('${s.id}')">🖨️ الملصق</button>${s.phone?`<button class="secondary" onclick="shipNotify('${s.id}')">💬 بلّغ العميل</button>`:''}<button class="secondary" onclick="shipEdit('${s.id}')">✏️ تعديل</button></div></div>`}).join('')
+  :`<div class="card"><div class="empty">${shLoaded?'مفيش شحنات هنا':'جاري التحميل...'}</div></div>`)}
+window.renderShips=renderShips;
+window.shSet=function(k,v){if(k==='t')shTab=v;if(k==='k')shKind=v;if(k==='q')shQ=v;renderShips()};
+window.shipGo=function(id){showPage('shipping');let s=SHP.find(x=>x.id===id);if(s){shTab=CLOSED.includes(s.status)?(s.status==='paid'?'done':'other'):s.status==='delivered'?'collect':'open';renderShips()}
+ setTimeout(()=>{let c=document.getElementById('sh-'+id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.add('hl');setTimeout(()=>c.classList.remove('hl'),2000)}},150)};
+(function(){let wo=document.querySelector('aside nav [data-page="weborders"]');
+ if(wo)wo.insertAdjacentHTML('afterend','<button data-page="shipping" onclick="showPage(\'shipping\')"><span style="width:1.15em;text-align:center">🚚</span> <span>الشحن والتوصيل</span> <span id="shCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
+ let mn=document.querySelector('main');
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="shipping" class="page"><div class="title-row"><div class="title"><h1>🚚 الشحن والتوصيل</h1><p>متابعة كل طلب من طباعة الملصق لحد ما نتحاسب</p></div><div class="btnrow"><button class="primary" onclick="shipNew()">＋ شحنة جديدة</button><button class="secondary" onclick="loadShips()">🔄 تحديث</button></div></div>
+  <div class="toolbar" id="shTabs"><button data-t="open" onclick="shSet('t','open')">شغالة</button><button data-t="collect" onclick="shSet('t','collect')">مستنية التحصيل</button><button data-t="done" onclick="shSet('t','done')">خلصت</button><button data-t="other" onclick="shSet('t','other')">مرتجع / ملغي</button></div>
+  <div class="toolbar"><input class="search" placeholder="ابحث بالاسم، التليفون، رقم الشحنة أو البوليصة..." oninput="shSet('q',this.value)"><select class="search" style="max-width:150px" onchange="shSet('k',this.value)"><option value="">شحن + توصيل</option><option value="ship">📦 شحن بس</option><option value="delivery">🛵 توصيل بس</option></select></div><div id="shBody"></div></section>`);
+ let ban=document.getElementById('woBanner');
+ if(ban)ban.insertAdjacentHTML('beforebegin','<button id="shBanner" onclick="showPage(\'shipping\')" style="display:none;width:100%;margin-bottom:14px;background:#eefaf3;color:#1e6b3c;border:1px solid #9fd8b4;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
+const _spS=showPage;showPage=function(id){_spS(id);navClose();if(id==='shipping'){renderShips();loadShips()}};
+
+/* ---------- 🧾 فاتورة البيع: اختيار «من المحل / توصيل / شحن» ---------- */
+let autoPaid=false;
+const delVal=()=>(document.querySelector('input[name=txDel]:checked')||{}).value||'';
+function delChanged(){let v=delVal(),on=!!v,g=document.getElementById('txGov');
+ ['txGovF','txAreaF','txDelHint'].forEach(k=>{let e=document.getElementById(k);if(e)e.style.display=on?'':'none'});
+ if(v==='delivery'&&g&&!['القاهرة','الجيزة'].includes(g.value))g.value='الجيزة';
+ let p=document.getElementById('txPaid');
+ if(on&&p&&!paidTouched){p.value='0';paidTouched=true;autoPaid=true;updRem()}
+ else if(!on&&autoPaid){paidTouched=false;autoPaid=false;updRem()}}
+window.delChanged=delChanged;
+const _otS=openTransaction;
+openTransaction=function(type,preset){autoPaid=false;_otS(type,preset);if(type!=='sale')return;let a=document.getElementById('txAddr');if(!a||document.getElementById('txDelF'))return;
+ a.closest('.field').insertAdjacentHTML('afterend',`<div class="field full" id="txDelF"><label>🚚 الاستلام</label><div class="delopt">${[['','🏪 من المحل'],['delivery','🛵 توصيل (القاهرة والجيزة)'],['ship','📦 شحن لمحافظة']].map(([v,t],i)=>`<label><input type="radio" name="txDel" value="${v}" ${i?'':'checked'} onchange="delChanged()"> ${t}</label>`).join('')}</div></div>
+ <div class="field" id="txGovF" style="display:none"><label>المحافظة</label><select id="txGov">${govOpts('')}</select></div><div class="field" id="txAreaF" style="display:none"><label>المنطقة / المدينة</label><input id="txArea"></div>
+ <div class="field full" id="txDelHint" style="display:none;color:var(--muted);font-size:13px">📌 الشحنة هتتسجل في «الشحن والتوصيل» وتطبع الملصق على طول. «المدفوع الآن» اتحط صفر عشان الدفع عند الاستلام — غيّره لو العميل دفع.</div>`)};
+const _stS=submitTransaction;
+submitTransaction=async function(ev,type){let k=type==='sale'?delVal():'';
+ if(!k)return _stS.call(this,ev,type);
+ let d={kind:k,name:(val('txPerson')||'').trim(),phone:(val('txPhone')||'').trim(),gov:val('txGov')||'',area:(val('txArea')||'').trim(),address:(val('txAddr')||'').trim()};
+ if(!d.name){ev.preventDefault();return toast('اكتب اسم العميل — الشحنة محتاجاه')}
+ if(d.phone.replace(/\D/g,'').length<8){ev.preventDefault();return toast('اكتب تليفون العميل — شركة الشحن/المندوب هيكلمه')}
+ if(k==='ship'&&!d.gov){ev.preventDefault();return toast('اختار المحافظة')}
+ if(k==='ship'&&!d.address){ev.preventDefault();return toast('اكتب عنوان العميل')}
+ let before=new Set(db.sales.map(r=>r.id)),wo=(ev.target&&ev.target.dataset&&ev.target.dataset.wo)||null;
+ await _stS.call(this,ev,type);
+ let row=db.sales.find(r=>!before.has(r.id)&&!r.ship);if(!row)return;
+ if(!row.gid||!navigator.onLine)return toast('📴 الشحنة هتتسجل لما النت يرجع — افتح الفاتورة واضغط «🚚 شحن / توصيل»');
+ let I=invInfo(row.no);
+ try{await shInsert(Object.assign(d,{inv_no:row.no,web_order_id:wo,cod:I?I.rem:0,content:I?I.content:''}));openInvoiceModal(row.id)}
+ catch(e){toast('الفاتورة اتسجلت، بس الشحنة لأ: '+shErrMsg(e))}};
+/* طلب الموقع → الفاتورة: طريقة الاستلام اللي العميل اختارها بتتنقل لوحدها */
+const _woiS=woInvoice;
+woInvoice=function(id){_woiS(id);let o=(typeof WO!=='undefined'?WO.list:[]).find(x=>x.id===id),s=o&&o.ship;if(!s||!s.method||s.method==='pickup')return;
+ let r=document.querySelector(`input[name=txDel][value="${s.method}"]`);if(r){r.checked=true;delChanged()}
+ let g=document.getElementById('txGov');if(g&&s.gov)g.value=s.gov;let a=document.getElementById('txArea');if(a&&s.area)a.value=s.area;let ad=document.getElementById('txAddr');if(ad&&s.address)ad.value=s.address};
+const shipLine=s=>!s||!s.method?'':s.method==='ship'?'📦 شحن لـ '+(s.gov||'')+(s.area?' — '+s.area:''):s.method==='delivery'?'🛵 توصيل — '+[s.gov,s.area].filter(Boolean).join(' — '):'🏪 هيستلم من المحل';
+const _roS=renderOrders;
+renderOrders=function(){_roS();let b=document.getElementById('woBody');if(!b||typeof WO==='undefined')return;
+ let L=WO.list.filter(o=>WO.tab==='new'?o.status==='new':WO.tab==='done'?woDoneSt(o):(o.status!=='new'&&!woDoneSt(o))),cards=[...b.children].filter(c=>c.classList.contains('card'));if(cards.length!==L.length)return;
+ L.forEach((o,i)=>{let sh=o.invoice_no&&SHP.find(x=>x.inv_no===o.invoice_no&&x.status!=='cancelled'),ln=shipLine(o.ship);if(!ln&&!sh)return;
+  let tb=cards[i].querySelector('.table-wrap');if(tb)tb.insertAdjacentHTML('beforebegin',`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--tint2,#eef6f7)">${ln?`<b>${esc(ln)}</b>${o.ship&&o.ship.address?`<br>📍 ${esc(o.ship.address)}`:''}`:''}${sh?`<div>🚚 ${esc(sh.no)}: <a href="#" onclick="shipGo('${sh.id}');return false">${esc(stLabel(sh.status,sh.kind))}</a></div>`:''}</div>`)})};
+/* شاشة الفاتورة: حالة الشحنة أو زرار «شحن / توصيل» */
+const _oimS=openInvoiceModal;
+openInvoiceModal=function(id){_oimS(id);let r=db.sales.find(x=>x.id===id);if(!r||!r.no)return;let o=document.getElementById('invOut');if(!o)return;
+ let s=SHP.find(x=>x.inv_no===r.no&&x.status!=='cancelled');
+ o.insertAdjacentHTML('beforebegin',s?`<div class="shinv">🚚 ${kindIc(s.kind)} <b>${esc(s.no)}</b> — <span class="badge st-${s.status}">${esc(stLabel(s.status,s.kind))}</span><div class="btnrow" style="margin-top:8px"><button class="primary" style="flex:1" onclick="shipLabel('${s.id}')">🖨️ اطبع ملصق الشحن</button><button class="secondary" onclick="closeModal();shipGo('${s.id}')">المتابعة</button></div></div>`
+  :`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="closeModal();shipNew('${esc(r.no)}')">🚚 شحن / توصيل للفاتورة دي</button></div>`)};
+
+/* ---------- تشغيل ---------- */
+let shT=null;
+function shLive(){try{sbx().channel('mk-ship').on('postgres_changes',{event:'*',schema:'public',table:'mk_shipments'},()=>{clearTimeout(shT);shT=setTimeout(loadShips,800)}).subscribe()}catch(e){}}
+(function wait(n){if(window.mkT_user&&sbx()){loadShips();shLive();setInterval(()=>{if(navigator.onLine&&!document.hidden)loadShips()},120000);return}if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
+})();
 </script>
 
 <style>
@@ -1834,8 +2109,20 @@ if(/error_code=otp_expired|error=access_denied/.test(location.hash))setTimeout((
 </script>
 
 <style>
-[data-page="weborders"],[data-page="waorders"],[data-page="daybook"],[data-page="shipping"],[data-page="debts"]{display:none!important}
-#mkSignTabs{display:flex;gap:6px;margin:4px 0 12px;background:#0000000d;border-radius:12px;padding:4px}
+[data-page="waorders"],[data-page="daybook"],[data-page="shipping"],[data-page="debts"]{display:none!important}
+aside nav button.promo .pv{margin-right:auto;background:linear-gradient(135deg,#d5a928,#f0c75e);color:#3b2a00;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;white-space:nowrap;flex:none}
+#promo{position:fixed;inset:0;z-index:99990;background:#0f2a2ecc;display:none;align-items:flex-end;justify-content:center;padding:0}
+#promo.show{display:flex}
+#promo .pc{background:#fff;color:#17363b;width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:22px 20px calc(18px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto;animation:pup .25s ease}
+@media(min-width:700px){#promo{align-items:center}#promo .pc{border-radius:24px}}
+@keyframes pup{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+#promo .hero{background:linear-gradient(135deg,var(--blue,#087f8c),#0b5c66);color:#fff;border-radius:18px;padding:18px;text-align:center;margin-bottom:14px}
+#promo .hero .ic{font-size:46px;line-height:1.1}#promo .hero h2{margin:8px 0 4px;font-size:21px}#promo .hero p{margin:0;opacity:.9;font-size:14px;line-height:1.7}
+#promo ul{list-style:none;padding:0;margin:0 0 16px}#promo li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #edf2f3;font-size:14.5px;line-height:1.6}#promo li:last-child{border:0}#promo li b{color:var(--blue,#087f8c)}
+#promo .wa{display:flex;align-items:center;justify-content:center;gap:10px;background:#25D366;color:#fff;border-radius:14px;padding:15px;font-weight:800;font-size:17px;text-decoration:none}
+#promo .wa svg{width:24px;height:24px}
+#promo .x{display:block;width:100%;margin-top:8px;background:none;border:0;color:#61777b;font:inherit;padding:10px;box-shadow:none}
+#mkLogin h2{display:flex;align-items:center;gap:10px;font-family:Poppins,Cairo,sans-serif;font-weight:800}#mkLogin .applg{width:44px;height:44px;border-radius:12px}#brandName{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#brandName .appic{width:30px;height:30px;border-radius:8px;flex:none}#brandName .bt{overflow:hidden;text-overflow:ellipsis;min-width:0;font-weight:inherit}@media(max-width:600px){#brandName span{display:none}}@media(max-width:430px){#brandName .bt{display:none}}#mkSignTabs{display:flex;gap:6px;margin:4px 0 12px;background:#0000000d;border-radius:12px;padding:4px}
 #mkSignTabs button{flex:1;background:none;color:inherit;border:0;border-radius:9px;padding:9px;font-weight:800;box-shadow:none}
 #mkSignTabs button.on{background:#fff;color:var(--blue,#087f8c);box-shadow:0 1px 5px #0002}
 #mkLogin .mkup{display:none}#mkLogin.up .mkup{display:block}#mkLogin.up .mkin{display:none}
@@ -1870,7 +2157,7 @@ const fmt=d=>d?new Date(d).toLocaleDateString('ar-EG',{day:'numeric',month:'long
 
 /* ---- شاشة الدخول: دخول / حساب جديد ---- */
 function signupUI(){const lg=$('mkLogin');if(!lg||$('mkSignTabs'))return;const bx=lg.querySelector('.mkbox');
- const h2=bx.querySelector('h2'),p=bx.querySelector('p');if(p)p.classList.add('mkin');
+ const h2=bx.querySelector('h2'),p=bx.querySelector('p');h2.innerHTML='<img src="icon-192.png" alt="" class="applg">'+APP;if(p)p.classList.add('mkin');
  h2.insertAdjacentHTML('afterend','<div id="mkSignTabs"><button type="button" class="on" data-t="in">تسجيل دخول</button><button type="button" data-t="up">حساب جديد</button></div><p class="mkup" style="margin:0 0 10px">جرّب السيستم مجاناً 7 أيام — من غير أي بيانات دفع</p><input class="mkup" id="upShop" placeholder="اسم المحل" autocomplete="organization"><input class="mkup" id="upPhone" placeholder="رقم الموبايل" inputmode="tel" autocomplete="tel">');
  const go=$('mkGo');go.classList.add('mkin');
  go.insertAdjacentHTML('afterend','<button type="button" class="mkup" id="upGo">✨ ابدأ التجربة المجانية</button>');
@@ -1913,10 +2200,44 @@ function show(s){const lock=$('subLock'),bar=$('subBar');
 window.mkSub=()=>SUB;window.mkSubCheck=check;
 
 /* ---- اسم المحل في الهيدر ---- */
-function brand(){const el=$('brandName');if(!el)return;const n=shopName();el.textContent='';if(n){el.append(n+' ');const s=document.createElement('span');s.textContent='| '+APP;el.append(s)}else el.textContent=APP}
+function brand(){const el=$('brandName');if(!el)return;const n=shopName();el.textContent='';const ic=document.createElement('img');ic.src='icon-192.png';ic.alt='';ic.className='appic';el.append(ic);const b=document.createElement('b');b.className='bt';b.textContent=n||APP;el.append(b);if(n){const s=document.createElement('span');s.textContent='| '+APP;el.append(s)}}
 if(typeof renderAll==='function'){const _ra=renderAll;renderAll=function(){const x=_ra.apply(this,arguments);try{brand()}catch(e){}return x}}
 
+/* ---- مميزات الأونلاين: أيقونات في القايمة → عرض + واتساب ---- */
+const PROMOS={
+ site:{ic:'🌐',nav:'موقعك على النت',t:'انشر موقع محلك على النت',s:'الناس كلها تشوف منتجاتك وتطلب منك — وأي طلب يوصلك على الواتساب',
+  li:['<b>موقع جاهز باسم محلك</b> — بنجهّزهولك وانت بس تحط صورك ومنتجاتك','منتجاتك بتتنقل للموقع <b>بضغطة</b> من السيستم','العميل يختار ويبعت الطلب يوصلك <b>على الواتساب</b> على طول','يظهر في <b>بحث جوجل</b> ويتربط بصفحتك على فيسبوك وانستجرام'],
+  msg:'السلام عليكم، عايز أعمل موقع لمحلي على النت'},
+ weborders:{ic:'🛒',nav:'طلبات الموقع',t:'طلبات الموقع في مكان واحد',s:'كل طلب من موقعك بيوصلك هنا وتحوّله فاتورة بضغطة',
+  li:['تنبيه أول ما يوصل <b>طلب جديد</b>','تحوّل الطلب <b>لفاتورة بيع</b> والمخزن يتخصم لوحده','العميل يتابع طلبه من الموقع <b>خطوة بخطوة</b>'],
+  msg:'السلام عليكم، عايز أفعّل طلبات الموقع لمحلي'},
+ waorders:{ic:'💬',nav:'طلبات الواتساب',t:'طلبات الواتساب تتسجل لوحدها',s:'رسايل العملاء على الواتساب بتتحول طلبات جاهزة جوه السيستم',
+  li:['أي رسالة فيها «طلب» بتتسجل <b>لوحدها</b>','تختار الأصناف وتعمل <b>فاتورة</b> من غير ما تكتب حاجة تاني','مفيش طلب <b>يضيع</b> وسط الرسايل'],
+  msg:'السلام عليكم، عايز أفعّل طلبات الواتساب في السيستم'},
+ shipping:{ic:'🚚',nav:'الشحن والتوصيل',t:'إدارة الشحن والتوصيل',s:'تابع كل شحنة من ساعة ما تخرج لحد ما فلوسها توصلك',
+  li:['<b>ملصق شحن A4</b> جاهز للطباعة بلوجو محلك','تتبّع: اتسلمت للشركة ← في الطريق ← وصلت ← <b>اتحاسبنا</b>','توصيل القاهرة والجيزة وشحن <b>لكل المحافظات</b>'],
+  msg:'السلام عليكم، عايز أفعّل الشحن والتوصيل في السيستم'},
+ daybook:{ic:'📒',nav:'يومية المحل',t:'يومية المحل',s:'اكتب كل بيعة على طول وفي آخر اليوم «صفّي» تطلعلك الفواتير جاهزة',
+  li:['تكتب البيعة في <b>ثانية</b> وقت الزحمة','المخزن بيتخصم <b>لوحده</b>','آخر اليوم كل عميل بتطلعله <b>فاتورة</b> والدرج يتقفل مظبوط'],
+  msg:'السلام عليكم، عايز أفعّل يومية المحل في السيستم'}};
+function promo(k){const p=PROMOS[k];if(!p)return;let el=$('promo');
+ if(!el){document.body.insertAdjacentHTML('beforeend','<div id="promo"></div>');el=$('promo');el.onclick=e=>{if(e.target===el||e.target.closest('.x'))el.classList.remove('show')}}
+ const wa=$('subWa').querySelector('svg').outerHTML,shop=shopName();
+ const txt=p.msg+(shop?'\nالمحل: '+shop:'')+((SUB&&SUB.email)?'\nالإيميل: '+SUB.email:'');
+ el.innerHTML='<div class="pc"><div class="hero"><div class="ic">'+p.ic+'</div><h2>'+p.t+'</h2><p>'+p.s+'</p></div><ul>'+p.li.map(x=>'<li><span>✅</span><span>'+x+'</span></li>').join('')+'</ul><a class="wa" target="_blank" rel="noopener" href="'+waLink(txt)+'">'+wa+'كلّمنا على واتساب ونجهّزهولك</a><button type="button" class="x">مش دلوقتي</button></div>';
+ el.classList.add('show')}
+window.mkPromo=promo;
+function promoNav(){const nav=document.querySelector('aside nav');if(!nav||nav.querySelector('.promo'))return;
+ const btn=(k)=>'<button type="button" class="own promo" data-promo="'+k+'"><span style="width:1.15em;text-align:center">'+PROMOS[k].ic+'</span> <span>'+PROMOS[k].nav+'</span><span class="pv">✨ جديد</span></button>';
+ const sales=nav.querySelector('[data-page="sales"]');if(sales)sales.insertAdjacentHTML('beforebegin',btn('daybook'));
+ let wo=nav.querySelector('[data-page="weborders"]');
+ if(wo){wo.removeAttribute('onclick');wo.removeAttribute('data-page');wo.classList.add('own','promo');wo.dataset.promo='weborders';wo.insertAdjacentHTML('beforeend','<span class="pv">✨ جديد</span>')}
+ else if(sales){sales.insertAdjacentHTML('afterend',btn('weborders'));wo=nav.querySelector('[data-promo="weborders"]')}
+ if(wo)wo.insertAdjacentHTML('afterend',btn('site')+btn('shipping')+btn('waorders'));
+ nav.addEventListener('click',e=>{const b=e.target.closest('[data-promo]');if(b){e.preventDefault();e.stopPropagation();promo(b.dataset.promo)}},true)}
+
 function boot(){document.body.insertAdjacentHTML('afterbegin','<div id="subBar"></div>');document.body.appendChild($('subLock'));
+ try{promoNav()}catch(e){console.warn('promo',e)}
  signupUI();brand();
  $('subRe').onclick=async()=>{const b=$('subRe');b.textContent='⏳ بنشيّك...';await check();b.textContent='🔄 اتفعّل؟ اضغط هنا';if(SUB&&(SUB.status==='expired'||SUB.status==='blocked'))toast('لسه ماتفعّلش — كلّمنا على واتساب')};
  $('subOut').onclick=async()=>{try{await sb.auth.signOut()}catch(e){}location.reload()};
