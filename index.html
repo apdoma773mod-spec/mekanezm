@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-5';
+const APP_VER='2026-10-08-6';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3705,7 +3705,8 @@ new MutationObserver(addLink).observe(document.body,{childList:true,subtree:true
 
 /* رجع من لينك الإيميل → اكتب رقم سري جديد */
 let shown=false;
-function newPass(){if(shown)return;shown=true;
+const RK='mk_recover';const rSet=v=>{try{v?sessionStorage.setItem(RK,'1'):sessionStorage.removeItem(RK)}catch(e){}};const rGet=()=>{try{return sessionStorage.getItem(RK)==='1'}catch(e){return false}};
+function newPass(){rSet(true);if(shown&&document.getElementById('mkRecover'))return;shown=true;
  document.body.insertAdjacentHTML('beforeend',`<div id="mkRecover"><div class="mkbox"><h2 style="margin-top:0">🔑 رقم سري جديد</h2><p>اكتب الرقم السري الجديد (6 حروف أو أرقام على الأقل) واحفظه.</p>
   <input id="rcP1" type="password" placeholder="الرقم السري الجديد" autocomplete="new-password"><input id="rcP2" type="password" placeholder="اكتبه تاني" autocomplete="new-password">
   <button type="button" id="rcGo">💾 حفظ</button><div id="rcMsg" style="margin-top:8px;color:#b3261e;font-size:14px"></div></div></div>`);
@@ -3713,10 +3714,15 @@ function newPass(){if(shown)return;shown=true;
   if(a.length<6){m.textContent='لازم 6 حروف أو أرقام على الأقل';return}if(a!==b){m.textContent='الاتنين مش زي بعض';return}
   btn.disabled=true;m.style.color='#555';m.textContent='⏳ بنحفظ…';
   try{const {error}=await sbx().auth.updateUser({password:a});if(error)throw error;
-   m.style.color='#1e7a3c';m.textContent='✅ الرقم السري اتغيّر — بندخلك دلوقتي…';
+   rSet(false);m.style.color='#1e7a3c';m.textContent='✅ الرقم السري اتغيّر — بندخلك دلوقتي…';
    try{history.replaceState(null,'',BACK)}catch(e){}setTimeout(()=>location.replace(BACK),1200)}
   catch(e){btn.disabled=false;m.style.color='#b3261e';const t=String(e&&e.message||e);m.textContent=/expired|invalid|session/i.test(t)?'اللينك انتهى — اطلب لينك جديد من «نسيت الرقم السري»':'ماتحفظش: '+t}}}
 if(/type=recovery/.test(location.hash))newPass();
+/* بعد ريفريش أو لو فاتح من لينك ?setpass=1 وهو داخل بالفعل: افتح شاشة الرقم الجديد */
+window.mkChangePass=newPass;
+if(rGet()||/[?&]setpass=1/.test(location.search))(function chk(n){const c=sbx();if(c&&c.auth){c.auth.getSession().then(r=>{if(r&&r.data&&r.data.session)newPass();else rSet(false)}).catch(()=>{});return}if(n<50)setTimeout(()=>chk(n+1),200)})(0);
+/* لو حاجة شالت الشاشة قبل الحفظ (ريفريش السيستم) رجّعها */
+setInterval(()=>{if(rGet()&&shown&&!document.getElementById('mkRecover')){shown=false;newPass()}},1500);
 (function wait(n){const c=sbx();if(c&&c.auth&&c.auth.onAuthStateChange){c.auth.onAuthStateChange(ev=>{if(ev==='PASSWORD_RECOVERY')newPass()});return}if(n<50)setTimeout(()=>wait(n+1),200)})(0);
 if(/error_code=otp_expired|error=access_denied/.test(location.hash))setTimeout(()=>{try{toast('اللينك انتهى أو اتستخدم قبل كده — اطلب لينك جديد')}catch(e){}},1500);
 })();
