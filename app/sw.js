@@ -2,7 +2,7 @@
    السيستم (index.html): من النت الأول، ولو مفيش نت أو النت بطيء بيفتح النسخة المحفوظة.
    المكتبات والخطوط: بتتحفظ أول مرة وبعد كده بتفتح من الجهاز.
    الموقع (shop.html) والسيرفر (Supabase) مش بيعدّوا على هنا خالص. */
-const CACHE = 'mkapp-v1';
+const CACHE = 'mkapp-v2';
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const APP = new URL('./', self.location).href;
 
@@ -20,7 +20,7 @@ const isApp = u => u.origin === self.location.origin && (u.href.split(/[?#]/)[0]
 const timeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 
 function networkFirst(req, key, ms) {
-  const net = fetch(req).then(res => {
+  const net = fetch(req, { cache: 'no-store' }).then(res => {
     if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(key, cp)); }
     return res;
   });

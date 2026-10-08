@@ -1599,7 +1599,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-10-1';
+const APP_VER='2026-10-10-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3828,6 +3828,10 @@ function promoNav(){const nav=document.querySelector('aside nav');if(!nav||nav.q
  if(wo){wo.removeAttribute('onclick');wo.removeAttribute('data-page');wo.classList.add('own','promo');wo.dataset.promo='weborders';wo.insertAdjacentHTML('beforeend','<span class="pv">✨ جديد</span>')}
  else{const s=nav.querySelector('[data-page="sales"]');if(s){s.insertAdjacentHTML('afterend',btn('weborders'));wo=nav.querySelector('[data-promo="weborders"]')}}
  if(wo)wo.insertAdjacentHTML('afterend',btn('site'));
+ /* 🚪 تسجيل الخروج: واضح في آخر القايمة */
+ const as=document.querySelector('aside');if(as&&!$('outBtn')){const navs=as.querySelectorAll('nav'),last=navs[navs.length-1];
+  (last||as).insertAdjacentHTML('beforeend','<button type="button" class="own" id="outBtn" style="color:#c0392b"><span style="width:1.15em;text-align:center">🚪</span> <span>تسجيل الخروج</span></button>');
+  $('outBtn').onclick=e=>{e.stopPropagation();document.body.classList.remove('navon');if(window.mkT_out)mkT_out();else $('subOut').click()}}
  nav.addEventListener('click',e=>{const b=e.target.closest('[data-promo]');if(b){e.preventDefault();e.stopPropagation();promo(b.dataset.promo)}},true)}
 /* البانر الأخضر بتاع طلبات الموقع في الرئيسية: مالوش لازمة هنا */
 function hideWebBits(){document.querySelectorAll('[data-page="weborders"]').forEach(b=>{if(!b.closest('aside nav'))b.style.display='none'})}
