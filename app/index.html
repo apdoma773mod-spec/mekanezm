@@ -1599,7 +1599,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-10-4';
+const APP_VER='2026-10-10-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3720,19 +3720,23 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 
 <script>
-/* Mika Omnix — 🗑️ مسح الطلبات الملغية (طلبات الموقع / الواتساب) — المدير بس */
+/* Mika Omnix — 🗑️ مسح الطلبات الملغية (طلبات الموقع / الواتساب) — المدير بس
+   الزرار برا شريط التابات (التابات بتتلوّن من جديد كل شوية) وليه id ثابت */
 (function(){
 const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
-function add(tabsId,kind,reload){const t=document.getElementById(tabsId);if(!t||t.querySelector('.purgeBtn'))return;
- t.insertAdjacentHTML('beforeend','<button type="button" class="secondary purgeBtn" style="margin-inline-start:auto;color:var(--danger,#c0392b)">🗑️ مسح الملغي</button>');
- const b=t.querySelector('.purgeBtn');b.style.display=isAdmin()?'':'none';
- b.onclick=async()=>{if(!isAdmin())return toast('للمدير بس');
-  if(!await ask('مسح كل الطلبات الملغية من «'+(kind==='web'?'طلبات الموقع':'طلبات الواتساب')+'» نهائياً؟\nالطلبات الجديدة واللي اتعملها فاتورة مش هتتلمس، والفواتير نفسها مش هتتمسح.','امسح الملغي','رجوع'))return;
-  b.disabled=true;try{const {data,error}=await window.mkSB.rpc('mk_purge_cancelled',{p_kind:kind});if(error)throw error;
-   toast('🗑️ اتمسح '+(data||0)+' طلب ملغي');try{reload()}catch(e){}}
-  catch(e){toast((window.mkT&&mkT.api&&mkT.api.errMsg)?mkT.api.errMsg(e):(e.message||e))}finally{b.disabled=false}}}
-function run(){add('woTabs','web',()=>loadOrders(true));add('waTabs','wa',()=>loadWa(true));
- document.querySelectorAll('.purgeBtn').forEach(b=>b.style.display=isAdmin()?'':'none')}
+function add(tabsId,kind,reload){const t=document.getElementById(tabsId);if(!t)return;
+ // شيل أي نسخ قديمة اتكررت جوه التابات
+ t.querySelectorAll('button').forEach(b=>{if(/مسح الملغي/.test(b.textContent))b.remove()});
+ const id='purge_'+kind;let b=document.getElementById(id);
+ if(!b){t.insertAdjacentHTML('afterend','<div style="display:flex;justify-content:flex-end;margin:-4px 0 10px"><button type="button" id="'+id+'" class="secondary" style="color:var(--danger,#c0392b)">🗑️ مسح الملغي</button></div>');
+  b=document.getElementById(id);
+  b.onclick=async()=>{if(!isAdmin())return toast('للمدير بس');
+   if(!await ask('مسح كل الطلبات الملغية من «'+(kind==='web'?'طلبات الموقع':'طلبات الواتساب')+'» نهائياً؟\nالطلبات الجديدة واللي اتعملها فاتورة مش هتتلمس، والفواتير نفسها مش هتتمسح.','امسح الملغي','رجوع'))return;
+   b.disabled=true;try{const {data,error}=await window.mkSB.rpc('mk_purge_cancelled',{p_kind:kind});if(error)throw error;
+    toast('🗑️ اتمسح '+(data||0)+' طلب ملغي');try{reload()}catch(e){}}
+   catch(e){toast((window.mkT&&mkT.api&&mkT.api.errMsg)?mkT.api.errMsg(e):(e.message||e))}finally{b.disabled=false}}}
+ b.parentElement.style.display=isAdmin()?'flex':'none'}
+function run(){add('woTabs','web',()=>loadOrders(true));add('waTabs','wa',()=>loadWa(true))}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 setTimeout(run,1500);setInterval(run,5000);
 })();
