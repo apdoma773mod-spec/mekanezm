@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-6';
+const APP_VER='2026-10-08-7';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4063,6 +4063,18 @@ if(typeof buildInvoicePdf==='function')buildInvoicePdf=async function(r){if(type
 if(typeof htmlPdf==='function')htmlPdf=async function(html){if(typeof html2canvas==='undefined'||!window.jspdf)throw new Error('مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت');
  try{return toPdf(await renderIso(html)).output('blob')}catch(e){throw new Error(e.message==='timeout'?'التحويل أخد وقت طويل، جرّب تاني':e.message)}};
 window.mkRenderIso=renderIso;
+})();
+</script>
+
+<script>
+/* ميكانيزم — 🚪 تسجيل الخروج واضح في آخر القايمة الجانبية */
+(function(){
+function add(){const as=document.querySelector('aside');if(!as||document.getElementById('outBtn'))return;
+ const navs=as.querySelectorAll('nav'),last=navs[navs.length-1];
+ (last||as).insertAdjacentHTML('beforeend','<button type="button" class="own" id="outBtn" style="color:#c0392b"><span style="width:1.15em;text-align:center">🚪</span> <span>تسجيل الخروج</span></button>');
+ document.getElementById('outBtn').onclick=e=>{e.stopPropagation();document.body.classList.remove('navon');
+  if(window.mkT_out)return mkT_out();if(typeof whoOut==='function')return whoOut();if(window.cloudLogout)return cloudLogout()}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();setTimeout(add,1500);
 })();
 </script>
 
