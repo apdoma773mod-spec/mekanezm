@@ -1599,7 +1599,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-10-3';
+const APP_VER='2026-10-10-4';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3719,6 +3719,162 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+<script>
+/* Mika Omnix — 🗑️ مسح الطلبات الملغية (طلبات الموقع / الواتساب) — المدير بس */
+(function(){
+const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+function add(tabsId,kind,reload){const t=document.getElementById(tabsId);if(!t||t.querySelector('.purgeBtn'))return;
+ t.insertAdjacentHTML('beforeend','<button type="button" class="secondary purgeBtn" style="margin-inline-start:auto;color:var(--danger,#c0392b)">🗑️ مسح الملغي</button>');
+ const b=t.querySelector('.purgeBtn');b.style.display=isAdmin()?'':'none';
+ b.onclick=async()=>{if(!isAdmin())return toast('للمدير بس');
+  if(!await ask('مسح كل الطلبات الملغية من «'+(kind==='web'?'طلبات الموقع':'طلبات الواتساب')+'» نهائياً؟\nالطلبات الجديدة واللي اتعملها فاتورة مش هتتلمس، والفواتير نفسها مش هتتمسح.','امسح الملغي','رجوع'))return;
+  b.disabled=true;try{const {data,error}=await window.mkSB.rpc('mk_purge_cancelled',{p_kind:kind});if(error)throw error;
+   toast('🗑️ اتمسح '+(data||0)+' طلب ملغي');try{reload()}catch(e){}}
+  catch(e){toast((window.mkT&&mkT.api&&mkT.api.errMsg)?mkT.api.errMsg(e):(e.message||e))}finally{b.disabled=false}}}
+function run(){add('woTabs','web',()=>loadOrders(true));add('waTabs','wa',()=>loadWa(true));
+ document.querySelectorAll('.purgeBtn').forEach(b=>b.style.display=isAdmin()?'':'none')}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+setTimeout(run,1500);setInterval(run,5000);
+})();
+</script>
+
+<style>
+#ciBox .ci-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+#ciBox .ci-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border)}
+#ciBox .ci-row b{display:block;font-size:15.5px;overflow-wrap:anywhere}#ciBox .ci-row small{color:var(--muted);font-size:12.5px}
+#ciBox .ci-row input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue)}
+#ciBox .ci-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#ciBox .ci-acts button{padding:7px 10px;font-size:13px;border-radius:10px}
+#ciBox .ci-dup{background:#fff4e5;color:#8a4b00;border-radius:8px;padding:1px 8px;font-size:12px;font-weight:700}
+#ciBox .ci-bulk{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:10px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:2}
+#ciBox .ci-help{background:var(--tint2,#eef6f7);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.9;margin-bottom:10px}
+@media(max-width:600px){#ciBox .ci-row{grid-template-columns:auto minmax(0,1fr)}#ciBox .ci-acts{grid-column:1/-1;justify-content:flex-start}}
+</style>
+<script>
+/* =====================================================================
+   Mika Omnix — 📇 استيراد الأسامي من التليفون (vCard .vcf / Excel / CSV)
+   الأسامي بتتحط في قايمة مراجعة: كل اسم لوحده — عدّله، اختار عميل أو مورد، واحفظ
+   ===================================================================== */
+(function(){
+const KEYS='mk_ct_import';
+const isAdmin=()=>!window.MK_T||!!(window.mkT_user&&window.mkT_user.role==='admin');
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEYS)||'[]')}catch(e){return []}};
+const store=L=>{try{L.length?localStorage.setItem(KEYS,JSON.stringify(L)):localStorage.removeItem(KEYS)}catch(e){toast('القايمة كبيرة على الجهاز — احفظ جزء الأول')}};
+const digits=s=>String(s||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d+]/g,'');
+function normPhone(p){let d=digits(p);if(d.startsWith('+'))d=d.slice(1);if(d.startsWith('0020'))d=d.slice(4);else if(d.startsWith('20')&&d.length===12)d=d.slice(2);if(d.length===10&&d[0]==='1')d='0'+d;return d}
+const tail=p=>normPhone(p).slice(-9);
+
+/* ---------- قراية الملفات ---------- */
+function qp(s){return s.replace(/=\r?\n/g,'').replace(/(=[0-9A-F]{2})+/gi,m=>{try{return decodeURIComponent(m.replace(/=/g,'%'))}catch(e){return m}})}
+function parseVcf(txt){const out=[];txt=txt.replace(/\r\n[ \t]/g,'').replace(/\n[ \t]/g,'');
+ for(const card of txt.split(/BEGIN:VCARD/i).slice(1)){let fn='',n='',org='',note='',adr='',tels=[];
+  for(const line of card.split(/\r?\n/)){const i=line.indexOf(':');if(i<0)continue;let k=line.slice(0,i).toUpperCase(),v=line.slice(i+1);
+   if(/QUOTED-PRINTABLE/.test(k))v=qp(v);v=v.replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\n/gi,' ').trim();
+   const key=k.split(';')[0].replace(/^ITEM\d+\./,'');
+   if(key==='FN')fn=v;else if(key==='N')n=v.split(';').filter(Boolean).reverse().join(' ');else if(key==='ORG')org=v.replace(/;/g,' ').trim();
+   else if(key==='TEL'&&v)tels.push(v);else if(key==='NOTE')note=v;else if(key==='ADR')adr=v.split(';').filter(Boolean).join('، ')}
+  const name=(fn||n||org||'').trim();if(name||tels.length)out.push({name:name||tels[0],phones:tels,note,addr:adr,org})}
+ return out}
+function rowsToContacts(rows){if(!rows.length)return [];const H=rows[0].map(h=>String(h||'').trim());
+ const find=re=>H.findIndex(h=>re.test(h));
+ let iName=find(/^(name|display name|full name|الاسم|اسم)$/i),iFirst=find(/first name|given|الاسم الأول/i),iLast=find(/last name|family|اسم العائلة/i),iOrg=find(/organi[sz]ation|company|شركة/i);
+ let iPh=H.map((h,i)=>/phone|mobile|tel|موبايل|تليفون|هاتف|رقم/i.test(h)&&!/type|label|نوع/i.test(h)?i:-1).filter(i=>i>=0);
+ let iNote=find(/^notes?$|ملاحظ/i),iAddr=find(/address.*(formatted|street)|^address|عنوان/i);
+ let body=rows.slice(1);
+ if(iName<0&&iFirst<0&&!iPh.length){iName=0;iPh=[1];body=rows}     // ملف من غير عناوين: الاسم ثم الرقم
+ return body.map(r=>{const nm=iName>=0?r[iName]:[r[iFirst],r[iLast]].filter(Boolean).join(' ');
+  const phones=iPh.flatMap(i=>String(r[i]??'').split(/\s*:::\s*|[,;\/]/)).map(x=>x.trim()).filter(x=>digits(x).length>=7);
+  return {name:String(nm||(iOrg>=0?r[iOrg]:'')||'').trim(),phones,note:iNote>=0?String(r[iNote]||''):'',addr:iAddr>=0?String(r[iAddr]||''):''}}).filter(c=>c.name||c.phones.length)}
+async function readFile(f){const nm=f.name.toLowerCase();
+ if(nm.endsWith('.vcf')||nm.endsWith('.vcard')||f.type==='text/vcard'||f.type==='text/x-vcard')return parseVcf(await f.text());
+ if(nm.endsWith('.csv')||nm.endsWith('.txt')){const t=await f.text();if(/BEGIN:VCARD/i.test(t))return parseVcf(t);
+  if(window.XLSX){const wb=XLSX.read(t,{type:'string'});return rowsToContacts(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false}))}
+  return rowsToContacts(t.split(/\r?\n/).map(l=>l.split(',')))}
+ if(!window.XLSX)throw new Error('مكتبة الإكسيل لسه بتحمل — جرّب تاني بعد ثواني');
+ const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});return rowsToContacts(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false}))}
+
+/* ---------- القايمة ---------- */
+function existsTail(t){return t&&db.contacts.some(c=>tail(c.phone)===t)}
+function addToList(found){const L=load(),seen=new Set(L.map(x=>x.t).filter(Boolean));let add=0,dup=0,same=0;
+ for(const c of found){const ph=normPhone(c.phones[0]||''),t=ph.slice(-9);
+  if(t&&seen.has(t)){same++;continue}if(t)seen.add(t);
+  const ex=existsTail(t);if(ex)dup++;
+  L.push({k:Math.random().toString(36).slice(2,10),name:c.name.replace(/\s+/g,' ').trim(),phone:ph,phone2:normPhone(c.phones[1]||''),addr:c.addr||'',note:[c.org,c.note].filter(Boolean).join(' — '),t,dup:!!ex});add++}
+ store(L);return {add,dup,same}}
+
+let tab='new',q='',sel=new Set();
+function openList(){if(!isAdmin())return toast('الاستيراد للمدير بس');const L=load();
+ if(!L.length)return openPick();
+ L.forEach(x=>x.dup=existsTail(x.t));
+ const S=L.filter(x=>tab==='dup'?x.dup:!x.dup).filter(x=>!q||VN(x.name+' '+x.phone).includes(VN(q)));
+ const nNew=L.filter(x=>!x.dup).length,nDup=L.length-nNew;
+ openModal(`<div class="modal-head"><h2>📇 أسامي التليفون (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div id="ciBox"><div class="ci-tabs"><button class="${tab==='new'?'primary':'secondary'}" onclick="mkCI.tab('new')">جديدة (${nNew})</button><button class="${tab==='dup'?'primary':'secondary'}" onclick="mkCI.tab('dup')">متسجلة قبل كده (${nDup})</button>
+  <input id="ciQ" placeholder="🔎 دوّر بالاسم أو الرقم" value="${esc(q)}" style="flex:1;min-width:150px;padding:9px;border:1px solid var(--border);border-radius:10px"></div>
+ ${S.length?S.slice(0,300).map(x=>`<div class="ci-row"><input type="checkbox" data-k="${x.k}" ${sel.has(x.k)?'checked':''}><div onclick="mkCI.edit('${x.k}')" style="cursor:pointer"><b>${esc(x.name||'(من غير اسم)')} ${x.dup?'<span class="ci-dup">متسجل</span>':''}</b><small dir="ltr">${esc(x.phone||'—')}${x.phone2?' • '+esc(x.phone2):''}</small></div>
+  <div class="ci-acts"><button class="secondary" onclick="mkCI.edit('${x.k}')">✏️ فتح</button><button class="secondary" onclick="mkCI.quick('${x.k}','عميل')">👤 عميل</button><button class="secondary" onclick="mkCI.quick('${x.k}','مورد')">🏭 مورد</button><button class="secondary" onclick="mkCI.drop(['${x.k}'])" title="شيله من القايمة">✕</button></div></div>`).join('')
+  +(S.length>300?`<p style="color:var(--muted);text-align:center">بيظهر أول 300 — استخدم البحث</p>`:''):'<div class="empty">مفيش أسامي هنا</div>'}
+ <div class="ci-bulk"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ciAll"> الكل</label><span id="ciN" style="color:var(--muted)"></span>
+  <button class="primary" onclick="mkCI.bulk('عميل')">حفظ المحددين عملاء</button><button class="secondary" onclick="mkCI.bulk('مورد')">موردين</button><button class="secondary" onclick="mkCI.drop([...mkCI.sel()])">شيل المحددين</button>
+  <button class="secondary" style="margin-inline-start:auto" onclick="mkCI.pick()">➕ ملف تاني</button></div></div>`);
+ const upd=()=>{const n=document.getElementById('ciN');if(n)n.textContent=sel.size?sel.size+' محدد':''};upd();
+ document.querySelectorAll('#ciBox input[data-k]').forEach(c=>c.onchange=()=>{c.checked?sel.add(c.dataset.k):sel.delete(c.dataset.k);upd()});
+ document.getElementById('ciAll').onchange=e=>{S.slice(0,300).forEach(x=>e.target.checked?sel.add(x.k):sel.delete(x.k));document.querySelectorAll('#ciBox input[data-k]').forEach(c=>c.checked=e.target.checked);upd()};
+ const qi=document.getElementById('ciQ');qi.oninput=()=>{q=qi.value;clearTimeout(qi._t);qi._t=setTimeout(()=>{openList();const n=document.getElementById('ciQ');if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length)}},350)}}
+
+function openPick(){openModal(`<div class="modal-head"><h2>📇 استيراد الأسامي من التليفون</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div id="ciBox"><div class="ci-help"><b>📱 آيفون:</b> افتح «جهات الاتصال» ← «القوائم» فوق ← اضغط ضغطة طويلة على «كل جهات الاتصال» ← «تصدير» ← احفظه في «الملفات».<br>
+ <b>🤖 أندرويد:</b> افتح «جهات الاتصال» ← الإعدادات ← «تصدير» ← هيعمل ملف <span dir="ltr">.vcf</span>.<br>
+ <b>💻 جوجل:</b> contacts.google.com ← تصدير ← <span dir="ltr">Google CSV</span>. وكمان ينفع شيت إكسيل فيه عمود للاسم وعمود للرقم.</div>
+ <label class="primary" style="display:flex;justify-content:center;align-items:center;gap:8px;padding:16px;border-radius:14px;cursor:pointer;font-weight:800;background:var(--blue);color:#fff">📂 اختار الملف<input type="file" id="ciFile" accept=".vcf,.vcard,text/vcard,text/x-vcard,.csv,.txt,.xlsx,.xls" style="display:none"></label>
+ <p id="ciMsg" style="color:var(--muted);text-align:center;margin:10px 0 0"></p></div>`);
+ document.getElementById('ciFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const m=document.getElementById('ciMsg');m.textContent='⏳ بنقرا الملف...';
+  try{const found=await readFile(f);if(!found.length){m.textContent='مالقيناش أسامي في الملف ده';return}
+   const r=addToList(found);toast('✔ اتضاف '+r.add+' اسم للقايمة'+(r.dup?' — منهم '+r.dup+' متسجلين قبل كده':''));tab='new';q='';sel.clear();openList()}
+  catch(x){m.textContent='⚠️ '+(x.message||x)}}}
+
+function edit(k){const L=load(),x=L.find(y=>y.k===k);if(!x)return openList();
+ openModal(`<div class="modal-head"><h2>✏️ ${esc(x.name||'اسم جديد')}</h2><button class="close" onclick="mkCI.list()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <form id="ciF"><div class="form">
+  <div class="field"><label>الاسم</label><input id="ciName" required value="${esc(x.name)}"></div>
+  <div class="field"><label>النوع</label><select id="ciType"><option>عميل</option><option>مورد</option></select></div>
+  <div class="field"><label>الموبايل</label><input id="ciPhone" dir="ltr" inputmode="tel" value="${esc(x.phone)}"></div>
+  <div class="field"><label>رقم تاني</label><input id="ciPhone2" dir="ltr" inputmode="tel" value="${esc(x.phone2||'')}"></div>
+  <div class="field full"><label>العنوان</label><input id="ciAddr" value="${esc(x.addr||'')}"></div>
+  <div class="field full"><label>ملاحظات</label><input id="ciNote" value="${esc(x.note||'')}"></div>
+ </div>${x.dup?'<p style="color:#8a4b00;margin:8px 0 0">⚠️ الرقم ده متسجل عندك قبل كده</p>':''}
+ <div class="modal-foot"><button class="primary">💾 حفظ</button><button type="button" class="secondary" onclick="mkCI.drop(['${k}'])">شيله</button><button type="button" class="secondary" onclick="mkCI.list()">رجوع</button></div></form>`);
+ document.getElementById('ciF').onsubmit=ev=>{ev.preventDefault();
+  const c={name:val('ciName'),type:val('ciType'),phone:normPhone(val('ciPhone')),addr:val('ciAddr'),note:[val('ciNote'),val('ciPhone2')?'رقم تاني: '+val('ciPhone2'):''].filter(Boolean).join(' — ')};
+  if(commit([{k,...c}]))openList()}}
+
+function commit(items){let ok=0,skip=[];
+ for(const it of items){const nm=String(it.name||'').trim();if(!nm){skip.push('(من غير اسم)');continue}
+  if(findContact(nm,it.type)){skip.push(nm);continue}
+  db.contacts.unshift({id:crypto.randomUUID(),name:nm,type:it.type,phone:it.phone||'',addr:it.addr||'',note:it.note||'',balance:0});ok++}
+ const done=new Set(items.filter(i=>!skip.includes(String(i.name||'').trim()||'(من غير اسم)')).map(i=>i.k));
+ store(load().filter(x=>!done.has(x.k)));done.forEach(k=>sel.delete(k));
+ if(ok){save();toast('✔ اتحفظ '+ok+' في '+(items[0].type==='مورد'?'الموردين':'العملاء'))}
+ if(skip.length)toast('متسجلين بنفس الاسم قبل كده: '+skip.slice(0,3).join('، ')+(skip.length>3?'…':''));
+ return ok>0||!skip.length}
+function quick(k,type){const x=load().find(y=>y.k===k);if(!x)return;
+ commit([{k,name:x.name,type,phone:x.phone,addr:x.addr,note:[x.note,x.phone2?'رقم تاني: '+x.phone2:''].filter(Boolean).join(' — ')}]);openList()}
+function bulk(type){const L=load().filter(x=>sel.has(x.k));if(!L.length)return toast('حدد أسامي الأول');
+ commit(L.map(x=>({k:x.k,name:x.name,type,phone:x.phone,addr:x.addr,note:[x.note,x.phone2?'رقم تاني: '+x.phone2:''].filter(Boolean).join(' — ')})));openList()}
+function drop(ks){if(!ks.length)return toast('حدد أسامي الأول');const s=new Set(ks);store(load().filter(x=>!s.has(x.k)));ks.forEach(k=>sel.delete(k));
+ load().length?openList():closeModal()}
+
+window.mkCI={list:openList,pick:openPick,edit,quick,bulk,drop,tab:t=>{tab=t;sel.clear();openList()},sel:()=>sel};
+
+/* زرار في صفحة العملاء والموردين */
+function btn(){const row=document.querySelector('#contacts .title-row');if(!row)return;let b=document.getElementById('ciBtn');
+ if(!b){row.insertAdjacentHTML('beforeend','<button class="secondary" id="ciBtn" onclick="mkCI.list()" style="white-space:nowrap">📇 من التليفون <span id="ciCnt" class="badge red" style="display:none"></span></button>');b=document.getElementById('ciBtn')}
+ b.style.display=isAdmin()?'':'none';const n=load().length,c=document.getElementById('ciCnt');if(c){c.textContent=n;c.style.display=n?'':'none'}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
+setTimeout(btn,1500);setInterval(btn,4000);
+})();
+</script>
+
 <style>
 aside nav button.promo .pv{margin-right:auto;background:linear-gradient(135deg,#d5a928,#f0c75e);color:#3b2a00;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;white-space:nowrap;flex:none}
 #promo{position:fixed;inset:0;z-index:99990;background:#0f2a2ecc;display:none;align-items:flex-end;justify-content:center;padding:0}
@@ -3774,6 +3930,7 @@ function decorate(){const w=$('mkWho');if(!w)return;const bx=w.querySelector('.m
  if(bx.querySelector('#wEmail')&&!bx.querySelector('#suTabs')&&!bx.dataset.su){
   (h2||bx.firstChild).insertAdjacentHTML('afterend','<div id="suTabs"><button type="button" class="on">تسجيل دخول</button><button type="button" data-up="1">حساب جديد</button></div>');
   bx.querySelector('#suTabs [data-up]').onclick=signupForm}
+ if(!bx.querySelector('.legal'))bx.insertAdjacentHTML('beforeend','<p class="legal" style="margin:14px 0 0;text-align:center;font-size:12.5px"><a href="about.html" style="color:#718087">عن '+escH(APP)+'</a> · <a href="privacy.html" style="color:#718087">الخصوصية</a> · <a href="terms.html" style="color:#718087">الشروط</a></p>');
  /* شاشة «موظف / مدير» (جهاز اتدخل منه قبل كده): زرار حساب جديد كمان */
  if(bx.querySelector('[onclick*="mkT_role"]')&&!bx.querySelector('#suNew')){
   bx.insertAdjacentHTML('beforeend','<button type="button" id="suNew" class="alt" style="margin-top:10px">✨ حساب جديد (محل جديد)</button>');
