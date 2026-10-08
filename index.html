@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-14';
+const APP_VER='2026-10-08-15';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3934,7 +3934,7 @@ const MS=()=>window.mkSite;
 const A=()=>window.mkT&&window.mkT.api;
 const uid7=()=>Math.random().toString(36).slice(2,9);
 let E=null;   // الحالة الحالية للشاشة
-function nextCode(){let m=0;(db.products||[]).forEach(p=>{let n=parseInt(String(p.code||''),10);if(String(n)===String(p.code)&&n>m)m=n});return String(m+1)}
+function nextCode(){let m=0,hp=false;(db.products||[]).forEach(p=>{let c=String(p.code||'').trim(),mp=c.match(/^P(\d+)$/i);if(mp){hp=true;m=Math.max(m,parseInt(mp[1],10));return}let n=parseInt(c,10);if(String(n)===c&&n>m)m=n});return hp?'P'+String(m+1).padStart(4,'0'):String(m+1)}
 function splitDesc(d){let txt=[],sp=[];String(d||'').split('\n').forEach(l=>{let s=l.trim();if(!s)return;let m=s.match(/^([^:：]{1,30})[:：]\s*(.+)$/);if(m)sp.push([m[1].trim(),m[2].trim()]);else txt.push(s)});return {txt:txt.join('\n'),sp}}
 const joinDesc=()=>[E.txt.trim()].concat(E.sp.filter(x=>x[0].trim()&&x[1].trim()).map(x=>x[0].trim()+': '+x[1].trim())).filter(Boolean).join('\n');
 const ytId=u=>{let m=String(u||'').match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:''};
