@@ -1599,7 +1599,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-10-2';
+const APP_VER='2026-10-10-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3707,6 +3707,18 @@ window.mkRenderIso=renderIso;
 })();
 </script>
 
+<script>
+/* Mika Omnix — 🚪 تسجيل الخروج واضح في آخر القايمة الجانبية */
+(function(){
+function add(){const as=document.querySelector('aside');if(!as||document.getElementById('outBtn'))return;
+ const navs=as.querySelectorAll('nav'),last=navs[navs.length-1];
+ (last||as).insertAdjacentHTML('beforeend','<button type="button" class="own" id="outBtn" style="color:#c0392b"><span style="width:1.15em;text-align:center">🚪</span> <span>تسجيل الخروج</span></button>');
+ document.getElementById('outBtn').onclick=e=>{e.stopPropagation();document.body.classList.remove('navon');
+  if(window.mkT_out)return mkT_out();if(typeof whoOut==='function')return whoOut();if(window.cloudLogout)return cloudLogout()}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();setTimeout(add,1500);
+})();
+</script>
+
 <style>
 aside nav button.promo .pv{margin-right:auto;background:linear-gradient(135deg,#d5a928,#f0c75e);color:#3b2a00;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;white-space:nowrap;flex:none}
 #promo{position:fixed;inset:0;z-index:99990;background:#0f2a2ecc;display:none;align-items:flex-end;justify-content:center;padding:0}
@@ -3761,7 +3773,11 @@ function decorate(){const w=$('mkWho');if(!w)return;const bx=w.querySelector('.m
  const h2=bx.querySelector('h2');if(h2&&!h2.classList.contains('apph')&&!/👷|👔|🔑/.test(h2.textContent)){h2.classList.add('apph');h2.innerHTML=LOGO+escH(APP)}
  if(bx.querySelector('#wEmail')&&!bx.querySelector('#suTabs')&&!bx.dataset.su){
   (h2||bx.firstChild).insertAdjacentHTML('afterend','<div id="suTabs"><button type="button" class="on">تسجيل دخول</button><button type="button" data-up="1">حساب جديد</button></div>');
-  bx.querySelector('#suTabs [data-up]').onclick=signupForm}}
+  bx.querySelector('#suTabs [data-up]').onclick=signupForm}
+ /* شاشة «موظف / مدير» (جهاز اتدخل منه قبل كده): زرار حساب جديد كمان */
+ if(bx.querySelector('[onclick*="mkT_role"]')&&!bx.querySelector('#suNew')){
+  bx.insertAdjacentHTML('beforeend','<button type="button" id="suNew" class="alt" style="margin-top:10px">✨ حساب جديد (محل جديد)</button>');
+  bx.querySelector('#suNew').onclick=signupForm}}
 function signupForm(){const w=$('mkWho');w.innerHTML=`<div class="mkbox" data-su="1"><h2 class="apph">${LOGO}${escH(APP)}</h2>
  <div id="suTabs"><button type="button" id="suIn">تسجيل دخول</button><button type="button" class="on">حساب جديد</button></div>
  <p style="margin:0 0 10px">جرّب السيستم كامل مجاناً 7 أيام — من غير أي بيانات دفع</p>
