@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-08-10';
+const APP_VER='2026-10-08-11';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1727,7 +1727,7 @@ async function refreshContacts(ids){ids=[...new Set(ids.filter(Boolean))];if(!id
  rows.forEach(r=>{let n=mapContact(r),old=db.contacts.find(c=>c.id===r.id);if(old)Object.assign(old,n);else db.contacts.unshift(n);T.snap.contacts.set(r.id,clone(n))});
  ids.forEach(id=>{if(!got.has(id)){db.contacts=db.contacts.filter(c=>c.id!==id);T.snap.contacts.delete(id)}})}
 async function refreshTable(t){if(T.user.role!=='admin'&&t!=='mk_quotes'&&t!=='mk_settings')return;
- let rows=await fetchAll(t,t==='mk_settings'?'key':'created_at');
+ let rows=await fetchAll(t,t==='mk_settings'?'key':t==='mk_voided'?'at':'created_at');
  if(t==='mk_payments'){let p=rows.slice().reverse();db.payments=p.filter(x=>x.dir==='in').map(mapPay);db.supPays=p.filter(x=>x.dir==='out').map(mapPay)}
  if(t==='mk_returns')db.returns=rows.slice().reverse().map(mapRet);
  if(t==='mk_expenses'){db.expenses=rows.slice().reverse().map(mapExp);T.snap.expenses=new Map(db.expenses.map(x=>[x.id,clone(x)]))}
