@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-4';
+const APP_VER='2026-10-09-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4643,7 +4643,7 @@ setTimeout(()=>{try{prodBtns()}catch(e){}},1500);
 const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;   // الواتساب لمحل ميكانيزم بس
 const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
 const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TYPES=[['void','🗑️ فاتورة اتلغت'],['below','⚠️ بيع بأقل من سعر الشراء'],['disc','🏷️ خصم كبير على صنف'],['adjust','📦 تعديل رصيد صنف يدوي'],['short','💵 عجز أو زيادة في الدرج عند التقفيل'],['edit','✏️ فاتورة اتعدلت بعد ما اتسجلت'],['pay','💸 دفعة أو تحصيل اتمسح'],['gift','🎁 هدية اتصرفت لصنايعي']];
+const TYPES=[['void','🗑️ فاتورة اتلغت'],['below','⚠️ بيع بأقل من سعر الشراء'],['disc','🏷️ خصم كبير على صنف'],['adjust','📦 تعديل رصيد صنف يدوي'],['short','💵 عجز أو زيادة في الدرج عند التقفيل'],['edit','✏️ فاتورة اتعدلت بعد ما اتسجلت'],['pay','💸 دفعة أو تحصيل اتمسح'],['gift','🎁 هدية اتصرفت لصنايعي'],['staff','👷 حضور وانصراف الموظفين والتأخير']];
 const DEF={on:true,to:['201119199659'],disc:15,short:50,skip_admin:true,types:{}};
 let CFG=null;
 async function load(){try{const r=await SBc().from('mk_settings').select('value').eq('key','alerts').maybeSingle();CFG=Object.assign({},DEF,(r.data&&r.data.value)||{})}catch(e){CFG=Object.assign({},DEF)}CFG.types=CFG.types||{};return CFG}
@@ -4773,6 +4773,193 @@ function inject(){const r=document.querySelector('#products .title-row .btnrow')
  r.insertAdjacentHTML('afterbegin',`<button id="sxGiftsBtn" class="secondary" onclick="mkSX.gifts()">🎁 الهدايا</button>${adm()?'<button class="secondary" onclick="mkSX.old()">💰 بضاعة قديمة</button>':''}`)}
 if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='products')try{inject()}catch(e){}return r}}
 (function w(k){if(window.mkT_user)return inject();if(k<120)setTimeout(()=>w(k+1),1000)})(0);
+})();
+</script>
+
+<style>
+#staff .st-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+#staff .st-card{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:12px}
+#staff .st-card small{color:#7b8a90;display:block}#staff .st-card b{font-size:20px}
+#staff .st-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#staff .st-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:12px;background:#eef6f7;color:#087f8c;margin:2px}
+#staff .st-chip.late{background:#fff4e0;color:#a66a00}#staff .st-chip.abs{background:#fdecec;color:#b33}#staff .st-chip.out{background:#eef0f2;color:#5b676c}
+#stQR{position:fixed;inset:0;z-index:2147483000;background:#0b2e33;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:Cairo,Tahoma,sans-serif;text-align:center;padding:16px}
+#stQR .qr{background:#fff;padding:18px;border-radius:22px}#stQR h1{margin:0;font-size:30px}#stQR p{margin:0;color:#bfe3e6;font-size:17px}
+#stQR .bar{width:min(340px,80vw);height:6px;border-radius:9px;background:#ffffff22;overflow:hidden}#stQR .bar i{display:block;height:100%;background:#c9971f;width:100%;transition:width 1s linear}
+#stQR .now{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:900px}#stQR .now span{background:#ffffff1a;border-radius:99px;padding:4px 12px;font-size:15px}
+#stQR .x{position:absolute;top:14px;left:14px;background:#ffffff22;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-size:15px;cursor:pointer}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 👷 العمالة: ملف الموظف + الحضور بالـ QR + المرتبات والسلف
+   السيرفر: db/39-staff.sql
+   ===================================================================== */
+(function(){
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;
+const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M=n=>typeof money==='function'?money(n):(Math.round(+n||0)).toLocaleString('ar-EG')+' ج.م';
+const num=v=>{const n=parseFloat(String(v??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[,٬\s]/g,''));return isNaN(n)?0:n};
+const $=id=>document.getElementById(id);
+const err=e=>(window.mkT&&mkT.api&&mkT.api.errMsg)?mkT.api.errMsg(e):(e&&e.message)||String(e);
+const head=t=>`<div class="modal-head"><h2>${t}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>`;
+const cairo=d=>new Date(new Date(d).toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+const todayISO=()=>{const d=cairo(Date.now());return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const hm=t=>t?new Date(t).toLocaleTimeString('ar-EG',{timeZone:'Africa/Cairo',hour:'numeric',minute:'2-digit'}):'—';
+const DAYS=['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'];
+const PT={month:'شهري',week:'أسبوعي',day:'يومية'};
+const KIND={advance:'💸 سلفة',bonus:'🎉 مكافأة',deduct:'➖ خصم',pay:'💵 قبض'};
+let ST=[],ATT=[],MV=[],CFG={absent:true,late:0},MON=todayISO().slice(0,7);
+
+/* ---------- البيانات ---------- */
+async function load(){const a=MON+'-01',e=new Date(+MON.slice(0,4),+MON.slice(5,7),0),b=MON+'-'+String(e.getDate()).padStart(2,'0');
+ const [s,t,m,c]=await Promise.all([SBc().from('mk_staff').select('*').order('created_at'),SBc().from('mk_attendance').select('*').gte('day',a).lte('day',b).order('day'),SBc().from('mk_staff_moves').select('*').order('created_at',{ascending:false}).limit(2000),adm()?SBc().from('mk_settings').select('value').eq('key','staff').maybeSingle():Promise.resolve({data:null})]);
+ if(s.error)throw s.error;ST=s.data||[];ATT=t.data||[];MV=m.data||[];CFG=Object.assign({absent:true,late:0},(c.data&&c.data.value)||{})}
+
+/* حساب الشهر لموظف */
+function calc(s){const y=+MON.slice(0,4),mo=+MON.slice(5,7)-1,last=new Date(y,mo+1,0).getDate(),tIso=todayISO();
+ const A=ATT.filter(r=>r.staff_id===s.id),have=new Set(A.map(r=>r.day));let work=0,abs=[];
+ for(let d=1;d<=last;d++){const iso=MON+'-'+String(d).padStart(2,'0');if(iso>tIso||iso<String(s.start_date||'')||!s.active&&!have.has(iso))continue;const wd=new Date(y,mo,d).getDay();if(wd===+s.off_day)continue;work++;if(!have.has(iso)&&iso<tIso)abs.push(iso)}
+ const pres=A.filter(r=>r.in_at).length,late=A.reduce((x,r)=>x+(+r.late_min||0),0),hrs=A.reduce((x,r)=>x+(r.in_at&&r.out_at?(new Date(r.out_at)-new Date(r.in_at))/36e5:0),0);
+ const sal=+s.salary||0;let base,daily;
+ if(s.pay_type==='day'){daily=sal;base=pres*sal}else if(s.pay_type==='week'){daily=sal/6;base=pres*daily}else{daily=sal/30;base=sal-(CFG.absent?abs.length*daily:0)}
+ const lateCut=(+CFG.late||0)*late,mv=k=>MV.filter(x=>x.staff_id===s.id&&x.kind===k&&x.month===MON).reduce((a,x)=>a+(+x.amount||0),0);
+ const adv=mv('advance'),bon=mv('bonus'),ded=mv('deduct'),paid=mv('pay'),due=Math.round(base+bon-ded-adv-lateCut);
+ return {work,pres,abs,late,hrs,base:Math.round(base),daily,lateCut:Math.round(lateCut),adv,bon,ded,paid,due,rest:due-paid}}
+
+/* ---------- الصفحة ---------- */
+function ensurePage(){if($('staff'))return;const ref=$('products');if(!ref)return;const sec=document.createElement(ref.tagName.toLowerCase());sec.id='staff';sec.className='page';ref.parentNode.appendChild(sec);
+ const nav=document.querySelector('aside .nav');if(nav&&!nav.querySelector('[data-page="staff"]'))nav.insertAdjacentHTML('beforeend',`<button data-page="staff" onclick="showPage('staff')"><span style="font-size:17px;width:20px;text-align:center">👷</span> <span>${adm()?'العمالة والمرتبات':'حضوري'}</span></button>`)}
+async function render(){const box=$('staff');if(!box)return;box.innerHTML='<div style="padding:30px;text-align:center;color:#8a979c">⏳ بجيب بيانات العمالة…</div>';
+ try{await load()}catch(e){box.innerHTML=`<div class="empty">ماقدرتش أجيب البيانات: ${H(err(e))}</div>`;return}
+ return adm()?drawAdmin(box):drawMe(box)}
+function monthSel(){const o=[];const d=cairo(Date.now());for(let i=0;i<12;i++){const x=new Date(d.getFullYear(),d.getMonth()-i,1),v=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');o.push(`<option value="${v}" ${v===MON?'selected':''}>${x.toLocaleDateString('ar-EG',{month:'long',year:'numeric'})}</option>`)}return `<select onchange="mkST.month(this.value)" style="width:auto">${o.join('')}</select>`}
+function drawAdmin(box){const tIso=todayISO(),act=ST.filter(s=>s.active),T=ATT.filter(r=>r.day===tIso),inNow=T.filter(r=>r.in_at&&!r.out_at),lateT=T.filter(r=>(+r.late_min||0)>10);
+ const wd=cairo(Date.now()).getDay(),absT=MON===tIso.slice(0,7)?act.filter(s=>+s.off_day!==wd&&!T.some(r=>r.staff_id===s.id)):[];
+ const C=act.map(s=>[s,calc(s)]),tot=C.reduce((a,[,c])=>a+Math.max(0,c.rest),0),advT=C.reduce((a,[,c])=>a+c.adv,0);
+ const nm=id=>(ST.find(s=>s.id===id)||{}).name||'';
+ box.innerHTML=`<div class="title-row"><div class="title"><h1>👷 العمالة والمرتبات</h1><p>ملف كل موظف، حضوره وانصرافه بالـ QR، وتأخيره وسلفه ومرتبه</p></div>
+ <div class="btnrow"><button class="secondary" onclick="mkST.manual()">✍️ تسجيل يدوي</button><button class="secondary" onclick="mkST.settings()">⚙️ قواعد المرتب</button><button class="secondary" onclick="mkST.qr()">📺 شاشة الحضور QR</button><button class="primary" onclick="mkST.edit()">➕ موظف جديد</button></div></div>
+ <div class="st-row">${monthSel()}</div>
+ <div class="st-cards"><div class="st-card"><small>موجودين في المحل دلوقتي</small><b>${inNow.length}</b><div>${inNow.map(r=>`<span class="st-chip">${H(nm(r.staff_id))} من ${hm(r.in_at)}</span>`).join('')}</div></div>
+ <div class="st-card"><small>متأخرين النهارده</small><b>${lateT.length}</b><div>${lateT.map(r=>`<span class="st-chip late">${H(nm(r.staff_id))} ${r.late_min} د</span>`).join('')}</div></div>
+ <div class="st-card"><small>لسه ماجوش النهارده</small><b>${absT.length}</b><div>${absT.map(s=>`<span class="st-chip abs">${H(s.name)}</span>`).join('')}</div></div>
+ <div class="st-card"><small>باقي مرتبات الشهر</small><b>${M(tot)}</b><small>سلف الشهر ${M(advT)}</small></div></div>
+ ${act.length?`<div class="table-wrap"><table><thead><tr><th>الموظف</th><th>الحضور</th><th>التأخير</th><th>المستحق</th><th>سلف / خصم</th><th>اتقبض</th><th>الباقي</th><th></th></tr></thead><tbody>${C.map(([s,c])=>`<tr>
+  <td><b>${H(s.name)}</b><br><small style="color:#7b8a90">${H(s.job||'')} · ${PT[s.pay_type]} ${M(s.salary)}</small></td>
+  <td>${c.pres} من ${c.work} يوم${c.abs.length?`<br><small style="color:#b33">غاب ${c.abs.length}</small>`:''}<br><small style="color:#7b8a90">${Math.round(c.hrs)} ساعة</small></td>
+  <td>${c.late?c.late+' دقيقة':'—'}</td><td>${M(c.base+c.bon)}${c.bon?`<br><small style="color:#087f8c">+ مكافأة ${M(c.bon)}</small>`:''}</td>
+  <td>${c.adv?'سلف '+M(c.adv):''}${c.ded?'<br>خصم '+M(c.ded):''}${c.lateCut?'<br>تأخير '+M(c.lateCut):''}${!c.adv&&!c.ded&&!c.lateCut?'—':''}</td>
+  <td>${M(c.paid)}</td><td><b style="color:${c.rest>0?'#087f8c':'#7b8a90'}">${M(c.rest)}</b></td>
+  <td><div class="st-row"><button class="secondary" onclick="mkST.card('${s.id}')">📋 الملف</button><button class="secondary" onclick="mkST.move('${s.id}','advance')">💸 سلفة</button><button class="secondary" onclick="mkST.move('${s.id}','bonus')">🎉 / ➖</button><button class="primary" onclick="mkST.pay('${s.id}')">💵 قبّض</button></div></td></tr>`).join('')}</tbody></table></div>`
+ :'<div class="empty" style="margin-top:12px">لسه مفيش موظفين. دوس «➕ موظف جديد» وضيف كل اللي شغالين معاك — ولو ليه حساب على السيستم اربطه بيه عشان يسجل حضوره بالـ QR من موبايله.</div>'}
+ ${ST.some(s=>!s.active)?`<details style="margin-top:12px"><summary style="cursor:pointer">موظفين سابوا الشغل (${ST.filter(s=>!s.active).length})</summary>${ST.filter(s=>!s.active).map(s=>`<div style="margin:6px 0">${H(s.name)} <button class="secondary" onclick="mkST.edit('${s.id}')">فتح</button></div>`).join('')}</details>`:''}`}
+function drawMe(box){const me=ST[0];if(!me){box.innerHTML='<div class="title-row"><div class="title"><h1>👷 حضوري</h1></div></div><div class="empty">حسابك لسه مش مربوط بملف موظف — كلم صاحب المحل.</div>';return}
+ const c=calc(me),A=ATT.filter(r=>r.staff_id===me.id);
+ box.innerHTML=`<div class="title-row"><div class="title"><h1>👷 حضوري — ${H(me.name)}</h1><p>عشان تسجل حضورك أو انصرافك: صوّر الـ QR اللي على شاشة المحل بكاميرا موبايلك</p></div></div>
+ <div class="st-row">${monthSel()}</div>
+ <div class="st-cards"><div class="st-card"><small>أيام الحضور</small><b>${c.pres}</b><small>من ${c.work} يوم شغل</small></div><div class="st-card"><small>التأخير</small><b>${c.late}</b><small>دقيقة الشهر ده</small></div><div class="st-card"><small>الساعات</small><b>${Math.round(c.hrs)}</b></div></div>
+ ${A.length?`<div class="table-wrap"><table><thead><tr><th>اليوم</th><th>حضور</th><th>انصراف</th><th>تأخير</th></tr></thead><tbody>${A.slice().reverse().map(r=>`<tr><td>${DAYS[new Date(r.day+'T12:00').getDay()]} ${H(r.day)}</td><td>${hm(r.in_at)}</td><td>${hm(r.out_at)}</td><td>${r.late_min?r.late_min+' د':'—'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">مفيش حضور مسجل الشهر ده.</div>'}`}
+
+/* ---------- ملف الموظف ---------- */
+async function edit(id){const s=ST.find(x=>x.id===id)||{pay_type:'month',shift_start:'10:00',shift_end:'22:00',off_day:5,active:true,start_date:todayISO()};
+ let mem=[];try{const r=await SBc().from('mk_members').select('user_id,name,role,active');mem=(r.data||[]).filter(m=>m.active!==false)}catch(e){}
+ openModal(`${head(id?'📋 ملف '+H(s.name):'➕ موظف جديد')}<div class="form">
+ <div class="field"><label>الاسم</label><input id="sfN" value="${H(s.name||'')}"></div><div class="field"><label>الشغلانة</label><input id="sfJ" value="${H(s.job||'')}" placeholder="بياع / مخزن / توصيل / مساعد"></div>
+ <div class="field"><label>الموبايل</label><input id="sfP" inputmode="tel" dir="ltr" value="${H(s.phone||'')}"></div><div class="field"><label>الرقم القومي (اختياري)</label><input id="sfI" inputmode="numeric" dir="ltr" value="${H(s.nid||'')}"></div>
+ <div class="field full"><label>العنوان (اختياري)</label><input id="sfA" value="${H(s.address||'')}"></div>
+ <div class="field"><label>نظام القبض</label><select id="sfT">${Object.entries(PT).map(([k,v])=>`<option value="${k}" ${s.pay_type===k?'selected':''}>${v}</option>`).join('')}</select></div><div class="field"><label>المرتب / اليومية</label><input id="sfS" type="number" min="0" value="${+s.salary||''}"></div>
+ <div class="field"><label>ميعاد الحضور</label><input id="sfF" type="time" value="${String(s.shift_start||'10:00').slice(0,5)}"></div><div class="field"><label>ميعاد الانصراف</label><input id="sfE" type="time" value="${String(s.shift_end||'22:00').slice(0,5)}"></div>
+ <div class="field"><label>يوم الأجازة</label><select id="sfO"><option value="-1">مفيش</option>${DAYS.map((d,i)=>`<option value="${i}" ${+s.off_day===i?'selected':''}>${d}</option>`).join('')}</select></div><div class="field"><label>بدأ الشغل من</label><input id="sfD" type="date" value="${H(s.start_date||todayISO())}"></div>
+ <div class="field full"><label>حسابه على السيستم (عشان يسجل حضوره بالـ QR من موبايله)</label><select id="sfU"><option value="">مالوش حساب — هسجله يدوي</option>${mem.map(m=>`<option value="${m.user_id}" ${s.user_id===m.user_id?'selected':''}>${H(m.name)} (${m.role==='admin'?'مدير':'موظف'})</option>`).join('')}</select></div>
+ <div class="field full"><label>ملاحظات</label><input id="sfX" value="${H(s.note||'')}"></div>
+ ${id?`<div class="field full"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="sfAct" style="width:auto" ${s.active?'checked':''}> لسه شغال معانا</label></div>`:''}</div>
+ <div class="modal-foot"><button class="primary" id="sfGo">حفظ</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('sfGo').onclick=async()=>{const v={name:$('sfN').value.trim(),job:$('sfJ').value.trim(),phone:$('sfP').value.trim(),nid:$('sfI').value.trim(),address:$('sfA').value.trim(),pay_type:$('sfT').value,salary:num($('sfS').value),shift_start:$('sfF').value||'10:00',shift_end:$('sfE').value||'22:00',off_day:+$('sfO').value,start_date:$('sfD').value||todayISO(),user_id:$('sfU').value||null,note:$('sfX').value.trim(),active:id?$('sfAct').checked:true};
+  if(!v.name)return toast('اكتب الاسم');if(v.user_id&&ST.some(x=>x.user_id===v.user_id&&x.id!==id))return toast('الحساب ده مربوط بموظف تاني');
+  const r=id?await SBc().from('mk_staff').update(v).eq('id',id):await SBc().from('mk_staff').insert([v]);if(r.error)return toast('ماتحفظش: '+err(r.error));closeModal();toast('✔ اتحفظ');render()}}
+
+/* كارت الموظف: الحضور يوم بيوم + الحركات */
+function card(id){const s=ST.find(x=>x.id===id);if(!s)return;const c=calc(s),A=ATT.filter(r=>r.staff_id===id),V=MV.filter(x=>x.staff_id===id).slice(0,40);
+ openModal(`${head('📋 '+H(s.name))}<div class="st-row" style="gap:6px;margin-bottom:8px"><button class="secondary" onclick="mkST.edit('${id}')">✏️ تعديل الملف</button><button class="secondary" onclick="mkST.manual('${id}')">✍️ تسجيل حضور يدوي</button>${s.phone?`<a class="secondary" style="text-decoration:none;padding:8px 12px;border-radius:10px;border:1px solid var(--border,#ddd)" href="https://wa.me/2${H(String(s.phone).replace(/\D/g,'').replace(/^2/,''))}" target="_blank">💬 واتساب</a>`:''}</div>
+ <div class="pc-kv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;font-size:14px">
+  <div><small>الشغلانة</small><br>${H(s.job||'—')}</div><div><small>الموبايل</small><br>${H(s.phone||'—')}</div><div><small>المواعيد</small><br>${String(s.shift_start).slice(0,5)} — ${String(s.shift_end).slice(0,5)}</div><div><small>الأجازة</small><br>${+s.off_day>=0?DAYS[+s.off_day]:'مفيش'}</div>
+  <div><small>المرتب</small><br>${PT[s.pay_type]} ${M(s.salary)}</div><div><small>من</small><br>${H(s.start_date)}</div><div><small>حساب السيستم</small><br>${s.user_id?'✅ مربوط (بيسجل بالـ QR)':'— يدوي'}</div></div>
+ <h3 style="font-size:15px;margin:12px 0 6px">حساب ${H(MON)}</h3>
+ <div style="font-size:14px;line-height:2">${s.pay_type==='month'?`المرتب ${M(s.salary)}${c.abs.length&&CFG.absent?` − غياب ${c.abs.length} يوم (${M(c.abs.length*c.daily)})`:''}`:`${c.pres} يوم × ${M(c.daily)}`} = <b>${M(c.base)}</b>
+ ${c.bon?`<br>+ مكافآت ${M(c.bon)}`:''}${c.ded?`<br>− خصومات ${M(c.ded)}`:''}${c.lateCut?`<br>− تأخير ${c.late} دقيقة (${M(c.lateCut)})`:''}${c.adv?`<br>− سلف ${M(c.adv)}`:''}
+ <br>المستحق <b>${M(c.due)}</b> · اتقبض ${M(c.paid)} · <b style="color:#087f8c">الباقي ${M(c.rest)}</b>${c.abs.length?`<br><small style="color:#b33">أيام الغياب: ${c.abs.map(d=>d.slice(8)).join('، ')}</small>`:''}</div>
+ <h3 style="font-size:15px;margin:12px 0 6px">الحضور</h3>${A.length?`<div class="table-wrap"><table><thead><tr><th>اليوم</th><th>حضور</th><th>انصراف</th><th>تأخير</th><th></th></tr></thead><tbody>${A.slice().reverse().map(r=>`<tr><td>${DAYS[new Date(r.day+'T12:00').getDay()]} ${H(r.day.slice(5))}</td><td>${hm(r.in_at)}</td><td>${hm(r.out_at)}</td><td>${r.late_min?r.late_min+' د':'—'}</td><td>${r.method==='manual'?'✍️':'📱'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">مفيش حضور الشهر ده.</div>'}
+ <h3 style="font-size:15px;margin:12px 0 6px">آخر الحركات</h3>${V.length?V.map(x=>`<div style="font-size:13px;border-bottom:1px solid var(--border,#eee);padding:5px 0">${KIND[x.kind]} ${M(x.amount)} — ${H(x.month)} ${x.note?'· '+H(x.note):''}<span style="color:#7b8a90"> · ${new Date(x.created_at).toLocaleDateString('ar-EG')}</span></div>`).join(''):'<div class="empty">مفيش حركات.</div>'}
+ <div class="modal-foot"><button class="secondary" onclick="closeModal()">إغلاق</button></div>`)}
+
+/* سلفة / مكافأة / خصم */
+function move(id,kind){const s=ST.find(x=>x.id===id);if(!s)return;
+ openModal(`${head((kind==='advance'?'💸 سلفة لـ ':'🎉 مكافأة أو ➖ خصم — ')+H(s.name))}<div class="form">
+ ${kind==='advance'?'':`<div class="field"><label>النوع</label><select id="smK"><option value="bonus">🎉 مكافأة</option><option value="deduct">➖ خصم</option></select></div>`}
+ <div class="field"><label>المبلغ</label><input id="smA" type="number" min="0"></div><div class="field full"><label>السبب</label><input id="smN" placeholder="${kind==='advance'?'مثلاً: ظرف عائلي':'مثلاً: شغل زيادة يوم الجمعة'}"></div></div>
+ ${kind==='advance'?'<p style="font-size:12px;color:#7b8a90;margin:4px 0">السلفة بتتخصم من مرتب الشهر ده، وبتتسجل في المصروفات عشان الدرج يتقفل صح.</p>':''}
+ <div class="modal-foot"><button class="primary" id="smGo">حفظ</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('smGo').onclick=async()=>{const a=num($('smA').value),note=$('smN').value.trim();if(a<=0)return toast('اكتب المبلغ');$('smGo').disabled=true;
+  const r=kind==='advance'?await SBc().rpc('mk_staff_advance',{p_staff:id,p_amount:a,p_note:note}):await SBc().from('mk_staff_moves').insert([{staff_id:id,kind:$('smK').value,amount:a,month:MON,note,by_name:(window.mkT_user&&mkT_user.name)||''}]);
+  if(r.error){$('smGo').disabled=false;return toast('ماتسجلش: '+err(r.error))}closeModal();toast('✔ اتسجل');reloadExp();render()}}
+function pay(id){const s=ST.find(x=>x.id===id);if(!s)return;const c=calc(s);
+ openModal(`${head('💵 قبض مرتب '+H(s.name)+' — '+H(MON))}<p style="font-size:14px;line-height:1.9;margin:0 0 8px">المستحق ${M(c.due)} · اتقبض قبل كده ${M(c.paid)} · <b>الباقي ${M(c.rest)}</b></p>
+ <div class="form"><div class="field"><label>المبلغ اللي هيقبضه</label><input id="spA" type="number" min="0" value="${Math.max(0,c.rest)}"></div><div class="field"><label>ملاحظة</label><input id="spN"></div></div>
+ <p style="font-size:12px;color:#7b8a90;margin:4px 0">بيتسجل في المصروفات (بند مرتبات) أوتوماتيك.</p>
+ <div class="modal-foot"><button class="primary" id="spGo">💵 قبّض</button>${s.phone?`<button class="secondary" id="spWa">💬 ابعتله كشف الحساب</button>`:''}<button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('spGo').onclick=async()=>{const a=num($('spA').value);if(a<=0)return toast('اكتب المبلغ');$('spGo').disabled=true;const r=await SBc().rpc('mk_staff_pay',{p_staff:id,p_amount:a,p_month:MON,p_note:$('spN').value.trim()});
+  if(r.error){$('spGo').disabled=false;return toast('ماتسجلش: '+err(r.error))}closeModal();toast('✔ اتقبض واتسجل في المصروفات');reloadExp();render()};
+ const w=$('spWa');if(w)w.onclick=()=>{const t=`كشف حساب ${s.name} — شهر ${MON}\nأيام الحضور: ${c.pres} من ${c.work}${c.abs.length?`\nغياب: ${c.abs.length} يوم`:''}${c.late?`\nتأخير: ${c.late} دقيقة`:''}\nالمرتب المستحق: ${Math.round(c.base)} ج${c.bon?`\nمكافآت: ${c.bon} ج`:''}${c.ded?`\nخصومات: ${c.ded} ج`:''}${c.adv?`\nسلف: ${c.adv} ج`:''}${c.lateCut?`\nخصم تأخير: ${c.lateCut} ج`:''}\nالصافي: ${c.due} ج\nاتقبض: ${c.paid} ج\nالباقي: ${c.rest} ج`;
+  window.open('https://wa.me/2'+String(s.phone).replace(/\D/g,'').replace(/^2/,'')+'?text='+encodeURIComponent(t),'_blank')}}
+function reloadExp(){try{if(window.mkT&&mkT.api&&mkT.api.reload)mkT.api.reload()}catch(e){}}
+
+/* تسجيل يدوي */
+function manual(id){const act=ST.filter(s=>s.active);if(!act.length)return toast('ضيف موظف الأول');
+ openModal(`${head('✍️ تسجيل حضور يدوي')}<div class="form"><div class="field"><label>الموظف</label><select id="mnS">${act.map(s=>`<option value="${s.id}" ${s.id===id?'selected':''}>${H(s.name)}</option>`).join('')}</select></div>
+ <div class="field"><label>اليوم</label><input id="mnD" type="date" value="${todayISO()}"></div><div class="field"><label>حضر الساعة</label><input id="mnI" type="time"></div><div class="field"><label>مشي الساعة (اختياري)</label><input id="mnO" type="time"></div>
+ <div class="field full"><label>ملاحظة</label><input id="mnN" placeholder="مثلاً: نسي موبايله"></div></div>
+ <div class="modal-foot"><button class="primary" id="mnGo">حفظ</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('mnGo').onclick=async()=>{const sid=$('mnS').value,d=$('mnD').value,i=$('mnI').value,o=$('mnO').value,s=ST.find(x=>x.id===sid);if(!d||!i)return toast('اكتب اليوم وساعة الحضور');
+  const ts=t=>new Date(d+'T'+t+':00+03:00').toISOString(),[sh,sm]=String(s.shift_start).split(':').map(Number),[ih,im]=i.split(':').map(Number),late=Math.max(0,(ih*60+im)-(sh*60+sm));
+  const r=await SBc().from('mk_attendance').upsert([{staff_id:sid,day:d,in_at:ts(i),out_at:o?ts(o):null,late_min:late>600?0:late,method:'manual',note:$('mnN').value.trim(),by_name:(window.mkT_user&&mkT_user.name)||''}],{onConflict:'staff_id,day'});
+  if(r.error)return toast('ماتسجلش: '+err(r.error));closeModal();toast('✔ اتسجل');render()}}
+
+/* قواعد المرتب */
+function settings(){openModal(`${head('⚙️ قواعد المرتب')}<div class="form">
+ <div class="field full"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="scA" style="width:auto" ${CFG.absent?'checked':''}> اخصم أيام الغياب من المرتب الشهري (المرتب ÷ ٣٠ لكل يوم)</label></div>
+ <div class="field"><label>خصم التأخير — جنيه لكل دقيقة (0 = من غير خصم)</label><input id="scL" type="number" min="0" step="0.25" value="${+CFG.late||0}"></div></div>
+ <p style="font-size:12px;color:#7b8a90">التأخير بيتحسب من ميعاد الحضور في ملف كل موظف. تنبيه التأخير بيوصلك واتساب لو اتأخر أكتر من ١٠ دقايق.</p>
+ <div class="modal-foot"><button class="primary" id="scGo">حفظ</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('scGo').onclick=async()=>{const v={absent:$('scA').checked,late:Math.max(0,num($('scL').value))};const r=await SBc().from('mk_settings').upsert([{key:'staff',value:v,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error)return toast('ماتحفظش: '+err(r.error));CFG=v;closeModal();toast('✔ اتحفظ');render()}}
+
+/* ---------- 📺 شاشة الحضور ---------- */
+let qrT=null,qrP=null,qrLib=null;
+const lib=()=>qrLib||(qrLib=new Promise((ok,no)=>{if(window.QRCode)return ok();const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=ok;s.onerror=()=>{qrLib=null;no(new Error('مكتبة الـ QR ماحملتش — اتأكد من النت'))};document.head.appendChild(s)}));
+async function qr(){try{await lib()}catch(e){return toast(e.message)}closeQR();
+ const d=document.createElement('div');d.id='stQR';d.innerHTML=`<button class="x" onclick="mkST.closeQR()">✕ قفل</button><h1>👷 تسجيل الحضور والانصراف</h1><p>افتح كاميرا موبايلك وصوّر الكود — أول مرة في اليوم حضور، والتانية انصراف</p><div class="qr" id="stQRc"></div><div class="bar"><i id="stQRb"></i></div><p id="stQRt" style="font-size:22px;color:#fff"></p><div class="now" id="stQRn"></div>`;document.body.appendChild(d);
+ try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}
+ const base=location.origin+location.pathname;let left=0;
+ const tick=async()=>{if(!$('stQR'))return;if(left<=0){try{const r=await SBc().rpc('mk_punch_code');if(r.error)throw r.error;const c=$('stQRc');c.innerHTML='';new QRCode(c,{text:base+'#punch='+r.data,width:Math.min(340,innerWidth*.7),height:Math.min(340,innerWidth*.7),correctLevel:QRCode.CorrectLevel.M});left=30}catch(e){$('stQRt').textContent='⚠️ '+err(e);left=5}}
+  left--;$('stQRb').style.width=(left/30*100)+'%';$('stQRt').textContent=new Date().toLocaleTimeString('ar-EG',{timeZone:'Africa/Cairo',hour:'numeric',minute:'2-digit'})};
+ const people=async()=>{if(!$('stQR'))return;try{const t=todayISO(),[s,a]=await Promise.all([SBc().from('mk_staff').select('id,name').eq('active',true),SBc().from('mk_attendance').select('*').eq('day',t)]);const nm={};(s.data||[]).forEach(x=>nm[x.id]=x.name);
+  $('stQRn').innerHTML=(a.data||[]).map(r=>`<span>${r.out_at?'👋':'✅'} ${H(nm[r.staff_id]||'')} ${hm(r.in_at)}${r.out_at?' — '+hm(r.out_at):''}</span>`).join('')||'<span>لسه محدش سجّل النهارده</span>'}catch(e){}};
+ tick();people();qrT=setInterval(tick,1000);qrP=setInterval(people,8000)}
+function closeQR(){clearInterval(qrT);clearInterval(qrP);const d=$('stQR');if(d)d.remove();try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}if($('staff')&&$('staff').classList.contains('active'))render()}
+
+/* ---------- الموظف صوّر الكود ---------- */
+function grab(){const m=location.hash.match(/punch=([0-9a-f]{6,40})/i);if(m){try{sessionStorage.setItem('mkPunch',JSON.stringify({c:m[1],t:Date.now()}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}}
+async function punch(){let p=null;try{p=JSON.parse(sessionStorage.getItem('mkPunch')||'null')}catch(e){}if(!p)return;try{sessionStorage.removeItem('mkPunch')}catch(e){}
+ if(Date.now()-p.t>3*60e3)return toast('الكود قديم — صوّر الكود اللي على الشاشة تاني');
+ const r=await SBc().rpc('mk_punch',{p_code:p.c});
+ const big=(ic,t,s)=>openModal(`<div style="text-align:center;padding:26px 10px"><div style="font-size:64px">${ic}</div><h2 style="margin:8px 0;font-size:24px">${t}</h2><p style="color:#6b7c82;font-size:16px;margin:0">${s}</p><button class="primary" style="margin-top:18px" onclick="closeModal()">تمام</button></div>`);
+ if(r.error)return big('⚠️','ماتسجلش',H(err(r.error)));const d=r.data||{};
+ if(d.kind==='in')big('✅','أهلاً يا '+H(d.name)+' — اتسجل حضورك',hm(d.at)+(d.late>10?' · متأخر '+d.late+' دقيقة ⏰':' · في ميعادك 👌'));else big('👋','مع السلامة يا '+H(d.name),'اتسجل انصرافك '+hm(d.at))}
+
+window.mkST={render,edit,card,move,pay,manual,settings,qr,closeQR,month:v=>{MON=v;render()}};
+grab();window.addEventListener('hashchange',()=>{grab();if(window.mkT_user)punch()});
+if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='staff')try{render()}catch(e){}return r}}
+(function w(k){if(window.mkSB&&window.mkT_user){ensurePage();punch();return}if(k<300)setTimeout(()=>w(k+1),1000)})(0);
 })();
 </script>
 
