@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-2';
+const APP_VER='2026-10-09-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4625,6 +4625,44 @@ function prodBtns(){const s=document.getElementById('productSearch');if(!s||docu
 if(typeof renderProducts==='function'){const _rp=renderProducts;renderProducts=function(){const r=_rp.apply(this,arguments);try{prodBtns()}catch(e){}return r}}
 if(typeof openTransaction==='function'){const _ot=openTransaction;openTransaction=function(){const r=_ot.apply(this,arguments);try{const s=document.getElementById('txSearch');if(s&&!document.getElementById('vsTxBtn')){s.insertAdjacentHTML('afterend',`<button type="button" id="vsTxBtn" class="primary vsbtn" title="صوّر القطعة يطلعلك الصنف" onclick="mkVS.pick('tx')" style="height:44px">📷</button>`);const p=s.parentElement;if(p&&getComputedStyle(p).display!=='flex'){p.style.display='flex';p.style.gap='6px';s.style.flex='1';s.style.minWidth='0'}}}catch(e){}return r}}
 setTimeout(()=>{try{prodBtns()}catch(e){}},1500);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   ميكانيزم — 🔔 تنبيهات فورية ضد السرقة والغلط (الإعدادات + السجل)
+   المراقبة نفسها على السيرفر (db/37-alerts.sql)، والشاشة دي بتظبط مين يستلم وإيه اللي يتبعت
+   ===================================================================== */
+(function(){
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;   // الواتساب لمحل ميكانيزم بس
+const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TYPES=[['void','🗑️ فاتورة اتلغت'],['below','⚠️ بيع بأقل من سعر الشراء'],['disc','🏷️ خصم كبير على صنف'],['adjust','📦 تعديل رصيد صنف يدوي'],['short','💵 عجز أو زيادة في الدرج عند التقفيل'],['edit','✏️ فاتورة اتعدلت بعد ما اتسجلت'],['pay','💸 دفعة أو تحصيل اتمسح']];
+const DEF={on:true,to:['201119199659'],disc:15,short:50,skip_admin:true,types:{}};
+let CFG=null;
+async function load(){try{const r=await SBc().from('mk_settings').select('value').eq('key','alerts').maybeSingle();CFG=Object.assign({},DEF,(r.data&&r.data.value)||{})}catch(e){CFG=Object.assign({},DEF)}CFG.types=CFG.types||{};return CFG}
+const fmt=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('20')?'0'+p.slice(2):p};
+const norm=p=>{let d=String(p||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('0'))d='2'+d;return d};
+async function open(){if(!adm())return toast('الإعدادات دي للمدير بس');const c=await load();let log=[];try{const r=await SBc().from('wa_out').select('created_at,body,status,to_phone').eq('by_name','🔔 تنبيه تلقائي').order('created_at',{ascending:false}).limit(30);log=r.data||[]}catch(e){}
+ openModal(`<div class="modal-head"><h2>🔔 تنبيهات فورية ضد السرقة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin:0 0 8px;color:#6b7c82;font-size:13px;line-height:1.8">السيرفر بيراقب العمليات الحساسة، وأول ما تحصل بيوصلك تنبيه على الواتساب من رقم المحل — حتى لو الموظف شغال من موبايله. محدش يقدر يوقفها غير من هنا.</p>
+ <label style="display:flex;align-items:center;gap:8px;font-weight:700"><input type="checkbox" id="alOn" style="width:auto" ${c.on!==false?'checked':''}> التنبيهات شغالة</label>
+ <div class="form" style="margin-top:8px"><div class="field full"><label>الأرقام اللي يوصلها التنبيه (رقم في كل سطر)</label><textarea id="alTo" rows="2" dir="ltr" style="text-align:right">${H((c.to||[]).map(fmt).join('\n'))}</textarea></div>
+ <div class="field"><label>نسبة الخصم اللي تعتبر كبيرة %</label><input id="alDisc" type="number" min="1" max="90" value="${+c.disc||15}"></div><div class="field"><label>أقل عجز في الدرج يتبلّغ (جنيه)</label><input id="alShort" type="number" min="1" value="${+c.short||50}"></div>
+ <div class="field full"><label>ابعتلي على:</label>${TYPES.map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:14px;color:inherit"><input type="checkbox" class="alT" data-k="${k}" style="width:auto" ${c.types[k]!==false?'checked':''}> ${l}</label>`).join('')}</div>
+ <div class="field full"><label style="display:flex;align-items:center;gap:8px;color:inherit"><input type="checkbox" id="alSkip" style="width:auto" ${c.skip_admin!==false?'checked':''}> متبعتليش على الحاجات اللي بعملها أنا (المدير)</label></div></div>
+ <div class="modal-foot"><button class="primary" onclick="mkAL.save()">حفظ</button><button class="secondary" onclick="mkAL.test()">🧪 ابعت تنبيه تجربة</button><button class="secondary" onclick="closeModal()">إغلاق</button></div>
+ <h3 style="margin:16px 0 6px;font-size:15px">آخر التنبيهات</h3>${log.length?log.map(x=>`<div style="border:1px solid var(--border,#e3e8ea);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:13px;white-space:pre-line;line-height:1.7">${H(String(x.body).replace(/^🔔 تنبيه من السيستم\n/,''))}<div style="color:#7b8a90;font-size:12px">${x.status==='sent'?'✔ اتبعت':x.status==='failed'?'✘ ماتبعتش':'⏳ في الطريق'} لـ ${H(fmt(x.to_phone))}</div></div>`).join(''):'<div class="empty">لسه مفيش تنبيهات.</div>'}`)}
+async function save(){const to=[...new Set(document.getElementById('alTo').value.split(/[\n,،]+/).map(norm).filter(x=>x.length>=11))];if(!to.length)return toast('اكتب رقم واحد على الأقل');
+ const types={};document.querySelectorAll('.alT').forEach(b=>types[b.dataset.k]=b.checked);
+ const v={on:document.getElementById('alOn').checked,to,disc:Math.max(1,+document.getElementById('alDisc').value||15),short:Math.max(1,+document.getElementById('alShort').value||50),skip_admin:document.getElementById('alSkip').checked,types};
+ const r=await SBc().from('mk_settings').upsert([{key:'alerts',value:v,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error)return toast('ماتحفظش: '+r.error.message);CFG=v;toast('✔ اتحفظت إعدادات التنبيهات');closeModal()}
+async function test(){const c=CFG||await load();const to=(c.to&&c.to.length?c.to:DEF.to);const rows=to.map(t=>({to_phone:t,body:'🔔 تنبيه من السيستم\n🧪 ده تنبيه تجربة — التنبيهات الفورية شغالة ✅',by_name:'🔔 تنبيه تلقائي'}));const r=await SBc().from('wa_out').insert(rows);toast(r.error?'ماتبعتش: '+r.error.message:'✔ التنبيه في الطريق لـ '+to.length+' رقم')}
+window.mkAL={open,save,test};
+/* زرار في صفحة الإعدادات */
+function btn(){const p=document.querySelector('#settings .title-row');if(!p||document.getElementById('alBtn')||!adm())return;p.insertAdjacentHTML('beforeend','<button id="alBtn" class="primary" onclick="mkAL.open()">🔔 تنبيهات ضد السرقة</button>')}
+if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='settings')try{btn()}catch(e){}return r}}
+setTimeout(()=>{try{btn()}catch(e){}},2000);
 })();
 </script>
 
