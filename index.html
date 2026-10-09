@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-6';
+const APP_VER='2026-10-09-7';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4710,7 +4710,7 @@ function btns(p,own){return `<button class="secondary" onclick="mkSX.gift('${p.i
 
 /* ---------- 🎁 هدية ---------- */
 function gift(id){const p=db.products.find(x=>x.id===id);if(!p)return;
- const names=[...new Set((db.contacts||[]).filter(c=>c.type!=='supplier').map(c=>c.name))].slice(0,400);
+ const names=[...new Set((db.contacts||[]).filter(c=>c.type!=='مورد').map(c=>c.name))].slice(0,400);
  openModal(`${head('🎁 هدية من «'+H(p.name)+'»')}
  <p style="margin:0 0 8px;color:#6b7c82;font-size:13px">بتتخصم من المخزن وبتتسجل باسم اللي خدها، وتقدر تشوف كل صنايعي خد هدايا بكام وجابلك شغل بكام.</p>
  <div class="form"><div class="field"><label>الكمية (${H(p.unit||'قطعة')}) — الرصيد ${p.qty}</label><input id="sxQ" type="number" min="0" step="any" value="1"></div>
@@ -4975,6 +4975,124 @@ window.mkST={render,edit,card,move,pay,manual,settings,qr,closeQR,month:v=>{MON=
 grab();window.addEventListener('hashchange',()=>{grab();if(window.mkT_user)punch()});
 if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='staff')try{render()}catch(e){}return r}}
 (function w(k){if(window.mkSB&&window.mkT_user){ensurePage();punch();return}if(k<300)setTimeout(()=>w(k+1),1000)})(0);
+})();
+</script>
+
+<style>
+#biz .bz-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+#biz .bz-tabs button{border:1px solid var(--border,#dfe6e8);background:var(--card,#fff);border-radius:99px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;color:inherit}
+#biz .bz-tabs button.on{background:#087f8c;border-color:#087f8c;color:#fff}
+#biz .bz-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+#biz .bz-card{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:12px}#biz .bz-card small{display:block;color:#7b8a90}#biz .bz-card b{font-size:19px}
+#biz .bz-note{font-size:13px;color:#6b7c82;line-height:1.8;margin:0 0 10px}
+#biz .bz-tag{display:inline-block;border-radius:8px;padding:1px 8px;font-size:12px;font-weight:700}
+#biz .bz-A{background:#e3f4f5;color:#087f8c}#biz .bz-B{background:#fff4dc;color:#9a6a00}#biz .bz-C{background:#f1f1f1;color:#6b6b6b}
+#biz .bz-bar{height:8px;border-radius:9px;background:#eef2f3;overflow:hidden;min-width:60px}#biz .bz-bar i{display:block;height:100%;background:linear-gradient(90deg,#087f8c,#c9971f)}
+</style>
+<script>
+/* =====================================================================
+   ميكانيزم — 📈 تحليلات ذكية للمدير: الراكد، ABC، العملاء الغايبين، نقاط الصنايعية،
+   مقارنة أسعار الموردين، كتالوج من غير أسعار، سجل العمليات
+   كله من بيانات السيستم الموجودة (من غير SQL جديد)
+   ===================================================================== */
+(function(){
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;
+const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M=n=>typeof money==='function'?money(n):(Math.round(+n||0)).toLocaleString('ar-EG')+' ج.م';
+const N=n=>(Math.round((+n||0)*100)/100).toLocaleString('ar-EG');
+const $=id=>document.getElementById(id);
+const dayMs=864e5,isoAgo=d=>new Date(Date.now()-d*dayMs).toISOString().slice(0,10);
+const ph=p=>{p=String(p||'').replace(/\D/g,'');if(p.startsWith('20'))p=p.slice(1);if(p.startsWith('0'))p=p.slice(1);return p?'20'+p:''};
+let TAB='dead',DAYS=60;
+const pidOf=r=>r.pid||((db.products||[]).find(p=>p.name===r.product)||{}).id;
+const sales=()=>(db.sales||[]).filter(r=>!r.ship);
+
+/* ---------- الحسابات ---------- */
+function dead(){const last={},sold={},since=isoAgo(DAYS);sales().forEach(r=>{const id=pidOf(r);if(!id)return;const d=String(r.iso||'');if(!last[id]||d>last[id])last[id]=d;if(d>=since)sold[id]=(sold[id]||0)+(+r.qty||0)});
+ const rows=(db.products||[]).filter(p=>p.qty>0&&!sold[p.id]).map(p=>({p,last:last[p.id]||'',val:(+p.cost||+p.price*0.75||0)*p.qty})).sort((a,b)=>b.val-a.val);return rows}
+function abc(){const since=isoAgo(90),v={},q={};sales().forEach(r=>{if(String(r.iso||'')<since)return;const id=pidOf(r);if(!id)return;v[id]=(v[id]||0)+(+r.total||(+r.qty||0)*(+r.price||0));q[id]=(q[id]||0)+(+r.qty||0)});
+ const tot=Object.values(v).reduce((a,x)=>a+x,0);let acc=0;return Object.entries(v).sort((a,b)=>b[1]-a[1]).map(([id,val])=>{const prev=acc/tot;acc+=val;const p=(db.products||[]).find(x=>x.id===id)||{name:'(صنف اتمسح)',qty:0,min:0};const cls=prev<.8?'A':prev<.95?'B':'C';return {p,val,qty:q[id],share:val/tot,cls}})}
+function lapsed(){const by={};sales().forEach(r=>{const n=String(r.person||'').trim();if(!n||n==='يومية'||n==='نقدي')return;const d=String(r.iso||'');const o=by[n]=by[n]||{n,last:'',first:d,tot:0,cnt:new Set()};if(d>o.last)o.last=d;if(d<o.first)o.first=d;o.tot+=(+r.total||(+r.qty||0)*(+r.price||0));o.cnt.add(d)});
+ const lim=isoAgo(DAYS),con=(db.contacts||[]);return Object.values(by).filter(o=>o.last&&o.last<lim&&o.cnt.size>=2).map(o=>{const c=con.find(x=>x.name===o.n)||{};return Object.assign(o,{visits:o.cnt.size,phone:c.phone||'',days:Math.round((Date.now()-new Date(o.last))/dayMs)})}).sort((a,b)=>b.tot-a.tot)}
+async function getSet(k,d){try{const r=await SBc().from('mk_settings').select('value').eq('key',k).maybeSingle();return (r.data&&r.data.value)||d}catch(e){return d}}
+async function putSet(k,v){return SBc().from('mk_settings').upsert([{key:k,value:v,updated_at:new Date().toISOString()}],{onConflict:'key'})}
+let PTS=null;
+let PL=[];async function points(){const cfg=await getSet('points',{per:100,crafts:[],used:{}});PTS=cfg;const set=new Set(cfg.crafts||[]),by={};
+ sales().forEach(r=>{const n=String(r.person||'').trim();if(!set.has(n))return;by[n]=(by[n]||0)+(+r.total||(+r.qty||0)*(+r.price||0))});
+ return [...set].map(n=>{const earned=Math.floor((by[n]||0)/(+cfg.per||100)),used=+(cfg.used||{})[n]||0;return {n,spent:by[n]||0,earned,used,left:earned-used}}).sort((a,b)=>b.spent-a.spent).map((x,i,a)=>(PL=a,x))}
+function suppliers(){const by={};(db.purchases||[]).filter(r=>!r.ship&&+r.price>0).forEach(r=>{const id=pidOf(r);if(!id||!r.person)return;const o=by[id]=by[id]||{};const s=o[r.person];if(!s||String(r.iso||'')>s.iso)o[r.person]={price:+r.price,iso:String(r.iso||'')}});
+ return Object.entries(by).filter(([,o])=>Object.keys(o).length>1).map(([id,o])=>{const p=(db.products||[]).find(x=>x.id===id)||{name:'?'};const L=Object.entries(o).map(([s,v])=>({s,...v})).sort((a,b)=>a.price-b.price);return {p,L,save:L[L.length-1].price-L[0].price}}).sort((a,b)=>b.save-a.save)}
+
+/* ---------- الرسم ---------- */
+function ensurePage(){if($('biz')||!adm())return;const ref=$('products');if(!ref)return;const sec=document.createElement(ref.tagName.toLowerCase());sec.id='biz';sec.className='page';ref.parentNode.appendChild(sec);
+ const nav=document.querySelector('aside .nav');if(nav&&!nav.querySelector('[data-page="biz"]'))nav.insertAdjacentHTML('beforeend',`<button data-page="biz" onclick="showPage('biz')"><span style="font-size:17px;width:20px;text-align:center">📈</span> <span>تحليلات ذكية</span></button>`)}
+const TABS=[['dead','🧊 بضاعة راكدة'],['abc','🏆 الأصناف المهمة (ABC)'],['lapsed','😴 عملاء غايبين'],['points','⭐ نقاط الصنايعية'],['sup','⚖️ مقارنة الموردين'],['cat','📖 كتالوج'],['log','🕵️ سجل العمليات']];
+async function render(){const box=$('biz');if(!box)return;if(!adm()){box.innerHTML='<div class="empty">الصفحة دي للمدير بس.</div>';return}
+ box.innerHTML=`<div class="title-row"><div class="title"><h1>📈 تحليلات ذكية</h1><p>السيستم بيقرا كل اللي حصل في المحل ويقولك تعمل إيه</p></div></div><div class="bz-tabs">${TABS.map(([k,l])=>`<button class="${k===TAB?'on':''}" onclick="mkBZ.tab('${k}')">${l}</button>`).join('')}</div><div id="bzBody"><div style="padding:24px;text-align:center;color:#8a979c">⏳</div></div>`;
+ const b=$('bzBody');try{b.innerHTML=await VIEWS[TAB]()}catch(e){b.innerHTML='<div class="empty">حصلت مشكلة: '+H(e.message||e)+'</div>'}}
+const daysSel=(opts)=>`<select onchange="mkBZ.days(this.value)" style="width:auto">${opts.map(d=>`<option value="${d}" ${d==DAYS?'selected':''}>${d} يوم</option>`).join('')}</select>`;
+const VIEWS={
+ dead(){const R=dead(),val=R.reduce((a,x)=>a+x.val,0);
+  return `<p class="bz-note">أصناف عندك في المخزن ومااتباعش منها ولا حتة من ${daysSel([30,60,90,180])}. دي فلوس نايمة — اعمل عليها عرض، أو حطها في كومبو مع صنف ماشي، أو ابعتها للصنايعية.</p>
+  <div class="bz-cards"><div class="bz-card"><small>عدد الأصناف الراكدة</small><b>${R.length}</b></div><div class="bz-card"><small>فلوس نايمة في المخزن (بالتكلفة)</small><b>${M(val)}</b></div></div>
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الرصيد</th><th>قيمته</th><th>آخر بيع</th><th></th></tr></thead><tbody>${R.slice(0,200).map(x=>`<tr><td><b>${H(x.p.name)}</b><br><small style="color:#7b8a90">${H(x.p.code)}</small></td><td>${N(x.p.qty)} ${H(x.p.unit||'')}</td><td>${M(x.val)}</td><td>${x.last?H(x.last)+' <small style="color:#b33">('+Math.round((Date.now()-new Date(x.last))/dayMs)+' يوم)</small>':'<span style="color:#b33">عمره مااتباع</span>'}</td><td>${window.mkPC?`<button class="secondary" onclick="mkPC.view('${x.p.id}')">فتح</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">👌 مفيش بضاعة راكدة في المدة دي.</div>'}`},
+ abc(){const R=abc(),A=R.filter(x=>x.cls==='A'),low=A.filter(x=>x.p.qty<=Math.max(+x.p.min||0,1));
+  return `<p class="bz-note">آخر ٩٠ يوم: الأصناف <span class="bz-tag bz-A">A</span> هي اللي بتجيبلك ٨٠٪ من فلوسك — دول ممنوع يخلصوا أبداً. <span class="bz-tag bz-B">B</span> متوسطين، و<span class="bz-tag bz-C">C</span> قليلين.</p>
+  <div class="bz-cards"><div class="bz-card"><small>أصناف A</small><b>${A.length}</b><small>من ${R.length} صنف اتباع</small></div><div class="bz-card"><small>⚠️ أصناف A قربت تخلص</small><b style="color:${low.length?'#b33':'inherit'}">${low.length}</b></div></div>
+  ${low.length?`<div class="card" style="padding:10px;margin-bottom:10px;border:1px solid #f3c2c2"><b>اطلب دول دلوقتي:</b> ${low.map(x=>H(x.p.name)+' ('+N(x.p.qty)+')').join('، ')}</div>`:''}
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th></th><th>الصنف</th><th>اتباع</th><th>القيمة</th><th>النسبة</th><th>الرصيد</th></tr></thead><tbody>${R.slice(0,150).map(x=>`<tr><td><span class="bz-tag bz-${x.cls}">${x.cls}</span></td><td>${H(x.p.name)}</td><td>${N(x.qty)}</td><td>${M(x.val)}</td><td><div class="bz-bar"><i style="width:${Math.max(3,Math.round(x.share/R[0].share*100))}%"></i></div><small>${(x.share*100).toFixed(1)}%</small></td><td style="color:${x.p.qty<=Math.max(+x.p.min||0,0)?'#b33':'inherit'}">${N(x.p.qty)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">مفيش مبيعات آخر ٩٠ يوم.</div>'}`},
+ lapsed(){const R=lapsed(),tot=R.reduce((a,x)=>a+x.tot,0);
+  return `<p class="bz-note">عملاء كانوا بيشتروا منك أكتر من مرة وبقالهم أكتر من ${daysSel([30,45,60,90,120])} مجوش. ابعتلهم رسالة «وحشتنا» — أرخص من إنك تجيب عميل جديد.</p>
+  <div class="bz-cards"><div class="bz-card"><small>عملاء غايبين</small><b>${R.length}</b></div><div class="bz-card"><small>كانوا اشتروا بـ</small><b>${M(tot)}</b></div></div>
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th>العميل</th><th>اشترى بـ</th><th>مرات</th><th>آخر مرة</th><th></th></tr></thead><tbody>${R.slice(0,200).map(x=>`<tr><td><b>${H(x.n)}</b>${x.phone?'<br><small dir="ltr">'+H(x.phone)+'</small>':''}</td><td>${M(x.tot)}</td><td>${x.visits}</td><td>${H(x.last)}<br><small style="color:#b33">${x.days} يوم</small></td><td>${x.phone?`<a class="secondary" style="text-decoration:none;padding:6px 10px;border-radius:9px;border:1px solid var(--border,#ddd);white-space:nowrap" target="_blank" href="https://wa.me/${ph(x.phone)}?text=${encodeURIComponent('أهلاً يا '+x.n+' 👋\nوحشتنا في ميكانيزم! نزلت عندنا حاجات جديدة في الإكسسوارات والمفصلات والمقابض.\nلو محتاج أي حاجة لشغلك ابعتلنا هنا وإحنا نجهزهالك 🙏')}">💬 وحشتنا</a>`:'<small style="color:#7b8a90">مفيش رقم</small>'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">👌 مفيش عملاء غايبين.</div>'}`},
+ async points(){const R=await points(),cfg=PTS,names=[...new Set(sales().map(r=>String(r.person||'').trim()).filter(Boolean))].sort();
+  return `<p class="bz-note">كل صنايعي بياخد نقطة على كل ${H(cfg.per||100)} جنيه بيشتريها. لما يجمّع نقط يستبدلها بهدية (من «🎁 هدية» في شاشة المنتج) — ده بيخلّيه مايروحش لحد غيرك.</p>
+  <div class="form" style="margin-bottom:10px"><div class="field"><label>نقطة لكل كام جنيه؟</label><input id="bzPer" type="number" min="10" value="${+cfg.per||100}"></div>
+  <div class="field"><label>ضيف صنايعي للبرنامج</label><input id="bzAdd" list="bzNames" placeholder="اسمه زي ما هو في الفواتير"><datalist id="bzNames">${names.map(n=>`<option value="${H(n)}">`).join('')}</datalist></div>
+  <div class="field" style="align-self:end"><button class="primary" onclick="mkBZ.ptAdd()">➕ ضيف / حفظ</button></div></div>
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th>#</th><th>الصنايعي</th><th>اشترى بـ</th><th>النقط</th><th>استبدل</th><th>الرصيد</th><th></th></tr></thead><tbody>${R.map((x,i)=>`<tr><td>${i<3?['🥇','🥈','🥉'][i]:i+1}</td><td><b>${H(x.n)}</b></td><td>${M(x.spent)}</td><td>${x.earned}</td><td>${x.used}</td><td><b style="color:#087f8c">${x.left}</b></td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="secondary" onclick="mkBZ.ptUse(${i})">🎁 استبدال</button><button class="secondary" onclick="mkBZ.ptDel(${i})">✕</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لسه مفيش صنايعية في البرنامج — ضيف أسماءهم فوق.</div>'}`},
+ sup(){const R=suppliers();
+  return `<p class="bz-note">أصناف اشتريتها من أكتر من مورد — السيستم بيقارن آخر سعر من كل واحد ويقولك مين الأرخص وبتوفر كام في الحتة.</p>
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الأرخص</th><th>باقي الموردين</th><th>الفرق في الحتة</th></tr></thead><tbody>${R.slice(0,200).map(x=>`<tr><td><b>${H(x.p.name)}</b></td><td style="color:#087f8c"><b>${H(x.L[0].s)}</b><br>${M(x.L[0].price)} <small style="color:#7b8a90">${H(x.L[0].iso)}</small></td><td>${x.L.slice(1).map(l=>`${H(l.s)}: ${M(l.price)} <small style="color:#7b8a90">${H(l.iso)}</small>`).join('<br>')}</td><td><b style="color:#b33">${M(x.save)}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لسه مفيش صنف اشتريته من أكتر من مورد.</div>'}`},
+ cat(){const cats=[...new Set((db.products||[]).map(p=>p.cat||'بدون تصنيف'))].sort();
+  return `<p class="bz-note">كتالوج PDF بصور المنتجات والأكواد — <b>من غير أسعار</b> — تبعته للصنايعية والمهندسين على الواتساب أو تطبعه.</p>
+  <div class="form"><div class="field full"><label>التصنيفات</label><div style="display:flex;flex-wrap:wrap;gap:6px">${cats.map(c=>`<label style="display:flex;gap:5px;align-items:center;border:1px solid var(--border,#ddd);border-radius:99px;padding:4px 10px;color:inherit"><input type="checkbox" class="bzCat" value="${H(c)}" checked style="width:auto"> ${H(c)}</label>`).join('')}</div></div>
+  <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" checked style="width:auto"> اللي ليه صورة بس</label></div></div>
+  <div class="modal-foot" style="justify-content:flex-start"><button class="primary" onclick="mkBZ.catalog()">📖 اعمل الكتالوج</button></div>`},
+ async log(){let L=[],S=[];try{const [a,b]=await Promise.all([SBc().from('mk_log').select('*').order('at',{ascending:false}).limit(150),SBc().from('mk_stock_moves').select('*').order('at',{ascending:false}).limit(150)]);L=a.data||[];S=b.data||[]}catch(e){}
+  const rows=[...L.map(x=>({t:x.at,who:x.user_name,what:x.action+(x.ref?' — '+x.ref:'')})),...S.map(x=>({t:x.at,who:x.by_name,what:`📦 ${x.product_name}: ${N(x.qty_before)} ← ${N(x.qty_after)} (${x.diff>0?'+':''}${N(x.diff)})${x.note?' · '+x.note:''}`}))].sort((a,b)=>String(b.t).localeCompare(String(a.t))).slice(0,200);
+  return `<p class="bz-note">مين عمل إيه وإمتى — تعديلات الأرصدة، الجرد، الهدايا، الدرجة التانية، وكل العمليات اللي السيرفر سجلها.</p>
+  ${rows.length?rows.map(r=>`<div style="border-bottom:1px solid var(--border,#eee);padding:7px 0;font-size:13px;line-height:1.7"><b>${H(r.who||'—')}</b> · ${H(r.what)}<br><small style="color:#7b8a90">${new Date(r.t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})}</small></div>`).join(''):'<div class="empty">مفيش سجل.</div>'}`}};
+
+/* ---------- أفعال ---------- */
+async function ptAdd(){const cfg=PTS||await getSet('points',{per:100,crafts:[],used:{}}),n=$('bzAdd').value.trim();cfg.per=Math.max(10,+$('bzPer').value||100);cfg.crafts=cfg.crafts||[];if(n&&!cfg.crafts.includes(n))cfg.crafts.push(n);const r=await putSet('points',cfg);toast(r.error?'ماتحفظش':'✔ اتحفظ');render()}
+async function ptDel(i){const n=(PL[i]||{}).n;if(!n)return;const cfg=PTS;cfg.crafts=(cfg.crafts||[]).filter(x=>x!==n);await putSet('points',cfg);render()}
+async function ptUse(i){const n=(PL[i]||{}).n;const R=await points(),x=R.find(r=>r.n===n);if(!x)return;
+ openModal(`<div class="modal-head"><h2>🎁 استبدال نقط ${H(n)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><p>رصيده <b>${x.left}</b> نقطة.</p><div class="form"><div class="field"><label>كام نقطة هيستبدل؟</label><input id="bzU" type="number" min="1" max="${Math.max(0,x.left)}" value="${Math.max(0,x.left)}"></div></div>
+ <p style="font-size:12px;color:#7b8a90">بعد كده افتح المنتج اللي هياخده ودوس «🎁 هدية» عشان يتخصم من المخزن.</p><div class="modal-foot"><button class="primary" id="bzUgo">استبدل</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+ $('bzUgo').onclick=async()=>{const u=Math.round(+$('bzU').value||0);if(u<=0||u>x.left)return toast('الرقم مش مظبوط');PTS.used=PTS.used||{};PTS.used[n]=(+PTS.used[n]||0)+u;const r=await putSet('points',PTS);if(r.error)return toast('ماتحفظش');closeModal();toast('✔ اتخصم '+u+' نقطة');render()}}
+function catalog(){const cats=new Set([...document.querySelectorAll('.bzCat:checked')].map(b=>b.value)),stock=$('bzStock').checked,needImg=$('bzImg').checked;
+ const S=window.mkSite&&mkSite.get&&mkSite.get(),site=(S&&S.data&&S.data.products)||[];const imgOf=p=>{const s=site.find(x=>String(x.code||'')===String(p.code||''));return s&&((s.imgs&&s.imgs[0])||s.img)||''};
+ const P=(db.products||[]).filter(p=>cats.has(p.cat||'بدون تصنيف')&&(!stock||p.qty>0)).map(p=>({p,img:imgOf(p)})).filter(x=>!needImg||x.img);if(!P.length)return toast('مفيش أصناف بالشروط دي'+(needImg&&!site.length?' — افتح «محتوى الموقع» مرة الأول عشان الصور تتحمل':''));
+ const by={};P.forEach(x=>{const c=x.p.cat||'بدون تصنيف';(by[c]=by[c]||[]).push(x)});const shop=(db.settings&&db.settings.companyName)||'ميكانيزم';
+ const html=`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كتالوج ${H(shop)}</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>
+ *{box-sizing:border-box}body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#14262b}@page{size:A4;margin:12mm}
+ .cover{height:250mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#087f8c,#0b4e57);color:#fff;border-radius:18px;page-break-after:always;text-align:center}
+ .cover h1{font-size:54px;margin:0;font-weight:900}.cover p{font-size:20px;opacity:.9;margin:8px 0}.cover .g{width:90px;height:5px;background:#c9971f;border-radius:9px;margin:18px auto}
+ h2{font-size:22px;border-right:6px solid #c9971f;padding-right:10px;margin:18px 0 10px;page-break-after:avoid}
+ .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.it{border:1px solid #e1e8ea;border-radius:12px;padding:8px;text-align:center;page-break-inside:avoid}
+ .it img{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:8px}.it .ph{width:100%;aspect-ratio:1;background:#f2f6f7;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9aa;font-size:40px}
+ .it b{display:block;font-size:13px;margin-top:6px;line-height:1.5}.it span{display:inline-block;margin-top:4px;background:#087f8c;color:#fff;border-radius:6px;padding:0 8px;font-size:12px;font-weight:700;direction:ltr}
+ .foot{margin-top:20px;text-align:center;color:#087f8c;font-weight:700;font-size:15px}
+ </style></head><body><div class="cover"><h1>${H(shop)}</h1><div class="g"></div><p>كتالوج المنتجات</p><p style="font-size:16px">${P.length} منتج · ${new Date().toLocaleDateString('ar-EG',{month:'long',year:'numeric'})}</p><p style="font-size:16px;margin-top:30px">${H((db.settings&&db.settings.phone)||'')}<br>${H((db.settings&&db.settings.address)||'')}</p></div>
+ ${Object.keys(by).sort().map(c=>`<h2>${H(c)}</h2><div class="grid">${by[c].map(x=>`<div class="it">${x.img?`<img src="${H(x.img)}">`:'<div class="ph">📦</div>'}<b>${H(x.p.name)}</b><span>${H(x.p.code)}</span></div>`).join('')}</div>`).join('')}
+ <div class="foot">للأسعار والطلب: كلمنا واتساب واذكر كود المنتج 🙏</div></body></html>`;
+ if(typeof printHTML==='function')printHTML(html);else{const w=window.open('','_blank');w.document.write(html);w.document.close()}}
+
+window.mkBZ={render,tab:k=>{TAB=k;render()},days:d=>{DAYS=+d;render()},ptAdd,ptDel,ptUse,catalog};
+if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='biz')try{render()}catch(e){}return r}}
+(function w(k){if(window.mkSB&&window.mkT_user){ensurePage();return}if(k<300)setTimeout(()=>w(k+1),1000)})(0);
 })();
 </script>
 
