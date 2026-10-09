@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-8';
+const APP_VER='2026-10-09-9';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4640,7 +4640,7 @@ setTimeout(()=>{try{prodBtns()}catch(e){}},1500);
    المراقبة نفسها على السيرفر (db/37-alerts.sql)، والشاشة دي بتظبط مين يستلم وإيه اللي يتبعت
    ===================================================================== */
 (function(){
-const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;   // الواتساب لمحل ميكانيزم بس
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);   // في أبلكيشن المشتركين: تقرير اليوم بس (التنبيهات محتاجة واتساب المحل)
 const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
 const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TYPES=[['void','🗑️ فاتورة اتلغت'],['below','⚠️ بيع بأقل من سعر الشراء'],['disc','🏷️ خصم كبير على صنف'],['adjust','📦 تعديل رصيد صنف يدوي'],['short','💵 عجز أو زيادة في الدرج عند التقفيل'],['edit','✏️ فاتورة اتعدلت بعد ما اتسجلت'],['pay','💸 دفعة أو تحصيل اتمسح'],['gift','🎁 هدية اتصرفت لصنايعي'],['staff','👷 حضور وانصراف الموظفين والتأخير']];
@@ -4649,7 +4649,7 @@ let CFG=null;
 async function load(){try{const r=await SBc().from('mk_settings').select('value').eq('key','alerts').maybeSingle();CFG=Object.assign({},DEF,(r.data&&r.data.value)||{})}catch(e){CFG=Object.assign({},DEF)}CFG.types=CFG.types||{};return CFG}
 const fmt=p=>{p=String(p||'').replace(/\D/g,'');return p.startsWith('20')?'0'+p.slice(2):p};
 const norm=p=>{let d=String(p||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g,'');if(d.startsWith('00'))d=d.slice(2);if(d.startsWith('0'))d='2'+d;return d};
-async function open(){if(!adm())return toast('الإعدادات دي للمدير بس');const c=await load();let log=[];try{const r=await SBc().from('wa_out').select('created_at,body,status,to_phone').eq('by_name','🔔 تنبيه تلقائي').order('created_at',{ascending:false}).limit(30);log=r.data||[]}catch(e){}
+async function open(){if(APPV)return report();if(!adm())return toast('الإعدادات دي للمدير بس');const c=await load();let log=[];try{const r=await SBc().from('wa_out').select('created_at,body,status,to_phone').eq('by_name','🔔 تنبيه تلقائي').order('created_at',{ascending:false}).limit(30);log=r.data||[]}catch(e){}
  openModal(`<div class="modal-head"><h2>🔔 تنبيهات فورية ضد السرقة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <p style="margin:0 0 8px;color:#6b7c82;font-size:13px;line-height:1.8">السيرفر بيراقب العمليات الحساسة، وأول ما تحصل بيوصلك تنبيه على الواتساب من رقم المحل — حتى لو الموظف شغال من موبايله. محدش يقدر يوقفها غير من هنا.</p>
  <label style="display:flex;align-items:center;gap:8px;font-weight:700"><input type="checkbox" id="alOn" style="width:auto" ${c.on!==false?'checked':''}> التنبيهات شغالة</label>
@@ -4665,7 +4665,7 @@ async function save(){const to=[...new Set(document.getElementById('alTo').value
  const r=await SBc().from('mk_settings').upsert([{key:'alerts',value:v,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error)return toast('ماتحفظش: '+r.error.message);CFG=v;toast('✔ اتحفظت إعدادات التنبيهات');closeModal()}
 async function test(){const c=CFG||await load();const to=(c.to&&c.to.length?c.to:DEF.to);const rows=to.map(t=>({to_phone:t,body:'🔔 تنبيه من السيستم\n🧪 ده تنبيه تجربة — التنبيهات الفورية شغالة ✅',by_name:'🔔 تنبيه تلقائي'}));const r=await SBc().from('wa_out').insert(rows);toast(r.error?'ماتبعتش: '+r.error.message:'✔ التنبيه في الطريق لـ '+to.length+' رقم')}
 /* 📊 تقرير آخر اليوم على الواتساب */
-async function report(){if(!adm())return toast('دي للمدير بس');let v={on:true,time:'23:30'};try{const r=await SBc().from('mk_settings').select('value').eq('key','report').maybeSingle();if(r.data)v=Object.assign(v,r.data.value)}catch(e){}
+async function report(){if(!adm())return toast('دي للمدير بس');if(APPV)return reportApp();let v={on:true,time:'23:30'};try{const r=await SBc().from('mk_settings').select('value').eq('key','report').maybeSingle();if(r.data)v=Object.assign(v,r.data.value)}catch(e){}
  openModal(`<div class="modal-head"><h2>📊 تقرير آخر اليوم</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <p style="margin:0 0 8px;color:#6b7c82;font-size:13px;line-height:1.8">كل يوم في الميعاد ده بيوصلك على الواتساب ملخص اليوم: المبيعات ومقارنتها بالأسبوع اللي فات، الكاش والآجل، المكسب، المصروفات، صافي الدرج، الأكتر بيعاً، اللي خلص، الهدايا، الفواتير الملغية، وحضور الموظفين. بيوصلك أنت بس (على نفس أرقام التنبيهات) ومش بيبان في واتساب المحل.</p>
  <label style="display:flex;align-items:center;gap:8px;font-weight:700"><input type="checkbox" id="rpOn" style="width:auto" ${v.on!==false?'checked':''}> التقرير شغال</label>
@@ -4679,9 +4679,16 @@ async function saveRep(){let old={};try{const r=await SBc().from('mk_settings').
 async function getRep(){const r=await SBc().rpc('mk_report_preview',{p_day:null});if(r.error)throw r.error;return r.data}
 async function prevRep(){try{const t=await getRep(),p=document.getElementById('rpPrev');p.textContent=t;p.style.display='block'}catch(e){toast('ماقدرتش: '+e.message)}}
 async function sendRep(){try{const t=await getRep(),c=CFG||await load(),to=(c.to&&c.to.length?c.to:DEF.to);const r=await SBc().from('wa_out').insert(to.map(x=>({to_phone:x,body:t,by_name:'🔔 تنبيه تلقائي'})));toast(r.error?'ماتبعتش: '+r.error.message:'✔ التقرير في الطريق لموبايلك')}catch(e){toast('ماقدرتش: '+e.message)}}
-window.mkAL={open,save,test,report,saveRep,prevRep,sendRep};
+async function reportApp(){openModal(`<div class="modal-head"><h2>📊 تقرير اليوم</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="margin:0 0 8px;color:#6b7c82;font-size:13px">ملخص يومك: المبيعات ومقارنتها بالأسبوع اللي فات، الكاش والآجل، المكسب، المصروفات، صافي الدرج، الأكتر بيعاً، اللي خلص، والحضور.</p>
+ <div class="form"><div class="field"><label>اليوم</label><input id="rpD" type="date" value="${new Date(Date.now()+3*36e5).toISOString().slice(0,10)}"></div></div>
+ <div class="modal-foot"><button class="primary" onclick="mkAL.prevApp()">👁️ اعرض التقرير</button><button class="secondary" onclick="mkAL.waApp()">📲 ابعته لنفسي واتساب</button></div>
+ <pre id="rpPrev" style="white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.8;background:var(--soft,#f4f7f8);border-radius:12px;padding:10px;display:none"></pre>`);prevApp()}
+async function getRepD(){const d=(document.getElementById('rpD')||{}).value||null;const r=await SBc().rpc('mk_report_preview',{p_day:d});if(r.error)throw r.error;return r.data}
+async function prevApp(){try{const t=await getRepD(),p=document.getElementById('rpPrev');p.textContent=t;p.style.display='block'}catch(e){toast('ماقدرتش: '+e.message)}}
+async function waApp(){try{const t=await getRepD();let ph=String((db.settings&&(db.settings.ownerPhone||db.settings.phone))||'').replace(/\D/g,'');if(ph.startsWith('0'))ph='2'+ph;window.open('https://wa.me/'+(ph||'')+'?text='+encodeURIComponent(t),'_blank')}catch(e){toast('ماقدرتش: '+e.message)}}window.mkAL={open,save,test,report,saveRep,prevRep,sendRep,prevApp,waApp};
 /* زرار في صفحة الإعدادات */
-function btn(){const p=document.querySelector('#settings .title-row');if(!p||document.getElementById('alBtn')||!adm())return;p.insertAdjacentHTML('beforeend','<button id="alBtn" class="primary" onclick="mkAL.open()">🔔 تنبيهات ضد السرقة</button><button class="primary" onclick="mkAL.report()">📊 تقرير آخر اليوم</button>')}
+function btn(){const p=document.querySelector('#settings .title-row');if(!p||document.getElementById('alBtn')||!adm())return;if(APPV){p.insertAdjacentHTML('beforeend','<button id="alBtn" class="primary" onclick="mkAL.report()">📊 تقرير اليوم</button>');return}p.insertAdjacentHTML('beforeend','<button id="alBtn" class="primary" onclick="mkAL.open()">🔔 تنبيهات ضد السرقة</button><button class="primary" onclick="mkAL.report()">📊 تقرير آخر اليوم</button>')}
 if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='settings')try{btn()}catch(e){}return r}}
 setTimeout(()=>{try{btn()}catch(e){}},2000);
 })();
@@ -4693,7 +4700,7 @@ setTimeout(()=>{try{btn()}catch(e){}},2000);
    الخصم من المخزن على السيرفر (db/38-gifts-grades.sql)
    ===================================================================== */
 (function(){
-const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);
 const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
 const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const M=n=>typeof money==='function'?money(n):(+n||0).toLocaleString('ar-EG')+' ج.م';
@@ -4823,7 +4830,7 @@ if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const 
    السيرفر: db/39-staff.sql
    ===================================================================== */
 (function(){
-const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);
 const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
 const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const M=n=>typeof money==='function'?money(n):(Math.round(+n||0)).toLocaleString('ar-EG')+' ج.م';
@@ -5009,7 +5016,7 @@ if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const 
    كله من بيانات السيستم الموجودة (من غير SQL جديد)
    ===================================================================== */
 (function(){
-const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);if(APPV)return;
+const APPV=typeof SB_URL!=='undefined'&&/rzvncstjattlklpdtkfn/.test(SB_URL);const shopN=()=>(db.settings&&db.settings.companyName)||'';
 const SBc=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
 const H=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const M=n=>typeof money==='function'?money(n):(Math.round(+n||0)).toLocaleString('ar-EG')+' ج.م';
@@ -5058,7 +5065,7 @@ const VIEWS={
  lapsed(){const R=lapsed(),tot=R.reduce((a,x)=>a+x.tot,0);
   return `<p class="bz-note">عملاء كانوا بيشتروا منك أكتر من مرة وبقالهم أكتر من ${daysSel([30,45,60,90,120])} مجوش. ابعتلهم رسالة «وحشتنا» — أرخص من إنك تجيب عميل جديد.</p>
   <div class="bz-cards"><div class="bz-card"><small>عملاء غايبين</small><b>${R.length}</b></div><div class="bz-card"><small>كانوا اشتروا بـ</small><b>${M(tot)}</b></div></div>
-  ${R.length?`<div class="table-wrap"><table><thead><tr><th>العميل</th><th>اشترى بـ</th><th>مرات</th><th>آخر مرة</th><th></th></tr></thead><tbody>${R.slice(0,200).map(x=>`<tr><td><b>${H(x.n)}</b>${x.phone?'<br><small dir="ltr">'+H(x.phone)+'</small>':''}</td><td>${M(x.tot)}</td><td>${x.visits}</td><td>${H(x.last)}<br><small style="color:#b33">${x.days} يوم</small></td><td>${x.phone?`<a class="secondary" style="text-decoration:none;padding:6px 10px;border-radius:9px;border:1px solid var(--border,#ddd);white-space:nowrap" target="_blank" href="https://wa.me/${ph(x.phone)}?text=${encodeURIComponent('أهلاً يا '+x.n+' 👋\nوحشتنا في ميكانيزم! نزلت عندنا حاجات جديدة في الإكسسوارات والمفصلات والمقابض.\nلو محتاج أي حاجة لشغلك ابعتلنا هنا وإحنا نجهزهالك 🙏')}">💬 وحشتنا</a>`:'<small style="color:#7b8a90">مفيش رقم</small>'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">👌 مفيش عملاء غايبين.</div>'}`},
+  ${R.length?`<div class="table-wrap"><table><thead><tr><th>العميل</th><th>اشترى بـ</th><th>مرات</th><th>آخر مرة</th><th></th></tr></thead><tbody>${R.slice(0,200).map(x=>`<tr><td><b>${H(x.n)}</b>${x.phone?'<br><small dir="ltr">'+H(x.phone)+'</small>':''}</td><td>${M(x.tot)}</td><td>${x.visits}</td><td>${H(x.last)}<br><small style="color:#b33">${x.days} يوم</small></td><td>${x.phone?`<a class="secondary" style="text-decoration:none;padding:6px 10px;border-radius:9px;border:1px solid var(--border,#ddd);white-space:nowrap" target="_blank" href="https://wa.me/${ph(x.phone)}?text=${encodeURIComponent('أهلاً يا '+x.n+' 👋\nوحشتنا في '+shopN()+'! نزلت عندنا حاجات جديدة في الإكسسوارات والمفصلات والمقابض.\nلو محتاج أي حاجة لشغلك ابعتلنا هنا وإحنا نجهزهالك 🙏')}">💬 وحشتنا</a>`:'<small style="color:#7b8a90">مفيش رقم</small>'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">👌 مفيش عملاء غايبين.</div>'}`},
  async points(){const R=await points(),cfg=PTS,names=[...new Set(sales().map(r=>String(r.person||'').trim()).filter(Boolean))].sort();
   return `<p class="bz-note">كل صنايعي بياخد نقطة على كل ${H(cfg.per||100)} جنيه بيشتريها. لما يجمّع نقط يستبدلها بهدية (من «🎁 هدية» في شاشة المنتج) — ده بيخلّيه مايروحش لحد غيرك.</p>
   <div class="form" style="margin-bottom:10px"><div class="field"><label>نقطة لكل كام جنيه؟</label><input id="bzPer" type="number" min="10" value="${+cfg.per||100}"></div>
@@ -5071,7 +5078,7 @@ const VIEWS={
  cat(){const cats=[...new Set((db.products||[]).map(p=>p.cat||'بدون تصنيف'))].sort();
   return `<p class="bz-note">كتالوج PDF بصور المنتجات والأكواد — <b>من غير أسعار</b> — تبعته للصنايعية والمهندسين على الواتساب أو تطبعه.</p>
   <div class="form"><div class="field full"><label>التصنيفات</label><div style="display:flex;flex-wrap:wrap;gap:6px">${cats.map(c=>`<label style="display:flex;gap:5px;align-items:center;border:1px solid var(--border,#ddd);border-radius:99px;padding:4px 10px;color:inherit"><input type="checkbox" class="bzCat" value="${H(c)}" checked style="width:auto"> ${H(c)}</label>`).join('')}</div></div>
-  <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" checked style="width:auto"> اللي ليه صورة بس</label></div></div>
+  <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" ${APPV?'':'checked'} style="width:auto"> اللي ليه صورة بس</label></div></div>
   <div class="modal-foot" style="justify-content:flex-start"><button class="primary" onclick="mkBZ.catalog()">📖 اعمل الكتالوج</button></div>`},
  async log(){let L=[],S=[];try{const [a,b]=await Promise.all([SBc().from('mk_log').select('*').order('at',{ascending:false}).limit(150),SBc().from('mk_stock_moves').select('*').order('at',{ascending:false}).limit(150)]);L=a.data||[];S=b.data||[]}catch(e){}
   const rows=[...L.map(x=>({t:x.at,who:x.user_name,what:x.action+(x.ref?' — '+x.ref:'')})),...S.map(x=>({t:x.at,who:x.by_name,what:`📦 ${x.product_name}: ${N(x.qty_before)} ← ${N(x.qty_after)} (${x.diff>0?'+':''}${N(x.diff)})${x.note?' · '+x.note:''}`}))].sort((a,b)=>String(b.t).localeCompare(String(a.t))).slice(0,200);
@@ -5088,7 +5095,7 @@ async function ptUse(i){const n=(PL[i]||{}).n;const R=await points(),x=R.find(r=
 function catalog(){const cats=new Set([...document.querySelectorAll('.bzCat:checked')].map(b=>b.value)),stock=$('bzStock').checked,needImg=$('bzImg').checked;
  const S=window.mkSite&&mkSite.get&&mkSite.get(),site=(S&&S.data&&S.data.products)||[];const imgOf=p=>{const s=site.find(x=>String(x.code||'')===String(p.code||''));return s&&((s.imgs&&s.imgs[0])||s.img)||''};
  const P=(db.products||[]).filter(p=>cats.has(p.cat||'بدون تصنيف')&&(!stock||p.qty>0)).map(p=>({p,img:imgOf(p)})).filter(x=>!needImg||x.img);if(!P.length)return toast('مفيش أصناف بالشروط دي'+(needImg&&!site.length?' — افتح «محتوى الموقع» مرة الأول عشان الصور تتحمل':''));
- const by={};P.forEach(x=>{const c=x.p.cat||'بدون تصنيف';(by[c]=by[c]||[]).push(x)});const shop=(db.settings&&db.settings.companyName)||'ميكانيزم';
+ const by={};P.forEach(x=>{const c=x.p.cat||'بدون تصنيف';(by[c]=by[c]||[]).push(x)});const shop=shopN();
  const html=`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كتالوج ${H(shop)}</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>
  *{box-sizing:border-box}body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#14262b}@page{size:A4;margin:12mm}
  .cover{height:250mm;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#087f8c,#0b4e57);color:#fff;border-radius:18px;page-break-after:always;text-align:center}
@@ -5122,14 +5129,14 @@ Object.assign(VIEWS,{
  async follow(){const cfg=await getSet('follow',{link:'',done:{}});X.follow=cfg;const a=isoAgo(9),b=isoAgo(5),by={};
   sales().forEach(r=>{const n=String(r.person||'').trim(),d=String(r.iso||'');if(!n||d<a||d>b)return;(by[n]=by[n]||{n,d,items:new Set()}).items.add(r.product)});
   const L=Object.values(by).map(o=>Object.assign(o,{phone:phoneOf(o.n)})).filter(o=>o.phone);
-  const msg=o=>`أهلاً يا ${o.n} 👋\nإن شاء الله ${[...o.items].slice(0,2).join(' و')} عجبك؟\nلو عندك أي ملاحظة إحنا موجودين 🙏${cfg.link?'\nولو عجبتك خدمتنا، تقييمك على جوجل بيفرق معانا جداً ⭐:\n'+cfg.link:''}\n— ميكانيزم`;
+  const msg=o=>`أهلاً يا ${o.n} 👋\nإن شاء الله ${[...o.items].slice(0,2).join(' و')} عجبك؟\nلو عندك أي ملاحظة إحنا موجودين 🙏${cfg.link?'\nولو عجبتك خدمتنا، تقييمك على جوجل بيفرق معانا جداً ⭐:\n'+cfg.link:''}\n— ${shopN()}`;
   return `<p class="bz-note">العملاء اللي اشتروا من ٥ لـ ٩ أيام: ابعتلهم رسالة «إيه رأيك؟» واطلب تقييم على جوجل — ده بيرفع ترتيبك في البحث ويرجّع العميل تاني.</p>
   <div class="form"><div class="field full"><label>لينك التقييم على جوجل (من Google Business ← «اطلب تقييمات»)</label><input id="bzRev" dir="ltr" value="${H(cfg.link||'')}" placeholder="https://g.page/r/..."></div><div class="field" style="align-self:end"><button class="primary" onclick="mkBZ.saveRev()">حفظ</button></div></div>
   ${L.length?`<div class="table-wrap"><table><thead><tr><th>العميل</th><th>اشترى</th><th>يوم</th><th></th></tr></thead><tbody>${L.map(o=>`<tr><td><b>${H(o.n)}</b></td><td><small>${H([...o.items].slice(0,3).join('، '))}</small></td><td>${H(o.d)}</td><td>${cfg.done[o.n]===o.d?'✅ اتبعت':`<span onclick="mkBZ.fDone(decodeURIComponent('${encodeURIComponent(o.n)}'),'${o.d}')">${wa(o.phone,msg(o),'⭐ ابعت')}</span>`}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">مفيش عملاء (بأرقام) اشتروا من ٥ لـ ٩ أيام.</div>'}`},
  async res(){const L=await getSet('reservations',[]);X.res=L;
   return `<p class="bz-note">عميل دفع عربون أو طلب يحجزله كمية؟ سجّلها هنا — والسيستم يوريك المتاح الحقيقي (الرصيد ناقص المحجوز) في شاشة المنتج ويفكّرك لما ميعاد الحجز يقرب.</p>
   ${prodDL()}${custDL()}<div class="form"><div class="field"><label>الصنف (الكود)</label><input id="rsP" list="bzPL"></div><div class="field"><label>الكمية</label><input id="rsQ" type="number" min="0" step="any" value="1"></div><div class="field"><label>العميل</label><input id="rsC" list="bzCL"></div><div class="field"><label>الموبايل</label><input id="rsPh" dir="ltr"></div><div class="field"><label>العربون</label><input id="rsD" type="number" min="0" value="0"></div><div class="field"><label>محجوز لحد</label><input id="rsU" type="date" value="${new Date(Date.now()+7*dayMs).toISOString().slice(0,10)}"></div><div class="field" style="align-self:end"><button class="primary" onclick="mkBZ.resAdd()">📌 احجز</button></div></div>
-  ${L.length?`<div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>العميل</th><th>العربون</th><th>لحد</th><th></th></tr></thead><tbody>${L.map((r,i)=>{const p=(db.products||[]).find(x=>x.id===r.pid)||{name:r.name,qty:0};const late=r.until<new Date().toISOString().slice(0,10);return `<tr><td>${H(p.name)}<br><small style="color:${p.qty<r.qty?'#b33':'#7b8a90'}">الرصيد ${N(p.qty)}</small></td><td>${N(r.qty)}</td><td>${H(r.cust)}</td><td>${M(r.dep)}</td><td style="color:${late?'#b33':'inherit'}">${H(r.until)}${late?' ⚠️':''}</td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${wa(r.phone||phoneOf(r.cust),'أهلاً يا '+r.cust+' 👋\nحجزك ('+p.name+' × '+r.qty+') جاهز في ميكانيزم، مستنيينك 🙏','💬')}<button class="secondary" onclick="mkBZ.resDel(${i},1)">✔ اتسلم</button><button class="secondary" onclick="mkBZ.resDel(${i},0)">✕ إلغاء</button></div></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">مفيش حجوزات.</div>'}`},
+  ${L.length?`<div class="table-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>العميل</th><th>العربون</th><th>لحد</th><th></th></tr></thead><tbody>${L.map((r,i)=>{const p=(db.products||[]).find(x=>x.id===r.pid)||{name:r.name,qty:0};const late=r.until<new Date().toISOString().slice(0,10);return `<tr><td>${H(p.name)}<br><small style="color:${p.qty<r.qty?'#b33':'#7b8a90'}">الرصيد ${N(p.qty)}</small></td><td>${N(r.qty)}</td><td>${H(r.cust)}</td><td>${M(r.dep)}</td><td style="color:${late?'#b33':'inherit'}">${H(r.until)}${late?' ⚠️':''}</td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${wa(r.phone||phoneOf(r.cust),'أهلاً يا '+r.cust+' 👋\nحجزك ('+p.name+' × '+r.qty+') جاهز في '+shopN()+'، مستنيينك 🙏','💬')}<button class="secondary" onclick="mkBZ.resDel(${i},1)">✔ اتسلم</button><button class="secondary" onclick="mkBZ.resDel(${i},0)">✕ إلغاء</button></div></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">مفيش حجوزات.</div>'}`},
  async kits(){const K=await getSet('kits',[]);X.kits=K;
   const calc=k=>{let cost=0,sep=0,can=Infinity;(k.items||[]).forEach(it=>{const p=(db.products||[]).find(x=>x.id===it.pid);if(!p){can=0;return}cost+=(+p.cost||0)*it.q;sep+=(+p.price||0)*it.q;can=Math.min(can,Math.floor(p.qty/it.q))});return {cost,sep,can:can===Infinity?0:can}};
   return `<p class="bz-note">اعمل «كومبو» من كذا صنف بسعر واحد (مثلاً: طقم مطبخ = مفصلات + مجاري + مقابض). السيستم بيحسبلك تكلفته ومكسبك وكام طقم تقدر تبيع من الرصيد، وتبعته للصنايعية على الواتساب.</p>
@@ -5159,7 +5166,7 @@ const ACT={
  async resDel(i,ok){X.res.splice(i,1);await putSet('reservations',X.res);toast(ok?'✔ اتشال من الحجز — اعمل فاتورة البيع':'اتلغى الحجز');render()},
  async kitAdd(){const n=$('kN').value.trim(),pr=+$('kPr').value||0,items=[],bad=[];$('kI').value.split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const f=l.split(/[|،\t]/).map(s=>s.trim()),p=prodBy(f[0]);if(p)items.push({pid:p.id,q:+f[1]||1});else bad.push(f[0])});if(!n||!items.length)return toast('اكتب الاسم والأصناف'+(bad.length?' — مش لاقي: '+bad.join('، '):''));X.kits.push({name:n,price:pr,items});await putSet('kits',X.kits);toast('✔ اتحفظ'+(bad.length?' — مش لاقي: '+bad.join('، '):''));render()},
  async kitDel(i){X.kits.splice(i,1);await putSet('kits',X.kits);render()},
- kitText(i){const k=X.kits[i];return `🎁 ${k.name} من ميكانيزم\n${(k.items||[]).map(it=>{const p=(db.products||[]).find(x=>x.id===it.pid);return p?'• '+p.name+' × '+it.q:''}).filter(Boolean).join('\n')}\nسعر الطقم كله: ${k.price} ج بس 🔥\nللطلب ابعت هنا 🙏`},
+ kitText(i){const k=X.kits[i];return `🎁 ${k.name}${shopN()?' من '+shopN():''}\n${(k.items||[]).map(it=>{const p=(db.products||[]).find(x=>x.id===it.pid);return p?'• '+p.name+' × '+it.q:''}).filter(Boolean).join('\n')}\nسعر الطقم كله: ${k.price} ج بس 🔥\nللطلب ابعت هنا 🙏`},
  async usdSave(){X.usd.rate=+$('uR').value||X.usd.rate;X.usd.margin=+$('uM').value||0;await putSet('usd',X.usd);render()},
  async usdAdd(){const p=prodBy($('uP').value),u=+$('uU').value||0;if(!p||u<=0)return toast('اختار الصنف واكتب سعره بالدولار');X.usd.items[p.id]={usd:u,extra:+$('uE').value||0};await putSet('usd',X.usd);render()},
  async usdDel(pid){delete X.usd.items[pid];await putSet('usd',X.usd);render()},
@@ -5167,7 +5174,7 @@ const ACT={
  plNew(){X.pl.groups.push({name:'مجموعة جديدة',pct:0,members:[]});ACT.plSave(1)},
  async plSave(silent){X.pl.groups.forEach((g,i)=>{if(!$('plN'+i))return;g.name=$('plN'+i).value.trim()||g.name;g.pct=+$('plP'+i).value||0;g.members=$('plM'+i).value.split('\n').map(s=>s.trim()).filter(Boolean)});await putSet('plists',X.pl);if(silent!==1)toast('✔ اتحفظ');render()},
  async plDel(i){X.pl.groups.splice(i,1);await putSet('plists',X.pl);render()},
- plPrint(i){const g=X.pl.groups[i],pct=+$('plP'+i).value||0,cat=$('plC'+i).value,shop=(db.settings&&db.settings.companyName)||'ميكانيزم';const P=(db.products||[]).filter(p=>(!cat||(p.cat||'بدون تصنيف')===cat)&&+p.price>0).sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||a.name.localeCompare(b.name));
+ plPrint(i){const g=X.pl.groups[i],pct=+$('plP'+i).value||0,cat=$('plC'+i).value,shop=shopN();const P=(db.products||[]).filter(p=>(!cat||(p.cat||'بدون تصنيف')===cat)&&+p.price>0).sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||a.name.localeCompare(b.name));
   const html=`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#14262b}@page{size:A4;margin:12mm}.h{background:linear-gradient(120deg,#087f8c,#0b4e57);color:#fff;border-radius:14px;padding:16px 20px;border-bottom:5px solid #c9971f}.h h1{margin:0;font-size:26px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}th{background:#e3f4f5;color:#0b4e57;text-align:right;padding:7px}td{border-bottom:1px solid #e6eef0;padding:6px 7px}td.p{font-weight:900;color:#087f8c;white-space:nowrap}</style></head><body><div class="h"><h1>${H(shop)} — قايمة أسعار ${H(g.name)}</h1><div>${cat?H(cat)+' · ':''}${new Date().toLocaleDateString('ar-EG')} · الأسعار سارية لحد إشعار آخر</div></div><table><thead><tr><th>الكود</th><th>الصنف</th><th>التصنيف</th><th>الوحدة</th><th>السعر</th></tr></thead><tbody>${P.map(p=>`<tr><td>${H(p.code)}</td><td>${H(p.name)}</td><td>${H(p.cat||'')}</td><td>${H(p.unit||'')}</td><td class="p">${N(Math.round(p.price*(1+pct/100)))} ج</td></tr>`).join('')}</tbody></table></body></html>`;
   if(typeof printHTML==='function')printHTML(html);else{const w=window.open('','_blank');w.document.write(html);w.document.close()}},
  async crSave(){X.cr.def=+$('crD').value||0;document.querySelectorAll('.crL').forEach(i=>{const n=decodeURIComponent(i.dataset.n);if(i.value==='')delete X.cr.lim[n];else X.cr.lim[n]=+i.value});await putSet('credit',X.cr);toast('✔ اتحفظ');render()}};
