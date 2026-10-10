@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-09-9';
+const APP_VER='2026-10-09-10';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5050,7 +5050,8 @@ function ensurePage(){if($('biz')||!adm())return;const ref=$('products');if(!ref
 const TABS=[['dead','🧊 بضاعة راكدة'],['abc','🏆 الأصناف المهمة (ABC)'],['lapsed','😴 عملاء غايبين'],['points','⭐ نقاط الصنايعية'],['sup','⚖️ مقارنة الموردين'],['cat','📖 كتالوج'],['log','🕵️ سجل العمليات']];
 async function render(){const box=$('biz');if(!box)return;if(!adm()){box.innerHTML='<div class="empty">الصفحة دي للمدير بس.</div>';return}
  box.innerHTML=`<div class="title-row"><div class="title"><h1>📈 تحليلات ذكية</h1><p>السيستم بيقرا كل اللي حصل في المحل ويقولك تعمل إيه</p></div></div><div class="bz-tabs">${TABS.map(([k,l])=>`<button class="${k===TAB?'on':''}" onclick="mkBZ.tab('${k}')">${l}</button>`).join('')}</div><div id="bzBody"><div style="padding:24px;text-align:center;color:#8a979c">⏳</div></div>`;
- const b=$('bzBody');try{b.innerHTML=await VIEWS[TAB]()}catch(e){b.innerHTML='<div class="empty">حصلت مشكلة: '+H(e.message||e)+'</div>'}}
+ const b=$('bzBody');try{b.innerHTML=await VIEWS[TAB]()}catch(e){b.innerHTML='<div class="empty">حصلت مشكلة: '+H(e.message||e)+'</div>'}
+ if(TAB==='cat'){catCount();if(window.mkSite&&mkSite.loadSite&&!siteProds().length)mkSite.loadSite().then(catCount).catch(()=>{})}}
 const daysSel=(opts)=>`<select onchange="mkBZ.days(this.value)" style="width:auto">${opts.map(d=>`<option value="${d}" ${d==DAYS?'selected':''}>${d} يوم</option>`).join('')}</select>`;
 const VIEWS={
  dead(){const R=dead(),val=R.reduce((a,x)=>a+x.val,0);
@@ -5078,7 +5079,8 @@ const VIEWS={
  cat(){const cats=[...new Set((db.products||[]).map(p=>p.cat||'بدون تصنيف'))].sort();
   return `<p class="bz-note">كتالوج PDF بصور المنتجات والأكواد — <b>من غير أسعار</b> — تبعته للصنايعية والمهندسين على الواتساب أو تطبعه.</p>
   <div class="form"><div class="field full"><label>التصنيفات</label><div style="display:flex;flex-wrap:wrap;gap:6px">${cats.map(c=>`<label style="display:flex;gap:5px;align-items:center;border:1px solid var(--border,#ddd);border-radius:99px;padding:4px 10px;color:inherit"><input type="checkbox" class="bzCat" value="${H(c)}" checked style="width:auto"> ${H(c)}</label>`).join('')}</div></div>
-  <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" ${APPV?'':'checked'} style="width:auto"> اللي ليه صورة بس</label></div></div>
+  <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto" onchange="mkBZ.catCount()"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" ${APPV?'':'checked'} style="width:auto" onchange="mkBZ.catCount()"> اللي ليه صورة بس</label></div></div>
+  <div id="bzCnt" class="bz-note" style="background:#e3f4f5;border-radius:10px;padding:8px 12px;color:#0b4e57"></div>
   <div class="modal-foot" style="justify-content:flex-start"><button class="primary" onclick="mkBZ.catalog()">📖 اعمل الكتالوج</button></div>`},
  async log(){let L=[],S=[];try{const [a,b]=await Promise.all([SBc().from('mk_log').select('*').order('at',{ascending:false}).limit(150),SBc().from('mk_stock_moves').select('*').order('at',{ascending:false}).limit(150)]);L=a.data||[];S=b.data||[]}catch(e){}
   const rows=[...L.map(x=>({t:x.at,who:x.user_name,what:x.action+(x.ref?' — '+x.ref:'')})),...S.map(x=>({t:x.at,who:x.by_name,what:`📦 ${x.product_name}: ${N(x.qty_before)} ← ${N(x.qty_after)} (${x.diff>0?'+':''}${N(x.diff)})${x.note?' · '+x.note:''}`}))].sort((a,b)=>String(b.t).localeCompare(String(a.t))).slice(0,200);
@@ -5092,9 +5094,18 @@ async function ptUse(i){const n=(PL[i]||{}).n;const R=await points(),x=R.find(r=
  openModal(`<div class="modal-head"><h2>🎁 استبدال نقط ${H(n)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><p>رصيده <b>${x.left}</b> نقطة.</p><div class="form"><div class="field"><label>كام نقطة هيستبدل؟</label><input id="bzU" type="number" min="1" max="${Math.max(0,x.left)}" value="${Math.max(0,x.left)}"></div></div>
  <p style="font-size:12px;color:#7b8a90">بعد كده افتح المنتج اللي هياخده ودوس «🎁 هدية» عشان يتخصم من المخزن.</p><div class="modal-foot"><button class="primary" id="bzUgo">استبدل</button><button class="secondary" onclick="closeModal()">إلغاء</button></div>`);
  $('bzUgo').onclick=async()=>{const u=Math.round(+$('bzU').value||0);if(u<=0||u>x.left)return toast('الرقم مش مظبوط');PTS.used=PTS.used||{};PTS.used[n]=(+PTS.used[n]||0)+u;const r=await putSet('points',PTS);if(r.error)return toast('ماتحفظش');closeModal();toast('✔ اتخصم '+u+' نقطة');render()}}
-function catalog(){const cats=new Set([...document.querySelectorAll('.bzCat:checked')].map(b=>b.value)),stock=$('bzStock').checked,needImg=$('bzImg').checked;
- const S=window.mkSite&&mkSite.get&&mkSite.get(),site=(S&&S.data&&S.data.products)||[];const imgOf=p=>{const s=site.find(x=>String(x.code||'')===String(p.code||''));return s&&((s.imgs&&s.imgs[0])||s.img)||''};
- const P=(db.products||[]).filter(p=>cats.has(p.cat||'بدون تصنيف')&&(!stock||p.qty>0)).map(p=>({p,img:imgOf(p)})).filter(x=>!needImg||x.img);if(!P.length)return toast('مفيش أصناف بالشروط دي'+(needImg&&!site.length?' — افتح «محتوى الموقع» مرة الأول عشان الصور تتحمل':''));
+/* معاينة جوه السيستم بشريط فوق فيه ✕ للرجوع (بدل صفحة جديدة من غير رجوع) */
+function bzClose(){const x=$('bzPrint');if(x)x.remove();document.documentElement.style.overflow=''}
+function bzPrint(html,title){bzClose();document.body.insertAdjacentHTML('beforeend',`<div id="bzPrint" style="position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column"><div style="display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 8px;background:#087f8c;color:#fff;font-family:Cairo,Tahoma,sans-serif"><button type="button" id="bzpX" style="width:42px;height:42px;border-radius:50%;border:0;background:#ffffff2e;color:#fff;font-size:22px;font-weight:900;cursor:pointer" title="رجوع للسيستم">✕</button><b style="flex:1;font-size:16px">${H(title||'معاينة')}</b><button type="button" id="bzpP" style="border:0;border-radius:12px;padding:10px 14px;background:#fff;color:#087f8c;font:inherit;font-weight:800;cursor:pointer">🖨️ طباعة / PDF</button></div><iframe id="bzpF" title="معاينة" style="flex:1;border:0;width:100%"></iframe></div>`);
+ document.documentElement.style.overflow='hidden';const f=$('bzpF');f.srcdoc=html;$('bzpX').onclick=bzClose;$('bzpP').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('الطباعة مااشتغلتش')}}}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('bzPrint'))bzClose()});
+const siteProds=()=>{const S=window.mkSite&&mkSite.get&&mkSite.get();return (S&&S.data&&S.data.products)||[]};
+const catImg=(p,site)=>{const s=site.find(x=>String(x.code||'')===String(p.code||''))||site.find(x=>x.name&&x.name===p.name);return (s&&((s.imgs&&s.imgs[0])||s.img))||(p.imgs&&p.imgs[0])||p.img||''};
+const catPick=site=>{const cats=new Set([...document.querySelectorAll('.bzCat:checked')].map(b=>b.value)),stock=$('bzStock').checked,needImg=$('bzImg').checked;return (db.products||[]).filter(p=>cats.has(p.cat||'بدون تصنيف')&&(!stock||p.qty>0)).map(p=>({p,img:catImg(p,site)})).filter(x=>!needImg||x.img)};
+function catCount(){const el=$('bzCnt');if(!el)return;const site=siteProds(),all=(db.products||[]).length,n=catPick(site).length;el.innerHTML=`هيطلع في الكتالوج <b>${N(n)}</b> منتج من ${N(all)}${n<all?' — شيل علامة «المتوفر بس» أو «اللي ليه صورة بس» لو عايز الكل':''}`}
+async function catalog(){if(window.mkSite&&mkSite.loadSite&&!siteProds().length){try{await mkSite.loadSite()}catch(e){}}
+ const site=siteProds(),needImg=$('bzImg').checked;
+ const P=catPick(site);if(!P.length)return toast('مفيش أصناف بالشروط دي'+(needImg&&!site.length?' — افتح «محتوى الموقع» مرة الأول عشان الصور تتحمل':''));
  const by={};P.forEach(x=>{const c=x.p.cat||'بدون تصنيف';(by[c]=by[c]||[]).push(x)});const shop=shopN();
  const html=`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كتالوج ${H(shop)}</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>
  *{box-sizing:border-box}body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#14262b}@page{size:A4;margin:12mm}
@@ -5108,7 +5119,7 @@ function catalog(){const cats=new Set([...document.querySelectorAll('.bzCat:chec
  </style></head><body><div class="cover"><h1>${H(shop)}</h1><div class="g"></div><p>كتالوج المنتجات</p><p style="font-size:16px">${P.length} منتج · ${new Date().toLocaleDateString('ar-EG',{month:'long',year:'numeric'})}</p><p style="font-size:16px;margin-top:30px">${H((db.settings&&db.settings.phone)||'')}<br>${H((db.settings&&db.settings.address)||'')}</p></div>
  ${Object.keys(by).sort().map(c=>`<h2>${H(c)}</h2><div class="grid">${by[c].map(x=>`<div class="it">${x.img?`<img src="${H(x.img)}">`:'<div class="ph">📦</div>'}<b>${H(x.p.name)}</b><span>${H(x.p.code)}</span></div>`).join('')}</div>`).join('')}
  <div class="foot">للأسعار والطلب: كلمنا واتساب واذكر كود المنتج 🙏</div></body></html>`;
- if(typeof printHTML==='function')printHTML(html);else{const w=window.open('','_blank');w.document.write(html);w.document.close()}}
+ bzPrint(html,/كتالوج/.test(html.slice(0,400))?'كتالوج المنتجات':'معاينة')}
 
 /* ===================== إضافات: توقع النفاد، المتابعة بعد البيع، الحجوزات، الكومبو، الدولار، قوائم الأسعار، حد الآجل ===================== */
 TABS.splice(2,0,['fc','⏳ هيخلص قريب'],['res','📌 الحجوزات'],['kits','🎁 كومبو'],['usd','💵 الدولار والاستيراد'],['plist','🏷️ قوائم أسعار'],['credit','🚦 حد الآجل'],['follow','⭐ متابعة بعد البيع']);
@@ -5176,7 +5187,7 @@ const ACT={
  async plDel(i){X.pl.groups.splice(i,1);await putSet('plists',X.pl);render()},
  plPrint(i){const g=X.pl.groups[i],pct=+$('plP'+i).value||0,cat=$('plC'+i).value,shop=shopN();const P=(db.products||[]).filter(p=>(!cat||(p.cat||'بدون تصنيف')===cat)&&+p.price>0).sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||a.name.localeCompare(b.name));
   const html=`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>body{font-family:Cairo,Tahoma,sans-serif;margin:0;color:#14262b}@page{size:A4;margin:12mm}.h{background:linear-gradient(120deg,#087f8c,#0b4e57);color:#fff;border-radius:14px;padding:16px 20px;border-bottom:5px solid #c9971f}.h h1{margin:0;font-size:26px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}th{background:#e3f4f5;color:#0b4e57;text-align:right;padding:7px}td{border-bottom:1px solid #e6eef0;padding:6px 7px}td.p{font-weight:900;color:#087f8c;white-space:nowrap}</style></head><body><div class="h"><h1>${H(shop)} — قايمة أسعار ${H(g.name)}</h1><div>${cat?H(cat)+' · ':''}${new Date().toLocaleDateString('ar-EG')} · الأسعار سارية لحد إشعار آخر</div></div><table><thead><tr><th>الكود</th><th>الصنف</th><th>التصنيف</th><th>الوحدة</th><th>السعر</th></tr></thead><tbody>${P.map(p=>`<tr><td>${H(p.code)}</td><td>${H(p.name)}</td><td>${H(p.cat||'')}</td><td>${H(p.unit||'')}</td><td class="p">${N(Math.round(p.price*(1+pct/100)))} ج</td></tr>`).join('')}</tbody></table></body></html>`;
-  if(typeof printHTML==='function')printHTML(html);else{const w=window.open('','_blank');w.document.write(html);w.document.close()}},
+  bzPrint(html,/كتالوج/.test(html.slice(0,400))?'كتالوج المنتجات':'معاينة')},
  async crSave(){X.cr.def=+$('crD').value||0;document.querySelectorAll('.crL').forEach(i=>{const n=decodeURIComponent(i.dataset.n);if(i.value==='')delete X.cr.lim[n];else X.cr.lim[n]=+i.value});await putSet('credit',X.cr);toast('✔ اتحفظ');render()}};
 /* 🚦 تنبيه حد الآجل جوه فاتورة البيع */
 let CRC=null;document.addEventListener('change',async e=>{const el=e.target;if(!el||el.tagName!=='INPUT'||!(el.getAttribute('list')==='custList'||el.id==='txPerson'))return;if(!CRC)CRC=await getSet('credit',{def:0,lim:{}});
@@ -5184,7 +5195,7 @@ let CRC=null;document.addEventListener('change',async e=>{const el=e.target;if(!
  if(!c){b.textContent='';return}const lim=+(CRC.lim[c.name]??CRC.def)||0;b.style.color=lim&&c.balance>=lim?'#b33':'#087f8c';b.textContent=(c.balance>0?'عليه '+N(c.balance)+' ج':'مفيش عليه فلوس')+(lim?' · الحد '+N(lim)+' ج'+(c.balance>=lim?' — 🔴 عدّى الحد! اقبض كاش':''):'')},true);
 /* 📌 المحجوز يبان في المتاح (للشاشات اللي بتسأل) */
 window.mkReserved=async pid=>{const L=await getSet('reservations',[]);return L.filter(r=>r.pid===pid).reduce((a,r)=>a+(+r.qty||0),0)};
-window.mkBZ={render,tab:k=>{TAB=k;render()},days:d=>{DAYS=+d;render()},ptAdd,ptDel,ptUse,catalog,...ACT};
+window.mkBZ={render,tab:k=>{TAB=k;render()},days:d=>{DAYS=+d;render()},ptAdd,ptDel,ptUse,catalog,catCount,print:bzPrint,closePrint:bzClose,...ACT};
 if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='biz')try{render()}catch(e){}return r}}
 (function w(k){if(window.mkSB&&window.mkT_user){ensurePage();return}if(k<300)setTimeout(()=>w(k+1),1000)})(0);
 })();
