@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-2';
+const APP_VER='2026-10-15-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5558,5 +5558,90 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bar);else bar();
 })();
 </script>
+<script>
+/* mk: شاشة «كلمات الواتساب المفتاحية» (أدمن فقط) — القواعد في mk_settings مفتاح wa_rules */
+(function(){
+ var KEY='wa_rules',STAT='wa_rules_stat';
+ var TYPES=['طلب','دلف','استانلس','بامبو','تحويل','استفسار سعر','استفسار توفّر','استفسار صور','استفسار أسعار','غيره'];
+ var D={enabled:true,windowMin:10,ownerPhones:[],photos:{byCaption:true,byWindow:true,fromKnown:false},rules:[{phrases:['طلب'],type:'طلب',scope:'both',mode:'contains',on:true}]};
+ var CFG=null,ST=null;
+ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function norm(s){return String(s||'').replace(/[ً-ٰٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[٠-٩]/g,function(d){return String(d.charCodeAt(0)-0x0660)}).replace(/[۰-۹]/g,function(d){return String(d.charCodeAt(0)-0x06F0)}).toLowerCase().replace(/\s+/g,' ').trim()}
+ function hit(r,t){t=norm(t);return(r.phrases||[]).some(function(p){p=norm(p);if(!p)return false;return r.mode==='exact'?t===p:r.mode==='starts'?t.indexOf(p)===0:t.indexOf(p)>-1})}
+ async function load(){
+  try{var a=await SBc().from('mk_settings').select('value').eq('key',KEY).maybeSingle();CFG=Object.assign({},D,(a.data&&a.data.value)||{});if(!Array.isArray(CFG.rules)||!CFG.rules.length)CFG.rules=D.rules.slice();CFG.photos=Object.assign({},D.photos,CFG.photos||{})}catch(e){CFG=JSON.parse(JSON.stringify(D))}
+  try{var b=await SBc().from('mk_settings').select('value').eq('key',STAT).maybeSingle();ST=(b.data&&b.data.value)||null}catch(e){ST=null}
+ }
+ function ruleRow(r,i){
+  return '<div class="card" style="padding:10px;margin:8px 0" data-i="'+i+'">'+
+  '<div class="form">'+
+  '<div class="field full"><label>الكلمة أو العبارة (ومرادفاتها بفاصلة)</label><input class="kwP" value="'+esc((r.phrases||[]).join('، '))+'"></div>'+
+  '<div class="field"><label>النوع</label><select class="kwT">'+TYPES.map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
+  '<div class="field"><label>الرقم</label><select class="kwS"><option value="both"'+(r.scope==='both'?' selected':'')+'>الاتنين</option><option value="shop"'+(r.scope==='shop'?' selected':'')+'>رقم المحل</option><option value="owner"'+(r.scope==='owner'?' selected':'')+'>رقم عبده</option></select></div>'+
+  '<div class="field"><label>المطابقة</label><select class="kwM"><option value="contains"'+(r.mode==='contains'?' selected':'')+'>تحتوي</option><option value="starts"'+(r.mode==='starts'?' selected':'')+'>تبدأ بـ</option><option value="exact"'+(r.mode==='exact'?' selected':'')+'>تطابق تماماً</option></select></div>'+
+  '<div class="field"><label class="chk"><input type="checkbox" class="kwO"'+(r.on!==false?' checked':'')+'> مفعّلة</label><button type="button" class="secondary danger kwDel" style="margin-top:6px">حذف</button></div>'+
+  '</div></div>';
+ }
+ function collect(){
+  var m=document.getElementById('modal');if(!m)return CFG;
+  var rules=[];m.querySelectorAll('[data-i]').forEach(function(c){
+   var ph=c.querySelector('.kwP').value.split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean);
+   if(!ph.length)return;
+   rules.push({phrases:ph,type:c.querySelector('.kwT').value,scope:c.querySelector('.kwS').value,mode:c.querySelector('.kwM').value,on:c.querySelector('.kwO').checked})});
+  CFG.rules=rules;
+  CFG.enabled=m.querySelector('#kwEn').checked;
+  CFG.windowMin=Math.max(1,parseInt(m.querySelector('#kwWin').value,10)||10);
+  CFG.ownerPhones=m.querySelector('#kwOwn').value.split(/[,،\s]+/).filter(Boolean);
+  CFG.photos={byCaption:m.querySelector('#kwPc').checked,byWindow:m.querySelector('#kwPw').checked,fromKnown:false};
+  return CFG;
+ }
+ function draw(){
+  var rec=((ST&&ST.recent)||[]).filter(function(x){return Date.now()-x.at<864e5});
+  var h='<div class="modal-head"><h2>🔑 كلمات الواتساب المفتاحية</h2></div>'+
+  '<p style="margin:0 0 8px;color:var(--muted);font-size:13px">أي رسالة من غير كلمة منهم بتتجاهل ومش بتتخزن. القواعد بتتحمّل في الجسر كل دقيقة. اتجاهلت النهارده: <b>'+(ST&&ST.ignored||0)+'</b></p>'+
+  '<div class="form"><div class="field"><label class="chk"><input id="kwEn" type="checkbox"'+(CFG.enabled!==false?' checked':'')+'> الفلتر شغّال</label></div>'+
+  '<div class="field"><label>نافذة الصور (دقايق)</label><input id="kwWin" type="number" min="1" value="'+(CFG.windowMin||10)+'"></div>'+
+  '<div class="field full"><label>رقم/أرقام عبده الشخصية (للتمييز)</label><input id="kwOwn" value="'+esc((CFG.ownerPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx"></div>'+
+  '<div class="field"><label class="chk"><input id="kwPc" type="checkbox"'+(CFG.photos.byCaption!==false?' checked':'')+'> صورة بتعليق فيه كلمة تتقبل</label></div>'+
+  '<div class="field"><label class="chk"><input id="kwPw" type="checkbox"'+(CFG.photos.byWindow!==false?' checked':'')+'> صورة بعد رسالة بكلمة تتقبل</label></div></div>'+
+  '<h3 style="margin:14px 0 4px">القواعد</h3><div id="kwRules">'+CFG.rules.map(ruleRow).join('')+'</div>'+
+  '<button type="button" class="secondary" id="kwAdd">➕ قاعدة جديدة</button>'+
+  '<h3 style="margin:16px 0 4px">🧪 جرّب رسالة</h3><textarea id="kwTest" rows="2" style="width:100%" placeholder="اكتب نص رسالة..."></textarea><div id="kwRes" class="sample" style="margin-top:6px">—</div>'+
+  '<h3 style="margin:16px 0 4px">المتجاهَل آخر ٢٤ ساعة ('+rec.length+')</h3><div id="kwRec">'+
+  (rec.length?rec.slice().reverse().map(function(x,i){return'<div class="card" style="padding:8px;margin:5px 0"><div style="font-size:12px;color:var(--muted)">'+esc(x.name||'')+' '+esc(x.phone||'')+'</div><div style="white-space:pre-line">'+esc(x.text)+'</div><button type="button" class="secondary kwPro" data-k="'+i+'" style="margin-top:6px">اعتبرها طلب</button></div>'}).join(''):'<div class="empty">مفيش</div>')+'</div>'+
+  '<div class="modal-foot"><button type="button" class="primary" id="kwSave">حفظ</button><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>';
+  openModal(h);
+  var m=document.getElementById('modal');
+  m.querySelector('#kwAdd').onclick=function(){collect();CFG.rules.push({phrases:[],type:'طلب',scope:'both',mode:'contains',on:true});draw()};
+  m.querySelectorAll('.kwDel').forEach(function(b){b.onclick=function(){var i=+b.closest('[data-i]').dataset.i;collect();CFG.rules.splice(i,1);if(!CFG.rules.length)CFG.rules=D.rules.slice();draw()}});
+  m.querySelector('#kwTest').oninput=function(){
+   collect();var t=this.value,res=m.querySelector('#kwRes');
+   if(!t.trim()){res.textContent='—';return}
+   if(CFG.enabled===false){res.textContent='✅ الفلتر مقفول: كل الرسايل بتتقبل';return}
+   var r=CFG.rules.filter(function(x){return x.on!==false}).find(function(x){return hit(x,t)});
+   res.innerHTML=r?'✅ هتتقبل — نوع: <b>'+esc(r.type)+'</b> (قاعدة: '+esc((r.phrases||[]).join('، '))+')':'🚫 هتتجاهل'};
+  m.querySelectorAll('.kwPro').forEach(function(b){b.onclick=async function(){
+   var x=rec.slice().reverse()[+b.dataset.k];
+   try{var r=await SBc().rpc('wa_rules_promote',{p_msg_id:'',p_phone:x.phone,p_name:x.name,p_body:x.text});if(r.error)throw r.error;b.textContent='✔ اتحوّلت لطلب';b.disabled=true}catch(e){toast('مقدرتش: '+(e.message||e))}}});
+  m.querySelector('#kwSave').onclick=async function(){
+   try{var v=collect();var r=await SBc().from('mk_settings').upsert([{key:KEY,value:v}],{onConflict:'key'});if(r.error)throw r.error;toast('✔ اتحفظت القواعد');closeModal()}catch(e){toast('مقدرتش أحفظ: '+(e.message||e))}};
+ }
+ async function open(){
+  if(typeof isAdmin==='function'&&!isAdmin())return toast('الشاشة دي للمدير بس');
+  await load();draw();
+ }
+ window.mkKw={open:open};
+ function addCard(){
+  var s=document.getElementById('settings');if(!s||document.getElementById('kwCard'))return;
+  if(typeof isAdmin==='function'&&!isAdmin())return;
+  var c=document.createElement('div');c.className='card';c.id='kwCard';c.style.marginTop='14px';
+  c.innerHTML='<h3>🔑 كلمات الواتساب المفتاحية</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">الرسايل اللي مفيهاش كلمة منهم بتتجاهل. تضيف وتعدّل بنفسك.</p><button type="button" class="primary" onclick="mkKw.open()">فتح الشاشة</button>';
+  s.appendChild(c);
+ }
+ var t=setInterval(function(){addCard();if(document.getElementById('kwCard'))clearInterval(t)},1500);
+ var _sp=window.showPage;if(typeof _sp==='function'){window.showPage=function(id){var r=_sp.apply(this,arguments);if(id==='settings')setTimeout(addCard,50);return r}}
+})();
+</script>
+
 </body>
 </html>
