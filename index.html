@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-9';
+const APP_VER='2026-10-15-10';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5858,7 +5858,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  }
  setInterval(function(){
   add();
-  var adm=!!(window.mkT_user&&window.mkT_user.role==='admin');
+  var adm=!!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'));
   ['mkSideWk','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
  },1500);
 })();
@@ -5872,7 +5872,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function num(v){v=String(v==null?'':v).replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/[۰-۹]/g,function(d){return d.charCodeAt(0)-1776}).replace(/[٫,]/g,'.').replace(/[^\d.\-]/g,'');return parseFloat(v)||0}
  function l10(p){return String(p||'').replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'').slice(-10)}
- function isAdm(){return !!(window.mkT_user&&window.mkT_user.role==='admin')}
+ function isAdm(){return !!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'))}
  function tm(iso){try{return new Date(iso).toLocaleString('ar-EG',{weekday:'short',hour:'numeric',minute:'2-digit'})}catch(e){return ''}}
  function contacts(){try{return (typeof db!=='undefined'&&db.contacts)||[]}catch(e){return []}}
  function identify(phone){
