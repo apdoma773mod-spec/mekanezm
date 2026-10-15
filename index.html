@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-12';
+const APP_VER='2026-10-15-13';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6205,6 +6205,44 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   c.innerHTML='<h3>🛠️ أنظمة الشغل</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">أوردرات دلف واستانلس بخط سير، طباعة وباركود، العرض والمصاريف.</p><button type="button" class="primary" onclick="mkWk.open()">فتح</button>';
   st.appendChild(c);
  }
+ /* مسح الباركود (WK-0001 أو WK-0001-2) من أي شاشة يفتح الأوردر على طول، وبيشتغل مع أي لغة كيبورد */
+ (function(){
+  var buf='',last=0,sEl=null,sVal=null,bad=false;
+  var CODE={Minus:'-',NumpadSubtract:'-',KeyW:'W',KeyK:'K'};
+  function ch(e){
+   if(CODE[e.code])return CODE[e.code];
+   var m=/^(Digit|Numpad)(\d)$/.exec(e.code||'');if(m)return m[2];
+   return /^[A-Za-z0-9\-]$/.test(e.key||'')?e.key.toUpperCase():null;
+  }
+  async function go(code){
+   var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
+   var no=parseInt(m[1],10);
+   try{closeModal()}catch(e){}
+   try{
+    await loadAll();NS=1;
+    var o=ORD.find(function(x){return (x.no|0)===no});
+    if(!o){toast('مفيش أوردر برقم '+code);return}
+    viewOrder(o.id);toast('✔ فتحت '+ordNo(o));
+   }catch(e){errAlert(e)}
+  }
+  document.addEventListener('keydown',function(e){
+   if(!isAdm())return;
+   var t=Date.now();
+   if(t-last>70){buf='';bad=false;sEl=document.activeElement;sVal=(sEl&&typeof sEl.value==='string')?sEl.value:null}
+   last=t;
+   if(e.key==='Enter'){
+    var ok=!bad&&buf.length>=5&&/^WK-?\d{1,6}(-\d+)?$/.test(buf);
+    if(ok){
+     e.preventDefault();e.stopPropagation();
+     if(sEl&&sVal!==null&&typeof sEl.value==='string'){sEl.value=sVal;try{sEl.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
+     var code=buf;buf='';go(code);return;
+    }
+    buf='';return;
+   }
+   if(e.key==='Shift'||e.key==='Control'||e.key==='Alt')return;
+   var c=ch(e);if(c)buf+=c;else bad=true;
+  },true);
+ })();
  var tw=setInterval(function(){addCard();if(document.getElementById('wkCard'))clearInterval(tw)},1500);
  var _sp0=window.showPage;if(typeof _sp0==='function'){window.showPage=function(id){var r=_sp0.apply(this,arguments);if(id==='settings')setTimeout(addCard,50);return r}}
  window.mkWk={menu:open,leaf:open,disp:open,exps:open,steel:open,open:open};
