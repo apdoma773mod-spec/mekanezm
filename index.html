@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-14';
+const APP_VER='2026-10-16-15';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7664,6 +7664,20 @@ body.mkpro.mkdark .table th,body.mkpro.mkdark th{background:var(--g3)}
 body.mkpro.mkdark .hb:first-of-type .nmx,body.mkpro.mkdark #recent .table tbody tr td:last-child{color:#FFD24D}
 body.mkpro.mkdark .mobile-nav button.active{color:#fff}
 body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
+
+/* ── الوضع الغامق: كلام أبيض واضح وخط أتقل (طلب عبده) ── */
+body.mkpro.mkdark{--tx:#ffffff;--tx2:#eef2f6;--tx3:#cfd8e0;--muted:#cfd8e0}
+body.mkpro.mkdark,body.mkpro.mkdark main,body.mkpro.mkdark #wkApp,body.mkpro.mkdark .modal{font-weight:600}
+body.mkpro.mkdark label,body.mkpro.mkdark .field label,body.mkpro.mkdark #wkApp .wkf label{color:#ffffff!important;font-size:14px!important;font-weight:800!important}
+body.mkpro.mkdark #wkApp .wkf label{margin-bottom:6px}
+body.mkpro.mkdark small,body.mkpro.mkdark .sub,body.mkpro.mkdark .title p,body.mkpro.mkdark .stat small{color:#dfe6ec!important;font-weight:700}
+body.mkpro.mkdark input,body.mkpro.mkdark select,body.mkpro.mkdark textarea{color:#ffffff!important;font-weight:700}
+body.mkpro.mkdark input::placeholder,body.mkpro.mkdark textarea::placeholder{color:#9fb0bd!important}
+body.mkpro.mkdark h1,body.mkpro.mkdark h2,body.mkpro.mkdark h3,body.mkpro.mkdark #wkApp .wkc h3{color:#ffffff;font-weight:900}
+body.mkpro.mkdark .table td,body.mkpro.mkdark td{color:#ffffff;font-weight:600}
+body.mkpro.mkdark .table th,body.mkpro.mkdark th{color:#eef2f6;font-weight:800}
+body.mkpro.mkdark .sample{color:#ffffff}
+body.mkpro.mkdark .empty{color:#cfd8e0}
 </style>
 <script>
 /* mk: ميكانيزم برو — أيقونات بلون ثابت لكل شاشة (مايتكررش) + رسومات مجسّمة + لوجو متحرك كبير + لون لكل شاشة */
