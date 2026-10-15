@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-27';
+const APP_VER='2026-10-15-28';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6485,8 +6485,40 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      if(nn.length)h+='<br><small>أقرب فضلة أكبر (هدر كبير، مش مفضّل):</small><br>'+nn.map(function(x){return esc(x.n)+' سم ← '+esc(x.c.o.code)+' ('+esc(x.c.len)+' سم) هدر '+esc(Math.round((x.c.len-x.n)*10)/10)+' سم'}).join('<br>');
      h+='<br><b>✂️ الأفضل من عود سليم: '+pl.length+' عود</b><br>'+pl.map(function(x,i){return 'عود '+(i+1)+': '+x.cuts.join(' + ')+' (يتبقى '+esc(x.left)+' سم)'}).join('<br>')+'</div>';
     }
+    /* الرصيد بالمتر (أعواد كاملة من المخزون + فضلات) وزرار نفّذ القص اللي بيخصم فعليًا */
+    var prod=(db.products||[]).find(function(p){return p.name.trim()===it});
+    var offM=pool.reduce(function(s,p){return s+p.len},0)/100,barM=prod?(num(prod.qty)*bar/100):0;
+    var balLine='<div class="sample" style="margin-top:6px;background:var(--tint2)"><b>📏 الرصيد الحالي من «'+esc(it)+'»:</b> '+
+     (prod?('<b>'+esc(prod.qty)+'</b> عود كامل ('+fmt(barM)+' م)'):'<span style="color:var(--danger)">الصنف ده مش مسجل كمنتج بنفس الاسم بالظبط — سجّله في المخزون عشان أقدر أخصم الأعواد منه تلقائي</span>')+
+     (offM?' + <b>'+fmt(offM)+'</b> م فضلة':'')+(prod?' = <b>'+fmt(barM+offM)+'</b> م إجمالي':'')+'</div>';
+    var canCut=exact.length||fit.length||pl.length;
+    h=balLine+h+((canCut&&prod)?'<div style="margin-top:8px"><button type="button" class="wkbtn p" id="oqCut">✂️ نفّذ القص (يخصم فعليًا من المخزون ويسجّل الفضلة الجديدة)</button></div>':'');
     el.innerHTML=h||'<span class="empty">مفيش</span>';
     el.querySelectorAll('[data-r]').forEach(function(x){x.onclick=function(){var o=O.find(function(z){return z.code===x.dataset.r});if(o){o.status='محجوزة';save().then(function(){toast('✔ اتحجزت '+o.code);draw()}).catch(errAlert)}}});
+    var cutBtnEl=el.querySelector('#oqCut');
+    if(cutBtnEl)cutBtnEl.onclick=async function(){
+     if(pl.length>num(prod.qty))return toast('مفيش عدد كافي من الأعواد — متاح '+prod.qty+' بس، ده محتاج '+pl.length);
+     var msg='هتقص دلوقتي: '+(pl.length?pl.length+' عود كامل':'')+(pl.length&&(exact.length+fit.length)?' + ':'')+((exact.length+fit.length)?(exact.length+fit.length)+' فضلة':'')+'. هيتخصم من المخزون على طول ومينفعش يترجع.';
+     if(!(await ask(msg,'نفّذ القص','لأ')))return;
+     cutBtnEl.disabled=true;
+     exact.forEach(function(f){f.o.status='اتباعت'});
+     fit.forEach(function(f){f.o.status='اتباعت'});
+     var newOffs=[];
+     pl.forEach(function(bx){
+      var leftover=Math.round(bx.left*10)/10;if(leftover<=0)return;
+      CFG.offNext=CFG.offNext||1;var code=offCode(CFG.offNext++);
+      var no={id:uid(),code:code,item:it,color:co,len:leftover,orig:bar,place:'',status:leftover<minL?'خردة':'متاحة',date:today()};
+      O.push(no);newOffs.push(no);
+     });
+     var totalM=Math.round(need.reduce(function(s,n){return s+n},0))/100;
+     try{
+      await Promise.all([save(),saveCfg()]);
+      var api=window.mkT&&window.mkT.api;
+      if(pl.length&&api){await api.syncNow();await api.rpc('mk_adjust_stock',{p_id:prod.id,p_qty:num(prod.qty)-pl.length,p_note:'قص '+it+(co?' / '+co:'')+': '+fmt(totalM)+' م — '+need.join('+')+' سم'+(newOffs.length?' ('+newOffs.length+' فضلة جديدة)':'')});await api.refreshProducts([prod.id]);api.done&&api.done()}
+      toast('✔ نُفّذ القص — '+(pl.length?pl.length+' عود + ':'')+(exact.length+fit.length)+' فضلة، إجمالي '+fmt(totalM)+' م'+(newOffs.length?' — '+newOffs.length+' فضلة جديدة اتسجّلت':''));
+      draw();
+     }catch(e){cutBtnEl.disabled=false;errAlert(e)}
+    };
    };
       b.querySelectorAll('[data-a]').forEach(function(x){x.onclick=async function(){
     var o=O[+x.dataset.i],a=x.dataset.a;if(!o)return;
