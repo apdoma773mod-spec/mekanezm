@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-15';
+const APP_VER='2026-10-15-16';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6166,7 +6166,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   while((m=re.exec(t))){
    var tail=t.slice(m.index+m[0].length,m.index+m[0].length+25),head=t.slice(Math.max(0,m.index-18),m.index);
    var q=/(\d+)\s*(?:قطع|قطعه|قطعة|حته|حتة|عدد)/.exec(tail)||/(?:عدد|كمية|كميه)\s*(\d+)/.exec(head+tail);
-   var sh=/(?:^|\s)L(?:\s|$)|حرف\s*ال/i.test(tail+head)?'L':/(?:^|\s)U(?:\s|$)|حرف\s*يو/i.test(tail+head)?'U':'مسطحة';
+   var ctxS=tail+' | '+head,sh=/(?:^|\s)L(?:\s|$|\|)|حرف\s*ال|ثنيه|ثنية/i.test(ctxS)?'L':/(?:^|\s)U(?:\s|$|\|)|حرف\s*يو/i.test(ctxS)?'U':'مسطحة';
    out.push({n:'',a:m[1],b:m[2],q:q?+q[1]:1,shape:sh,bends:sh==='مسطحة'?0:(sh==='L'?1:2),flange:3});
   }
   return out;
