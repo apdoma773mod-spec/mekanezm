@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-10-4';
+const APP_VER='2026-10-15-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3088,7 +3088,7 @@ const _spD=showPage;showPage=function(id){_spD(id);if(id==='daybook'){dbRender()
 let rtT=null;
 (function wait(n){if(window.mkT_user&&sbx()){dbLoad();
   try{sbx().channel('mk-daybook').on('postgres_changes',{event:'*',schema:'public',table:'mk_daybook'},()=>{clearTimeout(rtT);rtT=setTimeout(dbLoad,700)}).subscribe()}catch(e){}
-  setInterval(()=>{let pg=document.getElementById('daybook');if(pg&&pg.classList.contains('active'))dbRender();if(navigator.onLine)dbCommitIfDue()},30000);return}
+  setInterval(()=>{let pg=document.getElementById('daybook');if(!document.hidden&&pg&&pg.classList.contains('active'))dbRender();if(navigator.onLine)dbCommitIfDue()},30000);return}
  if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
@@ -4097,7 +4097,7 @@ function add(tabsId,kind,reload){const t=document.getElementById(tabsId);if(!t)r
  b.parentElement.style.display=isAdmin()?'flex':'none'}
 function run(){add('woTabs','web',()=>loadOrders(true));add('waTabs','wa',()=>loadWa(true))}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
-setTimeout(run,1500);setInterval(run,5000);
+setTimeout(run,1500);setInterval(()=>{if(!document.hidden)run()},15000);
 })();
 </script>
 
@@ -4234,7 +4234,7 @@ function btn(){const row=document.querySelector('#contacts .title-row');if(!row)
  if(!b){row.insertAdjacentHTML('beforeend','<button class="secondary" id="ciBtn" onclick="mkCI.list()" style="white-space:nowrap">📇 من التليفون <span id="ciCnt" class="badge red" style="display:none"></span></button>');b=document.getElementById('ciBtn')}
  b.style.display=isAdmin()?'':'none';const n=load().length,c=document.getElementById('ciCnt');if(c){c.textContent=n;c.style.display=n?'':'none'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
-setTimeout(btn,1500);setInterval(btn,4000);
+setTimeout(btn,1500);setInterval(()=>{if(!document.hidden)btn()},10000);
 })();
 </script>
 
@@ -5427,7 +5427,7 @@ let seen=null;async function watch(){if(!adm()||typeof db==='undefined'||!db.pur
  const fresh=db.purchases.filter((r,i)=>!seen.has(ids[i]));ids.forEach(x=>seen.add(x));if(!fresh.length)return;await load();
  const warn=[];fresh.forEach(r=>{const p=pOf(r);if(!p)return;const pr=+r.price||0,s=String(r.person||'').trim();const O=offers(p).filter(o=>o.s!==s);if(O.length&&pr&&O[0].p<pr*0.98)warn.push({p,pr,s,b:O[0]})});
  if(warn.length)openModal(`${head('⚠️ في أرخص من كده')}${warn.map(w=>`<div style="border:1px solid #f3c0c0;background:#fff7f7;border-radius:12px;padding:10px;margin:6px 0"><b>${H(w.p.name)}</b><br>اشتريته من ${H(w.s||'—')} بـ <b>${M(w.pr)}</b><br>عند <b style="color:#0b6b45">${H(w.b.s)}</b> بـ <b>${M(w.b.p)}</b> — أرخص بـ ${M(w.pr-w.b.p)}${w.b.at?` <small>(سعر ${H(String(w.b.at).slice(0,10))})</small>`:''}</div>`).join('')}<button class="secondary" onclick="mkPW.open()">💹 كل الأسعار</button>`)}
-setInterval(()=>{watch().catch(()=>{})},4000);
+setInterval(()=>{if(!document.hidden)watch().catch(()=>{})},15000);
 // زرار في التقارير/المشتريات + بانر في الرئيسية
 function inject(){if(!adm())return;const pur=$('purchases');if(pur){const tr=pur.querySelector('.title-row');if(tr&&!tr.querySelector('#pwBtn'))tr.insertAdjacentHTML('beforeend',`<button id="pwBtn" class="secondary" onclick="mkPW.open()">💹 أسعار السوق</button>`)}
  const d=$('dashboard');if(d&&MP&&!d.querySelector('#pwBan')){const G=gaps();if(G.length){const tr=d.querySelector('.title-row');const h=`<div id="pwBan" onclick="mkPW.open()" style="cursor:pointer;background:#fff4e0;border:1px solid #f0d68a;border-radius:12px;padding:8px 12px;margin:6px 0;font-weight:700">💹 ${G.length} صنف بتشتريهم أغلى من مورد تاني — دوس تشوف مين الأرخص</div>`;if(tr)tr.insertAdjacentHTML('afterend',h)}}}
@@ -5490,5 +5490,73 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 })();
 </script>
 
+<script>
+/* mk: منع اقتراحات كروم (إيميل/باسورد) في حقول البحث والأسماء */
+(function(){
+ var OK={text:1,search:1,number:1,tel:1,'':1};
+ function fix(i){
+  if(i._mkF)return;i._mkF=1;
+  var t=(i.getAttribute('type')||'').toLowerCase();if(!OK[t])return;
+  var a=(i.getAttribute('autocomplete')||'').toLowerCase();
+  if(a==='username'||a==='current-password'||a==='new-password'||a==='email')return;
+  i.setAttribute('autocomplete','off');
+  if(!i.name)i.name='mkf_'+Math.random().toString(36).slice(2,8);
+  if(!i.readOnly&&!i.disabled){
+   i.readOnly=true;
+   var un=function(){i.readOnly=false;i.removeEventListener('pointerdown',un);i.removeEventListener('touchstart',un);i.removeEventListener('focus',un)};
+   i.addEventListener('pointerdown',un);i.addEventListener('touchstart',un,{passive:true});i.addEventListener('focus',un);
+  }
+ }
+ function scan(r){try{(r.querySelectorAll?r.querySelectorAll('input'):[]).forEach(fix);if(r.tagName==='INPUT')fix(r)}catch(e){}}
+ function go(){scan(document);new MutationObserver(function(m){m.forEach(function(x){x.addedNodes.forEach(function(n){if(n.nodeType===1)scan(n)})})}).observe(document.body,{childList:true,subtree:true})}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);else go();
+})();
+</script>
+<script>
+/* mk: تنقّل موحّد: رجوع خطوة + إغلاق، وزر الرجوع في الموبايل/المتصفح */
+(function(){
+ var stack=[],busy=false;
+ function activeId(){var p=document.querySelector('.page.active');return p?p.id:null}
+ function modalOpen(){var m=document.getElementById('modalBg');return !!(m&&m.classList.contains('show'))}
+ var _sp=window.showPage,_om=window.openModal;
+ if(typeof _sp==='function'){
+  window.showPage=function(id){
+   var from=activeId();
+   if(!busy&&from&&from!==id){stack.push(from);if(stack.length>30)stack.shift();try{history.pushState({mk:1},'')}catch(e){}}
+   return _sp.apply(this,arguments)};
+ }
+ if(typeof _om==='function'){
+  window.openModal=function(){
+   var r=_om.apply(this,arguments);
+   try{
+    var m=document.getElementById('modal');
+    if(m&&!m.querySelector('.close')){
+     var h=m.querySelector('.modal-head')||m.firstElementChild;
+     if(h){var b=document.createElement('button');b.type='button';b.className='close';b.textContent='✕';b.setAttribute('aria-label','إغلاق');b.onclick=function(){window.closeModal()};h.appendChild(b)}
+    }
+    history.pushState({mk:2},'');
+   }catch(e){}
+   return r};
+ }
+ function back(){
+  if(modalOpen()){window.closeModal();return}
+  var p=stack.pop();if(p&&typeof _sp==='function'){busy=true;try{_sp(p)}finally{busy=false}}
+ }
+ window.addEventListener('popstate',function(){back()});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modalOpen())window.closeModal()});
+ var bg=document.getElementById('modalBg');
+ if(bg)bg.addEventListener('click',function(e){if(e.target===bg)window.closeModal()});
+ function bar(){
+  if(document.getElementById('mkNavBar'))return;
+  var d=document.createElement('div');d.id='mkNavBar';
+  d.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;z-index:40;display:flex;gap:6px';
+  d.innerHTML='<button type="button" id="mkNavBack" style="padding:6px 12px;border-radius:10px;background:#fff;color:#087f8c;border:1px solid #e4eaed;font-weight:700">رجوع</button><button type="button" id="mkNavClose" style="padding:6px 12px;border-radius:10px;background:#fff;color:#c0392b;border:1px solid #e4eaed;font-weight:700">✕</button>';
+  document.body.appendChild(d);
+  document.getElementById('mkNavBack').onclick=function(){back()};
+  document.getElementById('mkNavClose').onclick=function(){stack=[];if(modalOpen())window.closeModal();if(typeof _sp==='function'){busy=true;try{_sp('dashboard')}finally{busy=false}}};
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bar);else bar();
+})();
+</script>
 </body>
 </html>
