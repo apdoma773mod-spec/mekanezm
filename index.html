@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-19';
+const APP_VER='2026-10-15-20';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6328,17 +6328,52 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     var it=b.querySelector('#oqI').value.trim(),co=b.querySelector('#oqC').value.trim(),bar=num(b.querySelector('#oqB').value)||600,kerf=num(b.querySelector('#oqK').value),
         need=b.querySelector('#oqP').value.split(/[,،\s]+/).map(num).filter(function(x){return x>0}),el=b.querySelector('#oqR');
     if(!it||!need.length){el.innerHTML='<span class="empty">اكتب الصنف والمقاسات</span>';return}
-    var pool=O.filter(function(o){return o.status==='متاحة'&&o.item.indexOf(it)>-1&&(!co||String(o.color).indexOf(co)>-1)}).map(function(o){return {o:o,left:num(o.len)}});
-    var found=[],miss=[];
-    need.slice().sort(function(a,b){return b-a}).forEach(function(n){
-     var c=pool.filter(function(p){return p.left>=n+kerf-1e-9||p.left===n}).sort(function(a,b){return a.left-b.left})[0];
-     if(c){found.push({n:n,o:c.o,rest:Math.round((c.left-n-kerf)*10)/10});c.left=Math.max(0,c.left-n-kerf)}else miss.push(n)});
-    var pl=miss.length?plan(miss,bar,kerf):[];
-    el.innerHTML=(found.length?'<div class="sample"><b>✅ موجود في الفضل:</b><br>'+found.map(function(f){return esc(f.n)+' سم ← فضلة <b>'+esc(f.o.code)+'</b> ('+esc(num(f.o.len))+' سم، مكانها: '+esc(f.o.place||'—')+') — يتبقى '+esc(f.rest)+' سم <button type="button" class="wkbtn" data-r="'+esc(f.o.code)+'">احجزها</button>'}).join('<br>')+'</div>':'')+
-     (miss.length?'<div class="sample" style="margin-top:6px"><b>✂️ مش موجود في الفضل: '+miss.join('، ')+'</b><br>هتتقطع من <b>'+pl.length+'</b> عود:<br>'+pl.map(function(x,i){return 'عود '+(i+1)+': '+x.cuts.join(' + ')+' (يتبقى '+esc(x.left)+' سم)'}).join('<br>')+'</div>':'');
+    var pool=O.filter(function(o){return o.status==='متاحة'&&o.item.indexOf(it)>-1&&(!co||String(o.color).indexOf(co)>-1)}).map(function(o){return {o:o,len:num(o.len),used:false}});
+    var exact=[],rest=[];
+    need.slice().sort(function(a,c){return c-a}).forEach(function(n){
+     var c=pool.find(function(p){return !p.used&&Math.abs(p.len-n)<=0.5});
+     if(c){c.used=true;exact.push({n:n,o:c.o})}else rest.push(n)});
+    /* أقل هدر: مجموعة قطع تتقطع من نفس الفضلة (الهدر = الباقي بعد القص) */
+    var fit=[],left=rest.slice(),g=0;
+    while(left.length&&g++<20){
+     var best=null;
+     pool.forEach(function(p){
+      if(p.used)return;
+      var lim=Math.min(left.length,12);
+      for(var mask=1;mask<(1<<lim);mask++){
+       var s=0,c=0,idx=[];
+       for(var i=0;i<lim;i++)if(mask&(1<<i)){s+=left[i];c++;idx.push(i)}
+       var tot=s+kerf*(c-1);
+       if(tot>p.len+1e-9)continue;
+       var waste=Math.round((p.len-tot)*10)/10;
+       if(waste>minL)continue;                       /* الهدر الكبير مش من غير تهدير */
+       if(!best||waste<best.waste||(waste===best.waste&&c>best.c))best={p:p,idx:idx,waste:waste,c:c};
+      }});
+     if(!best)break;
+     best.p.used=true;
+     var cut=best.idx.map(function(i){return left[i]});
+     fit.push({o:best.p.o,cut:cut,waste:best.waste});
+     left=left.filter(function(_,i){return best.idx.indexOf(i)<0});
+    }
+    /* اللي فضل: أقرب فضلة أكبر (مع بيان الهدر) + العود السليم */
+    var near=left.map(function(n){
+     var c=pool.filter(function(p){return !p.used&&p.len>=n}).sort(function(a,c2){return a.len-c2.len})[0];
+     return {n:n,c:c};
+    });
+    var pl=left.length?plan(left,bar,kerf):[];
+    var h='';
+    if(exact.length)h+='<div class="sample"><b>✅ موجودة بنفس المقاس:</b><br>'+exact.map(function(f){return esc(f.n)+' سم ← <b>'+esc(f.o.code)+'</b> (مكانها: '+esc(f.o.place||'—')+') <button type="button" class="wkbtn" data-r="'+esc(f.o.code)+'">احجزها</button>'}).join('<br>')+'</div>';
+    if(fit.length)h+='<div class="sample" style="margin-top:6px"><b>🟡 مش بنفس المقاس، لكن تتقطع من غير تهدير تقريبًا:</b><br>'+fit.map(function(f){return 'من <b>'+esc(f.o.code)+'</b> ('+esc(num(f.o.len))+' سم، '+esc(f.o.place||'—')+'): قطّع '+f.cut.map(esc).join(' + ')+' سم — الباقي <b>'+esc(f.waste)+'</b> سم <button type="button" class="wkbtn" data-r="'+esc(f.o.code)+'">احجزها</button>'}).join('<br>')+'</div>';
+    if(left.length){
+     h+='<div class="sample" style="margin-top:6px"><b>❌ مش موجودة في الفضل: '+left.join('، ')+'</b>';
+     var nn=near.filter(function(x){return x.c});
+     if(nn.length)h+='<br><small>أقرب فضلة أكبر (هدر كبير، مش مفضّل):</small><br>'+nn.map(function(x){return esc(x.n)+' سم ← '+esc(x.c.o.code)+' ('+esc(x.c.len)+' سم) هدر '+esc(Math.round((x.c.len-x.n)*10)/10)+' سم'}).join('<br>');
+     h+='<br><b>✂️ الأفضل من عود سليم: '+pl.length+' عود</b><br>'+pl.map(function(x,i){return 'عود '+(i+1)+': '+x.cuts.join(' + ')+' (يتبقى '+esc(x.left)+' سم)'}).join('<br>')+'</div>';
+    }
+    el.innerHTML=h||'<span class="empty">مفيش</span>';
     el.querySelectorAll('[data-r]').forEach(function(x){x.onclick=function(){var o=O.find(function(z){return z.code===x.dataset.r});if(o){o.status='محجوزة';save().then(function(){toast('✔ اتحجزت '+o.code);draw()}).catch(errAlert)}}});
    };
-   b.querySelectorAll('[data-a]').forEach(function(x){x.onclick=async function(){
+      b.querySelectorAll('[data-a]').forEach(function(x){x.onclick=async function(){
     var o=O[+x.dataset.i],a=x.dataset.a;if(!o)return;
     if(a==='lab')return printOff(o);
     if(a==='res'){o.status=o.status==='محجوزة'?'متاحة':'محجوزة'}
