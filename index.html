@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-21';
+const APP_VER='2026-10-15-22';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5599,7 +5599,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function variants(w){var out={};out[w]=1;(function strip(x,d){if(d>2)return;PRE.forEach(function(p){if(x.length-p.length>=2&&x.indexOf(p)===0){var y=x.slice(p.length);if(!out[y]){out[y]=1;strip(y,d+1)}}})})(w,1);return Object.keys(out)}
  function skel(x){return x.charAt(0)+x.slice(1).replace(/[اوي]/g,'')}
  function lev(a,b){if(a===b)return 0;var m=a.length,n=b.length;if(!m)return n;if(!n)return m;var p=[];for(var i=0;i<=n;i++)p[i]=i;for(i=1;i<=m;i++){var c=[i];for(var j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
- function wordHit(w,q,fz){if(w===q)return true;if(q.length<=2)return false;var vs=variants(w);for(var i=0;i<vs.length;i++){var v=vs[i];if(v===q)return true;if(v.indexOf(q)===0&&v.length-q.length<=5)return true;if(q.length>=4){var sq=skel(q),sv=skel(v);if(sq.length>=3&&(sv===sq||(sv.indexOf(sq)===0&&sv.length-sq.length<=3)))return true}if(fz!==false&&q.length>=5){var l=q.length>=8?2:1;if(Math.abs(v.length-q.length)<=l&&lev(v,q)<=l)return true;if(v.length>q.length&&lev(v.slice(0,q.length),q)<=l&&v.length-q.length<=4)return true}}return false}
+ function wordHit(w,q,fz){if(w===q)return true;if(q.length<=2)return false;var vs=variants(w);for(var i=0;i<vs.length;i++){var v=vs[i];if(v===q)return true;if(v.indexOf(q)===0&&v.length-q.length<=5)return true;if(q.length>=4){var sq=skel(q),sv=skel(v);if(sq.length>=3&&(sv===sq||(sv.indexOf(sq)===0&&sv.length-sq.length<=3)))return true}if(fz!==false&&q.length>=5){var l=q.length>=7&&v[0]===q[0]?2:1;if(Math.abs(v.length-q.length)<=l&&lev(v,q)<=l)return true;if(v.length>q.length&&lev(v.slice(0,q.length),q)<=l&&v.length-q.length<=4)return true}}return false}
  function phraseHit(p,t,ws,mode,fz){var q=norm(p);if(!q)return false;if(mode==='exact')return t===q;var qw=words(q);if(!qw.length)return false;if(mode==='starts')return qw.every(function(x,i){return ws[i]&&wordHit(ws[i],x,fz)});if(qw.length===1)return ws.some(function(w){return wordHit(w,qw[0],fz)});if((' '+ws.join(' ')+' ').indexOf(' '+qw.join(' ')+' ')>-1)return true;for(var i=0;i<ws.length;i++){if(!wordHit(ws[i],qw[0],fz))continue;var win=ws.slice(i,i+qw.length+5);if(qw.every(function(x){return win.some(function(w){return wordHit(w,x,fz)})}))return true}return false}
  function hit(r,t){t=norm(t);var ws=words(t);if(!ws.length)return false;if((r.not||[]).some(function(p){return phraseHit(p,t,ws,'contains',false)}))return false;return(r.phrases||[]).some(function(p){return phraseHit(p,t,ws,r.mode,r.fuzzy)})}
  function neverHit(t){var n=norm(t),ws=words(n);return(CFG.never||[]).some(function(p){return phraseHit(p,n,ws,'contains',false)})}
