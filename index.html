@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-12';
+const APP_VER='2026-10-16-14';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6297,14 +6297,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="wkf"><label>المقبض</label><select id="fHd">'+HANDLES.map(function(x){return '<option value="'+x[0]+'"'+(o.handle===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'+
    '<div class="wkf"><label>نوع العود</label><select id="fRod">'+Object.keys(RODS).map(function(k){return '<option value="'+k+'"'+(o.rod===k?' selected':'')+'>'+RODS[k].n+'</option>'}).join('')+'</select></div>'+
    '</div>'+
-   '<div class="draw" id="fDr" style="margin-top:10px"></div><div id="fRods" class="sample" style="margin-top:10px"></div></div>'+
-   '<div class="wkc"><h3>الخامات</h3><div id="fM"></div><button type="button" class="wkbtn" id="fMA">➕ خامة</button></div>'+
-   '<div class="wkc"><h3>الحساب (إنت اللي بتكتب الأرقام)</h3><div class="wkg">'+
-   fi('fFe','أجرة الصنايعي للقطعة',o.fee,'inputmode="decimal"')+fi('fCs','التكلفة الإجمالية (فاضي = تتحسب من الخامات)',o.cost,'inputmode="decimal"')+
-   fi('fPc','سعر البيع',o.price,'inputmode="decimal"')+fi('fPd','العربون المدفوع',o.paid,'inputmode="decimal"')+'</div>'+
-   '<div id="fWork" class="sample" style="margin-top:10px"></div>'+
-   '<div id="fRes" class="sample" style="margin-top:10px"></div>'+
-   '<div class="wkf" style="margin-top:10px"><label>ملاحظات</label><textarea id="fNo" rows="2">'+esc(o.notes)+'</textarea></div></div>'+
+   '<div class="draw" id="fDr" style="margin-top:10px"></div></div>'+
+   '<div class="wkc"><h3>🔧 حسبة المصنعية</h3><div class="wkg">'+
+   fi('fFe','الصنايعي بياخد على الدرفة (ج)',o.fee,'inputmode="decimal"')+fi('fPe','على الزبون للدرفة (ج)',o.priceEach!=null&&o.priceEach!==''?o.priceEach:(num(o.price)&&num(o.qty)?Math.round(num(o.price)/num(o.qty)*100)/100:''),'inputmode="decimal"')+
+   fi('fPd','العربون اللي الزبون دفعه (ج)',o.paid,'inputmode="decimal"')+'</div>'+
+   '<div id="fRes" class="sample" style="margin-top:10px;font-size:15px"></div></div>'+
+   '<div class="wkc"><h3>🪵 حسبة الخامات</h3><div id="fRods" class="sample"></div>'+
+   '<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">خامات تانية اتصرفت على الأوردر (اختياري)</summary><div id="fM" style="margin-top:8px"></div><button type="button" class="wkbtn" id="fMA">➕ خامة</button></details></div>'+
+   '<div class="wkc"><div class="wkf"><label>ملاحظات</label><textarea id="fNo" rows="2">'+esc(o.notes)+'</textarea></div></div>'+
    '<div class="wkrow"><button type="button" class="wkbtn p" id="fSave">💾 حفظ</button><button type="button" class="wkbtn" id="fSavePr">💾 حفظ وطباعة</button><button type="button" class="wkbtn" id="fSaveInv">💾 حفظ وفاتورة</button></div>';
   function q(i){return b.querySelector('#'+i)}
   function drawMats(){q('fM').innerHTML=o.mats.map(function(m,i){return '<div class="wkg" style="margin-bottom:6px;align-items:end">'+
@@ -6315,16 +6315,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   function read(){
    o.type=q('fT').value;o.date=q('fD').value;o.customer=q('fC').value.trim();o.phone=q('fP').value.trim();o.crafter=q('fCr').value.trim();
    o.kind=q('fK').value;o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
-   o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.handle=q('fHd').value;o.rod=q('fRod').value;o.wOff=q('fWo').value.trim();o.wLen=q('fWl').value.trim();o.fee=q('fFe').value;o.cost=q('fCs').value;o.price=q('fPc').value;o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
-  function res(){read();var sl=o.kind==='slide';['fN','fS','fHP'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'none':''});['fWo','fWl'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'':'none'});q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;q('fRods').style.display=rh?'':'none';
-   var wc=(o.type==='دلفة'||o.type==='جرار')&&o.handle!=='frame'?workCalc(o):null;
-   q('fWork').innerHTML=wc?'🔧 <b>المصنعية</b> ('+(wc.sl?'جرار':'مفصلي')+'): '+wc.q+' درفة × '+fmt(wc.fee)+' = <b>'+fmt(wc.feeT)+'</b> ج للصنايعي — على الزبون '+wc.q+' × '+fmt(wc.price)+' = <b>'+fmt(wc.priceT)+'</b> ج — ربحك <b>'+fmt(wc.priceT-wc.feeT)+'</b> ج <button type="button" class="wkbtn" id="fWk" style="margin-right:8px">حط الأسعار دي</button>':'';q('fWork').style.display=wc?'':'none';
-   var wk=q('fWk');if(wk)wk.onclick=function(){q('fFe').value=wc.fee;q('fPc').value=wc.priceT;res()};
-   q('fRes').innerHTML='التكلفة: <b>'+fmt(cost(o))+'</b> ج — السعر: <b>'+fmt(num(o.price))+'</b> ج — الربح: <b>'+fmt(profit(o))+'</b> ج — الباقي على العميل: <b>'+fmt(num(o.price)-num(o.paid))+'</b> ج'}
+   o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.handle=q('fHd').value;o.rod=q('fRod').value;o.wOff=q('fWo').value.trim();o.wLen=q('fWl').value.trim();o.fee=q('fFe').value;o.priceEach=q('fPe').value;o.price=String(Math.round(num(o.priceEach)*(num(o.qty)||1)*100)/100);o.cost='';o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
+  function res(){read();var sl=o.kind==='slide';['fN','fS','fHP'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'none':''});['fWo','fWl'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'':'none'});q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;
+   var qn=num(o.qty)||1,fT=num(o.fee)*qn,pT=num(o.price),mt=(o.mats||[]).reduce(function(x,m){return x+num(m.q)*num(m.p)},0);
+   q('fRes').innerHTML='الصنايعي: '+qn+' × '+fmt(num(o.fee))+' = <b>'+fmt(fT)+'</b> ج<br>على الزبون: '+qn+' × '+fmt(num(o.priceEach))+' = <b>'+fmt(pT)+'</b> ج<br>'+(mt?'خامات تانية: <b>'+fmt(mt)+'</b> ج<br>':'')+'ربحك: <b style="font-size:18px">'+fmt(pT-fT-mt)+'</b> ج — الباقي على الزبون: <b>'+fmt(pT-num(o.paid))+'</b> ج';
+   if(!rh){q('fRods').innerHTML='<span style="color:var(--muted)">اكتب العرض والارتفاع وهتظهر الأعواد</span>';q('fRods').style.display=''}}
   b.querySelectorAll('input:not([data-m]),select,textarea').forEach(function(x){x.addEventListener('input',res);x.addEventListener('change',res)});
   q('fMA').onclick=function(){o.mats.push({n:'',q:'',p:''});drawMats()};
   drawMats();res();
-  if(!old){var autoW=function(){if(!(o.type==='دلفة'||o.type==='جرار')||o.handle==='frame')return;var wc=workCalc(o);if(!q('fFe').dataset.t)q('fFe').value=wc.fee;if(!q('fPc').dataset.t)q('fPc').value=wc.priceT;res()};['fFe','fPc'].forEach(function(i){q(i).addEventListener('input',function(){this.dataset.t=1})});['fQ','fK','fT','fHd'].forEach(function(i){q(i).addEventListener('change',autoW);q(i).addEventListener('input',autoW)});autoW()}
+  if(!old){var autoW=function(){if(!(o.type==='دلفة'||o.type==='جرار')||o.handle==='frame')return;var wc=workCalc(o);if(!q('fFe').dataset.t)q('fFe').value=wc.fee;if(!q('fPe').dataset.t)q('fPe').value=wc.price;res()};['fFe','fPe'].forEach(function(i){q(i).addEventListener('input',function(){this.dataset.t=1})});['fQ','fK','fT','fHd'].forEach(function(i){q(i).addEventListener('change',autoW);q(i).addEventListener('input',autoW)});autoW()}
   async function save(after){
    read();if(!o.customer)return toast('اكتب اسم العميل');
    o.mats=o.mats.filter(function(m){return m.n||m.q||m.p});
@@ -7593,7 +7592,7 @@ body.mkpro.mkdark .mkbox h2{color:var(--ac)}body.mkpro.mkdark .mkbox p{color:var
 body.mkpro.mkdark .mkbox input{background:var(--g0);border-color:var(--ln2);color:var(--tx)}
 body.mkpro.mkdark .mkbox button{background:var(--ac);color:var(--acI)}
 body.mkpro.mkdark .mkbox button.alt{background:var(--g3);color:var(--tx);border-color:var(--ln2)}
-body.mkpro.mkdark :is([style*="background:#fff;"],[style$="background:#fff"],[style*="background:#ffffff"],[style*="background: #fff;"],[style*="background:white"],[style*="background:#fafcfc"],[style*="background:#f6f6f6"],[style*="background:#f3f5f6"],[style*="background:#f3f3f3"],[style*="background:#f5f7f8"],[style*="background:#f4f7f8"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
+body.mkpro.mkdark :is([style*="background:#fff;"],[style$="background:#fff"],[style*="background:#ffffff"],[style*="background: #fff;"],[style*="background:white"],[style*="background:#fafcfc"],[style*="background:#f6f6f6"],[style*="background:#f3f5f6"],[style*="background:#f3f3f3"],[style*="background:#f5f7f8"],[style*="background:#f4f7f8"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img):not(svg):not(svg *){background:var(--g3)!important;color:var(--tx)}
 body.mkpro.mkdark :is([style*="background:var(--tint2)"],[style*="background:var(--tint)"]):not([style*="-10000px"] *){color:var(--tx)}
 body.mkpro.mkdark :is([style*="background:#fff4"],[style*="background:#fff7"],[style*="background:#fff8"],[style*="background:#fff6"],[style*="background:#fffaf0"],[style*="background:#fef3c7"],[style*="background:#fff9"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
 body.mkpro.mkdark :is([style*="background:#fdec"],[style*="background:#ffe4"],[style*="background:#fff0ee"],[style*="background:#ffefed"],[style*="background:#fff7f7"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
@@ -7607,7 +7606,7 @@ body.mkpro.mkdark :is([style*="color:#159447"],[style*="color:#0b6b45"],[style*=
 body.mkpro.mkdark :is([style*="color:#087f8c"],[style*="color:#0b4e57"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
 body.mkpro.mkdark :is([style*="color:#0b4a8b"]):not([style*="-10000px"] *):not(#mkPrint *){color:#93c5fd!important}
 body.mkpro.mkdark :is([style*="#e4eaed"],[style*="#e3e8ea"],[style*="#d5dde0"],[style*="solid #ddd"],[style*="solid #eee"],[style*="solid #ccc"],[style*="#eef1f2"]):not([style*="-10000px"] *):not(#mkPrint *){border-color:var(--ln2)!important}
-body.mkpro.mkdark :is([style*="background: rgb(255, 255, 255)"],[style*="background-color: rgb(255, 255, 255)"],[style*="background: white"],[style*="background: rgb(250, 252, 252)"],[style*="background: rgb(245, 247, 248)"],[style*="background: rgb(243, 245, 246)"],[style*="background: rgb(244, 247, 248)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
+body.mkpro.mkdark :is([style*="background: rgb(255, 255, 255)"],[style*="background-color: rgb(255, 255, 255)"],[style*="background: white"],[style*="background: rgb(250, 252, 252)"],[style*="background: rgb(245, 247, 248)"],[style*="background: rgb(243, 245, 246)"],[style*="background: rgb(244, 247, 248)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img):not(svg):not(svg *){background:var(--g3)!important;color:var(--tx)}
 body.mkpro.mkdark :is([style*="background: rgb(255, 24"],[style*="background: rgb(255, 250, 240)"],[style*="background: rgb(254, 243, 199)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
 body.mkpro.mkdark :is([style*="background: rgb(253, 236"],[style*="background: rgb(255, 228, 232)"],[style*="background: rgb(255, 239, 237)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
 body.mkpro.mkdark :is([style*="color: rgb(8, 127, 140)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
