@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-18';
+const APP_VER='2026-10-15-19';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2101,7 +2101,21 @@ function mkIsMob(){return /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)|
   try{w.document.open();w.document.write(h);w.document.close();return true}catch(e){try{w.close()}catch(_){}return false}
  }
  window.addEventListener('afterprint',function(){document.body.classList.remove('mkp-on')});
- function printHTML(html){closePrint();if(mkTabPrint(html))return;
+ function mkPrintChoose(html){
+  var kind=/size:\s*(80|58)mm/i.test(html)?'receipt':(/size:\s*\d+mm\s+\d+mm/i.test(html)||/\.lb\{width:\d+mm/.test(html))?'label':'a4';
+  var T={receipt:'🧾 طابعة الفواتير (XP-80)',label:'🏷️ طابعة الملصقات (XP-370B)',a4:'📄 طابعة A4'};
+  openModal('<div class="modal-head"><h2>🖨️ اطبع على إيه؟</h2></div><p style="margin:0 0 8px;color:var(--muted);font-size:13px">الطباعة بتتم على طابعات الكمبيوتر اللي في المحل. الكمبيوتر لازم يكون شغّال.</p><div class="quick">'+
+   ['receipt','label','a4'].map(function(k){return '<button type="button" data-k="'+k+'"'+(k===kind?' style="outline:3px solid #087f8c"':'')+'><b>'+T[k]+'</b>'+(k===kind?'مقترح':'')+'</button>'}).join('')+
+   '<button type="button" data-k="phone"><b>📱 من الموبايل نفسه</b>تبويب جاهز للطباعة</button></div>'+
+   '<div class="modal-foot"><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>');
+  document.getElementById('modal').querySelectorAll('[data-k]').forEach(function(b){b.onclick=async function(){
+   var k=b.dataset.k;closeModal();
+   if(k==='phone'){printHTML(html,true);return}
+   if(html.length>900000){toast('الورقة كبيرة أوي على الإرسال');return}
+   try{var r=await window.mkSB.from('wa_out').insert({to_phone:'PRINT:'+k,body:html,imgs:[],by_name:'🖨️ طباعة'});if(r.error)throw r.error;toast('✔ اتبعتت لـ '+T[k]+' (ثواني وتطلع)')}
+   catch(e){toast('الإرسال للطابعة ماتمش: '+(e.message||e))}}});
+ }
+ function printHTML(html,local){closePrint();if(!local&&mkIsMob()&&window.mkSB&&typeof openModal==='function'){mkPrintChoose(html);return}if(mkTabPrint(html))return;
  document.body.insertAdjacentHTML('beforeend','<div id="mkPrint"><div class="mkpbar"><button type="button" id="mkpBack">→ رجوع</button><b>معاينة الطباعة</b><button type="button" id="mkpGo">🖨️ اطبع</button></div><iframe id="mkpF" title="طباعة"></iframe></div>');
  let f=document.getElementById('mkpF');f.srcdoc=html;
  document.getElementById('mkpBack').onclick=closePrint;
