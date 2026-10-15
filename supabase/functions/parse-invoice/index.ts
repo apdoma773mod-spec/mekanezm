@@ -1,4 +1,5 @@
 // ميكانيزم — قراءة صورة فاتورة (مطبوعة أو بخط اليد) وإرجاع البنود كـ JSON
+// + kind:"transfer" ← قراءة صورة تحويل فلوس (انستاباي/محافظ/بنك) حتى لو ضعيفة
 // بتتنشر على Supabase باسم: parse-invoice   (اقفل «Verify JWT» — التحقق بيتعمل جوه الكود تحت)
 // الأسرار في Supabase → Edge Functions → Secrets (واحد منهم يكفي):
 //   GEMINI_API_KEY     ← مجاني من aistudio.google.com (من غير فيزا)
@@ -93,6 +94,111 @@ async function viaGemini(key: string, image: string, mt: string) {
   try { return json(JSON.parse(txt)); } catch { return json({ error: "ماقدرتش أقرا الفاتورة" }, 422); }
 }
 
+// ═════════ قراءة صورة تحويل فلوس (انستاباي / محافظ / بنك) — kind: "transfer"
+// بتشتغل حتى لو الصورة ضعيفة أو متصورة من شاشة موبايل تاني: قراءة أولى سريعة، ولو الثقة قليلة قراءة تانية بموديل أقوى.
+const TF_FIELDS = {
+  is_transfer: "هل الصورة دي إيصال/سكرين تحويل فلوس فعلاً؟",
+  confidence: "ثقتك في قراءة المبلغ من 0 لـ 1",
+  method: "instapay | vodafone_cash | etisalat_cash | orange_cash | we_pay | bank | fawry | other",
+  status: "success | failed | pending | unknown",
+  amount: "المبلغ المحوّل الأساسي (رقم بس، من غير رسوم)",
+  amount_text: "المبلغ زي ما هو مكتوب في الصورة بالظبط",
+  fees: "رسوم التحويل لو ظاهرة",
+  currency: "EGP عادةً",
+  date: "تاريخ العملية YYYY-MM-DD",
+  time: "وقت العملية HH:MM (24 ساعة)",
+  sender_name: "اسم المحوِّل",
+  sender_account: "رقم موبايل/حساب/عنوان دفع المحوِّل زي ما ظاهر (ممكن يكون متنجم ***)",
+  receiver_name: "اسم المستلم",
+  receiver_account: "رقم موبايل/حساب/عنوان دفع المستلم زي ما ظاهر",
+  reference: "رقم العملية / المرجع / Transaction ID",
+  note: "أي رسالة أو ملاحظة مكتوبة مع التحويل",
+  quality: "good | blurry | photo_of_screen | cropped | dark",
+  issues: "أي حاجة مش مقروءة أو مشكوك فيها",
+};
+const TF_SCHEMA = {
+  type: "OBJECT",
+  properties: Object.fromEntries(Object.keys(TF_FIELDS).map((k) => [k, { type: ["is_transfer"].includes(k) ? "BOOLEAN" : ["confidence", "amount", "fees"].includes(k) ? "NUMBER" : "STRING" }])),
+  required: ["is_transfer", "confidence", "amount"],
+};
+const TF_TOOL = {
+  name: "record_transfer",
+  description: "سجّل بيانات التحويل زي ما ظاهرة في الصورة",
+  input_schema: {
+    type: "object",
+    properties: Object.fromEntries(Object.entries(TF_FIELDS).map(([k, d]) => [k, { type: k === "is_transfer" ? "boolean" : ["confidence", "amount", "fees"].includes(k) ? "number" : "string", description: d }])),
+    required: ["is_transfer", "confidence", "amount"],
+  },
+};
+const TF_PROMPT = `دي صورة جاية على واتساب محل في مصر. غالبًا سكرين أو صورة إيصال تحويل فلوس (InstaPay، فودافون كاش، اتصالات كاش، أورنج كاش، وي باي، تحويل بنكي، فوري) — وممكن تكون صورة عادية مش تحويل خالص.
+الصورة ممكن تكون ضعيفة: مهزوزة، أو متصورة من شاشة موبايل تاني بكاميرا (فيها انعكاس أو خطوط)، أو مقصوصة، أو غامقة. اقراها بعناية.
+القواعد:
+- لو مش تحويل فلوس: is_transfer=false و amount=0.
+- amount = المبلغ المحوّل نفسه، مش الرسوم ومش الرصيد المتبقي ومش "إجمالي مع الرسوم". لو فيه "المبلغ" و"الإجمالي" خد المبلغ.
+- الأرقام بالإنجليزي. انتبه للفاصلة: 1,500.00 = 1500. وفي الأرقام العربي "٫" = علامة عشرية.
+- اكتب amount_text زي ما هو مكتوب بالظبط عشان نراجع.
+- ماتخمّنش: لو المبلغ مش واضح قلّل confidence واكتب السبب في issues.
+- confidence عالية (0.9+) بس لو المبلغ واضح تمامًا ومفيش شك.
+- status=failed لو مكتوب فشلت/مرفوضة/failed، pending لو قيد التنفيذ.`;
+
+const TF_MODELS = [...new Set([Deno.env.get("TRANSFER_MODEL"), Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean))] as string[];
+const TF_STRONG = [...new Set([Deno.env.get("TRANSFER_STRONG_MODEL"), "gemini-pro-latest", "gemini-2.5-pro"].filter(Boolean))] as string[];
+
+async function tfGemini(key: string, models: string[], image: string, mt: string, hint = "") {
+  let last = "";
+  for (const m of models) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: TF_PROMPT + (hint ? "\n" + hint : "") + "\nرجّع JSON بس." }, { inline_data: { mime_type: mt, data: image } }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: TF_SCHEMA, temperature: 0 },
+      }),
+    });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) { last = body?.error?.message || `Gemini ${r.status}`; if ([400, 404, 429, 500, 503].includes(r.status)) continue; break; }
+    const txt = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
+    try { const o = JSON.parse(txt); o._model = m; return o; } catch { last = "رد مش مفهوم"; }
+  }
+  throw new Error(last || "ماقدرتش أقرا الصورة");
+}
+async function tfClaude(key: string, image: string, mt: string) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL, max_tokens: 1500, tools: [TF_TOOL], tool_choice: { type: "tool", name: "record_transfer" },
+      messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: mt, data: image } }, { type: "text", text: TF_PROMPT }] }],
+    }),
+  });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body?.error?.message || `Anthropic ${r.status}`);
+  const tu = (body.content || []).find((c: { type: string }) => c.type === "tool_use");
+  if (!tu) throw new Error("ماقدرتش أقرا الصورة");
+  return { ...tu.input, _model: MODEL };
+}
+const weak = (o: Record<string, unknown> | null) => !o || (o.is_transfer !== false && (!(Number(o.amount) > 0) || Number(o.confidence || 0) < 0.8));
+
+async function readTransfer(gkey: string | undefined, akey: string | undefined, image: string, mt: string) {
+  let a: Record<string, unknown> | null = null, err = "";
+  if (gkey) { try { a = await tfGemini(gkey, TF_MODELS, image, mt); } catch (e) { err = String((e as Error).message); } }
+  else if (akey) { try { a = await tfClaude(akey, image, mt); } catch (e) { err = String((e as Error).message); } }
+  if (!weak(a)) return { ...a, passes: 1 };
+  // قراءة تانية بموديل أقوى (الصورة ضعيفة أو الثقة قليلة)
+  let b: Record<string, unknown> | null = null;
+  try {
+    if (gkey) b = await tfGemini(gkey, TF_STRONG, image, mt, "دي قراءة تانية لأن الأولى مكانتش واثقة. ركّز على المبلغ ورقم العملية.");
+    else if (akey && !a) b = await tfClaude(akey, image, mt);
+  } catch (_) { /* الموديل الأقوى مش متاح: نكمل بالأولى */ }
+  if (!b && akey && gkey) { try { b = await tfClaude(akey, image, mt); } catch (_) {} }
+  if (!a && !b) throw new Error(err || "ماقدرتش أقرا الصورة");
+  if (!a) return { ...b, passes: 2 };
+  if (!b) return { ...a, passes: 1 };
+  const agree = Math.abs(Number(a.amount || 0) - Number(b.amount || 0)) < 0.01;
+  const best = Number(b.confidence || 0) >= Number(a.confidence || 0) ? b : a;
+  return { ...best, passes: 2, agree, alt_amount: agree ? undefined : (best === b ? a.amount : b.amount), confidence: agree ? Math.max(Number(a.confidence || 0), Number(b.confidence || 0), 0.85) : Math.min(Number(best.confidence || 0), 0.6) };
+}
+
 async function authed(req: Request): Promise<boolean> {
   const auth = req.headers.get("authorization") || "";
   const apikey = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -113,10 +219,14 @@ Deno.serve(async (req) => {
     const key = Deno.env.get("ANTHROPIC_API_KEY");
     if (!gkey && !key) return json({ error: "ضيف GEMINI_API_KEY (مجاني) أو ANTHROPIC_API_KEY في Secrets" }, 500);
 
-    const { image, media_type } = await req.json();
+    const { image, media_type, kind } = await req.json();
     if (typeof image !== "string" || !image) return json({ error: "مفيش صورة" }, 400);
     if (image.length > MAX_B64) return json({ error: "الصورة كبيرة — صوّرها تاني بحجم أصغر" }, 413);
     const mt = TYPES.includes(media_type) ? media_type : "image/jpeg";
+    if (kind === "transfer") {
+      try { return json(await readTransfer(gkey || undefined, key || undefined, image.replace(/^data:[^,]+,/, ""), mt)); }
+      catch (e) { return json({ error: String((e as Error).message || e) }, 502); }
+    }
     if (gkey) return await viaGemini(gkey, image, mt);
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
