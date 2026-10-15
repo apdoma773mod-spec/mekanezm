@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-28';
+const APP_VER='2026-10-15-29';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6935,23 +6935,23 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 })();
 </script>
 <style id="mkProCss">
-/* ═══ ميكانيزم برو — الوضع الغامق «جرافيت»: أسطح متدرّجة (كل ما يعلى يفتح)، تيل ميكانيزم للأكشن، ذهبي للتنبيه ═══ */
+/* ═══ ميكانيزم برو — الوضع الغامق: أسود/أبيض + هوية ميكانيزم (أزرق غامق للأكشن، أصفر منجاوي للتنبيه) ═══ */
 body.mkpro{
  --g0:#090b0e;--g1:#0e1114;--g2:#151a1f;--g3:#1c2228;--g4:#242b33;--g5:#313a44;
  --ln:#252d36;--ln2:#36414c;--tx:#e8edf1;--tx2:#b1bdc6;--tx3:#83919b;
- --ac:#1fc8b5;--acI:#04211e;--gd:#f4bd43;--gdI:#2a1d00;
+ --ac:#3B63F2;--acI:#f4f8ff;--gd:#FFBE0B;--gdI:#2A1D00;
  --ok:#4ade80;--wr:#fbbf24;--bd:#f87171;--in:#60a5fa;--vi:#a78bfa;--or:#fb923c;
  --bg:var(--g1);--card:var(--g2);--text:var(--tx);--muted:var(--tx3);--border:var(--ln);
- --blue:var(--ac);--blue2:#15a394;--onblue:var(--acI);--gold:var(--gd);--onaccent:var(--gdI);
+ --blue:var(--ac);--blue2:#1C3AA8;--onblue:var(--acI);--gold:var(--gd);--onaccent:var(--gdI);
  --danger:var(--bd);--green:var(--ok);
- --tint:rgba(31,200,181,.15);--tint2:rgba(31,200,181,.08);--tintb:rgba(31,200,181,.38);--ring:rgba(31,200,181,.28);
+ --tint:rgba(59,99,242,.15);--tint2:rgba(59,99,242,.08);--tintb:rgba(59,99,242,.38);--ring:rgba(59,99,242,.28);
  color-scheme:dark;color:var(--tx);font-variant-numeric:tabular-nums;
  background-color:var(--g1)!important;
- background-image:radial-gradient(1200px 520px at 100% -10%,rgba(31,200,181,.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(244,189,67,.06),transparent 60%),radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px)!important;
+ background-image:radial-gradient(1200px 520px at 100% -10%,rgba(59,99,242,.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(255,190,11,.06),transparent 60%),radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px)!important;
  background-size:auto,auto,22px 22px!important;background-attachment:fixed!important;
 }
 body.mkpro.mkpro-font{font-family:Cairo,"Segoe UI",Tahoma,sans-serif!important}
-body.mkpro ::selection{background:rgba(31,200,181,.35)}
+body.mkpro ::selection{background:rgba(59,99,242,.35)}
 body.mkpro *{scrollbar-color:#3a4550 transparent}
 /* رجّع الألوان الفاتحة لملفات الـPDF والطباعة (بتتبني في الصفحة نفسها) */
 body.mkpro>[style*="-10000px"],body.mkpro #mkPrint{color-scheme:light;--bg:#f5f7f8;--card:#fff;--text:#18343a;--muted:#718087;--border:#e4eaed;--blue:#087f8c;--onblue:#fff;--danger:#c0392b;--green:#159447;--tint:#e3f2f3;--tint2:#f1f8f9;color:#18343a}
@@ -6967,8 +6967,8 @@ body.mkpro aside{background:linear-gradient(180deg,#0b0e11,#080a0c);border-left:
 body.mkpro aside .nav-title{color:#5f6d77;font-weight:800;font-size:11px;letter-spacing:.3px}
 body.mkpro aside .nav button{color:#c3cdd4;padding:9px 10px;border-radius:12px;position:relative;font-weight:600;transition:background .15s,color .15s}
 body.mkpro aside .nav button:hover{background:rgba(255,255,255,.05);color:#fff}
-body.mkpro aside .nav button.active{background:linear-gradient(270deg,rgba(31,200,181,.16),rgba(31,200,181,.03));color:#fff;font-weight:800;box-shadow:inset 0 0 0 1px rgba(31,200,181,.22)}
-body.mkpro aside .nav button.active::after{content:"";position:absolute;right:-16px;top:8px;bottom:8px;width:4px;border-radius:4px 0 0 4px;background:var(--gd);box-shadow:0 0 12px rgba(244,189,67,.6)}
+body.mkpro aside .nav button.active{background:linear-gradient(270deg,rgba(59,99,242,.16),rgba(59,99,242,.03));color:#fff;font-weight:800;box-shadow:inset 0 0 0 1px rgba(59,99,242,.22)}
+body.mkpro aside .nav button.active::after{content:"";position:absolute;right:-16px;top:8px;bottom:8px;width:4px;border-radius:4px 0 0 4px;background:var(--gd);box-shadow:0 0 12px rgba(255,190,11,.6)}
 body.mkpro aside .nav .danger:hover{background:rgba(248,113,113,.12)}
 body.mkpro aside .nav button .badge{margin-right:auto;background:var(--gd);color:var(--gdI);font-weight:800}
 .mkic{flex:none;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(145deg,hsl(var(--h,200) 78% 58%),hsl(var(--h,200) 72% 40%));box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -2px 0 rgba(0,0,0,.22),0 4px 12px hsl(var(--h,200) 70% 35% / .45)}
@@ -6994,15 +6994,15 @@ body.mkpro .stat strong{font-weight:800;color:#fff;font-size:26px}
 body.mkpro .stat small{color:var(--tx3);font-weight:600}
 body.mkpro .empty{color:var(--tx3)}
 /* ── الأزرار ── */
-body.mkpro .primary{background:linear-gradient(180deg,#2ad6c2,#17b3a2);color:var(--acI);font-weight:800;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(31,200,181,.22)}
+body.mkpro .primary{background:linear-gradient(180deg,#4A74FF,#1E3AA0);color:var(--acI);font-weight:800;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(59,99,242,.22)}
 body.mkpro .primary:hover{filter:brightness(1.07)}
 body.mkpro .secondary{background:var(--g3);color:var(--tx);border:1px solid var(--ln2)}
 body.mkpro .secondary:hover{background:var(--g4);color:#fff}
 body.mkpro .primary:active,body.mkpro .secondary:active{transform:translateY(1px)}
 body.mkpro .secondary.danger,body.mkpro .danger{color:var(--bd)!important}
-body.mkpro .fab{background:linear-gradient(180deg,#ffd166,#f4b43a);color:var(--gdI);box-shadow:0 10px 26px rgba(244,189,67,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+body.mkpro .fab{background:linear-gradient(180deg,#FFD24D,#F5A800);color:var(--gdI);box-shadow:0 10px 26px rgba(255,190,11,.35),inset 0 1px 0 rgba(255,255,255,.5)}
 body.mkpro .close{background:var(--g3);color:var(--tx);border:1px solid var(--ln2)}
-body.mkpro :focus-visible{outline:3px solid rgba(244,189,67,.7);outline-offset:2px}
+body.mkpro :focus-visible{outline:3px solid rgba(255,190,11,.7);outline-offset:2px}
 /* ── الخانات ── */
 body.mkpro input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),body.mkpro select,body.mkpro textarea,body.mkpro .search,body.mkpro .field input,body.mkpro .field select,body.mkpro .field textarea{background:var(--g0);color:var(--tx);border:1px solid var(--ln2);border-radius:11px}
 body.mkpro input::placeholder,body.mkpro textarea::placeholder{color:#6b7882}
@@ -7015,16 +7015,16 @@ body.mkpro option{background:var(--g2);color:var(--tx)}
 body.mkpro .table th,body.mkpro th{background:var(--g3);color:var(--tx2);font-weight:700;border-bottom:1px solid var(--ln2)}
 body.mkpro .table td,body.mkpro td{border-bottom-color:var(--ln);color:var(--tx)}
 body.mkpro tr:nth-child(even) td{background:rgba(255,255,255,.018)}
-body.mkpro .prow:hover td,body.mkpro tr:hover td{background:rgba(31,200,181,.06)}
-body.mkpro .pico{background:rgba(31,200,181,.12);color:var(--ac)}
+body.mkpro .prow:hover td,body.mkpro tr:hover td{background:rgba(59,99,242,.06)}
+body.mkpro .pico{background:rgba(59,99,242,.12);color:var(--ac)}
 /* ── الشارات ── */
-body.mkpro .badge{background:rgba(31,200,181,.14);color:#6ee7d8;font-weight:700}
+body.mkpro .badge{background:rgba(59,99,242,.14);color:#AEC1FF;font-weight:700}
 body.mkpro .badge.red{background:rgba(248,113,113,.15);color:#fca5a5}
 body.mkpro .badge.green,body.mkpro .badge.st-paid{background:rgba(74,222,128,.14);color:#86efac}
-body.mkpro .badge.st-delivered{background:rgba(251,191,36,.14);color:#fcd34d}
+body.mkpro .badge.st-delivered{background:rgba(251,191,36,.14);color:#FFD24D}
 body.mkpro .badge.st-returned,body.mkpro .badge.st-cancelled{background:rgba(248,113,113,.15);color:#fca5a5}
 body.mkpro .dtage,body.mkpro .rtag,body.mkpro .kt-chip{background:var(--g4);color:var(--tx2)}
-body.mkpro .dtage.a30,body.mkpro .rtag.r1{background:rgba(251,191,36,.14);color:#fcd34d}
+body.mkpro .dtage.a30,body.mkpro .rtag.r1{background:rgba(251,191,36,.14);color:#FFD24D}
 body.mkpro .dtage.a60,body.mkpro .rtag.r0{background:rgba(248,113,113,.15);color:#fca5a5}
 /* ── النوافذ ── */
 body.mkpro .modal-bg{background:rgba(3,5,7,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
@@ -7047,29 +7047,29 @@ body.mkpro .mkbox button.alt{background:var(--g3);color:var(--tx);border-color:v
 /* ── الكود القديم المكتوب بألوان فاتحة جوه العناصر (ما عدا الطباعة/الـPDF) ── */
 body.mkpro :is([style*="background:#fff;"],[style$="background:#fff"],[style*="background:#ffffff"],[style*="background: #fff;"],[style*="background:white"],[style*="background:#fafcfc"],[style*="background:#f6f6f6"],[style*="background:#f3f5f6"],[style*="background:#f3f3f3"],[style*="background:#f5f7f8"],[style*="background:#f4f7f8"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
 body.mkpro :is([style*="background:var(--tint2)"],[style*="background:var(--tint)"]):not([style*="-10000px"] *){color:var(--tx)}
-body.mkpro :is([style*="background:#fff4"],[style*="background:#fff7"],[style*="background:#fff8"],[style*="background:#fff6"],[style*="background:#fffaf0"],[style*="background:#fef3c7"],[style*="background:#fff9"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#fde68a!important}
+body.mkpro :is([style*="background:#fff4"],[style*="background:#fff7"],[style*="background:#fff8"],[style*="background:#fff6"],[style*="background:#fffaf0"],[style*="background:#fef3c7"],[style*="background:#fff9"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
 body.mkpro :is([style*="background:#fdec"],[style*="background:#ffe4"],[style*="background:#fff0ee"],[style*="background:#ffefed"],[style*="background:#fff7f7"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
 body.mkpro :is([style*="background:#e8f7ee"],[style*="background:#eefaf3"],[style*="background:#e3f4ec"],[style*="background:#e6f6ec"],[style*="background:#eaf7ef"],[style*="background:#dff3e6"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(74,222,128,.11)!important;color:#bbf7d0!important}
 body.mkpro :is([style*="background:#eef6ff"],[style*="background:#e3f4f5"],[style*="background:#eef6f7"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(96,165,250,.11)!important;color:#cfe3ff!important}
 body.mkpro :is([style*="color:#7b8a90"],[style*="color:#6b7c82"],[style*="color:#7a8a8f"],[style*="color:#718087"],[style*="color:#8a979c"],[style*="color:#888"],[style*="color:#777"],[style*="color:#555"],[style*="color:#475b61"],[style*="color:#5d7477"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx3)!important}
 body.mkpro :is([style*="color:#18343a"],[style*="color:#1c2a30"],[style*="color:#222"],[style*="color:#333"],[style*="color:#000"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx)!important}
-body.mkpro :is([style*="color:#8a4b00"],[style*="color:#a66a00"],[style*="color:#7a4b00"],[style*="color:#b9770e"],[style*="color:#8a6410"],[style*="color:#b7791f"]):not([style*="-10000px"] *):not(#mkPrint *){color:#fcd34d!important}
+body.mkpro :is([style*="color:#8a4b00"],[style*="color:#a66a00"],[style*="color:#7a4b00"],[style*="color:#b9770e"],[style*="color:#8a6410"],[style*="color:#b7791f"]):not([style*="-10000px"] *):not(#mkPrint *){color:#FFD24D!important}
 body.mkpro :is([style*="color:#c0392b"],[style*="color:#b33"],[style*="color:#b3261e"],[style*="color:#8c1d18"]):not([style*="-10000px"] *):not(#mkPrint *){color:#fca5a5!important}
 body.mkpro :is([style*="color:#159447"],[style*="color:#0b6b45"],[style*="color:#1e6b3c"],[style*="color:#0b5b2b"],[style*="color:#1e7a3c"]):not([style*="-10000px"] *):not(#mkPrint *){color:#86efac!important}
-body.mkpro :is([style*="color:#087f8c"],[style*="color:#0b4e57"]):not([style*="-10000px"] *):not(#mkPrint *){color:#5eead4!important}
+body.mkpro :is([style*="color:#087f8c"],[style*="color:#0b4e57"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
 body.mkpro :is([style*="color:#0b4a8b"]):not([style*="-10000px"] *):not(#mkPrint *){color:#93c5fd!important}
 body.mkpro :is([style*="#e4eaed"],[style*="#e3e8ea"],[style*="#d5dde0"],[style*="solid #ddd"],[style*="solid #eee"],[style*="solid #ccc"],[style*="#eef1f2"]):not([style*="-10000px"] *):not(#mkPrint *){border-color:var(--ln2)!important}
 /* نفس الألوان بعد ما الصفحة تعدّل الستايل بنفسها (المتصفح بيكتبها rgb) */
 body.mkpro :is([style*="background: rgb(255, 255, 255)"],[style*="background-color: rgb(255, 255, 255)"],[style*="background: white"],[style*="background: rgb(250, 252, 252)"],[style*="background: rgb(245, 247, 248)"],[style*="background: rgb(243, 245, 246)"],[style*="background: rgb(244, 247, 248)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
-body.mkpro :is([style*="background: rgb(255, 24"],[style*="background: rgb(255, 250, 240)"],[style*="background: rgb(254, 243, 199)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#fde68a!important}
+body.mkpro :is([style*="background: rgb(255, 24"],[style*="background: rgb(255, 250, 240)"],[style*="background: rgb(254, 243, 199)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
 body.mkpro :is([style*="background: rgb(253, 236"],[style*="background: rgb(255, 228, 232)"],[style*="background: rgb(255, 239, 237)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
-body.mkpro :is([style*="color: rgb(8, 127, 140)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#5eead4!important}
+body.mkpro :is([style*="color: rgb(8, 127, 140)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
 body.mkpro :is([style*="color: rgb(192, 57, 43)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#fca5a5!important}
 body.mkpro :is([style*="color: rgb(113, 128, 135)"],[style*="color: rgb(123, 138, 144)"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx3)!important}
 body.mkpro :is([style*="background:var(--blue)"],[style*="background: var(--blue)"]):not([style*="-10000px"] *){color:var(--acI)!important}
 body.mkpro #mkNavBar button{background:rgba(28,34,40,.92)!important;color:var(--tx)!important;border:1px solid var(--ln2)!important;backdrop-filter:blur(8px)}
 body.mkpro #mkNavBar #mkNavClose{color:#fca5a5!important}
-body.mkpro #roBanner{background:linear-gradient(270deg,rgba(244,189,67,.16),rgba(244,189,67,.05))!important;color:#fde68a!important;border:1px solid rgba(244,189,67,.4)!important;font-weight:700}
+body.mkpro #roBanner{background:linear-gradient(270deg,rgba(255,190,11,.16),rgba(255,190,11,.05))!important;color:#FFE49E!important;border:1px solid rgba(255,190,11,.4)!important;font-weight:700}
 body.mkpro .prow .spgo{background:var(--g3);border-color:var(--ln2);color:var(--tx2)}
 body.mkpro .prow .spgo.on{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:#86efac}
 body.mkpro #outBtn{color:#fca5a5!important}
@@ -7087,14 +7087,14 @@ body.mkpro #dashboard button[onclick="showPage('daybook')"][style]{display:none!
 .mkLaunch .mkic svg{width:30px;height:30px;stroke-width:2}
 .mkLaunch button>span:last-child{display:flex;flex-direction:column;gap:3px;line-height:1.3;position:relative;z-index:1}
 .mkLaunch small{display:block;font-weight:600;font-size:12.5px;color:hsl(var(--h) 30% 78%)}
-.mkLaunch .cnt{position:absolute;top:14px;left:14px;min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:var(--gd,#f4bd43);color:#2a1d00;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(0,0,0,.25)}
+.mkLaunch .cnt{position:absolute;top:14px;left:14px;min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:var(--gd,#FFBE0B);color:#2A1D00;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(0,0,0,.25)}
 body:not(.mkpro) .mkLaunch button{background:#fff;color:#18343a;border-color:#e4eaed}
 body:not(.mkpro) .mkLaunch small{color:#7a8a90}
 @media(max-width:600px){.mkLaunch{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mkLaunch button{min-height:112px;padding:12px;font-size:15px;gap:10px;border-radius:16px}.mkLaunch .mkic{width:46px;height:46px;border-radius:14px}.mkLaunch .mkic svg{width:24px;height:24px}.mkLaunch small{font-size:11.5px}}
 body.mkpro .dash-acts button{background:var(--g2);border:1px solid var(--ln);color:var(--tx);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 26px rgba(0,0,0,.28)}
 body.mkpro .dash-acts button:hover{background:var(--g3);border-color:var(--ln2)}
-body.mkpro .dash-acts .ic{background:rgba(31,200,181,.12);color:var(--ac)}
-body.mkpro .dash-acts .pri{background:linear-gradient(160deg,#1a8f84,#0f5f58);border-color:#24b3a4;color:#fff}
+body.mkpro .dash-acts .ic{background:rgba(59,99,242,.12);color:var(--ac)}
+body.mkpro .dash-acts .pri{background:linear-gradient(160deg,#16297A,#0A1850);border-color:#3B63F2;color:#fff}
 body.mkpro .dash-acts .pri .ic{background:rgba(255,255,255,.14);color:#fff}
 body.mkpro .dash-acts small{color:var(--tx3)}body.mkpro .dash-acts .pri small{color:#c9f3ee}
 /* ══ اليومية: كل خانة ليها لونها ══ */
@@ -7104,9 +7104,9 @@ body.mkpro #dbPerson{background:rgba(96,165,250,.10);border:1.5px solid rgba(96,
 body.mkpro #dbPerson::placeholder{color:#8db4ec;font-weight:600}
 body.mkpro #dbPerson:focus{border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.22);background:rgba(96,165,250,.14)}
 /* الصنف = ذهبي */
-body.mkpro #dbSearch{background:rgba(244,189,67,.09);border:2px solid rgba(244,189,67,.6);border-radius:14px;padding:15px 16px;font-size:18px;font-weight:800;color:#ffe8b0}
+body.mkpro #dbSearch{background:rgba(255,190,11,.09);border:2px solid rgba(255,190,11,.6);border-radius:14px;padding:15px 16px;font-size:18px;font-weight:800;color:#ffe8b0}
 body.mkpro #dbSearch::placeholder{color:#cfa64a;font-weight:600}
-body.mkpro #dbSearch:focus{border-color:#f4bd43;box-shadow:0 0 0 4px rgba(244,189,67,.22);background:rgba(244,189,67,.13)}
+body.mkpro #dbSearch:focus{border-color:#FFBE0B;box-shadow:0 0 0 4px rgba(255,190,11,.22);background:rgba(255,190,11,.13)}
 body.mkpro #dbBox{background:var(--g3);border:1px solid var(--ln2);box-shadow:0 18px 40px rgba(0,0,0,.5)}
 body.mkpro #dbBox>div{border-bottom-color:var(--ln)}
 body.mkpro #dbBox>div:hover{background:var(--g4)}
@@ -7137,7 +7137,45 @@ body.mkpro .dbbadge.insta{background:rgba(167,139,250,.15);color:#c4b5fd}
 body.mkpro .dbbadge.transfer{background:rgba(96,165,250,.15);color:#93c5fd}
 body.mkpro .dbbadge.credit{background:rgba(248,113,113,.15);color:#fca5a5}
 body.mkpro .dbfoot{background:rgba(21,26,31,.96);border:1px solid var(--ln2);box-shadow:0 -10px 30px rgba(0,0,0,.4)}
-@media (prefers-reduced-motion:reduce){.mkLaunch button,body.mkpro aside .nav button{transition:none}}
+/* ══ شريط اللوجو: ميكانيزم كبيرة بعرض الشريط + حركة خفيفة (مسمار وترس) ══ */
+body.mkpro .top{height:92px;padding-top:0;padding-bottom:0}
+body.mkpro .brand{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:16px;min-width:0;max-width:none}
+body.mkpro .brand #brandLogo{height:52px!important;max-width:160px!important}
+body.mkpro #mkWordmark{display:flex;align-items:center;gap:14px;line-height:1}
+body.mkpro #mkWordmark .mkw-ic{flex:none;width:34px;height:34px;color:var(--gd);filter:drop-shadow(0 0 8px rgba(255,190,11,.35))}
+body.mkpro #mkWordmark .mkw-ic svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+body.mkpro #mkWordmark .mkw-ic.g1{animation:mkSpin 7s linear infinite}
+body.mkpro #mkWordmark .mkw-ic.g2{color:var(--ac);filter:drop-shadow(0 0 8px rgba(59,99,242,.45));animation:mkSpinRev 5.5s linear infinite}
+body.mkpro #mkWordmark .mkw-tx{font-weight:800;font-size:30px;letter-spacing:.3px;display:flex;flex-direction:column;align-items:center;white-space:nowrap}
+body.mkpro #mkWordmark .mkw-tx b{background:linear-gradient(90deg,#fff 10%,var(--gd) 55%,var(--ac) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.mkpro #mkWordmark .mkw-tx small{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--tx3)}
+@keyframes mkSpin{to{transform:rotate(360deg)}}
+@keyframes mkSpinRev{to{transform:rotate(-360deg)}}
+@keyframes mkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+body.mkpro #mkWordmark .mkw-ic.g3{animation:mkFloat 2.6s ease-in-out infinite}
+@media(max-width:900px){
+ body.mkpro .top{height:76px}
+ body.mkpro #mkWordmark .mkw-tx{font-size:21px}
+ body.mkpro #mkWordmark .mkw-ic{width:24px;height:24px}
+ body.mkpro #mkWordmark{gap:8px}
+ body.mkpro .brand #brandLogo{height:38px!important}
+}
+@media (prefers-reduced-motion:reduce){.mkLaunch button,body.mkpro aside .nav button,body.mkpro #mkWordmark .mkw-ic{animation:none!important}}
+/* ── لمسة ذهبية: لوحة التحكم (آخر العمليات + الرسومات) ── */
+body.mkpro .chc{position:relative;overflow:hidden;padding-top:20px}
+body.mkpro .chc::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--gd),rgba(255,190,11,0) 75%)}
+body.mkpro .chc h3{display:flex;align-items:center;gap:8px}
+body.mkpro .chc h3::before{content:'◆';color:var(--gd);font-size:11px}
+body.mkpro .hb .bar{background:var(--g4)}
+body.mkpro .hb .bar i{background:linear-gradient(90deg,var(--ac) 0%,var(--gd) 100%)!important;box-shadow:0 0 10px rgba(255,190,11,.3)}
+body.mkpro .hb:first-of-type .nmx{color:var(--gd);font-weight:800}
+body.mkpro .hb:first-of-type .nmx::before{content:'🏆 '}
+body.mkpro #recent{position:relative}
+body.mkpro #recent .table tbody tr{border-right:3px solid transparent;transition:background .15s}
+body.mkpro #recent .table tbody tr:hover{background:rgba(255,190,11,.07)}
+body.mkpro #recent .table tbody tr:has(.badge.green){border-right-color:var(--gd)}
+body.mkpro #recent .badge.green{background:linear-gradient(135deg,var(--gd),#ffd766)!important;color:#2A1D00!important;font-weight:800;box-shadow:0 0 8px rgba(255,190,11,.35)}
+body.mkpro #recent .table tbody tr td:last-child{font-weight:800;color:var(--gd)}
 </style>
 <script>
 /* mk: ميكانيزم برو (غامق) — أيقونات بألوان لكل شاشة + مربعات كبيرة في لوحة التحكم + ألوان اليومية */
@@ -7222,7 +7260,18 @@ body.mkpro .dbfoot{background:rgba(21,26,31,.96);border:1px solid var(--ln2);box
   try{var f=typeof db!=='undefined'&&db.theme&&db.theme.font;document.body.classList.toggle('mkpro-font',on&&(!f||f==='default'))}catch(e){}
   var mt=document.getElementById('metaTheme');if(on&&mt&&mt.content!=='#0e1114')mt.content='#0e1114';
  }
- function all(){paint();launch();dbPaint();chrome()}
+ /* شريط اللوجو الكبير: مسمار (يلف) + اسم ميكانيزم بالتدرّج + ترس (يلف عكس) */
+ function brandUp(){
+  if(!document.body.classList.contains('mkpro'))return;
+  var br=document.querySelector('header.top .brand');if(!br||document.getElementById('mkWordmark'))return;
+  var txt=br.querySelector('div');if(txt)txt.style.display='none';
+  var screw='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12h8M12 8v1.5M12 14.5V16M9.3 9.3l1 1M13.7 13.7l1 1M9.3 14.7l1-1M13.7 10.3l1-1"/></svg>';
+  var gear='<svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M12 2.5v2.3M12 19.2v2.3M4.5 7.2l2 1.15M17.5 15.65l2 1.15M4.5 16.8l2-1.15M17.5 8.35l2-1.15M2.5 12h2.3M19.2 12h2.3"/></svg>';
+  var w=document.createElement('div');w.id='mkWordmark';
+  w.innerHTML='<span class="mkw-ic g1" aria-hidden="true">'+screw+'</span><span class="mkw-tx"><b>ميكانيزم</b><small>MEKANIZM</small></span><span class="mkw-ic g2 g3" aria-hidden="true">'+gear+'</span>';
+  br.appendChild(w);
+ }
+ function all(){paint();launch();dbPaint();chrome();brandUp()}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',all);else all();
  var mo=new MutationObserver(function(){clearTimeout(mo.t);mo.t=setTimeout(all,60)});
  mo.observe(document.body,{childList:true,subtree:true});
