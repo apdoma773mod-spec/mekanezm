@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-16';
+const APP_VER='2026-10-16-17';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4688,7 +4688,7 @@ async function open(){if(APPV)return report();if(!adm())return toast('الإعد
  <div class="field full"><label style="display:flex;align-items:center;gap:8px;color:inherit"><input type="checkbox" id="alSkip" style="width:auto" ${c.skip_admin!==false?'checked':''}> متبعتليش على الحاجات اللي بعملها أنا (المدير)</label></div></div>
  <div class="modal-foot"><button class="primary" onclick="mkAL.save()">حفظ</button><button class="secondary" onclick="mkAL.test()">🧪 ابعت تنبيه تجربة</button><button class="secondary" onclick="closeModal()">إغلاق</button></div>
  <h3 style="margin:16px 0 6px;font-size:15px">آخر التنبيهات</h3>${log.length?log.map(x=>`<div style="border:1px solid var(--border,#e3e8ea);border-radius:10px;padding:8px 10px;margin-top:6px;font-size:13px;white-space:pre-line;line-height:1.7">${H(String(x.body).replace(/^🔔 تنبيه من السيستم\n/,''))}<div style="color:#7b8a90;font-size:12px">${x.status==='sent'?'✔ اتبعت':x.status==='failed'?'✘ ماتبعتش':'⏳ في الطريق'} لـ ${H(fmt(x.to_phone))}</div></div>`).join(''):'<div class="empty">لسه مفيش تنبيهات.</div>'}`)}
-async function save(){const to=[...new Set(document.getElementById('alTo').value.split(/[\n,،]+/).map(norm).filter(x=>x.length>=11))];if(!to.length)return toast('اكتب رقم واحد على الأقل');
+async function save(){const to=[...new Set(document.getElementById('alTo').value.split(/[\n,،\/]+/).map(norm).filter(x=>x.length>=11))];if(!to.length)return toast('اكتب رقم واحد على الأقل');
  const types={};document.querySelectorAll('.alT').forEach(b=>types[b.dataset.k]=b.checked);
  const v={on:document.getElementById('alOn').checked,to,disc:Math.max(1,+document.getElementById('alDisc').value||15),short:Math.max(1,+document.getElementById('alShort').value||50),skip_admin:document.getElementById('alSkip').checked,types};
  const r=await SBc().from('mk_settings').upsert([{key:'alerts',value:v,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error)return toast('ماتحفظش: '+r.error.message);CFG=v;toast('✔ اتحفظت إعدادات التنبيهات');closeModal()}
@@ -5608,7 +5608,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function phraseHit(p,t,ws,mode,fz){var q=norm(p);if(!q)return false;if(mode==='exact')return t===q;var qw=words(q);if(!qw.length)return false;if(mode==='starts')return qw.every(function(x,i){return ws[i]&&wordHit(ws[i],x,fz)});if(qw.length===1)return ws.some(function(w){return wordHit(w,qw[0],fz)});if((' '+ws.join(' ')+' ').indexOf(' '+qw.join(' ')+' ')>-1)return true;for(var i=0;i<ws.length;i++){if(!wordHit(ws[i],qw[0],fz))continue;var win=ws.slice(i,i+qw.length+5);if(qw.every(function(x){return win.some(function(w){return wordHit(w,x,fz)})}))return true}return false}
  function hit(r,t){t=norm(t);var ws=words(t);if(!ws.length)return false;if((r.not||[]).some(function(p){return phraseHit(p,t,ws,'contains',false)}))return false;return(r.phrases||[]).some(function(p){return phraseHit(p,t,ws,r.mode,r.fuzzy)})}
  function neverHit(t){var n=norm(t),ws=words(n);return(CFG.never||[]).some(function(p){return phraseHit(p,n,ws,'contains',false)})}
- function phones(v){return String(v||'').split(/[,،\s]+/).map(function(x){return x.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'')}).filter(function(x){return x.length>=10})}
+ function phones(v){return String(v||'').split(/[,،\s\/]+/).map(function(x){return x.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'')}).filter(function(x){return x.length>=10})}
  function lst(v){return String(v||'').split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean)}
  async function load(){
   try{var a=await SBc().from('mk_settings').select('value').eq('key',KEY).maybeSingle();CFG=Object.assign({},D,(a.data&&a.data.value)||{});if(!Array.isArray(CFG.rules)||!CFG.rules.length)CFG.rules=D.rules.slice();CFG.photos=Object.assign({},D.photos,CFG.photos||{})}catch(e){CFG=JSON.parse(JSON.stringify(D))}
@@ -5824,7 +5824,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   };
   var ac=M.querySelector('#tfAcc');if(ac)ac.onclick=function(){
    var v=prompt('اكتب أرقام الموبايل/الحسابات اللي بتستلم عليها التحويلات (انستاباي/محافظ) — بينهم مسافة.\nالسيستم هينبّهك لو تحويل رايح لحساب تاني (سكرين مزوّر).',(TFC.accounts||[]).join(' '));
-   if(v==null)return;TFC.accounts=v.split(/[,،\s]+/).map(function(z){return z.replace(/\D/g,'')}).filter(function(z){return z.length>=10});
+   if(v==null)return;TFC.accounts=v.split(/[,،\s\/]+/).map(function(z){return z.replace(/\D/g,'')}).filter(function(z){return z.length>=10});
    SBc().from('mk_settings').upsert([{key:'tf_cfg',value:TFC}],{onConflict:'key'}).then(function(r){toast(r.error?('مقدرتش أحفظ: '+r.error.message):'✔ اتحفظت حساباتك')});
   };
  }
@@ -5994,7 +5994,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 
  /* ---------- الرسم ---------- */
  function hingePositions(o){
-  var h=num(o.h),n=Math.max(2,Math.round(num(o.hinges))||3),manual=String(o.hingePos||'').split(/[,،\s]+/).map(num).filter(function(x){return x>0});
+  var h=num(o.h),n=Math.max(2,Math.round(num(o.hinges))||3),manual=String(o.hingePos||'').split(/[,،\s\/]+/).map(num).filter(function(x){return x>0});
   if(manual.length)return manual.sort(function(a,b){return a-b});
   var first=11,hl=10,last=Math.max(first+1,h-11-hl),ys=[];
   for(var i=0;i<n;i++)ys.push(first+(last-first)*i/(n-1));
@@ -6645,7 +6645,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    var by={};O.filter(function(o){return o.status==='متاحة'||o.status==='محجوزة'}).forEach(function(o){var k=o.item+(o.color?' / '+o.color:'');by[k]=(by[k]||0)+num(o.len)});
    var now=Date.now();
    b.innerHTML='<div class="wkc"><h3>موجود في الفضل ولا لا؟</h3><div class="wkg">'+fi('oqI','الصنف','','list="oqL"')+'<datalist id="oqL">'+prodNames().slice(0,400).map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist>'+
-    fi('oqC','اللون','')+fi('oqP','المقاسات المطلوبة (سم) بفاصلة','','placeholder="60, 45, 120"')+fi('oqB','طول العود (سم)',600,'inputmode="decimal"')+fi('oqK','سمك المنشار (سم)',0.3,'inputmode="decimal"')+'</div>'+
+    fi('oqC','اللون','')+fi('oqP','المقاسات المطلوبة (سم) بشرطة /','','placeholder="60/45/120"')+fi('oqB','طول العود (سم)',600,'inputmode="decimal"')+fi('oqK','سمك المنشار (سم)',0.3,'inputmode="decimal"')+'</div>'+
     '<button type="button" class="wkbtn p" id="oqGo" style="margin-top:10px">🔍 دوّر</button><div id="oqR" style="margin-top:10px"></div></div>'+
     '<div class="wkc"><h3>إضافة فضلة</h3><div class="wkg">'+fi('oaI','الصنف','','list="oqL"')+fi('oaC','اللون','')+fi('oaL','الطول (سم)','','inputmode="decimal"')+fi('oaO','طول العود الأصلي (سم)',600,'inputmode="decimal"')+fi('oaP','المكان','')+'</div>'+
     '<div class="wkrow" style="margin-top:10px"><button type="button" class="wkbtn p" id="oaAdd">➕ إضافة وطباعة ملصق</button><button type="button" class="wkbtn" id="oaAdd2">➕ إضافة بس</button></div>'+
@@ -6665,7 +6665,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    b.querySelector('#oaAdd').onclick=function(){add(true)};b.querySelector('#oaAdd2').onclick=function(){add(false)};
    b.querySelector('#oqGo').onclick=function(){
     var it=b.querySelector('#oqI').value.trim(),co=b.querySelector('#oqC').value.trim(),bar=num(b.querySelector('#oqB').value)||600,kerf=num(b.querySelector('#oqK').value),
-        need=b.querySelector('#oqP').value.split(/[,،\s]+/).map(num).filter(function(x){return x>0}),el=b.querySelector('#oqR');
+        need=b.querySelector('#oqP').value.split(/[,،\s\/]+/).map(num).filter(function(x){return x>0}),el=b.querySelector('#oqR');
     if(!it||!need.length){el.innerHTML='<span class="empty">اكتب الصنف والمقاسات</span>';return}
     var pool=O.filter(function(o){return o.status==='متاحة'&&o.item.indexOf(it)>-1&&(!co||String(o.color).indexOf(co)>-1)}).map(function(o){return {o:o,len:num(o.len),used:false}});
     var exact=[],rest=[];
