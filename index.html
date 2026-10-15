@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-16';
+const APP_VER='2026-10-15-17';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5830,7 +5830,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="wkt" id="wkTabs"></div><div class="wkb" id="wkBody"></div>';
   var b=a.querySelector('#wkBack');if(backFn){b.onclick=backFn}else{b.style.display='none'}
   a.querySelector('#wkX').onclick=close;
-  var tabs=[['ord','📋 الأوردرات',viewOrders],['new','➕ أوردر دلفة',function(){viewForm(null,'دلفة')}],['steel','🔩 استانلس',function(){viewSteel(null)}],['disp','🏬 العرض',viewDisp],['exp','🧾 المصاريف',viewExps],['cfg','⚙️ إعدادات',viewCfg]];
+  var tabs=[['ord','📋 الأوردرات',viewOrders],['new','➕ أوردر دلفة',function(){viewForm(null,'دلفة')}],['steel','🔩 استانلس',function(){viewSteel(null)}],['off','🧰 الفضل',viewOff],['disp','🏬 العرض',viewDisp],['exp','🧾 المصاريف',viewExps],['cfg','⚙️ إعدادات',viewCfg]];
   var T=a.querySelector('#wkTabs');
   tabs.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.k=t[0];b.onclick=t[2];T.appendChild(b)});
   a.scrollTop=0;return a.querySelector('#wkBody');
@@ -6259,6 +6259,82 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   viewSteel(null,{customer:ctx&&ctx.customer,phone:ctx&&ctx.phone,body:ctx&&ctx.body,wa_id:ctx&&ctx.id,pieces:pcs,note:''});
  }
 
+  /* ---------- الفضل (بواقي الأطوال) ---------- */
+ var OFS=['متاحة','محجوزة','اتباعت','خردة'];
+ function offCode(n){return 'FD-'+String(n).padStart(4,'0')}
+ function prodNames(){try{return (db.products||[]).map(function(p){return p.name})}catch(e){return []}}
+ function plan(lens,bar,kerf){
+  var L=lens.slice().sort(function(a,b){return b-a}),bars=[];
+  L.forEach(function(x){
+   var b=bars.find(function(z){return z.left>=x+kerf-1e-9||z.left>=x-1e-9&&z.cuts.length===0});
+   if(!b){b={left:bar,cuts:[]};bars.push(b)}
+   b.cuts.push(x);b.left=Math.round((b.left-x-kerf)*100)/100;
+  });
+  return bars;
+ }
+ async function viewOff(hl){
+  var b=shell('🧰 الفضل (بواقي الأطوال)');mark('off');
+  var O=await get('wk_offcuts',[]);
+  var minL=num(CFG.minOff)||20,F2={q:'',st:'متاحة'};
+  function save(){return put('wk_offcuts',O)}
+  function draw(){
+   var rows=O.filter(function(o){return (!F2.st||o.status===F2.st)&&(!F2.q||(o.item+' '+o.color+' '+o.place+' '+o.code).indexOf(F2.q)>-1)});
+   var by={};O.filter(function(o){return o.status==='متاحة'||o.status==='محجوزة'}).forEach(function(o){var k=o.item+(o.color?' / '+o.color:'');by[k]=(by[k]||0)+num(o.len)});
+   var now=Date.now();
+   b.innerHTML='<div class="wkc"><h3>موجود في الفضل ولا لا؟</h3><div class="wkg">'+fi('oqI','الصنف','','list="oqL"')+'<datalist id="oqL">'+prodNames().slice(0,400).map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist>'+
+    fi('oqC','اللون','')+fi('oqP','المقاسات المطلوبة (سم) بفاصلة','','placeholder="60, 45, 120"')+fi('oqB','طول العود (سم)',600,'inputmode="decimal"')+fi('oqK','سمك المنشار (سم)',0.3,'inputmode="decimal"')+'</div>'+
+    '<button type="button" class="wkbtn p" id="oqGo" style="margin-top:10px">🔍 دوّر</button><div id="oqR" style="margin-top:10px"></div></div>'+
+    '<div class="wkc"><h3>إضافة فضلة</h3><div class="wkg">'+fi('oaI','الصنف','','list="oqL"')+fi('oaC','اللون','')+fi('oaL','الطول (سم)','','inputmode="decimal"')+fi('oaO','طول العود الأصلي (سم)',600,'inputmode="decimal"')+fi('oaP','المكان','')+'</div>'+
+    '<div class="wkrow" style="margin-top:10px"><button type="button" class="wkbtn p" id="oaAdd">➕ إضافة وطباعة ملصق</button><button type="button" class="wkbtn" id="oaAdd2">➕ إضافة بس</button></div>'+
+    '<p style="color:var(--muted);font-size:13px;margin:8px 0 0">أقل من '+minL+' سم بتتحسب خردة تلقائي (من الإعدادات).</p></div>'+
+    '<div class="wkc"><h3>رصيد الفضل بالمتر</h3>'+(Object.keys(by).map(function(k){return '<span class="badge" style="margin:2px">'+esc(k)+': '+fmt(by[k]/100)+' م</span>'}).join('')||'<span class="empty">مفيش</span>')+'</div>'+
+    '<div class="wkc"><div class="wkrow"><input id="ofQ" placeholder="دوّر بالصنف أو الكود" value="'+esc(F2.q)+'" style="flex:1;min-width:160px;padding:10px;border:1px solid var(--border);border-radius:10px"><select id="ofS" style="padding:10px;border-radius:10px;border:1px solid var(--border)"><option value="">كل الحالات</option>'+OFS.map(function(s){return '<option'+(F2.st===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div>'+
+    '<div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>الكود</th><th>الصنف</th><th>الطول</th><th>المكان</th><th>العمر</th><th>الحالة</th><th></th></tr></thead><tbody>'+
+    (rows.map(function(o){var i=O.indexOf(o),age=Math.floor((now-new Date(o.date).getTime())/864e5);
+     return '<tr'+(hl&&o.code===hl?' style="background:#fff8e1"':'')+'><td>'+esc(o.code)+'</td><td>'+esc(o.item)+(o.color?' / '+esc(o.color):'')+'</td><td><b>'+esc(num(o.len))+'</b> سم</td><td>'+esc(o.place)+'</td><td>'+age+' يوم</td><td><span class="badge">'+esc(o.status)+'</span></td>'+
+      '<td style="white-space:nowrap"><button type="button" class="wkbtn" data-a="sell" data-i="'+i+'">بيع جزء</button> <button type="button" class="wkbtn" data-a="res" data-i="'+i+'">حجز</button> <button type="button" class="wkbtn" data-a="lab" data-i="'+i+'">🏷️</button> <button type="button" class="wkbtn d" data-a="scr" data-i="'+i+'">خردة</button></td></tr>'}).join('')||'<tr><td colspan="7" class="empty">مفيش فضلات</td></tr>')+'</tbody></table></div></div>';
+   b.querySelector('#ofQ').oninput=function(){F2.q=this.value;draw()};b.querySelector('#ofS').onchange=function(){F2.st=this.value;draw()};
+   function add(print){
+    var it=b.querySelector('#oaI').value.trim(),len=num(b.querySelector('#oaL').value);if(!it||!len)return toast('اكتب الصنف والطول');
+    CFG.offNext=CFG.offNext||1;
+    var o={id:uid(),code:offCode(CFG.offNext++),item:it,color:b.querySelector('#oaC').value.trim(),len:len,orig:num(b.querySelector('#oaO').value)||600,place:b.querySelector('#oaP').value.trim(),status:len<minL?'خردة':'متاحة',date:today()};
+    O.push(o);Promise.all([save(),saveCfg()]).then(function(){toast('✔ اتسجّلت '+o.code);if(print)printOff(o);draw()}).catch(errAlert)}
+   b.querySelector('#oaAdd').onclick=function(){add(true)};b.querySelector('#oaAdd2').onclick=function(){add(false)};
+   b.querySelector('#oqGo').onclick=function(){
+    var it=b.querySelector('#oqI').value.trim(),co=b.querySelector('#oqC').value.trim(),bar=num(b.querySelector('#oqB').value)||600,kerf=num(b.querySelector('#oqK').value),
+        need=b.querySelector('#oqP').value.split(/[,،\s]+/).map(num).filter(function(x){return x>0}),el=b.querySelector('#oqR');
+    if(!it||!need.length){el.innerHTML='<span class="empty">اكتب الصنف والمقاسات</span>';return}
+    var pool=O.filter(function(o){return o.status==='متاحة'&&o.item.indexOf(it)>-1&&(!co||String(o.color).indexOf(co)>-1)}).map(function(o){return {o:o,left:num(o.len)}});
+    var found=[],miss=[];
+    need.slice().sort(function(a,b){return b-a}).forEach(function(n){
+     var c=pool.filter(function(p){return p.left>=n+kerf-1e-9||p.left===n}).sort(function(a,b){return a.left-b.left})[0];
+     if(c){found.push({n:n,o:c.o,rest:Math.round((c.left-n-kerf)*10)/10});c.left=Math.max(0,c.left-n-kerf)}else miss.push(n)});
+    var pl=miss.length?plan(miss,bar,kerf):[];
+    el.innerHTML=(found.length?'<div class="sample"><b>✅ موجود في الفضل:</b><br>'+found.map(function(f){return esc(f.n)+' سم ← فضلة <b>'+esc(f.o.code)+'</b> ('+esc(num(f.o.len))+' سم، مكانها: '+esc(f.o.place||'—')+') — يتبقى '+esc(f.rest)+' سم <button type="button" class="wkbtn" data-r="'+esc(f.o.code)+'">احجزها</button>'}).join('<br>')+'</div>':'')+
+     (miss.length?'<div class="sample" style="margin-top:6px"><b>✂️ مش موجود في الفضل: '+miss.join('، ')+'</b><br>هتتقطع من <b>'+pl.length+'</b> عود:<br>'+pl.map(function(x,i){return 'عود '+(i+1)+': '+x.cuts.join(' + ')+' (يتبقى '+esc(x.left)+' سم)'}).join('<br>')+'</div>':'');
+    el.querySelectorAll('[data-r]').forEach(function(x){x.onclick=function(){var o=O.find(function(z){return z.code===x.dataset.r});if(o){o.status='محجوزة';save().then(function(){toast('✔ اتحجزت '+o.code);draw()}).catch(errAlert)}}});
+   };
+   b.querySelectorAll('[data-a]').forEach(function(x){x.onclick=async function(){
+    var o=O[+x.dataset.i],a=x.dataset.a;if(!o)return;
+    if(a==='lab')return printOff(o);
+    if(a==='res'){o.status=o.status==='محجوزة'?'متاحة':'محجوزة'}
+    else if(a==='scr'){if(!(await ask('تحسبها خردة؟','خردة','لأ')))return;o.status='خردة'}
+    else if(a==='sell'){
+     var n=num(prompt('بعت كام سم من '+o.code+'؟ (طولها '+num(o.len)+')','')); if(!n||n<=0||n>num(o.len))return;
+     var rest=Math.round((num(o.len)-n)*10)/10;
+     if(rest<=0)o.status='اتباعت';else{o.len=rest;if(rest<minL){o.status='خردة'}}
+     toast('اتخصم '+n+' سم. الباقي '+rest+' سم (سجّل البيع في فاتورة لخصمه من الرصيد)');
+    }
+    try{await save();draw()}catch(e){errAlert(e)}}});
+  }
+  draw();
+ }
+ function printOff(o){
+  var html='<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>@page{size:50mm 30mm;margin:0}*{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif;color:#000}html{direction:rtl}body{margin:0 auto;width:48mm;height:28mm;padding:1mm;overflow:hidden;font-size:9px;text-align:center}svg{max-width:100%}</style></head><body><b>'+esc(o.item)+(o.color?' / '+esc(o.color):'')+'</b><br>'+esc(num(o.len))+' سم — '+esc(o.date)+'<br><svg class="bc" data-v="'+esc(o.code)+'"></svg>'+
+   '<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script><script>window.onload=function(){document.querySelectorAll("svg.bc").forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:"CODE128",displayValue:true,fontSize:11,margin:0,height:20})}catch(e){}})}<\/script></body></html>';
+  if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(html);
+ }
+
  /* ---------- العرض والمصاريف ---------- */
  async function viewDisp(){
   var b=shell('🏬 بضاعة العرض');mark('disp');
@@ -6312,14 +6388,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  /* مسح الباركود (WK-0001 أو WK-0001-2) من أي شاشة يفتح الأوردر على طول، وبيشتغل مع أي لغة كيبورد */
  (function(){
   var buf='',last=0,sEl=null,sVal=null,bad=false;
-  var CODE={Minus:'-',NumpadSubtract:'-',KeyW:'W',KeyK:'K'};
+  var CODE={Minus:'-',NumpadSubtract:'-',KeyW:'W',KeyK:'K',KeyF:'F',KeyD:'D'};
   function ch(e){
    if(CODE[e.code])return CODE[e.code];
    var m=/^(Digit|Numpad)(\d)$/.exec(e.code||'');if(m)return m[2];
    return /^[A-Za-z0-9\-]$/.test(e.key||'')?e.key.toUpperCase():null;
   }
   async function go(code){
-   var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
+   if(/^FD/i.test(code)){try{closeModal()}catch(e){}await loadAll();NS=1;viewOff(code.toUpperCase().replace(/^FD-?(\d+).*/,function(_,d){return offCode(parseInt(d,10))}));return}var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
    var no=parseInt(m[1],10);
    try{closeModal()}catch(e){}
    try{
@@ -6335,7 +6411,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(t-last>70){buf='';bad=false;sEl=document.activeElement;sVal=(sEl&&typeof sEl.value==='string')?sEl.value:null}
    last=t;
    if(e.key==='Enter'){
-    var ok=!bad&&buf.length>=5&&/^WK-?\d{1,6}(-\d+)?$/.test(buf);
+    var ok=!bad&&buf.length>=5&&/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(buf);
     if(ok){
      e.preventDefault();e.stopPropagation();
      if(sEl&&sVal!==null&&typeof sEl.value==='string'){sEl.value=sVal;try{sEl.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
