@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-17';
+const APP_VER='2026-10-16-18';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5609,7 +5609,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function hit(r,t){t=norm(t);var ws=words(t);if(!ws.length)return false;if((r.not||[]).some(function(p){return phraseHit(p,t,ws,'contains',false)}))return false;return(r.phrases||[]).some(function(p){return phraseHit(p,t,ws,r.mode,r.fuzzy)})}
  function neverHit(t){var n=norm(t),ws=words(n);return(CFG.never||[]).some(function(p){return phraseHit(p,n,ws,'contains',false)})}
  function phones(v){return String(v||'').split(/[,،\s\/]+/).map(function(x){return x.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'')}).filter(function(x){return x.length>=10})}
- function lst(v){return String(v||'').split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean)}
+ function lst(v){return String(v||'').split(/[,،\n\/]/).map(function(x){return x.trim()}).filter(Boolean)}
  async function load(){
   try{var a=await SBc().from('mk_settings').select('value').eq('key',KEY).maybeSingle();CFG=Object.assign({},D,(a.data&&a.data.value)||{});if(!Array.isArray(CFG.rules)||!CFG.rules.length)CFG.rules=D.rules.slice();CFG.photos=Object.assign({},D.photos,CFG.photos||{})}catch(e){CFG=JSON.parse(JSON.stringify(D))}
   try{var b=await SBc().from('mk_settings').select('value').eq('key',STAT).maybeSingle();ST=(b.data&&b.data.value)||null}catch(e){ST=null}
@@ -5617,7 +5617,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function ruleRow(r,i){
   return '<div class="card" style="padding:10px;margin:8px 0" data-i="'+i+'">'+
   '<div class="form">'+
-  '<div class="field full"><label>الكلمة أو العبارة (ومرادفاتها بفاصلة)</label><input class="kwP" value="'+esc((r.phrases||[]).join('، '))+'"></div>'+
+  '<div class="field full"><label>الكلمة أو العبارة (ومرادفاتها بشرطة /)</label><input class="kwP" value="'+esc((r.phrases||[]).join(' / '))+'" placeholder="مثال: استانلس / استلس / دلف استانلس"></div>'+
   '<div class="field full"><label>إلا لو فيها (اختياري)</label><input class="kwN" value="'+esc((r.not||[]).join('، '))+'" placeholder="مثال: قلبي، كلب"></div>'+
   '<div class="field"><label>النوع</label><select class="kwT">'+TYPES.map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
   '<div class="field"><label>الرقم</label><select class="kwS"><option value="both"'+(r.scope==='both'?' selected':'')+'>الاتنين</option><option value="shop"'+(r.scope==='shop'?' selected':'')+'>رقم المحل</option><option value="owner"'+(r.scope==='owner'?' selected':'')+'>رقم عبده</option></select></div>'+
@@ -5628,7 +5628,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function collect(){
   var m=document.getElementById('modal');if(!m)return CFG;
   var rules=[];m.querySelectorAll('[data-i]').forEach(function(c){
-   var ph=c.querySelector('.kwP').value.split(/[,،\n]/).map(function(x){return x.trim()}).filter(Boolean);
+   var ph=c.querySelector('.kwP').value.split(/[,،\n\/]/).map(function(x){return x.trim()}).filter(Boolean);
    if(!ph.length)return;
    rules.push({phrases:ph,not:lst(c.querySelector('.kwN').value),type:c.querySelector('.kwT').value,scope:c.querySelector('.kwS').value,mode:c.querySelector('.kwM').value,on:c.querySelector('.kwO').checked})});
   CFG.rules=rules;
