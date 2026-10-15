@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-24';
+const APP_VER='2026-10-15-25';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2990,6 +2990,8 @@ async function dbScanAdd(code){let p=window.findByCode&&findByCode(code);if(!p){
  if(last){try{let r=await rpc('mk_daybook_update',{p_id:last.id,p:{qty:+last.qty+1}});Object.assign(last,r);dbRender()}catch(e){toast(dbErr(e))}}
  else await dbAdd({product_id:p.id,qty:1,price:+p.price||0});
  return p.name}
+window.dbScanAdd=dbScanAdd;window.dbAdd=dbAdd;   /* منظومة الباركود وأنظمة الشغل بتستخدمهم من بره */
+window.mkDbFocus=function(){setTimeout(function(){var i=document.getElementById('dbSearch');if(i){try{i.focus({preventScroll:true})}catch(e){i.focus()}}},80)};
 
 /* ---------- كارت الصنف (جديد أو تعديل) ---------- */
 function card(html){window.closeLineCard&&closeLineCard();let b=document.getElementById('lcBox');if(b)b.remove();document.body.insertAdjacentHTML('beforeend',`<div id="lcBox"><div class="lc">${html}</div></div>`);
@@ -6778,7 +6780,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(inv&&!p){try{closeModal()}catch(e){}openInvoiceModal(inv.id);bp();flash('فتحت فاتورة '+inv.no);return}
   if(!p){bp(false);flash('باركود مش متسجل: '+code,false);if(!modalOn())quickUnknown(code);return}
   /* ٣) في اليومية */
-  if(pageOn('daybook')&&!modalOn()&&typeof dbScanAdd==='function'){var r=await dbScanAdd(p.barcode||String(p.code));if(r!==false){bp();flash('اتضاف لليومية: '+p.name)}return}
+  if(pageOn('daybook')&&!modalOn()&&typeof window.dbScanAdd==='function'){var r=await window.dbScanAdd(p.barcode||String(p.code));if(r!==false){bp();flash('اتضاف لليومية: '+p.name);if(window.mkDbFocus)mkDbFocus()}return}
   /* ٤) أي شاشة تانية: كارت سريع */
   bp();quick(p);
  }
@@ -6800,7 +6802,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<button type="button" data-a="det"><span>🔎</span>تفاصيل الصنف</button>'+
    '</div><div class="modal-foot"><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>');
   var m=document.getElementById('modal'),A={
-   db:act(function(){showPage('daybook');setTimeout(function(){if(typeof dbScanAdd==='function')dbScanAdd(code).then(function(r){if(r!==false)flash('اتضاف لليومية: '+p.name)})},250)}),
+   db:act(function(){
+    showPage('daybook');
+    /* نستنى اليومية تجهز (أول مرة بتحمّل بيانات النهارده) وبعدين نضيف الصنف ونحط القلم في خانة البحث عشان تكمّل */
+    var n=0;(function go(){
+     if(typeof window.dbScanAdd!=='function'||!document.getElementById('dbSearch')){if(++n<40)return setTimeout(go,150);return flash('اليومية لسه بتحمّل — امسح تاني',false)}
+     window.dbScanAdd(code).then(function(r){if(r!==false){bp();flash('اتضاف لليومية: '+p.name)}if(window.mkDbFocus)mkDbFocus()});
+    })();
+   }),
    sale:act(function(){openTransaction('sale');setTimeout(function(){addByCode(code)},120)}),
    pur:act(function(){openTransaction('purchase');setTimeout(function(){addByCode(code)},120)}),
    quo:act(function(){if(typeof openQuote==='function')openQuote();else openTransaction('sale');setTimeout(function(){addByCode(code)},120)}),
