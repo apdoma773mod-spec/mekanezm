@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-31';
+const APP_VER='2026-10-15-33';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7211,6 +7211,34 @@ body.mkpro #recent .table tbody tr:hover td{background:rgba(255,190,11,.10)}
 body.mkpro #recent .table tbody tr:has(.badge.green){border-right-color:#FFBE0B}
 body.mkpro #recent .badge.green{background:linear-gradient(135deg,#FFBE0B,#ffd766)!important;color:#2A1D00!important;font-weight:900;box-shadow:0 2px 8px rgba(255,190,11,.45)}
 body.mkpro #recent .table tbody tr td:last-child{font-weight:900;color:var(--gdT)}
+
+/* ── شريط التنبيهات الماشي ── */
+body.mkpro #mkTicker{flex:1 1 auto;min-width:0;height:40px;margin:0 6px;border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(90deg,#0A1450,#1A34A8 50%,#0A1450);box-shadow:inset 0 0 0 1.5px rgba(255,190,11,.55),0 4px 12px rgba(10,20,80,.18);-webkit-mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+body.mkpro #mkTicker .mkt-in{display:flex;width:max-content;height:100%;align-items:center;animation:mkTick 30s linear infinite}
+body.mkpro #mkTicker:hover .mkt-in{animation-play-state:paused}
+body.mkpro #mkTicker .mkt-run{display:flex;align-items:center;gap:10px;padding:0 10px;white-space:nowrap}
+body.mkpro #mkTicker .mkt-i{background:none;border:0;color:#fff;font:inherit;font-weight:800;font-size:14.5px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px;border-radius:10px;white-space:nowrap}
+body.mkpro #mkTicker .mkt-i:hover{background:rgba(255,255,255,.14)}
+body.mkpro #mkTicker .mkt-i.bad{color:#ffb4b4}body.mkpro #mkTicker .mkt-i.warn{color:#FFD24D}body.mkpro #mkTicker .mkt-i.gold{color:#FFE08A}body.mkpro #mkTicker .mkt-i.ok{color:#a7f3d0}
+body.mkpro #mkTicker .mkt-s{color:#FFBE0B;font-style:normal;font-size:10px}
+@keyframes mkTick{from{transform:translateX(0)}to{transform:translateX(50%)}}
+@media (prefers-reduced-motion:reduce){body.mkpro #mkTicker .mkt-in{animation:none}body.mkpro #mkTicker{overflow-x:auto}}
+@media(max-width:900px){body.mkpro .top-actions{flex-wrap:wrap;height:auto;padding:8px 10px;row-gap:7px}body.mkpro #mkTicker{order:9;flex:1 0 100%;margin:0;height:34px}body.mkpro #mkTicker .mkt-i{font-size:13.5px}}
+
+/* ── لون القايمة الجانبية اللي عبده بيختاره ── */
+body.mkpro.mkside aside{background:var(--sideBg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.mkpro.mkside.mkside-dk aside{color:#d7dee6;border-left-color:rgba(255,255,255,.08)}
+body.mkpro.mkside.mkside-dk aside .nav-title{color:rgba(255,255,255,.55)}
+body.mkpro.mkside.mkside-dk aside .nav button{color:#dbe2ea}
+body.mkpro.mkside.mkside-dk aside .nav button:hover{background:rgba(255,255,255,.09);color:#fff}
+body.mkpro.mkside.mkside-dk aside .nav button.active{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+body.mkpro.mkside:not(.mkside-dk) aside{color:#2b2f4a;border-left-color:rgba(0,0,0,.08)}
+body.mkpro.mkside:not(.mkside-dk) aside .nav-title{color:rgba(0,0,0,.45)}
+body.mkpro.mkside:not(.mkside-dk) aside .nav button{color:#23263f}
+body.mkpro.mkside:not(.mkside-dk) aside .nav button:hover{background:rgba(0,0,0,.06);color:#000}
+body.mkpro.mkside:not(.mkside-dk) aside .nav button.active{background:rgba(0,0,0,.09);color:#0A1450;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+@media(min-width:901px){body.mkpro #whoBtn{flex:none}}
+body.mkpro.mkside:not(.mkside-dk) aside .nav button .badge{background:#0A1450;color:#FFD24D}
 /* ══ وضع غامق: بيشتغل لوحده لما الأرضية اللي اخترتها غامقة ══ */
 body.mkpro.mkdark{--g0:#090b0e;--g1:#0e1114;--g2:#151a1f;--g3:#1c2228;--g4:#242b33;--g5:#313a44;--ln:#252d36;--ln2:#36414c;--tx:#e8edf1;--tx2:#b1bdc6;--tx3:#83919b;--ac:#3B63F2;--acI:#f4f8ff;--gd:#FFBE0B;--gdI:#2A1D00;--ok:#4ade80;--wr:#fbbf24;--bd:#f87171;--in:#60a5fa;--vi:#a78bfa;--or:#fb923c;--bg:var(--g1);--card:var(--g2);--text:var(--tx);--muted:var(--tx3);--border:var(--ln);--blue:var(--ac);--blue2:#1C3AA8;--onblue:var(--acI);--gold:var(--gd);--onaccent:var(--gdI);--danger:var(--bd);--green:var(--ok);--tint:rgba(59,99,242,.15);--tint2:rgba(59,99,242,.08);--tintb:rgba(59,99,242,.38);--ring:rgba(59,99,242,.28);}
 body.mkpro.mkdark ::selection{background:rgba(59,99,242,.35)}
@@ -7492,49 +7520,65 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   try{var f=typeof db!=='undefined'&&db.theme&&db.theme.font;document.body.classList.toggle('mkpro-font',on&&(!f||f==='default'))}catch(e){}
   var mt=document.getElementById('metaTheme');if(on&&mt&&mt.content!=='#0A1450')mt.content='#0A1450';
  }
- /* ══ لوجو ميكانيزم: الحروف شبابيك دهب مجسّمة، وجوّاها ميكانيزم مطابخ ودريسنج شغال: مجاري أدراج بتطلع وتدخل، مفصلات بتفتح وتقفل، ذراع رفع (أفنتوس)، شماعة دريسنج بتنزل وتطلع، تروس بتعشّق، ومسامير بتلف ══ */
+ /* ══ لوجو ميكانيزم: الحروف ثابتة (قلبها دهب وحوافها أزرق)، وعلى الشمال واليمين ميكانيزم مطابخ ودريسنج شغال:
+    وحدة أدراج بتفتح وتقفل، دولاب حيطة بمفصلة، مجاري أدراج تلسكوبية، دولاب سوبر ماركت (كارجو) بيطلع ويدخل، ومفصلة مطبخ ══ */
  function logoSVG(){
-  var W='x="600" y="134" '+TX+' font-size="148" textLength="860" lengthAdjust="spacingAndGlyphs"',
-   rot=function(dur,rev,ph){ph=ph||0;return '<animateTransform attributeName="transform" type="rotate" from="'+ph+'" to="'+(ph+(rev?-360:360))+'" dur="'+dur+'s" repeatCount="indefinite"/>'},
-   oc=function(type,a,b,dur,beg){return '<animateTransform attributeName="transform" type="'+type+'" values="'+a+';'+b+';'+b+';'+a+'" keyTimes="0;.42;.58;1" calcMode="spline" keySplines=".55 0 .2 1;0 0 1 1;.55 0 .2 1" dur="'+dur+'s" begin="'+(beg||0)+'s" repeatCount="indefinite"/>'},
-   ST='stroke="#06103a" stroke-width="1.4"',GD='stroke="#5a3600" stroke-width="1.3"',
-   ext='',sh=['#1f1100','#2a1700','#341d00','#3f2400','#4a2b00','#563300','#623b00','#6e4300','#7b4b00','#885400'],i,x,o='';
-  for(i=10;i>=1;i--)ext+='<use href="#mkW" x="'+(i*.8).toFixed(1)+'" y="'+(i*1.25).toFixed(2)+'" fill="'+sh[10-i]+'" stroke="'+sh[10-i]+'" stroke-width="12" stroke-linejoin="round"/>';
-  /* مسامير بتلف فوق (أطراف الحروف العالية) */
-  for(x=196,i=0;x<=1010;x+=46,i++)o+='<g transform="translate('+x+' 34)"><circle r="7.5" fill="url(#mkSteel)" '+ST+'/><g><path d="M-4.5 0h9M0-4.5v9" stroke="#06103a" stroke-width="2.2" stroke-linecap="round"/>'+rot(2.2,i%2)+'</g></g>';
-  /* مفصلات بتفتح وتقفل + ذراع رفع للدولاب العلوي */
-  [215,435,655,875].forEach(function(cx,k){o+='<g transform="translate('+cx+' 64)"><rect x="0" y="-9" width="40" height="18" rx="4" fill="url(#mkSteel)" '+ST+'/><circle cx="12" r="2.6" fill="#06103a"/><circle cx="30" r="2.6" fill="#06103a"/><g><rect x="-44" y="-5" width="48" height="10" rx="5" fill="url(#mkGold)" '+GD+'/><circle cx="-44" r="14" fill="url(#mkSteel)" '+ST+'/><circle cx="-44" r="8" fill="#7d8fbf"/><rect x="-63" y="-32" width="10" height="64" rx="2" fill="#FFC21A" '+GD+'/>'+oc('rotate','0','-62',3.4,-k*.85)+'</g><circle r="4.5" fill="#FFF2B8"/></g>'});
-  [322,542,762,982].forEach(function(cx,k){o+='<g transform="translate('+cx+' 70)"><rect x="-8" y="-13" width="28" height="26" rx="6" fill="url(#mkSteel)" '+ST+'/><g><rect x="0" y="-4" width="66" height="8" rx="4" fill="url(#mkGold)" '+GD+'/><rect x="60" y="-30" width="9" height="44" rx="2" fill="#FFC21A" '+GD+'/>'+oc('rotate','0','-72',4.4,-k*1.1-.5)+'</g><circle r="5" fill="#FFF2B8"/></g>'});
-  /* مجاري أدراج تلسكوبية بتطلع وتدخل (ببلي) ووش الدرج معاها */
-  [172,388,604,820].forEach(function(x0,k){var b='';for(var bx=30;bx<=170;bx+=20)b+='<circle cx="'+bx+'" r="2.6" fill="#3b4a7a"/>';
-   o+='<g transform="translate('+x0+' 102)"><rect x="0" y="-8" width="200" height="16" rx="4" fill="url(#mkSteel)" '+ST+'/><g><rect x="8" y="-5" width="184" height="10" rx="3" fill="#eef3ff" stroke="#8090b8" stroke-width="1"/>'+b+'<g><rect x="14" y="-2.6" width="172" height="5.2" rx="2.6" fill="#FFC21A"/><rect x="174" y="-26" width="22" height="52" rx="4" fill="url(#mkGold)" '+GD+'/><rect x="183" y="-9" width="4.5" height="18" rx="2.2" fill="#5a3600"/>'+oc('translate','0 0','64 0',3.8,-k*.95)+'</g>'+oc('translate','0 0','60 0',3.8,-k*.95)+'</g></g>'});
-  /* تروس بتعشّق في بعض تحت */
-  for(x=186,i=0;x<=1020;x+=31,i++)o+='<g transform="translate('+x+' 160)"><g><use href="#mkG1" fill="'+(i%2?'#FFC21A':'url(#mkSteel)')+'" '+(i%2?GD:ST)+'/><circle r="5.5" fill="#06103a"/><circle r="2.4" fill="#FFF2B8"/>'+rot(4,i%2,i%2?18:0)+'</g></g>';
-  /* شماعة دريسنج روم بتنزل وتطلع */
-  [300,620,940].forEach(function(cx,k){o+='<g transform="translate('+cx+' 0)"><rect x="-5" y="120" width="10" height="68" rx="3" fill="url(#mkSteel)" '+ST+'/><g><rect x="-34" y="128" width="68" height="7" rx="3.5" fill="url(#mkGold)" '+GD+'/><path d="M-22 135v10M0 135v10M22 135v10" stroke="#FFE694" stroke-width="2.4" stroke-linecap="round"/>'+oc('translate','0 0','0 26',3,-k)+'</g></g>'});
-  return '<svg viewBox="0 0 1200 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="ميكانيزم">'+
+  var W='x="850" y="134" '+TX+' font-size="148" textLength="860" lengthAdjust="spacingAndGlyphs"',
+   K='stroke="#0a1450" stroke-width="1.3" stroke-linejoin="round"',
+   P=function(a,f,x){return '<path d="M'+a.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1)}).join('L')+'Z" fill="'+f+'" '+(x||K)+'/>'},
+   /* حركة: يفتح، يستنى، يقفل، يستنى */
+   mv=function(type,a,b,dur,beg,add){return '<animateTransform attributeName="transform" type="'+type+'" values="'+a+';'+b+';'+b+';'+a+';'+a+'" keyTimes="0;.18;.42;.6;1" calcMode="spline" keySplines=".5 0 .2 1;0 0 1 1;.5 0 .2 1;0 0 1 1" dur="'+dur+'s" begin="'+beg+'s" repeatCount="indefinite"'+(add?' additive="sum"':'')+'/>'},
+   slide=function(x0,y,len,dir,beg){var s=len*.42*dir,b='';for(var i=1;i<6;i++)b+='<circle cx="'+(x0+len*i/6).toFixed(1)+'" cy="'+(y+7)+'" r="2.4" fill="#4a5a8c"/>';
+    return '<rect x="'+x0+'" y="'+y+'" width="'+len+'" height="14" rx="4" fill="url(#mkSteel)" '+K+'/><g><rect x="'+(x0+4)+'" y="'+(y+2.5)+'" width="'+(len-8)+'" height="9" rx="3" fill="#eef3ff" stroke="#8090b8" stroke-width="1"/>'+b+
+     '<g><rect x="'+(x0+8)+'" y="'+(y+4.5)+'" width="'+(len-16)+'" height="5" rx="2.5" fill="url(#mkGoldH)"/><rect x="'+(dir<0?x0+6:x0+len-14)+'" y="'+(y-3)+'" width="8" height="20" rx="2" fill="url(#mkGoldH)" '+K+'/>'+mv('translate','0 0',s+' 0',5,beg)+'</g>'+mv('translate','0 0',s+' 0',5,beg)+'</g>'},
+   jar=function(x,y,c){return '<rect x="'+x+'" y="'+(y-13)+'" width="10" height="13" rx="2" fill="'+c+'" stroke="#0a1450" stroke-width="1"/><rect x="'+(x-1)+'" y="'+(y-16)+'" width="12" height="4" rx="1.5" fill="#FFC21A"/>'},
+   L='',R='',i,y;
+  /* ── شمال: دولاب حيطة بباب على مفصلة بيفتح ويقفل ── */
+  L+=P([[40,18],[170,18],[200,8],[70,8]],'#e9eef8')+P([[170,18],[200,8],[200,102],[170,112]],'#c3cde3')+'<rect x="40" y="18" width="130" height="94" fill="#0d1638" '+K+'/>'+
+   '<rect x="42" y="63" width="126" height="4" fill="#c3cde3"/>'+jar(56,62,'#ff7a7a')+jar(74,62,'#7dd3a8')+jar(92,62,'#8fb3ff')+jar(126,62,'#ffd36b')+jar(60,110,'#ffd36b')+jar(84,110,'#ff9ecb')+jar(130,110,'#7dd3a8')+
+   '<rect x="42" y="28" width="7" height="12" rx="2" fill="#FFC21A"/><rect x="42" y="88" width="7" height="12" rx="2" fill="#FFC21A"/>'+
+   '<g transform="translate(40 0)"><g><rect x="0" y="18" width="130" height="94" rx="3" fill="#f7f9fd" '+K+'/><rect x="10" y="28" width="110" height="74" rx="3" fill="none" stroke="#c3cde3" stroke-width="2"/><rect x="108" y="48" width="6" height="34" rx="3" fill="url(#mkGoldH)"/>'+mv('scale','1 1','.13 1',6,0)+mv('skewY','0','-16',6,0,1)+'</g></g>';
+  /* ── شمال تحت: مجرى أدراج تلسكوبي ── */
+  L+=slide(110,150,92,-1,-1.2);
+  /* ── شمال: وحدة أدراج (3 أدراج بتفتح وتقفل واحد ورا التاني) + رخامة ── */
+  L+='<rect x="240" y="40" width="120" height="146" fill="#0d1638" '+K+'/>';
+  for(i=2;i>=0;i--){y=42+i*48;
+   L+='<g>'+P([[244,y+8],[358,y+8],[396.5,y-4.6],[282.5,y-4.6]],'#a9b5d0')+P([[358,y+8],[396.5,y-4.6],[396.5,y+33.4],[358,y+46]],'#d4dbea')+
+    '<path d="M358 '+(y+44)+'L396.5 '+(y+31.4)+'" stroke="#FFC21A" stroke-width="3" stroke-linecap="round"/>'+
+    '<rect x="242" y="'+y+'" width="116" height="46" rx="3" fill="#f7f9fd" '+K+'/><rect x="278" y="'+(y+19)+'" width="44" height="7" rx="3.5" fill="url(#mkGoldH)" '+K+'/>'+
+    mv('translate','0 0','-38.5 12.6',7.5,-(2-i)*2.5)+'</g>'}
+  L+=P([[360,40],[404,25.6],[404,171.6],[360,186]],'#c3cde3')+P([[232,34],[368,34],[412,19.6],[276,19.6]],'#fff6d6')+'<rect x="232" y="34" width="136" height="7" fill="url(#mkGoldH)" '+K+'/>'+P([[368,34],[412,19.6],[412,26.6],[368,41]],'#c98a00');
+  /* ── يمين: مفصلة مطبخ (منظر من فوق): الباب بيفتح ويقفل على جنب الدولاب ── */
+  R+='<rect x="1326" y="26" width="16" height="80" rx="2" fill="#e9eef8" '+K+'/><rect x="1342" y="62" width="14" height="22" rx="3" fill="url(#mkSteel)" '+K+'/>'+
+   '<g transform="translate(1344 102)"><g><rect x="0" y="-12" width="96" height="12" rx="2" fill="#f7f9fd" '+K+'/><circle cx="18" cy="-12" r="8" fill="url(#mkSteel)" '+K+'/><path d="M18 -12 L5 -31" stroke="url(#mkGoldH)" stroke-width="6" stroke-linecap="round"/><rect x="84" y="-12" width="5" height="12" fill="url(#mkGoldH)"/>'+mv('rotate','0','-92',5.5,-.6)+'</g><circle r="4" fill="#FFF2B8"/></g>';
+  /* ── يمين تحت: مجرى أدراج ── */
+  R+=slide(1302,150,92,1,-2.6);
+  /* ── يمين: دولاب سوبر ماركت (كارجو طويل) بسلال وحاجات، بيطلع ويدخل ── */
+  R+='<rect x="1460" y="22" width="100" height="164" fill="#0d1638" '+K+'/><g>';
+  [42,80,118,156].forEach(function(yb,k){var C=['#ff7a7a','#7dd3a8','#8fb3ff','#ffd36b','#ff9ecb'];
+   R+=P([[1462,yb-24],[1422.4,yb-37],[1422.4,yb-13],[1462,yb]],'rgba(255,194,26,.14)','stroke="#FFC21A" stroke-width="2" stroke-linejoin="round"')+
+    '<path d="M1452 '+(yb-27.3)+'v24M1442 '+(yb-30.6)+'v24M1432 '+(yb-33.9)+'v24" stroke="#FFC21A" stroke-width="1" stroke-opacity=".7"/>'+
+    jar(1448,yb-4.6,C[k])+jar(1434,yb-9.2,C[(k+2)%5])});
+  R+='<rect x="1462" y="24" width="96" height="160" rx="3" fill="#f7f9fd" '+K+'/><rect x="1472" y="34" width="76" height="140" rx="3" fill="none" stroke="#c3cde3" stroke-width="2"/><rect x="1476" y="74" width="7" height="60" rx="3.5" fill="url(#mkGoldH)" '+K+'/>'+mv('translate','0 0','44 9.6',6.5,-3.2)+'</g>'+
+   P([[1460,22],[1416,12.4],[1416,176.4],[1460,186]],'#c3cde3')+P([[1460,22],[1560,22],[1516,12.4],[1416,12.4]],'#e9eef8');
+  var ext='',sh=['#020617','#030a26','#050e30','#07133b','#0a1846','#0d1d52','#10235e','#13296a','#162f76','#1a3582'];
+  for(i=10;i>=1;i--)ext+='<use href="#mkW" x="'+(i*.8).toFixed(1)+'" y="'+(i*1.25).toFixed(2)+'" fill="'+sh[10-i]+'" stroke="'+sh[10-i]+'" stroke-width="14" stroke-linejoin="round"/>';
+  return '<svg viewBox="0 0 1700 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="ميكانيزم">'+
   '<defs>'+
-   '<linearGradient id="mkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7CF"/><stop offset=".3" stop-color="#FFD54F"/><stop offset=".55" stop-color="#FFBE0B"/><stop offset=".8" stop-color="#DD8700"/><stop offset="1" stop-color="#FFD66B"/></linearGradient>'+
-   '<linearGradient id="mkIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16278a"/><stop offset=".5" stop-color="#0b1756"/><stop offset="1" stop-color="#050c33"/></linearGradient>'+
+   '<linearGradient id="mkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7CF"/><stop offset=".3" stop-color="#FFD54F"/><stop offset=".55" stop-color="#FFBE0B"/><stop offset=".8" stop-color="#E08A00"/><stop offset="1" stop-color="#FFD66B"/></linearGradient>'+
+   '<linearGradient id="mkGoldH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE58A"/><stop offset=".5" stop-color="#FFBE0B"/><stop offset="1" stop-color="#C98400"/></linearGradient>'+
+   '<linearGradient id="mkBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9DB8FF"/><stop offset=".45" stop-color="#3D6BFF"/><stop offset="1" stop-color="#1B3FD6"/></linearGradient>'+
    '<linearGradient id="mkSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c3cde6"/><stop offset="1" stop-color="#e9eefa"/></linearGradient>'+
-   '<linearGradient id="mkShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'+
    '<radialGradient id="mkShadow"><stop offset="0" stop-color="#000" stop-opacity=".5"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>'+
    '<pattern id="mkGrid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#fff" stroke-opacity=".07"/></pattern>'+
-   '<pattern id="mkGridIn" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M12 0H0V12" fill="none" stroke="#6f8cff" stroke-opacity=".22"/></pattern>'+
-   '<path id="mkG1" d="'+gp(0,0,17,10,5)+'"/>'+
    '<text id="mkW" '+W+'>ميكانيزم</text>'+
-   '<clipPath id="mkClip"><text '+W+'>ميكانيزم</text></clipPath>'+
   '</defs>'+
-  '<rect width="1200" height="200" fill="url(#mkGrid)"/>'+
-  '<g transform="translate(64 176)"><g><path d="'+gp(0,0,104,18,15)+'" fill="rgba(255,255,255,.035)" stroke="rgba(255,255,255,.10)" stroke-width="2"/>'+rot(60)+'</g></g>'+
-  '<g transform="translate(1140 22)"><g><path d="'+gp(0,0,90,16,13)+'" fill="rgba(255,255,255,.035)" stroke="rgba(255,255,255,.10)" stroke-width="2"/>'+rot(50,1)+'</g></g>'+
-  '<ellipse cx="600" cy="182" rx="460" ry="16" fill="url(#mkShadow)"/>'+ext+
-  '<use href="#mkW" fill="none" stroke="url(#mkGold)" stroke-width="12" stroke-linejoin="round"/>'+
-  '<use href="#mkW" fill="url(#mkIn)"/>'+
-  '<g clip-path="url(#mkClip)"><rect x="150" y="0" width="900" height="200" fill="url(#mkGridIn)"/>'+o+
-   '<rect x="-300" y="-20" width="130" height="240" fill="url(#mkShine)" opacity=".45" transform="skewX(-20)"><animate attributeName="x" from="-300" to="1500" dur="6s" repeatCount="indefinite"/></rect>'+
-  '</g>'+
-  '<text x="1112" y="188" font-family="Cairo,Arial" font-weight="800" font-size="13" letter-spacing="6" text-anchor="middle" fill="#cdd8ff" fill-opacity=".8">MEKANIZM</text>'+
+  '<rect width="1700" height="200" fill="url(#mkGrid)"/>'+
+  '<ellipse cx="200" cy="190" rx="200" ry="10" fill="url(#mkShadow)"/><ellipse cx="1500" cy="190" rx="200" ry="10" fill="url(#mkShadow)"/>'+L+R+
+  '<ellipse cx="850" cy="182" rx="460" ry="16" fill="url(#mkShadow)"/>'+ext+
+  '<use href="#mkW" fill="none" stroke="#020a2e" stroke-width="17" stroke-linejoin="round"/>'+
+  '<use href="#mkW" fill="none" stroke="url(#mkBlue)" stroke-width="12" stroke-linejoin="round"/>'+
+  '<use href="#mkW" fill="url(#mkGold)"/>'+
   '</svg>'}
  function brandUp(){
   if(!document.body.classList.contains('mkpro'))return;
@@ -7543,7 +7587,7 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   if(!document.getElementById('mkMini'))ac.insertAdjacentHTML('beforeend','<span id="mkMini" aria-hidden="true"><i></i>ميكانيزم</span>');
   if(document.getElementById('mkLogo'))return;
   var w=document.createElement('div');w.id='mkLogo';w.innerHTML=logoSVG();br.appendChild(w);
-  var svg=w.querySelector('svg'),mq=window.matchMedia('(max-width:700px)'),fit=function(){svg.setAttribute('viewBox',mq.matches?'150 0 900 200':'0 0 1200 200')};
+  var svg=w.querySelector('svg'),mq=window.matchMedia('(max-width:700px)'),fit=function(){svg.setAttribute('viewBox',mq.matches?'400 0 900 200':'0 0 1700 200')};
   fit();try{mq.addEventListener('change',fit)}catch(e){try{mq.addListener(fit)}catch(e2){}}
   var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if(still&&svg.pauseAnimations)svg.pauseAnimations();
@@ -7558,12 +7602,14 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
  window.addEventListener('resize',function(){if(!hq){hq=1;requestAnimationFrame(hdr)}});
  /* ══ الأرضية: عبده بيختار لونها من «المظهر» (أبيض، أصفر، أسود، أي لون) + الألوان المتداخلة شغالة/مقفولة ══ */
  var BGP=[['#f7f6fb','أبيض متداخل'],['#ffffff','أبيض سادة'],['#fff4cc','أصفر منجاوي فاتح'],['#ffe08a','أصفر'],['#eaf0ff','لبني'],['#e9f7ef','أخضر فاتح'],['#fde8f1','بمبي فاتح'],['#eceef2','رمادي فاتح'],['#0B1650','كحلي غامق'],['#0e1114','أسود']];
- function bgGet(){var o={c:'#f7f6fb',fx:1};try{var v=JSON.parse(localStorage.getItem('mk_bg')||'null');if(v&&/^#[0-9a-f]{6}$/i.test(v.c))o={c:v.c,fx:v.fx!==0}}catch(e){}return o}
+ var SDP=[['','تلقائي (زي الأرضية)'],['#ffffff','أبيض'],['#0e1114','أسود'],['#0B1650','كحلي'],['#1F3FB8','أزرق'],['#FFBE0B','منجاوي'],['#14532d','أخضر غامق'],['#3b0764','بنفسجي غامق'],['#374151','رمادي غامق']];
+ function bgGet(){var o={c:'#f7f6fb',fx:1,side:''};try{var v=JSON.parse(localStorage.getItem('mk_bg')||'null');if(v&&/^#[0-9a-f]{6}$/i.test(v.c))o={c:v.c,fx:v.fx!==0,side:/^#[0-9a-f]{6}$/i.test(v.side||'')?v.side:''}}catch(e){}return o}
  function lum(h){var n=parseInt(h.slice(1),16),f=function(c){c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255)}
  function bgApply(){var o=bgGet(),B=document.body,dk=lum(o.c)<.32;
   B.style.setProperty('--bgc',o.c);B.classList.toggle('mkdark',dk&&B.classList.contains('mkpro'));B.classList.toggle('mk-nofx',!o.fx);
+  if(o.side){B.style.setProperty('--sideBg',o.side);B.classList.add('mkside');B.classList.toggle('mkside-dk',lum(o.side)<.32)}else{B.classList.remove('mkside','mkside-dk')}
   if(!document.getElementById('mkBgFx'))B.insertAdjacentHTML('afterbegin','<div id="mkBgFx" aria-hidden="true"><i class="pg"></i><i class="b b1"></i><i class="b b2"></i><i class="b b3"></i><i class="b b4"></i><i class="b b5"></i></div>')}
- window.mkBgSet=function(c,fx){var o=bgGet();if(c)o.c=c;if(fx!=null)o.fx=fx?1:0;try{localStorage.setItem('mk_bg',JSON.stringify(o))}catch(e){}bgApply();var cp=document.getElementById('mkBgC');if(cp)cp.value=o.c;document.querySelectorAll('#mkBgP button').forEach(function(b){b.classList.toggle('on',b.dataset.c===o.c)})};
+ window.mkBgSet=function(c,fx,side){var o=bgGet();if(c)o.c=c;if(fx!=null)o.fx=fx?1:0;if(side!=null)o.side=side;try{localStorage.setItem('mk_bg',JSON.stringify(o))}catch(e){}bgApply();var cp=document.getElementById('mkBgC');if(cp)cp.value=o.c;document.querySelectorAll('#mkBgP button').forEach(function(b){b.classList.toggle('on',b.dataset.c===o.c)});document.querySelectorAll('#mkSdP button').forEach(function(b){b.classList.toggle('on',b.dataset.c===o.side)});var sc=document.getElementById('mkSdC');if(sc&&o.side)sc.value=o.side};
  /* المظهر والإدارة وتسجيل الخروج آخر حاجة في القايمة الجانبية */
  function navEnd(){var as=document.querySelector('aside');if(!as)return;
   var keep=[as.querySelector('[data-page="theme"]'),as.querySelector('[data-page="settings"]'),document.getElementById('outBtn')].filter(function(x){return x&&as.contains(x)});if(!keep.length)return;
@@ -7574,7 +7620,32 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   if(as.lastElementChild!==nv){as.appendChild(t);as.appendChild(nv)}
   [].slice.call(as.querySelectorAll('nav.nav:not(#mkNavEnd)')).forEach(function(n){if(!n.children.length){var pt=n.previousElementSibling;if(pt&&pt.classList.contains('nav-title'))pt.style.display='none';n.style.display='none'}});
  }
- function all(){bgApply();paint();navEnd();launch();dbPaint();chrome();brandUp();pg()}
+ /* ══ شريط التنبيهات الماشي تحت اللوجو: نواقص المحل، الواتساب، الشحن، الفلوس اللي برة... وكل تنبيه بيفتح شاشته ══ */
+ function hx(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function tickItems(){var A=[],sp=function(id,alt){return function(){showPage(document.getElementById(id)?id:alt)}};
+  try{var Pr=db.products||[],out=Pr.filter(function(p){return (+p.qty||0)<=0}),low=Pr.filter(function(p){var q=+p.qty||0;return q>0&&q<=(+p.min||0)}),
+   nm=function(L){return L.slice(0,4).map(function(p){return p.name}).join('، ')+(L.length>4?' و'+(L.length-4)+' كمان':'')};
+   if(out.length)A.push(['❌','خلص من المحل ('+out.length+'): '+nm(out),sp('reorder','products'),'bad']);
+   if(low.length)A.push(['⚠️','قرّب يخلص ('+low.length+'): '+nm(low),sp('reorder','products'),'warn']);
+  }catch(e){}
+  document.querySelectorAll('aside nav button').forEach(function(b){var g=b.querySelector('.badge');if(!g||g.style.display==='none')return;var n=parseInt((g.textContent||'').replace(/[^\d]/g,''),10);if(!(n>0))return;
+   var t=(b.querySelector('span:not(.badge):not(.mkic)')||b).textContent.trim();A.push([/واتس/.test(t)?'💬':'🔔',t+': '+n,function(){b.click()},'info'])});
+  try{if(typeof owed==='function'){var o=owed();if(o>0)A.push(['💰','فلوس عند العملاء: '+money(o),sp('debts','contacts'),'gold'])}}catch(e){}
+  var sb=document.getElementById('shBanner');if(sb&&sb.style.display!=='none'&&sb.textContent.trim())A.push(['🚚',sb.textContent.replace(/—\s*اضغط.*$/,'').replace(/^🚚\s*/,'').trim(),sp('shipping','dashboard'),'info']);
+  return A}
+ var TK={sig:''};
+ function ticker(){var ac=document.querySelector('header.top .top-actions');if(!ac||!document.body.classList.contains('mkpro'))return;
+  var el=document.getElementById('mkTicker');
+  if(!el){ac.insertAdjacentHTML('beforeend','<div id="mkTicker" role="marquee" aria-label="تنبيهات مهمة"><div class="mkt-in"></div></div>');el=document.getElementById('mkTicker');var m=document.getElementById('mkMini');if(m)ac.appendChild(m)}
+  var A=tickItems();if(!A.length)A=[['✅','كله تمام — مفيش تنبيهات دلوقتي',null,'ok']];
+  var sig=A.map(function(x){return x[1]}).join('|');if(sig===TK.sig)return;TK.sig=sig;TK.A=A;
+  var one=A.map(function(x,i){return '<button type="button" class="mkt-i '+x[3]+'" data-i="'+i+'"><b>'+x[0]+'</b>'+hx(x[1])+'</button><i class="mkt-s">◆</i>'}).join('');
+  var inn=el.firstElementChild;inn.innerHTML='<span class="mkt-run">'+one+'</span><span class="mkt-run" aria-hidden="true">'+one+'</span>';
+  requestAnimationFrame(function(){var w=inn.firstElementChild.offsetWidth||600;inn.style.animationDuration=Math.max(16,w/55).toFixed(1)+'s'});
+  inn.querySelectorAll('.mkt-i').forEach(function(b){b.onclick=function(){var x=TK.A[+b.dataset.i];if(x&&x[2])try{x[2]()}catch(e){}}});
+ }
+ setInterval(function(){try{ticker()}catch(e){}},15000);
+ function all(){bgApply();paint();navEnd();launch();dbPaint();chrome();brandUp();ticker();pg()}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',all);else all();
  var mo=new MutationObserver(function(){clearTimeout(mo.t);mo.t=setTimeout(all,60)});
  mo.observe(document.body,{childList:true,subtree:true});
@@ -7587,12 +7658,17 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
    '<h3 style="margin:18px 0 8px">🎨 لون الأرضية</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">اختار لون من دول أو أي لون من المربع. لو اخترت لون غامق السيستم كله بيقلب غامق لوحده.</p>'+
    '<div id="mkBgP" style="display:flex;flex-wrap:wrap;gap:8px">'+BGP.map(function(p){return '<button type="button" data-c="'+p[0]+'" class="'+(p[0]===o.c?'on':'')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;border:2px solid var(--ln2);background:var(--card);color:var(--text);font-weight:700;cursor:pointer"><i style="width:22px;height:22px;border-radius:7px;background:'+p[0]+';border:1px solid rgba(0,0,0,.18);display:inline-block"></i>'+p[1]+'</button>'}).join('')+'</div>'+
    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px"><label style="display:flex;align-items:center;gap:8px;font-weight:700">لون براحتك <input type="color" id="mkBgC" value="'+o.c+'" style="width:54px;height:38px;padding:2px;border-radius:10px;cursor:pointer"></label><label class="chk"><input type="checkbox" id="mkBgFxT"'+(o.fx?' checked':'')+'> ألوان متداخلة بتتحرك فوق الأرضية</label></div>'+
-   '<style>#mkBgP button.on{border-color:#FFBE0B!important;box-shadow:0 0 0 3px rgba(255,190,11,.3)}</style>';
+   '<h3 style="margin:18px 0 8px">🧭 لون القايمة الجانبية</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">تقدر تخلّي القايمة اللي على الجنب بلون غير الأرضية.</p>'+
+   '<div id="mkSdP" style="display:flex;flex-wrap:wrap;gap:8px">'+SDP.map(function(p){return '<button type="button" data-c="'+p[0]+'" class="'+(p[0]===o.side?'on':'')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;border:2px solid var(--ln2);background:var(--card);color:var(--text);font-weight:700;cursor:pointer"><i style="width:22px;height:22px;border-radius:7px;background:'+(p[0]||'linear-gradient(135deg,#fff 50%,#0e1114 50%)')+';border:1px solid rgba(0,0,0,.18);display:inline-block"></i>'+p[1]+'</button>'}).join('')+'</div>'+
+   '<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-top:12px">لون براحتك <input type="color" id="mkSdC" value="'+(o.side||'#0B1650')+'" style="width:54px;height:38px;padding:2px;border-radius:10px;cursor:pointer"></label>'+
+   '<style>#mkBgP button.on,#mkSdP button.on{border-color:#FFBE0B!important;box-shadow:0 0 0 3px rgba(255,190,11,.3)}</style>';
   var tr=th.querySelector('.title-row');if(tr)tr.after(c);else th.prepend(c);
   c.querySelector('#mkProT').onchange=function(){try{localStorage.setItem('mk_pro',this.checked?'1':'0')}catch(e){}location.reload()};
   c.querySelectorAll('#mkBgP button').forEach(function(b){b.onclick=function(){mkBgSet(b.dataset.c)}});
   c.querySelector('#mkBgC').oninput=function(){mkBgSet(this.value)};
   c.querySelector('#mkBgFxT').onchange=function(){mkBgSet(null,this.checked)};
+  c.querySelectorAll('#mkSdP button').forEach(function(b){b.onclick=function(){mkBgSet(null,null,b.dataset.c)}});
+  c.querySelector('#mkSdC').oninput=function(){mkBgSet(null,null,this.value)};
  }
  setTimeout(themeCard,500);
 })();
