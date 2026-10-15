@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-19';
+const APP_VER='2026-10-16-20';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5618,7 +5618,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   return '<div class="card" style="padding:10px;margin:8px 0" data-i="'+i+'">'+
   '<div class="form">'+
   '<div class="field full"><label>الكلمة أو العبارة (كل كلمة في سطر جديد، أو بينهم شرطة /)</label><textarea class="kwP" rows="5" style="min-height:120px;font-size:17px;line-height:1.9" placeholder="اكتب الكلمة، واضغط Enter، واكتب اللي بعدها&#10;مثال:&#10;استانلس&#10;استلس&#10;دلف استانلس">'+esc((r.phrases||[]).join('\n'))+'</textarea></div>'+
-  '<div class="field full"><label>إلا لو فيها (اختياري)</label><input class="kwN" value="'+esc((r.not||[]).join('، '))+'" placeholder="مثال: قلبي، كلب"></div>'+
+  '<div class="field full"><label>إلا لو فيها (اختياري، كل كلمة في سطر)</label><textarea class="kwN" rows="3" style="min-height:90px;font-size:17px;line-height:1.9">'+esc((r.not||[]).join('\n'))+'</textarea></div>'+
   '<div class="field"><label>النوع</label><select class="kwT">'+TYPES.map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
   '<div class="field"><label>الرقم</label><select class="kwS"><option value="both"'+(r.scope==='both'?' selected':'')+'>الاتنين</option><option value="shop"'+(r.scope==='shop'?' selected':'')+'>رقم المحل</option><option value="owner"'+(r.scope==='owner'?' selected':'')+'>رقم عبده</option></select></div>'+
   '<div class="field"><label>المطابقة</label><select class="kwM"><option value="contains"'+(r.mode==='contains'?' selected':'')+'>تحتوي</option><option value="starts"'+(r.mode==='starts'?' selected':'')+'>تبدأ بـ</option><option value="exact"'+(r.mode==='exact'?' selected':'')+'>تطابق تماماً</option></select></div>'+
@@ -5652,7 +5652,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   '<div class="field full"><label>📱 أرقامك الشخصية (صورها بتدخل دايمًا كتحويلات لموردين)</label><input id="kwOwn" value="'+esc((CFG.ownerPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx 01xxxxxxxxx"></div>'+
   '<div class="field full"><label>⛔ أرقام بتتجاهل دايمًا (أهل وأصحاب)</label><input id="kwBlk" value="'+esc((CFG.blockPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx"></div>'+
   '<div class="field full"><label>✅ أرقام بتدخل دايمًا (صنايعية شغالين معاك)</label><input id="kwAlw" value="'+esc((CFG.allowPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx"></div>'+
-  '<div class="field full"><label>🚫 عبارات لو موجودة الرسالة تتجاهل حتى لو فيها كلمة</label><input id="kwNev" value="'+esc((CFG.never||[]).join('، '))+'" placeholder="كل سنة وانت طيب، مبروك"></div>'+
+  '<div class="field full"><label>🚫 عبارات لو موجودة الرسالة تتجاهل حتى لو فيها كلمة (كل عبارة في سطر)</label><textarea id="kwNev" rows="3" style="min-height:90px;font-size:17px;line-height:1.9">'+esc((CFG.never||[]).join('\n'))+'</textarea></div>'+
   '<div class="field full"><label class="chk"><input id="kwSav" type="checkbox"'+(CFG.ignoreSaved?' checked':'')+'> تجاهل أي رقم متسجّل في موبايل المحل (حتى لو فيه كلمة)</label></div>'+
   '<div class="field"><label class="chk"><input id="kwPc" type="checkbox"'+(CFG.photos.byCaption!==false?' checked':'')+'> صورة بتعليق فيه كلمة تتقبل</label></div>'+
   '<div class="field"><label class="chk"><input id="kwPw" type="checkbox"'+(CFG.photos.byWindow!==false?' checked':'')+'> صورة بعد رسالة بكلمة تتقبل</label></div>'+
