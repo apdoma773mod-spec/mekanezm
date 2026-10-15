@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-29';
+const APP_VER='2026-10-15-30';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2848,6 +2848,9 @@ window.renderShips=renderShips;
 window.shSet=function(k,v){if(k==='t')shTab=v;if(k==='k')shKind=v;if(k==='q')shQ=v;renderShips()};
 window.shipGo=function(id){showPage('shipping');let s=SHP.find(x=>x.id===id);if(s){shTab=CLOSED.includes(s.status)?(s.status==='paid'?'done':'other'):s.status==='delivered'?'collect':'open';renderShips()}
  setTimeout(()=>{let c=document.getElementById('sh-'+id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.add('hl');setTimeout(()=>c.classList.remove('hl'),2000)}},150)};
+/* للباركود: يلاقي الشحنة برقمها (SP-0003) حتى لو لسه ماتحمّلتش */
+window.shipFindByNo=async function(no){let n=String(no||'').trim().toUpperCase(),f=()=>SHP.find(x=>String(x.no||'').toUpperCase()===n);
+ if(!f()){try{await loadShips()}catch(e){}}return f()||null};
 (function(){let wo=document.querySelector('aside nav [data-page="weborders"]');
  if(wo)wo.insertAdjacentHTML('afterend','<button data-page="shipping" onclick="showPage(\'shipping\')"><span style="width:1.15em;text-align:center">🚚</span> <span>الشحن والتوصيل</span> <span id="shCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
  let mn=document.querySelector('main');
@@ -6801,6 +6804,23 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var code=String(raw||'').trim();if(!code)return;
   var C=code.toUpperCase();
   if(/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(C))return;      // ليهم معالج في أنظمة الشغل
+  /* أكواد السيستم نفسه: كل كود يروح لشاشته (شحنة / فاتورة شراء / عرض سعر) — مش «صنف مش متسجّل» */
+  var sys=/^(SP|SH|QT)-?(\d{1,6})(?:-\d+)?$/.exec(C);
+  if(sys){
+   var no=sys[1]+'-'+(sys[2].length<4?('0000'+sys[2]).slice(-4):sys[2]);
+   try{closeModal()}catch(e){}
+   if(sys[1]==='SP'){
+    var s=window.shipFindByNo?await window.shipFindByNo(no):null;
+    if(s){bp();flash('الشحنة '+s.no);window.shipGo(s.id);return}
+   }else if(sys[1]==='SH'){
+    var pr=(db.purchases||[]).find(function(r){return String(r.pno||'').toUpperCase()===no});
+    if(pr&&typeof openPurchaseView==='function'){bp();flash('فاتورة شراء '+no);openPurchaseView(pr.id);return}
+   }else{
+    var q=(typeof qts==='function'?qts():(db.quotes||[])).find(function(x){return String(x.no||'').toUpperCase()===no});
+    if(q&&typeof openQuoteView==='function'){bp();flash('عرض سعر '+no);openQuoteView(q.id);return}
+   }
+   if(!prod(code)){bp(false);flash('الكود '+no+' مش لاقيه — اتأكد إن النت شغال وجرب تاني',false);return}
+  }
   /* ١) فاتورة مفتوحة (بيع/شراء/عرض سعر): الصنف يتضاف فيها مكانك */
   var p=prod(code)||prod(C);
   if(txOpen()){
@@ -6935,294 +6955,341 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 })();
 </script>
 <style id="mkProCss">
-/* ═══ ميكانيزم برو — الوضع الغامق: أسود/أبيض + هوية ميكانيزم (أزرق غامق للأكشن، أصفر منجاوي للتنبيه) ═══ */
+/* ═══ ميكانيزم برو — الأرضية فاتحة بألوان متداخلة + هوية ميكانيزم (أزرق غامق + أصفر منجاوي) ═══
+   كل شاشة ليها لون ثابت مايتكررش (نفس لون أيقونتها)، والشاشات المزدحمة ليها شريط عنوان بلونها */
 body.mkpro{
- --g0:#090b0e;--g1:#0e1114;--g2:#151a1f;--g3:#1c2228;--g4:#242b33;--g5:#313a44;
- --ln:#252d36;--ln2:#36414c;--tx:#e8edf1;--tx2:#b1bdc6;--tx3:#83919b;
- --ac:#3B63F2;--acI:#f4f8ff;--gd:#FFBE0B;--gdI:#2A1D00;
- --ok:#4ade80;--wr:#fbbf24;--bd:#f87171;--in:#60a5fa;--vi:#a78bfa;--or:#fb923c;
+ --g0:#ffffff;--g1:#f6f5fb;--g2:#ffffff;--g3:#f2f1f8;--g4:#e9e7f3;--g5:#dcd9ea;
+ --ln:#e6e4f0;--ln2:#d6d3e6;--tx:#1a1d3a;--tx2:#454a6b;--tx3:#7a7f9a;
+ --ac:#1F3FB8;--acD:#132a85;--acI:#ffffff;--gd:#FFBE0B;--gdI:#2A1D00;--gdT:#9A6500;
+ --ok:#15803d;--wr:#b45309;--bd:#dc2626;--in:#2563eb;--vi:#7c3aed;--or:#ea580c;
  --bg:var(--g1);--card:var(--g2);--text:var(--tx);--muted:var(--tx3);--border:var(--ln);
- --blue:var(--ac);--blue2:#1C3AA8;--onblue:var(--acI);--gold:var(--gd);--onaccent:var(--gdI);
+ --blue:var(--ac);--blue2:var(--acD);--onblue:#fff;--gold:var(--gd);--onaccent:var(--gdI);
  --danger:var(--bd);--green:var(--ok);
- --tint:rgba(59,99,242,.15);--tint2:rgba(59,99,242,.08);--tintb:rgba(59,99,242,.38);--ring:rgba(59,99,242,.28);
- color-scheme:dark;color:var(--tx);font-variant-numeric:tabular-nums;
- background-color:var(--g1)!important;
- background-image:radial-gradient(1200px 520px at 100% -10%,rgba(59,99,242,.10),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(255,190,11,.06),transparent 60%),radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px)!important;
- background-size:auto,auto,22px 22px!important;background-attachment:fixed!important;
+ --tint:rgba(31,63,184,.10);--tint2:rgba(31,63,184,.05);--tintb:rgba(31,63,184,.30);--ring:rgba(31,63,184,.20);
+ --logoH:190px;--actH:58px;
+ color-scheme:light;color:var(--tx);font-variant-numeric:tabular-nums;
+ background-color:#f7f6fb!important;
+ background-image:
+  radial-gradient(1100px 650px at 60% 0%,var(--pgw,transparent),transparent 70%),
+  radial-gradient(900px 620px at 104% -8%,rgba(255,190,11,.24),transparent 62%),
+  radial-gradient(820px 620px at -8% 12%,rgba(31,63,184,.15),transparent 62%),
+  radial-gradient(760px 520px at 45% 112%,rgba(236,72,153,.11),transparent 62%),
+  radial-gradient(620px 460px at 88% 72%,rgba(13,148,136,.11),transparent 62%),
+  radial-gradient(520px 420px at 12% 80%,rgba(124,58,237,.08),transparent 62%)!important;
+ background-attachment:fixed!important;
 }
+body.mkpro.pg-on{--pgw:color-mix(in srgb,var(--pg) 16%,transparent)}
+body.mkpro.pg-strong{--pgw:color-mix(in srgb,var(--pg) 28%,transparent)}
 body.mkpro.mkpro-font{font-family:Cairo,"Segoe UI",Tahoma,sans-serif!important}
-body.mkpro ::selection{background:rgba(59,99,242,.35)}
-body.mkpro *{scrollbar-color:#3a4550 transparent}
-/* رجّع الألوان الفاتحة لملفات الـPDF والطباعة (بتتبني في الصفحة نفسها) */
+body.mkpro ::selection{background:rgba(255,190,11,.35)}
+body.mkpro *{scrollbar-color:#c9c5dc transparent}
+/* ألوان الطباعة والـPDF زي ما هي */
 body.mkpro>[style*="-10000px"],body.mkpro #mkPrint{color-scheme:light;--bg:#f5f7f8;--card:#fff;--text:#18343a;--muted:#718087;--border:#e4eaed;--blue:#087f8c;--onblue:#fff;--danger:#c0392b;--green:#159447;--tint:#e3f2f3;--tint2:#f1f8f9;color:#18343a}
-/* ── الشريط العلوي ── */
-body.mkpro .top{background:rgba(12,15,18,.82);backdrop-filter:saturate(1.4) blur(12px);-webkit-backdrop-filter:saturate(1.4) blur(12px);border-bottom:1px solid var(--ln);box-shadow:0 1px 0 rgba(255,255,255,.03),0 10px 30px rgba(0,0,0,.25)}
-body.mkpro .brand{color:var(--tx)}body.mkpro .brand div{color:var(--ac)}body.mkpro .brand span{color:var(--tx2)}
-body.mkpro .icon-btn{background:var(--g3);color:var(--tx);border:1px solid var(--ln2)}
-body.mkpro .icon-btn:hover{background:var(--g4);color:#fff}
-body.mkpro #whoBtn{background:var(--g3)!important;color:var(--tx)!important;border:1px solid var(--ln2)}
-body.mkpro #mkStat{background:rgba(28,34,40,.9);color:var(--tx2);border:1px solid var(--ln2)}
+
+/* ══ الشريط العلوي: سطر اللوجو الكبير (بيطلع لفوق مع السكرول) + سطر الزراير تحته (بيفضل ثابت) ══ */
+body.mkpro .top{height:auto;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;gap:0;position:sticky;top:calc(-1 * var(--logoH));z-index:30;background:transparent;border:0;box-shadow:none}
+body.mkpro .brand{position:relative;height:var(--logoH);flex:none;display:block;overflow:hidden;padding:0;margin:0;
+ background:radial-gradient(700px 220px at 50% 135%,rgba(255,190,11,.40),transparent 70%),radial-gradient(500px 260px at 0% 0%,rgba(110,140,255,.35),transparent 70%),linear-gradient(100deg,#0A1450 0%,#1A34A8 48%,#0D1C63 100%);
+ box-shadow:inset 0 -3px 0 #FFBE0B,inset 0 1px 0 rgba(255,255,255,.12)}
+body.mkpro .brand>div:not(#mkLogo),body.mkpro .brand #brandLogo,body.mkpro #mkWordmark{display:none!important}
+body.mkpro #mkLogo{position:absolute;inset:0;display:block}
+body.mkpro #mkLogo svg{display:block;width:100%;height:100%}
+body.mkpro .top-actions{height:var(--actH);flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.5) blur(14px);-webkit-backdrop-filter:saturate(1.5) blur(14px);border-bottom:1px solid var(--ln);box-shadow:0 10px 26px rgba(26,29,58,.08)}
+body.mkpro .top-actions #navBtn{margin:0}
+body.mkpro #mkMini{margin-right:auto;display:flex;align-items:center;gap:8px;font-weight:900;font-size:20px;color:var(--ac);opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+body.mkpro #mkMini i{width:22px;height:22px;display:inline-block;background:conic-gradient(from 0deg,#FFBE0B 0 12.5%,transparent 0 25%,#FFBE0B 0 37.5%,transparent 0 50%,#FFBE0B 0 62.5%,transparent 0 75%,#FFBE0B 0 87.5%,transparent 0);border-radius:50%;-webkit-mask:radial-gradient(circle,transparent 4px,#000 4.5px);mask:radial-gradient(circle,transparent 4px,#000 4.5px);animation:mkSpin 6s linear infinite}
+body.mkpro .top.stuck #mkMini{opacity:1;transform:none}
+body.mkpro .icon-btn{background:#fff;color:var(--tx);border:1px solid var(--ln2);box-shadow:0 2px 6px rgba(26,29,58,.06)}
+body.mkpro .icon-btn:hover{background:var(--g3);color:var(--ac)}
+body.mkpro #whoBtn{background:#fff!important;color:var(--tx)!important;border:1px solid var(--ln2)}
+body.mkpro #mkStat{background:rgba(255,255,255,.92);color:var(--tx2);border:1px solid var(--ln2);box-shadow:0 4px 14px rgba(26,29,58,.10)}
+@media(min-width:901px){body.mkpro aside{top:var(--asTop,248px)!important}}
+@media(max-width:900px){body.mkpro{--logoH:118px;--actH:56px}body.mkpro #mkMini{display:none}body.mkpro .top-actions{gap:6px;padding:0 10px}body.mkpro .top-actions .icon-btn{width:40px;height:40px}body.mkpro #whoBtn{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+@keyframes mkSpin{to{transform:rotate(360deg)}}
+
 /* ── القايمة الجانبية ── */
-body.mkpro aside{background:linear-gradient(180deg,#0b0e11,#080a0c);border-left:1px solid var(--ln);color:var(--tx2)}
-body.mkpro aside .nav-title{color:#5f6d77;font-weight:800;font-size:11px;letter-spacing:.3px}
-body.mkpro aside .nav button{color:#c3cdd4;padding:9px 10px;border-radius:12px;position:relative;font-weight:600;transition:background .15s,color .15s}
-body.mkpro aside .nav button:hover{background:rgba(255,255,255,.05);color:#fff}
-body.mkpro aside .nav button.active{background:linear-gradient(270deg,rgba(59,99,242,.16),rgba(59,99,242,.03));color:#fff;font-weight:800;box-shadow:inset 0 0 0 1px rgba(59,99,242,.22)}
-body.mkpro aside .nav button.active::after{content:"";position:absolute;right:-16px;top:8px;bottom:8px;width:4px;border-radius:4px 0 0 4px;background:var(--gd);box-shadow:0 0 12px rgba(255,190,11,.6)}
-body.mkpro aside .nav .danger:hover{background:rgba(248,113,113,.12)}
+body.mkpro aside{background:rgba(255,255,255,.78);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-left:1px solid var(--ln);color:var(--tx2)}
+body.mkpro aside .nav-title{color:#9a9eb6;font-weight:800;font-size:11px;letter-spacing:.3px}
+body.mkpro aside .nav button{color:var(--tx2);padding:8px 10px;border-radius:12px;position:relative;font-weight:700;transition:background .15s,color .15s}
+body.mkpro aside .nav button:hover{background:var(--g3);color:var(--tx)}
+body.mkpro aside .nav button.active{background:linear-gradient(270deg,rgba(31,63,184,.12),rgba(31,63,184,.02));color:var(--acD);font-weight:800;box-shadow:inset 0 0 0 1px rgba(31,63,184,.16)}
+body.mkpro aside .nav button.active::after{content:"";position:absolute;right:-16px;top:8px;bottom:8px;width:4px;border-radius:4px 0 0 4px;background:var(--gd);box-shadow:0 0 12px rgba(255,190,11,.7)}
+body.mkpro aside .nav .danger:hover{background:#fee2e2}
 body.mkpro aside .nav button .badge{margin-right:auto;background:var(--gd);color:var(--gdI);font-weight:800}
-.mkic{flex:none;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(145deg,hsl(var(--h,200) 78% 58%),hsl(var(--h,200) 72% 40%));box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -2px 0 rgba(0,0,0,.22),0 4px 12px hsl(var(--h,200) 70% 35% / .45)}
-.mkic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-body.mkpro .mobile-nav{background:rgba(10,12,15,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--ln);box-shadow:0 -10px 30px rgba(0,0,0,.35)}
-body.mkpro .mobile-nav button{color:#93a1ab}
-body.mkpro .mobile-nav button.active{color:#fff}
+/* أيقونة صغيرة: زرار مجسّم بلون الشاشة */
+.mkic{--cc:var(--c,#1F3FB8);flex:none;position:relative;width:34px;height:34px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;color:#fff;
+ background:linear-gradient(150deg,color-mix(in srgb,var(--cc) 62%,#fff) 0%,var(--cc) 48%,color-mix(in srgb,var(--cc) 72%,#000) 100%);
+ box-shadow:inset 0 1.5px 0 rgba(255,255,255,.5),inset 0 -2.5px 0 rgba(0,0,0,.22),0 4px 10px color-mix(in srgb,var(--cc) 45%,transparent)}
+.mkic::after{content:"";position:absolute;left:3px;right:3px;top:2px;height:45%;border-radius:9px 9px 14px 14px;background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,0));pointer-events:none}
+.mkic svg{position:relative;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+body.mkpro .mobile-nav{background:rgba(255,255,255,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--ln);box-shadow:0 -10px 30px rgba(26,29,58,.10)}
+body.mkpro .mobile-nav button{color:var(--tx3)}
+body.mkpro .mobile-nav button.active{color:var(--tx);font-weight:800}
 body.mkpro .mobile-nav .mkic{width:30px;height:30px;border-radius:10px}
 body.mkpro .mobile-nav .mkic svg{width:17px;height:17px}
-body.mkpro .mobile-nav button:not(.active) .mkic{filter:saturate(.55) brightness(.8)}
+body.mkpro .mobile-nav button:not(.active) .mkic{filter:saturate(.75)}
 body.mkpro .mobile-nav button.active .mkic{outline:2px solid var(--gd);outline-offset:2px}
+
+/* ══ رسومات مجسّمة (المربعات الكبيرة + زراير لوحة التحكم) ══ */
+.mkill{--cc:var(--c,#1F3FB8);--ink:color-mix(in srgb,var(--cc) 62%,#000);position:relative;flex:none;width:78px;height:78px;border-radius:24px;display:inline-flex;align-items:center;justify-content:center;
+ background:radial-gradient(120% 90% at 30% 15%,color-mix(in srgb,var(--cc) 55%,#fff) 0%,var(--cc) 55%,color-mix(in srgb,var(--cc) 70%,#000) 100%);
+ box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -5px 0 rgba(0,0,0,.20),inset 0 0 0 1px rgba(255,255,255,.18),0 12px 22px color-mix(in srgb,var(--cc) 42%,transparent),0 3px 6px rgba(0,0,0,.12);
+ transform:perspective(320px) rotateX(10deg) rotateY(-12deg);transition:transform .25s cubic-bezier(.2,.8,.3,1.3)}
+.mkill::after{content:"";position:absolute;left:6px;right:6px;top:4px;height:42%;border-radius:20px 20px 40px 40px;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0));pointer-events:none}
+.mkill svg{position:relative;z-index:1;width:64px;height:64px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.28));overflow:visible}
+.mkill svg *{stroke:none}
+.mkill .w{fill:#fff}.mkill .w9{fill:#fff;fill-opacity:.88}.mkill .ws{fill:#fff;fill-opacity:.62}.mkill .sh{fill:#000;fill-opacity:.2}
+.mkill .sc{fill:color-mix(in srgb,var(--cc) 22%,#fff)}
+.mkill .k{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mkill .kt{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linecap:round}
+.mkill .kf{fill:var(--ink)}
+.mkill .m{fill:#FFC21A}.mkill .md{fill:#DE9500}.mkill .mi{fill:none;stroke:#3a2600;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.mkill .ml{fill:none;stroke:#FFC93C;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.mkill .wl{fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.mkill .d{fill:#1d2240}.mkill .g{fill:#d7dce8}.mkill .rs{fill:#ff8a9a}
+button:hover>.mkill,button:hover .mkill{transform:perspective(320px) rotateX(0) rotateY(0) scale(1.06)}
+.mkill .spin{transform-box:fill-box;transform-origin:center;animation:mkSpin 9s linear infinite}
+@media (prefers-reduced-motion:reduce){.mkill,.mkill .spin,#mkMini i{animation:none!important;transition:none!important}}
+
 /* ── العناوين والأسطح ── */
 body.mkpro main{color:var(--tx)}
-body.mkpro .title h1{font-weight:800;letter-spacing:-.3px;color:#fff}
+body.mkpro .title h1{font-weight:900;letter-spacing:-.3px;color:var(--tx)}
 body.mkpro .title p{color:var(--tx3)}
-body.mkpro .card,body.mkpro .stat{background:var(--g2);border:1px solid var(--ln);border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 28px rgba(0,0,0,.28)}
-body.mkpro .card h3{color:#fff;font-weight:800}
+body.mkpro .card,body.mkpro .stat{background:var(--g2);border:1px solid var(--ln);border-radius:18px;box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 10px 28px rgba(26,29,58,.07),0 1px 3px rgba(26,29,58,.05)}
+body.mkpro .card h3{color:var(--tx);font-weight:800}
 body.mkpro .stat{position:relative;overflow:hidden}
-body.mkpro .stat::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:hsl(var(--sh,174) 75% 52%)}
+body.mkpro .stat::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:hsl(var(--sh,174) 75% 45%)}
 body.mkpro .stats>.stat:nth-child(4n+1){--sh:174}body.mkpro .stats>.stat:nth-child(4n+2){--sh:42}body.mkpro .stats>.stat:nth-child(4n+3){--sh:145}body.mkpro .stats>.stat:nth-child(4n+4){--sh:215}
-body.mkpro .stat .ic{color:hsl(var(--sh,174) 80% 62%)}
-body.mkpro .stat strong{font-weight:800;color:#fff;font-size:26px}
-body.mkpro .stat small{color:var(--tx3);font-weight:600}
+body.mkpro .stat .ic{color:hsl(var(--sh,174) 70% 40%)}
+body.mkpro .stat strong{font-weight:900;color:var(--tx);font-size:26px}
+body.mkpro .stat small{color:var(--tx3);font-weight:700}
 body.mkpro .empty{color:var(--tx3)}
 /* ── الأزرار ── */
-body.mkpro .primary{background:linear-gradient(180deg,#4A74FF,#1E3AA0);color:var(--acI);font-weight:800;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(59,99,242,.22)}
-body.mkpro .primary:hover{filter:brightness(1.07)}
-body.mkpro .secondary{background:var(--g3);color:var(--tx);border:1px solid var(--ln2)}
-body.mkpro .secondary:hover{background:var(--g4);color:#fff}
+body.mkpro .primary{background:linear-gradient(180deg,#3557d6,#162f96);color:#fff;font-weight:800;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(31,63,184,.25)}
+body.mkpro .primary:hover{filter:brightness(1.08)}
+body.mkpro .secondary{background:#fff;color:var(--tx);border:1px solid var(--ln2)}
+body.mkpro .secondary:hover{background:var(--g3);color:var(--ac)}
 body.mkpro .primary:active,body.mkpro .secondary:active{transform:translateY(1px)}
 body.mkpro .secondary.danger,body.mkpro .danger{color:var(--bd)!important}
-body.mkpro .fab{background:linear-gradient(180deg,#FFD24D,#F5A800);color:var(--gdI);box-shadow:0 10px 26px rgba(255,190,11,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+body.mkpro .fab{background:linear-gradient(180deg,#FFD24D,#F5A800);color:var(--gdI);box-shadow:0 10px 26px rgba(245,168,0,.45),inset 0 1px 0 rgba(255,255,255,.6)}
 body.mkpro .close{background:var(--g3);color:var(--tx);border:1px solid var(--ln2)}
-body.mkpro :focus-visible{outline:3px solid rgba(255,190,11,.7);outline-offset:2px}
+body.mkpro :focus-visible{outline:3px solid rgba(255,190,11,.85);outline-offset:2px}
 /* ── الخانات ── */
-body.mkpro input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),body.mkpro select,body.mkpro textarea,body.mkpro .search,body.mkpro .field input,body.mkpro .field select,body.mkpro .field textarea{background:var(--g0);color:var(--tx);border:1px solid var(--ln2);border-radius:11px}
-body.mkpro input::placeholder,body.mkpro textarea::placeholder{color:#6b7882}
+body.mkpro input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),body.mkpro select,body.mkpro textarea,body.mkpro .search,body.mkpro .field input,body.mkpro .field select,body.mkpro .field textarea{background:#fff;color:var(--tx);border:1px solid var(--ln2);border-radius:11px}
+body.mkpro input::placeholder,body.mkpro textarea::placeholder{color:#9a9eb6}
 body.mkpro .search:focus,body.mkpro input:focus,body.mkpro select:focus,body.mkpro textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ring);outline:none}
 body.mkpro .field label,body.mkpro label{color:var(--tx2)}
 body.mkpro input[type=checkbox],body.mkpro input[type=radio]{accent-color:var(--ac)}
-body.mkpro input[type=color]{background:var(--g0);border-color:var(--ln2)}
-body.mkpro option{background:var(--g2);color:var(--tx)}
 /* ── الجداول ── */
-body.mkpro .table th,body.mkpro th{background:var(--g3);color:var(--tx2);font-weight:700;border-bottom:1px solid var(--ln2)}
+body.mkpro .table th,body.mkpro th{background:#f4f3fa;color:var(--tx2);font-weight:800;border-bottom:1px solid var(--ln2)}
 body.mkpro .table td,body.mkpro td{border-bottom-color:var(--ln);color:var(--tx)}
-body.mkpro tr:nth-child(even) td{background:rgba(255,255,255,.018)}
-body.mkpro .prow:hover td,body.mkpro tr:hover td{background:rgba(59,99,242,.06)}
-body.mkpro .pico{background:rgba(59,99,242,.12);color:var(--ac)}
+body.mkpro tr:nth-child(even) td{background:rgba(31,63,184,.022)}
+body.mkpro .prow:hover td,body.mkpro tr:hover td{background:rgba(255,190,11,.09)}
+body.mkpro .pico{background:rgba(31,63,184,.08);color:var(--ac)}
 /* ── الشارات ── */
-body.mkpro .badge{background:rgba(59,99,242,.14);color:#AEC1FF;font-weight:700}
-body.mkpro .badge.red{background:rgba(248,113,113,.15);color:#fca5a5}
-body.mkpro .badge.green,body.mkpro .badge.st-paid{background:rgba(74,222,128,.14);color:#86efac}
-body.mkpro .badge.st-delivered{background:rgba(251,191,36,.14);color:#FFD24D}
-body.mkpro .badge.st-returned,body.mkpro .badge.st-cancelled{background:rgba(248,113,113,.15);color:#fca5a5}
+body.mkpro .badge{background:rgba(31,63,184,.10);color:var(--ac);font-weight:800}
+body.mkpro .badge.red{background:#fee2e2;color:#b91c1c}
+body.mkpro .badge.green,body.mkpro .badge.st-paid{background:#dcfce7;color:#15803d}
+body.mkpro .badge.st-delivered{background:#fef3c7;color:#92400e}
+body.mkpro .badge.st-returned,body.mkpro .badge.st-cancelled{background:#fee2e2;color:#b91c1c}
 body.mkpro .dtage,body.mkpro .rtag,body.mkpro .kt-chip{background:var(--g4);color:var(--tx2)}
-body.mkpro .dtage.a30,body.mkpro .rtag.r1{background:rgba(251,191,36,.14);color:#FFD24D}
-body.mkpro .dtage.a60,body.mkpro .rtag.r0{background:rgba(248,113,113,.15);color:#fca5a5}
+body.mkpro .dtage.a30,body.mkpro .rtag.r1{background:#fef3c7;color:#92400e}
+body.mkpro .dtage.a60,body.mkpro .rtag.r0{background:#fee2e2;color:#b91c1c}
 /* ── النوافذ ── */
-body.mkpro .modal-bg{background:rgba(3,5,7,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-body.mkpro .modal{background:var(--g2);color:var(--tx);border:1px solid var(--ln2);box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
-body.mkpro .modal-head h2{color:#fff}
-body.mkpro .toast{background:#f1f5f7;color:#0b0f12;font-weight:700;box-shadow:0 12px 30px rgba(0,0,0,.5)}
-body.mkpro #scanBox .sb,body.mkpro .ivrow,body.mkpro .ivbar,body.mkpro #vsBox .vs,body.mkpro #spEd .pvc,body.mkpro #spEd .pvd,body.mkpro #mkRecover .mkbox{background:var(--g2);color:var(--tx)}
-body.mkpro #mkInv{background:var(--g1);color:var(--tx)}
-body.mkpro .quick button{background:var(--g3);color:var(--tx);border:1px solid var(--ln)}
-body.mkpro .quick button:hover{background:var(--g4)}
+body.mkpro .modal-bg{background:rgba(16,22,58,.42);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+body.mkpro .modal{background:#fff;color:var(--tx);border:1px solid var(--ln);box-shadow:0 30px 80px rgba(16,22,58,.28)}
+body.mkpro .modal-head h2{color:var(--tx)}
+body.mkpro .toast{background:#1a1d3a;color:#fff;font-weight:700;box-shadow:0 12px 30px rgba(16,22,58,.35)}
+body.mkpro .quick button{background:#fff;color:var(--tx);border:1px solid var(--ln)}
+body.mkpro .quick button:hover{background:var(--g3)}
 body.mkpro .quick b{color:var(--ac)}
 body.mkpro .quick small{color:var(--tx3)}
-/* شاشة الدخول */
-body.mkpro #mkWho,body.mkpro #mkLogin,body.mkpro #mkConf{background:var(--g1)}
-body.mkpro .mkbox{background:var(--g2);border-color:var(--ln2);box-shadow:0 30px 80px rgba(0,0,0,.55)}
-body.mkpro .mkbox h2{color:var(--ac)}body.mkpro .mkbox p{color:var(--tx3)}
-body.mkpro .mkbox input{background:var(--g0);border-color:var(--ln2);color:var(--tx)}
-body.mkpro .mkbox button{background:var(--ac);color:var(--acI)}
-body.mkpro .mkbox button.alt{background:var(--g3);color:var(--tx);border-color:var(--ln2)}
-/* ── الكود القديم المكتوب بألوان فاتحة جوه العناصر (ما عدا الطباعة/الـPDF) ── */
-body.mkpro :is([style*="background:#fff;"],[style$="background:#fff"],[style*="background:#ffffff"],[style*="background: #fff;"],[style*="background:white"],[style*="background:#fafcfc"],[style*="background:#f6f6f6"],[style*="background:#f3f5f6"],[style*="background:#f3f3f3"],[style*="background:#f5f7f8"],[style*="background:#f4f7f8"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
-body.mkpro :is([style*="background:var(--tint2)"],[style*="background:var(--tint)"]):not([style*="-10000px"] *){color:var(--tx)}
-body.mkpro :is([style*="background:#fff4"],[style*="background:#fff7"],[style*="background:#fff8"],[style*="background:#fff6"],[style*="background:#fffaf0"],[style*="background:#fef3c7"],[style*="background:#fff9"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
-body.mkpro :is([style*="background:#fdec"],[style*="background:#ffe4"],[style*="background:#fff0ee"],[style*="background:#ffefed"],[style*="background:#fff7f7"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
-body.mkpro :is([style*="background:#e8f7ee"],[style*="background:#eefaf3"],[style*="background:#e3f4ec"],[style*="background:#e6f6ec"],[style*="background:#eaf7ef"],[style*="background:#dff3e6"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(74,222,128,.11)!important;color:#bbf7d0!important}
-body.mkpro :is([style*="background:#eef6ff"],[style*="background:#e3f4f5"],[style*="background:#eef6f7"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(96,165,250,.11)!important;color:#cfe3ff!important}
-body.mkpro :is([style*="color:#7b8a90"],[style*="color:#6b7c82"],[style*="color:#7a8a8f"],[style*="color:#718087"],[style*="color:#8a979c"],[style*="color:#888"],[style*="color:#777"],[style*="color:#555"],[style*="color:#475b61"],[style*="color:#5d7477"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx3)!important}
-body.mkpro :is([style*="color:#18343a"],[style*="color:#1c2a30"],[style*="color:#222"],[style*="color:#333"],[style*="color:#000"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx)!important}
-body.mkpro :is([style*="color:#8a4b00"],[style*="color:#a66a00"],[style*="color:#7a4b00"],[style*="color:#b9770e"],[style*="color:#8a6410"],[style*="color:#b7791f"]):not([style*="-10000px"] *):not(#mkPrint *){color:#FFD24D!important}
-body.mkpro :is([style*="color:#c0392b"],[style*="color:#b33"],[style*="color:#b3261e"],[style*="color:#8c1d18"]):not([style*="-10000px"] *):not(#mkPrint *){color:#fca5a5!important}
-body.mkpro :is([style*="color:#159447"],[style*="color:#0b6b45"],[style*="color:#1e6b3c"],[style*="color:#0b5b2b"],[style*="color:#1e7a3c"]):not([style*="-10000px"] *):not(#mkPrint *){color:#86efac!important}
-body.mkpro :is([style*="color:#087f8c"],[style*="color:#0b4e57"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
-body.mkpro :is([style*="color:#0b4a8b"]):not([style*="-10000px"] *):not(#mkPrint *){color:#93c5fd!important}
-body.mkpro :is([style*="#e4eaed"],[style*="#e3e8ea"],[style*="#d5dde0"],[style*="solid #ddd"],[style*="solid #eee"],[style*="solid #ccc"],[style*="#eef1f2"]):not([style*="-10000px"] *):not(#mkPrint *){border-color:var(--ln2)!important}
-/* نفس الألوان بعد ما الصفحة تعدّل الستايل بنفسها (المتصفح بيكتبها rgb) */
-body.mkpro :is([style*="background: rgb(255, 255, 255)"],[style*="background-color: rgb(255, 255, 255)"],[style*="background: white"],[style*="background: rgb(250, 252, 252)"],[style*="background: rgb(245, 247, 248)"],[style*="background: rgb(243, 245, 246)"],[style*="background: rgb(244, 247, 248)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *):not(canvas):not(img){background:var(--g3)!important;color:var(--tx)}
-body.mkpro :is([style*="background: rgb(255, 24"],[style*="background: rgb(255, 250, 240)"],[style*="background: rgb(254, 243, 199)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(251,191,36,.11)!important;border-color:rgba(251,191,36,.35)!important;color:#FFE49E!important}
-body.mkpro :is([style*="background: rgb(253, 236"],[style*="background: rgb(255, 228, 232)"],[style*="background: rgb(255, 239, 237)"]):not([style*="-10000px"]):not([style*="-10000px"] *):not(#mkPrint *){background:rgba(248,113,113,.12)!important;border-color:rgba(248,113,113,.35)!important;color:#fecaca!important}
-body.mkpro :is([style*="color: rgb(8, 127, 140)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#AEC1FF!important}
-body.mkpro :is([style*="color: rgb(192, 57, 43)"]):not([style*="-10000px"] *):not(#mkPrint *){color:#fca5a5!important}
-body.mkpro :is([style*="color: rgb(113, 128, 135)"],[style*="color: rgb(123, 138, 144)"]):not([style*="-10000px"] *):not(#mkPrint *){color:var(--tx3)!important}
-body.mkpro :is([style*="background:var(--blue)"],[style*="background: var(--blue)"]):not([style*="-10000px"] *){color:var(--acI)!important}
-body.mkpro #mkNavBar button{background:rgba(28,34,40,.92)!important;color:var(--tx)!important;border:1px solid var(--ln2)!important;backdrop-filter:blur(8px)}
-body.mkpro #mkNavBar #mkNavClose{color:#fca5a5!important}
-body.mkpro #roBanner{background:linear-gradient(270deg,rgba(255,190,11,.16),rgba(255,190,11,.05))!important;color:#FFE49E!important;border:1px solid rgba(255,190,11,.4)!important;font-weight:700}
-body.mkpro .prow .spgo{background:var(--g3);border-color:var(--ln2);color:var(--tx2)}
-body.mkpro .prow .spgo.on{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:#86efac}
-body.mkpro #outBtn{color:#fca5a5!important}
+body.mkpro #mkNavBar button{background:rgba(255,255,255,.92)!important;color:var(--tx)!important;border:1px solid var(--ln2)!important;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(26,29,58,.12)}
+body.mkpro #roBanner{background:linear-gradient(270deg,#FFF1BF,#FFF9E8)!important;color:#7A5200!important;border:1px solid #FFD666!important;font-weight:800}
 body.mkpro #dashboard button[onclick="showPage('daybook')"][style]{display:none!important}
+
 /* ══ لوحة التحكم: مربعات كبيرة للحاجات اللي بتتفتح طول اليوم ══ */
-.mkLaunch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 18px}
+.mkLaunch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 0 20px}
 @media(max-width:1100px){.mkLaunch{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.mkLaunch button{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px;min-height:138px;border-radius:18px;font:inherit;font-weight:800;font-size:17px;text-align:right;cursor:pointer;color:#fff;
- background:linear-gradient(155deg,hsl(var(--h) 55% 20%) 0%,hsl(var(--h) 35% 12%) 55%,#12161a 100%);border:1px solid hsl(var(--h) 55% 35% / .55);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 28px rgba(0,0,0,.35);transition:transform .12s,box-shadow .15s,border-color .15s}
-.mkLaunch button::before{content:"";position:absolute;width:190px;height:190px;left:-60px;bottom:-90px;border-radius:50%;background:radial-gradient(circle,hsl(var(--h) 80% 55% / .28),transparent 70%);pointer-events:none}
-.mkLaunch button::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.05) 50%,transparent 60%);pointer-events:none}
-.mkLaunch button:hover{border-color:hsl(var(--h) 75% 55% / .85);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 16px 34px hsl(var(--h) 70% 30% / .45);transform:translateY(-2px)}
+.mkLaunch button{--cc:var(--c,#1F3FB8);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px;min-height:162px;border-radius:22px;font:inherit;font-weight:900;font-size:18px;text-align:right;cursor:pointer;
+ color:color-mix(in srgb,var(--cc) 55%,#000);
+ background:linear-gradient(155deg,#fff 0%,color-mix(in srgb,var(--cc) 9%,#fff) 45%,color-mix(in srgb,var(--cc) 22%,#fff) 100%);
+ border:1px solid color-mix(in srgb,var(--cc) 26%,#fff);
+ box-shadow:inset 0 1px 0 #fff,0 12px 26px color-mix(in srgb,var(--cc) 16%,transparent),0 2px 4px rgba(26,29,58,.05);transition:transform .15s,box-shadow .2s,border-color .2s}
+.mkLaunch button::before{content:"";position:absolute;width:220px;height:220px;left:-80px;bottom:-110px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--cc) 30%,transparent),transparent 70%);pointer-events:none}
+.mkLaunch button::after{content:"";position:absolute;left:-30px;top:-60px;width:150px;height:150px;border-radius:50%;border:18px solid color-mix(in srgb,var(--cc) 10%,transparent);pointer-events:none}
+.mkLaunch button:hover{border-color:color-mix(in srgb,var(--cc) 55%,#fff);box-shadow:inset 0 1px 0 #fff,0 18px 34px color-mix(in srgb,var(--cc) 28%,transparent);transform:translateY(-3px)}
 .mkLaunch button:active{transform:scale(.98)}
-.mkLaunch .mkic{width:58px;height:58px;border-radius:17px}
-.mkLaunch .mkic svg{width:30px;height:30px;stroke-width:2}
 .mkLaunch button>span:last-child{display:flex;flex-direction:column;gap:3px;line-height:1.3;position:relative;z-index:1}
-.mkLaunch small{display:block;font-weight:600;font-size:12.5px;color:hsl(var(--h) 30% 78%)}
-.mkLaunch .cnt{position:absolute;top:14px;left:14px;min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:var(--gd,#FFBE0B);color:#2A1D00;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(0,0,0,.25)}
+.mkLaunch small{display:block;font-weight:700;font-size:12.5px;color:color-mix(in srgb,var(--cc) 35%,#5b607e)}
+.mkLaunch .cnt{position:absolute;top:14px;left:14px;z-index:2;min-width:28px;height:28px;padding:0 8px;border-radius:14px;background:var(--gd,#FFBE0B);color:#2A1D00;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff,0 4px 10px rgba(245,168,0,.45)}
+.mkLaunch .mkill{z-index:1}
 body:not(.mkpro) .mkLaunch button{background:#fff;color:#18343a;border-color:#e4eaed}
-body:not(.mkpro) .mkLaunch small{color:#7a8a90}
-@media(max-width:600px){.mkLaunch{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mkLaunch button{min-height:112px;padding:12px;font-size:15px;gap:10px;border-radius:16px}.mkLaunch .mkic{width:46px;height:46px;border-radius:14px}.mkLaunch .mkic svg{width:24px;height:24px}.mkLaunch small{font-size:11.5px}}
-body.mkpro .dash-acts button{background:var(--g2);border:1px solid var(--ln);color:var(--tx);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 26px rgba(0,0,0,.28)}
-body.mkpro .dash-acts button:hover{background:var(--g3);border-color:var(--ln2)}
-body.mkpro .dash-acts .ic{background:rgba(59,99,242,.12);color:var(--ac)}
-body.mkpro .dash-acts .pri{background:linear-gradient(160deg,#16297A,#0A1850);border-color:#3B63F2;color:#fff}
+@media(max-width:600px){.mkLaunch{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mkLaunch button{min-height:136px;padding:12px;font-size:15.5px;gap:8px;border-radius:18px}.mkLaunch .mkill{width:62px;height:62px;border-radius:19px}.mkLaunch .mkill svg{width:52px;height:52px}.mkLaunch small{font-size:11.5px}}
+body.mkpro .dash-acts button{background:#fff;border:1px solid var(--ln);color:var(--tx);box-shadow:0 10px 24px rgba(26,29,58,.07)}
+body.mkpro .dash-acts button:hover{background:#fff;border-color:var(--ln2);transform:translateY(-2px)}
+body.mkpro .dash-acts .ic{background:rgba(31,63,184,.08);color:var(--ac)}
+body.mkpro .dash-acts .ic.mkx{width:auto;height:auto;background:none!important;border-radius:0}
+body.mkpro .dash-acts .pri{background:linear-gradient(160deg,#2a4bd0,#0f2275);border-color:#1F3FB8;color:#fff;box-shadow:0 14px 30px rgba(31,63,184,.30)}
+body.mkpro .dash-acts .pri:hover{background:linear-gradient(160deg,#3156e0,#13287f)}
 body.mkpro .dash-acts .pri .ic{background:rgba(255,255,255,.14);color:#fff}
-body.mkpro .dash-acts small{color:var(--tx3)}body.mkpro .dash-acts .pri small{color:#c9f3ee}
+body.mkpro .dash-acts small{color:var(--tx3)}body.mkpro .dash-acts .pri small{color:#dbe4ff}
+
+/* ══ الشاشات: كل شاشة بلونها — والمزدحمة (اليومية، الجرد، المبيعات، الواتساب، الموقع، الشحن) شريط عنوان بلونها ══ */
+body.mkpro.pg-on main .page.active>.title-row .title h1{color:color-mix(in srgb,var(--pg) 72%,#000)}
+body.mkpro.pg-strong main .page.active>.title-row{position:relative;overflow:hidden;isolation:isolate;padding:20px 22px;border-radius:22px;margin-bottom:18px;
+ background:linear-gradient(115deg,color-mix(in srgb,var(--pg) 88%,#000) 0%,color-mix(in srgb,var(--pg) 55%,#000) 100%);
+ box-shadow:0 16px 34px color-mix(in srgb,var(--pg) 34%,transparent),inset 0 1px 0 rgba(255,255,255,.28)}
+body.mkpro.pg-strong main .page.active>.title-row::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:radial-gradient(circle at 12% 135%,rgba(255,255,255,.22) 0 95px,transparent 96px),radial-gradient(circle at 94% -45%,rgba(255,255,255,.16) 0 130px,transparent 131px),radial-gradient(circle at 70% 160%,rgba(255,190,11,.35) 0 80px,transparent 81px)}
+body.mkpro.pg-strong main .page.active>.title-row .title h1{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.18)}
+body.mkpro.pg-strong main .page.active>.title-row .title h1 *{color:inherit}
+body.mkpro.pg-strong main .page.active>.title-row .title p{color:rgba(255,255,255,.9)}
+body.mkpro.pg-strong main .page.active>.title-row .secondary{background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.4)}
+body.mkpro.pg-strong main .page.active>.title-row .primary{background:#fff;color:color-mix(in srgb,var(--pg) 70%,#000);box-shadow:0 6px 16px rgba(0,0,0,.16)}
+body.mkpro.pg-strong main .page.active .card{border-top:3px solid var(--pg)}
+body.mkpro.pg-strong main .page.active .table th{background:color-mix(in srgb,var(--pg) 9%,#fff);color:color-mix(in srgb,var(--pg) 65%,#000)}
+body.mkpro.pg-strong main .page.active .toolbar .search:focus{border-color:var(--pg);box-shadow:0 0 0 3px color-mix(in srgb,var(--pg) 22%,transparent)}
+
 /* ══ اليومية: كل خانة ليها لونها ══ */
-body.mkpro .dbent{background:var(--g2);border:1px solid var(--ln2);border-radius:18px;box-shadow:0 14px 34px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04)}
+body.mkpro .dbent{background:#fff;border:1px solid var(--ln2);border-radius:18px;box-shadow:0 14px 34px rgba(26,29,58,.08)}
 /* العميل = أزرق */
-body.mkpro #dbPerson{background:rgba(96,165,250,.10);border:1.5px solid rgba(96,165,250,.55);color:#dbeafe;font-weight:800;border-radius:13px;padding:12px 14px;font-size:16px}
-body.mkpro #dbPerson::placeholder{color:#8db4ec;font-weight:600}
-body.mkpro #dbPerson:focus{border-color:#60a5fa;box-shadow:0 0 0 4px rgba(96,165,250,.22);background:rgba(96,165,250,.14)}
-/* الصنف = ذهبي */
-body.mkpro #dbSearch{background:rgba(255,190,11,.09);border:2px solid rgba(255,190,11,.6);border-radius:14px;padding:15px 16px;font-size:18px;font-weight:800;color:#ffe8b0}
-body.mkpro #dbSearch::placeholder{color:#cfa64a;font-weight:600}
-body.mkpro #dbSearch:focus{border-color:#FFBE0B;box-shadow:0 0 0 4px rgba(255,190,11,.22);background:rgba(255,190,11,.13)}
-body.mkpro #dbBox{background:var(--g3);border:1px solid var(--ln2);box-shadow:0 18px 40px rgba(0,0,0,.5)}
+body.mkpro #dbPerson{background:#eef4ff;border:1.5px solid #93b4f5;color:#1e3a8a;font-weight:800;border-radius:13px;padding:12px 14px;font-size:16px}
+body.mkpro #dbPerson::placeholder{color:#6f8fd0;font-weight:600}
+body.mkpro #dbPerson:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.16);background:#e6efff}
+/* الصنف = منجاوي */
+body.mkpro #dbSearch{background:#fff8e1;border:2px solid #ffc93c;border-radius:14px;padding:15px 16px;font-size:18px;font-weight:800;color:#5c3b00}
+body.mkpro #dbSearch::placeholder{color:#b08a2e;font-weight:600}
+body.mkpro #dbSearch:focus{border-color:#FFBE0B;box-shadow:0 0 0 4px rgba(255,190,11,.28);background:#fff3cc}
+body.mkpro #dbBox{background:#fff;border:1px solid var(--ln2);box-shadow:0 18px 40px rgba(26,29,58,.16)}
 body.mkpro #dbBox>div{border-bottom-color:var(--ln)}
-body.mkpro #dbBox>div:hover{background:var(--g4)}
+body.mkpro #dbBox>div:hover{background:#fff8e1}
 /* طرق الدفع */
 body.mkpro .dbpays button{border-radius:20px;font-weight:800;border:1.5px solid transparent;background:var(--g3);color:var(--tx2)}
-body.mkpro .dbpays button[data-p="cash"]{background:rgba(74,222,128,.12);color:#86efac}
-body.mkpro .dbpays button[data-p="insta"]{background:rgba(167,139,250,.14);color:#c4b5fd}
-body.mkpro .dbpays button[data-p="transfer"]{background:rgba(96,165,250,.14);color:#93c5fd}
-body.mkpro .dbpays button[data-p="credit"]{background:rgba(248,113,113,.14);color:#fca5a5}
-body.mkpro .dbpays button.on{border-color:currentColor;box-shadow:0 0 0 3px rgba(255,255,255,.04),0 4px 14px rgba(0,0,0,.35)}
-/* مجموعة كل عميل بلونه، والبيع من غير اسم برتقاني مخطّط */
-body.mkpro .dbg{background:var(--g2);border:1px solid var(--ln);border-right:6px solid hsl(var(--gh,174) 70% 52%);border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
-body.mkpro .dbg .dbgh{background:linear-gradient(270deg,hsl(var(--gh,174) 45% 16%),hsl(var(--gh,174) 25% 12%));border-bottom:1px solid var(--ln)}
-body.mkpro .dbg .dbgh b{color:hsl(var(--gh,174) 85% 74%);font-size:16px}
+body.mkpro .dbpays button[data-p="cash"]{background:#dcfce7;color:#166534}
+body.mkpro .dbpays button[data-p="insta"]{background:#ede9fe;color:#5b21b6}
+body.mkpro .dbpays button[data-p="transfer"]{background:#dbeafe;color:#1e40af}
+body.mkpro .dbpays button[data-p="credit"]{background:#fee2e2;color:#991b1b}
+body.mkpro .dbpays button.on{border-color:currentColor;box-shadow:0 4px 12px rgba(26,29,58,.12)}
+/* كل عميل بلونه، والبيع من غير اسم برتقاني مخطّط */
+body.mkpro .dbg{background:#fff;border:1px solid var(--ln);border-right:6px solid hsl(var(--gh,174) 70% 45%);border-radius:16px;box-shadow:0 8px 22px rgba(26,29,58,.06)}
+body.mkpro .dbg .dbgh{background:linear-gradient(270deg,hsl(var(--gh,174) 80% 95%),hsl(var(--gh,174) 60% 98.5%));border-bottom:1px solid var(--ln)}
+body.mkpro .dbg .dbgh b{color:hsl(var(--gh,174) 65% 28%);font-size:16px}
 body.mkpro .dbg .dbgh small{color:var(--tx2)}
 body.mkpro .dbg.mk-anon{border-right-color:var(--or)}
-body.mkpro .dbg.mk-anon .dbgh{background:repeating-linear-gradient(-45deg,rgba(251,146,60,.13) 0 10px,rgba(251,146,60,.06) 10px 20px)}
-body.mkpro .dbg.mk-anon .dbgh b{color:#fdba74}
+body.mkpro .dbg.mk-anon .dbgh{background:repeating-linear-gradient(-45deg,rgba(234,88,12,.12) 0 10px,rgba(234,88,12,.05) 10px 20px)}
+body.mkpro .dbg.mk-anon .dbgh b{color:#c2410c}
 body.mkpro .dbg.done{opacity:.6}
 body.mkpro .dbg.done .dbgh{background:var(--g3)}
 body.mkpro .dbl{border-bottom-color:var(--ln)}
 body.mkpro .dbl.hd{background:var(--g3);color:var(--tx3);font-weight:700}
-body.mkpro .dbl.pay{background:rgba(74,222,128,.05)}
+body.mkpro .dbl.pay{background:rgba(22,163,74,.06)}
 body.mkpro .dbl .st{color:var(--tx3)}
 body.mkpro .dbbadge{background:var(--g4);color:var(--tx2)}
-body.mkpro .dbbadge.cash{background:rgba(74,222,128,.13);color:#86efac}
-body.mkpro .dbbadge.insta{background:rgba(167,139,250,.15);color:#c4b5fd}
-body.mkpro .dbbadge.transfer{background:rgba(96,165,250,.15);color:#93c5fd}
-body.mkpro .dbbadge.credit{background:rgba(248,113,113,.15);color:#fca5a5}
-body.mkpro .dbfoot{background:rgba(21,26,31,.96);border:1px solid var(--ln2);box-shadow:0 -10px 30px rgba(0,0,0,.4)}
-/* ══ شريط اللوجو: ميكانيزم كبيرة بعرض الشريط + حركة خفيفة (مسمار وترس) ══ */
-body.mkpro .top{height:92px;padding-top:0;padding-bottom:0}
-body.mkpro .brand{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:16px;min-width:0;max-width:none}
-body.mkpro .brand #brandLogo{height:52px!important;max-width:160px!important}
-body.mkpro #mkWordmark{display:flex;align-items:center;gap:14px;line-height:1}
-body.mkpro #mkWordmark .mkw-ic{flex:none;width:34px;height:34px;color:var(--gd);filter:drop-shadow(0 0 8px rgba(255,190,11,.35))}
-body.mkpro #mkWordmark .mkw-ic svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-body.mkpro #mkWordmark .mkw-ic.g1{animation:mkSpin 7s linear infinite}
-body.mkpro #mkWordmark .mkw-ic.g2{color:var(--ac);filter:drop-shadow(0 0 8px rgba(59,99,242,.45));animation:mkSpinRev 5.5s linear infinite}
-body.mkpro #mkWordmark .mkw-tx{font-weight:800;font-size:30px;letter-spacing:.3px;display:flex;flex-direction:column;align-items:center;white-space:nowrap}
-body.mkpro #mkWordmark .mkw-tx b{background:linear-gradient(90deg,#fff 10%,var(--gd) 55%,var(--ac) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-body.mkpro #mkWordmark .mkw-tx small{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--tx3)}
-@keyframes mkSpin{to{transform:rotate(360deg)}}
-@keyframes mkSpinRev{to{transform:rotate(-360deg)}}
-@keyframes mkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-body.mkpro #mkWordmark .mkw-ic.g3{animation:mkFloat 2.6s ease-in-out infinite}
-@media(max-width:900px){
- body.mkpro .top{height:76px}
- body.mkpro #mkWordmark .mkw-tx{font-size:21px}
- body.mkpro #mkWordmark .mkw-ic{width:24px;height:24px}
- body.mkpro #mkWordmark{gap:8px}
- body.mkpro .brand #brandLogo{height:38px!important}
-}
-@media (prefers-reduced-motion:reduce){.mkLaunch button,body.mkpro aside .nav button,body.mkpro #mkWordmark .mkw-ic{animation:none!important}}
+body.mkpro .dbbadge.cash{background:#dcfce7;color:#166534}
+body.mkpro .dbbadge.insta{background:#ede9fe;color:#5b21b6}
+body.mkpro .dbbadge.transfer{background:#dbeafe;color:#1e40af}
+body.mkpro .dbbadge.credit{background:#fee2e2;color:#991b1b}
+body.mkpro .dbfoot{background:rgba(255,255,255,.96);border:1px solid var(--ln2);box-shadow:0 -10px 30px rgba(26,29,58,.10)}
+
 /* ── لمسة ذهبية: لوحة التحكم (آخر العمليات + الرسومات) ── */
 body.mkpro .chc{position:relative;overflow:hidden;padding-top:20px}
-body.mkpro .chc::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--gd),rgba(255,190,11,0) 75%)}
+body.mkpro .chc::before{content:'';position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,#FFBE0B,#FFD86B 40%,rgba(255,190,11,0) 85%)}
 body.mkpro .chc h3{display:flex;align-items:center;gap:8px}
-body.mkpro .chc h3::before{content:'◆';color:var(--gd);font-size:11px}
+body.mkpro .chc h3::before{content:'◆';color:#E0A100;font-size:11px}
 body.mkpro .hb .bar{background:var(--g4)}
-body.mkpro .hb .bar i{background:linear-gradient(90deg,var(--ac) 0%,var(--gd) 100%)!important;box-shadow:0 0 10px rgba(255,190,11,.3)}
-body.mkpro .hb:first-of-type .nmx{color:var(--gd);font-weight:800}
+body.mkpro .hb .bar i{background:linear-gradient(90deg,#1F3FB8 0%,#FFBE0B 100%)!important;box-shadow:0 0 10px rgba(255,190,11,.35)}
+body.mkpro .hb:first-of-type .nmx{color:var(--gdT);font-weight:900}
 body.mkpro .hb:first-of-type .nmx::before{content:'🏆 '}
-body.mkpro #recent{position:relative}
 body.mkpro #recent .table tbody tr{border-right:3px solid transparent;transition:background .15s}
-body.mkpro #recent .table tbody tr:hover{background:rgba(255,190,11,.07)}
-body.mkpro #recent .table tbody tr:has(.badge.green){border-right-color:var(--gd)}
-body.mkpro #recent .badge.green{background:linear-gradient(135deg,var(--gd),#ffd766)!important;color:#2A1D00!important;font-weight:800;box-shadow:0 0 8px rgba(255,190,11,.35)}
-body.mkpro #recent .table tbody tr td:last-child{font-weight:800;color:var(--gd)}
+body.mkpro #recent .table tbody tr:hover td{background:rgba(255,190,11,.10)}
+body.mkpro #recent .table tbody tr:has(.badge.green){border-right-color:#FFBE0B}
+body.mkpro #recent .badge.green{background:linear-gradient(135deg,#FFBE0B,#ffd766)!important;color:#2A1D00!important;font-weight:900;box-shadow:0 2px 8px rgba(255,190,11,.45)}
+body.mkpro #recent .table tbody tr td:last-child{font-weight:900;color:var(--gdT)}
 </style>
 <script>
-/* mk: ميكانيزم برو (غامق) — أيقونات بألوان لكل شاشة + مربعات كبيرة في لوحة التحكم + ألوان اليومية */
+/* mk: ميكانيزم برو — أيقونات بلون ثابت لكل شاشة (مايتكررش) + رسومات مجسّمة + لوجو متحرك كبير + لون لكل شاشة */
 (function(){
  var ON=true;try{ON=localStorage.getItem('mk_pro')!=='0'}catch(e){}
  if(ON)document.body.classList.add('mkpro');
  var P='<svg viewBox="0 0 24 24" aria-hidden="true">',E='</svg>';
+ /* [اللون، الرسمة] — كل شاشة لون مختلف عشان تقول «افتح الأيقونة البرتقاني» */
  var I={
-  dashboard:[200,'<rect x="3" y="3" width="7" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/>'],
-  daybook:[174,'<path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M9.5 8h6M9.5 12h6M9.5 16h3.5"/>'],
-  sales:[145,'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>'],
-  saleNew:[145,'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M12 8v7M8.5 11.5h7"/>'],
-  purchases:[215,'<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M12 10v7M9 14l3 3 3-3"/>'],
-  products:[32,'<path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/><path d="M3 7l9 4.5L21 7M12 11.5V21.5"/>'],
-  returns:[2,'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'],
-  contacts:[265,'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4.5a3 3 0 0 1 0 6M18.5 20a5 5 0 0 0-2.5-4.3"/>'],
-  cash:[128,'<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l11-3.5V7M16 13.5h2"/>'],
-  reports:[290,'<path d="M4 20V11M10 20V5M16 20v-6M3 20h18"/>'],
-  theme:[322,'<path d="M12 3a9 9 0 1 0 0 18c1.6 0 2.2-1 2.2-2.1 0-1.4-1.2-2 0-3.2.9-.9 2-.7 3-.7A3.8 3.8 0 0 0 21 11.2C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>'],
-  settings:[205,'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/>'],
-  weborders:[188,'<path d="M3 4h2l2.4 11h10.2L20 7.5H6.3"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>'],
-  quotes:[252,'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12.5h6M9 16.5h4"/>'],
-  count:[46,'<path d="M9 3.5h6v3H9z"/><path d="M7 5H5v16h14V5h-2"/><path d="m9 13.5 2 2 4-4"/>'],
-  shipping:[24,'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>'],
-  debts:[350,'<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>'],
-  reorder:[162,'<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.5h-4.5"/>'],
-  waorders:[142,'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/>'],
-  staff:[38,'<path d="M4 17h16M6 17a6 6 0 0 1 12 0"/><path d="M12 7v4.5M9 9.6v2.2M15 9.6v2.2"/>'],
-  biz:[275,'<path d="m3 17 6-6 4 4 8-8"/><path d="M14.5 7H21v6.5"/>'],
-  kits:[12,'<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>'],
-  mkSideWk:[30,'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
-  mkSideKw:[48,'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/>'],
-  tf:[228,'<path d="M3 6h18v12H3z"/><path d="M3 10h18M7 15h4"/>'],
-  site:[195,'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'],
-  custTerms:[300,'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.4"/>'],
-  logout:[0,'<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h10"/>']
+  dashboard:['#1E3A8A','<rect x="3" y="3" width="7" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/>'],
+  daybook:['#16A34A','<path d="M4 5.5q4-1.5 8 .5v14q-4-2-8-.5zM20 5.5q-4-1.5-8 .5v14q4-2 8-.5z"/><path d="M14.5 13l1.5 1.5 2.5-2.7"/>'],
+  sales:['#84CC16','<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>'],
+  saleNew:['#10B981','<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M12 8v7M8.5 11.5h7"/>'],
+  purchases:['#2563EB','<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M12 10v7M9 14l3 3 3-3"/>'],
+  purchaseNew:['#6366F1','<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M12 9v7M8.5 12.5h7"/>'],
+  products:['#EA580C','<path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/><path d="M3 7l9 4.5L21 7M12 11.5V21.5"/>'],
+  productNew:['#FB923C','<path d="M12 2.5 21 7v10l-9 4.5L3 17V7z"/><path d="M12 9v7M8.5 12.5h7"/>'],
+  returns:['#881337','<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'],
+  contacts:['#7C3AED','<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 4.5a3 3 0 0 1 0 6M18.5 20a5 5 0 0 0-2.5-4.3"/>'],
+  cash:['#4D7C0F','<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l11-3.5V7M16 13.5h2"/>'],
+  reports:['#A855F7','<path d="M4 20V11M10 20V5M16 20v-6M3 20h18"/>'],
+  theme:['#FB7185','<path d="M12 3a9 9 0 1 0 0 18c1.6 0 2.2-1 2.2-2.1 0-1.4-1.2-2 0-3.2.9-.9 2-.7 3-.7A3.8 3.8 0 0 0 21 11.2C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>'],
+  settings:['#64748B','<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2.1 1.2M17.7 15.3l2.1 1.2M4.2 16.5l2.1-1.2M17.7 8.7l2.1-1.2"/>'],
+  weborders:['#EC4899','<path d="M3 4h2l2.4 11h10.2L20 7.5H6.3"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>'],
+  quotes:['#C026D3','<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12.5h6M9 16.5h4"/>'],
+  count:['#78350F','<path d="M9 3.5h6v3H9z"/><path d="M7 5H5v16h14V5h-2"/><path d="m9 13.5 2 2 4-4"/>'],
+  shipping:['#CA8A04','<path d="M2.5 6h11v10h-11zM13.5 9.5h4l3.5 3.5v3h-7.5"/><circle cx="7" cy="17.5" r="1.9"/><circle cx="17" cy="17.5" r="1.9"/>'],
+  debts:['#DC2626','<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4M12 8.5v3.5"/>'],
+  reorder:['#155E75','<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.5h-4.5"/>'],
+  waorders:['#0D9488','<path d="M5.5 17.5A8.5 8.5 0 1 1 8.6 20L4 21z"/><path d="M9 10h6M9 13.5h4"/>'],
+  staff:['#57534E','<path d="M4 17h16M6 17a6 6 0 0 1 12 0"/><path d="M12 7v4.5M9 9.6v2.2M15 9.6v2.2"/>'],
+  biz:['#BE185D','<path d="m3 17 6-6 4 4 8-8"/><path d="M14.5 7H21v6.5"/>'],
+  kits:['#047857','<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>'],
+  mkSideWk:['#B45309','<circle cx="9" cy="15" r="4.5"/><circle cx="9" cy="15" r="1.4"/><path d="M9 9v1.5M9 19.5V21M3 15h1.5M13.5 15H15M14 4h6v9h-6z"/>'],
+  mkSideKw:['#F59E0B','<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/>'],
+  tf:['#0EA5E9','<rect x="3" y="4" width="8" height="15" rx="2"/><path d="M14 9h7v8h-7z"/><path d="M8 3.5c4-1.5 8 0 10 4"/>'],
+  site:['#4338CA','<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'],
+  custTerms:['#94A3B8','<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.4"/>'],
+  logout:['#111827','<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h10"/>']
  };
- function ic(k){var d=I[k];return d?'<span class="mkic" style="--h:'+d[0]+'">'+P+d[1]+E+'</span>':''}
+ function ic(k){var d=I[k];return d?'<span class="mkic" style="--c:'+d[0]+'">'+P+d[1]+E+'</span>':''}
  window.mkIcon=ic;
+ /* ── أدوات الرسم ── */
+ function gp(cx,cy,r,n,th){var ri=r-th,F=[[ri,0],[ri,.2],[r,.32],[r,.68],[ri,.8]],d='';for(var i=0;i<n;i++)for(var j=0;j<F.length;j++){var a=(i+F[j][1])/n*Math.PI*2;d+=(d?'L':'M')+(cx+F[j][0]*Math.cos(a)).toFixed(1)+' '+(cy+F[j][0]*Math.sin(a)).toFixed(1)}return d+'Z'}
+ function pt(p){return p[0].toFixed(1)+' '+p[1].toFixed(1)}
+ function iso(cx,cy,a,h){var L=[cx-a,cy-a/2],R=[cx+a,cy-a/2],O=[cx,cy],B=[cx,cy-a],u=function(p){return [p[0],p[1]-h]};
+  return '<path class="w9" d="M'+[L,O,u(O),u(L)].map(pt).join('L')+'Z"/><path class="ws" d="M'+[O,R,u(R),u(O)].map(pt).join('L')+'Z"/><path class="w" d="M'+[u(L),u(O),u(R),u(B)].map(pt).join('L')+'Z"/>'+
+   '<path class="ml" style="stroke-width:3" d="M'+pt([cx-a/2,cy-h-a*.75])+'L'+pt([cx+a/2,cy-h-a*.25])+'"/>'}
+ function rc(x,y,w,h,cls){var z='',n=6,st=w/n;for(var i=n;i>=0;i--)z+='L'+pt([x+i*st,y+h-(i%2?3.5:0)]);return '<path class="'+cls+'" d="M'+x+' '+y+'H'+(x+w)+'V'+(y+h)+z+'Z"/>'}
+ function sh(s){return '<g transform="translate(2.5 3)">'+s.replace(/class="(w|w9|ws)"/g,'class="sh"')+'</g>'+s}
+ var TX='font-family="Cairo,Tajawal,Arial" font-weight="900" text-anchor="middle"';
+ /* رسومات كبيرة معبّرة (64×64) للمربعات وزراير لوحة التحكم */
+ var IL={
+  daybook:'<path class="sh" d="M5 47 32 53 59 47 59 51 32 57 5 51z"/><path class="w" d="M5 14Q18.5 9.5 32 15V52Q18.5 46.5 5 51z"/><path class="w9" d="M59 14Q45.5 9.5 32 15V52Q45.5 46.5 59 51z"/><path class="sh" style="fill-opacity:.12" d="M29 15.5h6V52h-6z"/><path class="kt" d="M10 22.5q8-2.2 16 .8M10 29.5q8-2.2 16 .8M10 36.5q8-2.2 16 .8M10 43.5q5-1.4 10 .2M37 22.5q7-2 13 0M37 29.5q7-2 10 0"/><path class="k" style="stroke-width:2" d="M37.5 38l2.4 2.4 4.4-4.6"/><g transform="rotate(38 50 24)"><rect class="rs" x="46" y="0" width="8" height="5" rx="2"/><rect class="g" x="46" y="4.5" width="8" height="2.6"/><rect class="m" x="46" y="7" width="8" height="26"/><rect class="md" x="50.5" y="7" width="3.5" height="26"/><path class="w" d="M46 33h8l-4 8.5z"/><path class="kf" d="M48.6 38.6h2.8L50 41.5z"/></g>',
+  waorders:'<path class="sh" d="M16.5 44.5A21 21 0 1 1 26.5 53L12 57z"/><path class="w" d="M14.5 41.5A21 21 0 1 1 24.5 50L10 54z"/><circle class="kf" cx="22" cy="23" r="1.9"/><circle class="kf" cx="22" cy="30" r="1.9"/><circle class="kf" cx="22" cy="37" r="1.9"/><path class="k" d="M27 23h15M27 30h15M27 37h9"/><circle class="md" cx="50.5" cy="13.5" r="9"/><circle class="m" cx="50" cy="12.5" r="9"/><text x="50" y="17" font-size="12.5" fill="#2A1D00" '+TX+'>3</text>',
+  tf:'<rect class="sh" x="10.5" y="12" width="21" height="38" rx="5"/><rect class="w" x="8" y="9" width="21" height="38" rx="5"/><rect class="sc" x="11" y="14" width="15" height="25" rx="2"/><path class="kt" d="M14 20h9M14 25h6M14 30h8"/><rect class="kf" x="15" y="42" width="7" height="2" rx="1"/><g transform="rotate(-14 46 42)"><rect class="sh" x="34.5" y="36" width="27" height="16" rx="2.5"/><rect class="w" x="32" y="33" width="27" height="16" rx="2.5"/><circle class="k" style="stroke-width:2" cx="45.5" cy="41" r="4.6"/><path class="kt" d="M36 37.5v7M55 37.5v7"/></g><path class="ml" d="M31 15Q46 6 53 24"/><path class="ml" d="M48.5 21.5l4.5 3 2-5"/><circle class="md" cx="27.5" cy="45.5" r="7"/><circle class="m" cx="27" cy="44.5" r="7"/><path class="mi" style="stroke-width:2.2" d="M23.8 44.6l2.3 2.3 4.2-4.4"/>',
+  mkSideWk:'<path class="ws" d="M44 8.5l7 3.5v42l-7 3.5z"/><path class="w" d="M15 8.5h29V57.5H15z"/><rect class="k" style="stroke-width:2" x="20" y="14" width="19" height="38" rx="1.5"/><rect class="kf" x="35" y="28" width="2.8" height="11" rx="1.4"/><circle class="sh" cx="20.5" cy="47" r="13"/><g class="spin"><path class="m" d="'+gp(19,45,13.5,9,4.2)+'"/><circle class="md" cx="19" cy="45" r="5.2"/><circle class="w" cx="19" cy="45" r="2.8"/></g><g class="spin" style="animation-direction:reverse;animation-duration:6.3s"><path class="d" d="'+gp(34.5,53.5,7.5,6,2.6)+'"/><circle class="g" cx="34.5" cy="53.5" r="2"/></g>',
+  products:'<ellipse class="sh" cx="33" cy="58" rx="27" ry="4"/>'+iso(22,58,13,16)+iso(44,58,13,16)+iso(33,41.5,12,14)+'<path class="kt" style="stroke-width:1.3" d="M34.5 46v-7M36.5 47v-7M39 48.2v-7M41 49.2v-7"/>',
+  contacts:'<ellipse class="sh" cx="30" cy="57" rx="24" ry="3.5"/><circle class="ws" cx="43" cy="19" r="7.5"/><path class="ws" d="M30.5 46a12.5 12.5 0 0 1 25 0v4h-25z"/><circle class="w" cx="24" cy="23" r="9"/><path class="w" d="M8 56a16 16 0 0 1 32 0z"/><path class="k" style="stroke-width:2" d="M18.5 42l5.5 5 5.5-5"/><path class="m" d="M24 46.5l-2.6 3 2.6 6.5 2.6-6.5z"/><circle class="md" cx="50.5" cy="47.5" r="8"/><circle class="m" cx="50" cy="46.5" r="8"/><text x="50" y="50.8" font-size="11" fill="#3a2600" '+TX+'>ج</text>',
+  debts:'<path class="ml" style="stroke-width:2.6" d="M11 17q-4.5 7 0 14M6 14q-6.5 10 0 20M53 17q4.5 7 0 14M58 14q6.5 10 0 20"/><path class="w" d="M32 7.5a3.2 3.2 0 0 1 3.2 3.2v1.4A14.5 14.5 0 0 1 46.5 26.2V37l4.5 6.5H13L17.5 37V26.2A14.5 14.5 0 0 1 28.8 12.1v-1.4A3.2 3.2 0 0 1 32 7.5z"/><path class="sh" style="fill-opacity:.12" d="M32 12.5a14 14 0 0 1 14.5 13.7V37l4.5 6.5H32z"/><path class="w9" d="M26.5 45.5a5.5 5.5 0 0 0 11 0z"/><path class="k" style="stroke-width:3" d="M32 20.5v10"/><circle class="kf" cx="32" cy="36" r="1.9"/><ellipse class="md" cx="48" cy="57" rx="9.5" ry="3.6"/><rect class="md" x="38.5" y="50" width="19" height="7"/><ellipse class="m" cx="48" cy="50" rx="9.5" ry="3.6"/><ellipse class="md" cx="48" cy="50" rx="5.5" ry="1.8" style="fill-opacity:.7"/>',
+  shipping:'<ellipse class="sh" cx="32" cy="53.5" rx="27" ry="3.2"/><path class="wl" style="stroke-opacity:.85;stroke-width:2.2" d="M1 23h5M0 30h7M2 37h4"/><path class="ws" d="M9 17l6-5.5h29l-6 5.5z"/><path class="w9" d="M38 17l6-5.5V39l-6 6z"/><path class="w" d="M9 17h29v28H9z"/><rect class="k" style="stroke-width:2" x="15" y="23" width="13" height="11" rx="1"/><path class="kt" d="M21.5 23v4M13 39.5h21"/><path class="md" d="M38 25l5-4h9l-4.5 4z"/><path class="m" d="M38 25h9.5l8.5 10v10H38z"/><path class="w9" d="M41 28h5.6l5.5 6.5H41z"/><rect class="w" x="53" y="38" width="3" height="3" rx="1"/><circle class="d" cx="17" cy="46" r="6.3"/><circle class="g" cx="17" cy="46" r="2.6"/><circle class="d" cx="47" cy="46" r="6.3"/><circle class="g" cx="47" cy="46" r="2.6"/>',
+  saleNew:sh(rc(12,7,28,44,'w'))+'<path class="kt" d="M17 15h18M17 21h18M17 27h12"/><path class="k" d="M17 36h18"/><circle class="md" cx="46" cy="41" r="11"/><circle class="m" cx="45" cy="39.5" r="11"/><circle style="fill:none;stroke:#E8A600;stroke-width:1.6" cx="45" cy="39.5" r="7.8"/><path class="mi" d="M45 45V34M40.5 38.5l4.5-4.5 4.5 4.5"/><path class="wl" style="stroke-width:2" d="M54 14v6M51 17h6"/>',
+  purchaseNew:sh(rc(8,4,26,40,'w'))+'<path class="kt" d="M13 12h16M13 18h16M13 24h10"/>'+iso(46,60,12,14)+'<path class="ml" d="M46 13v15M40.5 22.5 46 28l5.5-5.5"/>',
+  productNew:'<ellipse class="sh" cx="30" cy="57" rx="22" ry="3.5"/>'+iso(30,56,18,22)+'<path class="kt" style="stroke-width:1.4" d="M16 39v-8M18.5 40.2v-8M21.5 41.8v-8M24 43v-8"/><circle class="md" cx="49.5" cy="17.5" r="11"/><circle class="m" cx="49" cy="16" r="11"/><path class="mi" style="stroke-width:3.2" d="M49 10v12M43 16h12"/>',
+  quotes:sh('<path class="w" d="M12 6h23l11 11v40H12z"/>')+'<path class="ws" d="M35 6v11h11z"/><path class="kt" d="M17 22h20M17 28h20M17 34h13"/><g transform="rotate(-18 46 45)"><path class="md" d="M34 41.5h15l6.5 6.5-6.5 6.5H34z"/><path class="m" d="M33 40h15l6.5 6.5L48 53H33z"/><circle class="w" cx="37.5" cy="46.5" r="2"/><path class="mi" style="stroke-width:2" d="M42 44.5h5M42 48.5h3.5"/></g>',
+  sales:'<g transform="rotate(-8 30 32)">'+rc(16,8,26,40,'ws')+'</g>'+sh(rc(10,8,28,42,'w'))+'<path class="kt" d="M15 16h18M15 22h18M15 28h12M15 34h16"/><circle style="fill:none;stroke:#FFC21A;stroke-width:3.4" cx="46" cy="45" r="10"/><path class="ml" d="M41 45l3.5 3.5 6.5-7"/>',
+  purchases:'<g transform="rotate(-8 28 30)">'+rc(14,6,24,38,'ws')+'</g>'+sh(rc(8,6,26,40,'w'))+'<path class="kt" d="M13 14h16M13 20h16M13 26h10M13 32h14"/>'+iso(46,59,12,13)
+ };
+ function ill(k){var s=IL[k],d=I[k];return s&&d?'<span class="mkill" style="--c:'+d[0]+'"><svg viewBox="0 0 64 64" aria-hidden="true">'+s+'</svg></span>':ic(k)}
+ window.mkIll=ill;
  function paint(){
   if(!document.body.classList.contains('mkpro'))return;
   document.querySelectorAll('aside .nav button,.mobile-nav button').forEach(function(b){
-   if(b.dataset.mkic)return;var k=b.dataset.page||b.id;
+   var k=b.dataset.page||b.id;
    if(k==='mkSideTf')k='tf';else if(k==='outBtn')k='logout';else if(!k&&/openSiteAdmin/.test(b.getAttribute('onclick')||''))k='site';
    if(!I[k])return;
+   var old=b.querySelector('.mkic');if(old){if(b.dataset.mkic!=='2'){old.style.setProperty('--c',I[k][0]);b.dataset.mkic='2'}return}
    var f=b.firstElementChild;if(!f)return;
-   if(f.tagName.toLowerCase()==='svg'||(f.tagName==='SPAN'&&(f.className==='waic'||(!f.className&&f.textContent.trim().length<=3)))){f.outerHTML=ic(k);b.dataset.mkic=1}
+   if(f.tagName.toLowerCase()==='svg'||(f.tagName==='SPAN'&&(f.className==='waic'||(!f.className&&f.textContent.trim().length<=3)))){f.outerHTML=ic(k);b.dataset.mkic='2'}
+  });
+  /* زراير لوحة التحكم (فاتورة بيع، شراء، منتج...) — رسمة مجسّمة معبّرة */
+  document.querySelectorAll('#dashboard .dash-acts button').forEach(function(b){
+   if(b.dataset.mkx)return;var o=b.getAttribute('onclick')||'',k=/openTransaction\('sale'\)/.test(o)?'saleNew':/openTransaction\('purchase'\)/.test(o)?'purchaseNew':/openProduct\(/.test(o)?'productNew':/openQuote\(/.test(o)?'quotes':/showPage\('sales'\)/.test(o)?'sales':/showPage\('purchases'\)/.test(o)?'purchases':'';
+   var c=b.querySelector('.ic');if(!k||!c)return;c.className='ic mkx';c.innerHTML=ill(k);b.dataset.mkx=1;
   });
  }
  /* مربعات كبيرة: الشاشات اللي بتتفتح طول اليوم */
@@ -7243,8 +7310,8 @@ body.mkpro #recent .table tbody tr td:last-child{font-weight:800;color:var(--gd)
   var box=document.getElementById('mkLaunch');
   if(!box){box=document.createElement('div');box.id='mkLaunch';box.className='mkLaunch';var tr=d.querySelector('.title-row');if(tr)tr.after(box);else d.prepend(box)}
   var e=emp(),L=T.filter(function(t){return !(t[4]&&e)&&(t[0]!=='shipping'||document.getElementById('shipping'))&&(t[0]!=='waorders'||document.getElementById('waorders'))&&(t[0]!=='debts'||document.getElementById('debts'))});
-  var sig=String(e)+L.map(function(t){return t[0]+(t[5]?cnt(t[5]):'')}).join(',');if(box.dataset.sig===sig)return;box.dataset.sig=sig;
-  box.innerHTML=L.map(function(t){var n=t[5]?cnt(t[5]):0;return '<button type="button" data-i="'+T.indexOf(t)+'" style="--h:'+I[t[0]][0]+'">'+(n?'<span class="cnt">'+n+'</span>':'')+ic(t[0])+'<span>'+t[1]+(t[2]?'<small>'+t[2]+'</small>':'')+'</span></button>'}).join('');
+  var sig='v2'+String(e)+L.map(function(t){return t[0]+(t[5]?cnt(t[5]):'')}).join(',');if(box.dataset.sig===sig)return;box.dataset.sig=sig;
+  box.innerHTML=L.map(function(t){var n=t[5]?cnt(t[5]):0;return '<button type="button" data-i="'+T.indexOf(t)+'" style="--c:'+I[t[0]][0]+'">'+(n?'<span class="cnt">'+n+'</span>':'')+ill(t[0])+'<span>'+t[1]+(t[2]?'<small>'+t[2]+'</small>':'')+'</span></button>'}).join('');
   box.querySelectorAll('button').forEach(function(b){b.onclick=function(){try{T[+b.dataset.i][3]()}catch(err){toast('الشاشة لسه بتتحمّل، جرّب تاني')}}});
  }
  /* اليومية: كل عميل بلون ثابت، والبيع من غير اسم برتقاني مخطّط (البرتقاني محجوز ليه) */
@@ -7255,23 +7322,102 @@ body.mkpro #recent .table tbody tr td:last-child{font-weight:800;color:var(--gd)
    if(/من غير اسم/.test(t)){g.classList.add('mk-anon')}else{g.classList.remove('mk-anon');g.style.setProperty('--gh',hue(t.replace(/^👤\s*/,'')))}
   });
  }
+ /* كل شاشة بلونها (نفس لون أيقونتها)، والمزدحمة شريط عنوان كامل بلونها */
+ var STRONG=['daybook','count','sales','waorders','weborders','shipping'];
+ function pg(){
+  var a=document.querySelector('main .page.active'),id=a?a.id:'',B=document.body;if(B.dataset.pg===id)return;B.dataset.pg=id;
+  var c=I[id]&&I[id][0];if(c)B.style.setProperty('--pg',c);else B.style.removeProperty('--pg');
+  B.classList.toggle('pg-on',!!c&&id!=='dashboard');B.classList.toggle('pg-strong',!!c&&STRONG.indexOf(id)>-1);
+ }
+ if(typeof window.showPage==='function'){var _sp=window.showPage;window.showPage=function(){var r=_sp.apply(this,arguments);try{pg()}catch(e){}setTimeout(pg,30);return r}}
  function chrome(){
   var on=document.body.classList.contains('mkpro');
   try{var f=typeof db!=='undefined'&&db.theme&&db.theme.font;document.body.classList.toggle('mkpro-font',on&&(!f||f==='default'))}catch(e){}
-  var mt=document.getElementById('metaTheme');if(on&&mt&&mt.content!=='#0e1114')mt.content='#0e1114';
+  var mt=document.getElementById('metaTheme');if(on&&mt&&mt.content!=='#0A1450')mt.content='#0A1450';
  }
- /* شريط اللوجو الكبير: مسمار (يلف) + اسم ميكانيزم بالتدرّج + ترس (يلف عكس) */
+ /* ══ لوجو ميكانيزم: حروف دهب مجسّمة، وجوه الحروف تروس بتعشّق في بعض، مسمار بيتربط ويتفك، ومفصلة ومجرى درج بيفتحوا ويقفلوا ══ */
+ function logoSVG(){
+  var W='x="600" y="130" '+TX+' font-size="136" textLength="700" lengthAdjust="spacingAndGlyphs"',
+   rot=function(cx,cy,dur,rev){return '<animateTransform attributeName="transform" type="rotate" from="'+(rev?360:0)+' '+cx+' '+cy+'" to="'+(rev?0:360)+' '+cx+' '+cy+'" dur="'+dur+'s" repeatCount="indefinite"/>'},
+   ease=function(att,vals,dur){return '<animateTransform attributeName="transform" type="'+att+'" values="'+vals+'" keyTimes="0;.5;1" calcMode="spline" keySplines=".45 0 .2 1;.45 0 .2 1" dur="'+dur+'s" repeatCount="indefinite"/>'},
+   gear=function(cx,cy,r,n,th,dur,rev,f,s,h){return '<g><path d="'+gp(cx,cy,r,n,th)+'" fill="'+f+'" stroke="'+s+'" stroke-width="2"/><circle cx="'+cx+'" cy="'+cy+'" r="'+(r*.34).toFixed(1)+'" fill="'+h+'"/><circle cx="'+cx+'" cy="'+cy+'" r="'+(r*.12).toFixed(1)+'" fill="'+s+'"/>'+rot(cx,cy,dur,rev)+'</g>'},
+   ext='',shades=['#2a1700','#341d00','#3f2400','#4a2b00','#563300','#623b00','#6e4300','#7b4b00','#885400'];
+  for(var i=9;i>=1;i--)ext+='<use href="#mkW" x="'+(i*.75).toFixed(2)+'" y="'+(i*1.2).toFixed(2)+'" fill="'+shades[9-i]+'"/>';
+  var rivets='';for(var x=270;x<=930;x+=34)rivets+='<circle cx="'+x+'" cy="50" r="3.2" fill="#5a3500" fill-opacity=".55"/><circle cx="'+(x+17)+'" cy="160" r="3.2" fill="#5a3500" fill-opacity=".45"/>';
+  return '<svg viewBox="0 0 1200 200" preserveAspectRatio="xMidYMid meet" role="img" aria-label="ميكانيزم">'+
+  '<defs>'+
+   '<linearGradient id="mkGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF7CF"/><stop offset=".28" stop-color="#FFD54F"/><stop offset=".52" stop-color="#FFBE0B"/><stop offset=".78" stop-color="#DD8700"/><stop offset="1" stop-color="#FFD66B"/></linearGradient>'+
+   '<linearGradient id="mkSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f7ff"/><stop offset=".5" stop-color="#b9c5e0"/><stop offset="1" stop-color="#e3e9f7"/></linearGradient>'+
+   '<linearGradient id="mkShine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'+
+   '<radialGradient id="mkShadow"><stop offset="0" stop-color="#000" stop-opacity=".45"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>'+
+   '<pattern id="mkGrid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#fff" stroke-opacity=".07"/></pattern>'+
+   '<pattern id="mkThr" width="8" height="26" patternUnits="userSpaceOnUse"><path d="M-1 27 9-1" stroke="#4a2c00" stroke-width="2.4"/><animateTransform attributeName="patternTransform" type="translate" from="0 0" to="-8 0" dur=".3s" repeatCount="indefinite"/></pattern>'+
+   '<pattern id="mkThrV" width="16" height="7" patternUnits="userSpaceOnUse"><path d="M0 7 16 0" stroke="#6f7c9c" stroke-width="2"/><animateTransform attributeName="patternTransform" type="translate" values="0 0;0 -7" dur=".28s" repeatCount="indefinite"/></pattern>'+
+   '<text id="mkW" '+W+'>ميكانيزم</text>'+
+   '<clipPath id="mkClip"><text '+W+'>ميكانيزم</text></clipPath>'+
+  '</defs>'+
+  '<rect width="1200" height="200" fill="url(#mkGrid)"/>'+
+  /* تروس كبيرة باهتة في الخلفية */
+  gear(80,170,105,18,15,46,false,'none','rgba(255,255,255,.10)','rgba(255,255,255,.04)')+
+  gear(1135,26,88,16,13,38,true,'none','rgba(255,255,255,.10)','rgba(255,255,255,.04)')+
+  /* شمال: مسمار طويل وصامولة بتطلع وتنزل (بتتربط وتتفك) */
+  '<rect x="170" y="30" width="16" height="146" rx="4" fill="url(#mkSteel)"/><rect x="170" y="30" width="16" height="146" rx="4" fill="url(#mkThrV)" opacity=".75"/>'+
+  '<path d="M156 176h44l7 10-7 10h-44l-7-10z" fill="url(#mkSteel)" stroke="#7d89a8" stroke-width="1.5"/>'+
+  '<g><path d="M151 104h54l9 15-9 15h-54l-9-15z" fill="url(#mkGold)" stroke="#8a5a00" stroke-width="2"/><path d="M162 104l-6 15 6 15M194 104l6 15-6 15" fill="none" stroke="#a46d00" stroke-width="2"/>'+ease('translate','0 0;0 -66;0 0',4)+'</g>'+
+  /* يمين: مفصلة بتفتح وتقفل */
+  '<rect x="1032" y="78" width="74" height="44" rx="10" fill="url(#mkSteel)" stroke="#7d89a8" stroke-width="1.5"/>'+
+  '<g><circle cx="1052" cy="100" r="7" fill="#8f9bb9"/><path d="M1047 100h10M1052 95v10" stroke="#e6ebf7" stroke-width="2"/>'+rot(1052,100,6)+'</g><g><circle cx="1088" cy="100" r="7" fill="#8f9bb9"/><path d="M1083 100h10M1088 95v10" stroke="#e6ebf7" stroke-width="2"/>'+rot(1088,100,6,true)+'</g>'+
+  '<g><rect x="962" y="91" width="80" height="18" rx="9" fill="url(#mkGold)" stroke="#8a5a00" stroke-width="1.5"/><circle cx="964" cy="100" r="24" fill="url(#mkSteel)" stroke="#7d89a8" stroke-width="2"/><circle cx="964" cy="100" r="15" fill="#97a3c0"/><circle cx="1036" cy="100" r="6" fill="#fff3c4"/>'+ease('rotate','0 1036 100;-40 1036 100;0 1036 100',3.4)+'</g>'+
+  '<text x="1069" y="160" font-family="Cairo,Arial" font-weight="800" font-size="15" letter-spacing="6" text-anchor="middle" fill="#cdd8ff" fill-opacity=".85">MEKANIZM</text>'+
+  /* الحروف: ظل + سُمك مجسّم + وش دهب */
+  '<ellipse cx="600" cy="176" rx="380" ry="18" fill="url(#mkShadow)"/>'+ext+
+  '<use href="#mkW" fill="url(#mkGold)"/>'+
+  /* جوه الحروف: ميكانيزم شغال */
+  '<g clip-path="url(#mkClip)"><g opacity=".72">'+
+   gear(352,88,54,12,10,9,false,'rgba(120,70,0,.35)','#5c3600','#FFE694')+
+   gear(426,148,35,8,8,6,true,'rgba(120,70,0,.35)','#5c3600','#FFE694')+
+   gear(850,86,50,12,10,9,true,'rgba(120,70,0,.35)','#5c3600','#FFE694')+
+   gear(781,140,31,7,8,5.25,false,'rgba(120,70,0,.35)','#5c3600','#FFE694')+
+   rivets+
+   /* مسمار بيتربط ويتفك في النص */
+   '<g><rect x="568" y="80" width="120" height="26" rx="5" fill="#7a4a00" fill-opacity=".4"/><rect x="568" y="80" width="120" height="26" fill="url(#mkThr)"/><path d="M542 70h28v46h-28z" fill="#5c3600" fill-opacity=".65"/>'+
+   '<g><path d="M556 74v38" stroke="#FFE694" stroke-width="4" stroke-linecap="round"/>'+rot(556,93,.9)+'</g>'+ease('translate','0 0;-34 0;0 0',3.2)+'</g>'+
+   /* مقص (ميكانيزم رفع) بيفتح ويقفل */
+   '<g><rect x="455" y="64" width="12" height="96" rx="6" fill="#5c3600" fill-opacity=".55"/>'+ease('rotate','26 461 112;-26 461 112;26 461 112',2.8)+'</g>'+
+   '<g><rect x="455" y="64" width="12" height="96" rx="6" fill="#5c3600" fill-opacity=".55"/>'+ease('rotate','-26 461 112;26 461 112;-26 461 112',2.8)+'</g>'+
+   '<circle cx="461" cy="112" r="6" fill="#FFE694"/>'+
+   '<g><rect x="694" y="64" width="12" height="96" rx="6" fill="#5c3600" fill-opacity=".55"/>'+ease('rotate','-26 700 112;26 700 112;-26 700 112',2.8)+'</g>'+
+   '<g><rect x="694" y="64" width="12" height="96" rx="6" fill="#5c3600" fill-opacity=".55"/>'+ease('rotate','26 700 112;-26 700 112;26 700 112',2.8)+'</g>'+
+   '<circle cx="700" cy="112" r="6" fill="#FFE694"/>'+
+   /* مجرى درج تلسكوبي بيطلع ويدخل */
+   '<rect x="300" y="128" width="600" height="12" rx="6" fill="#5c3600" fill-opacity=".45"/>'+
+   '<g><rect x="312" y="131" width="360" height="6" rx="3" fill="#FFF2B8"/><circle cx="340" cy="134" r="2.4" fill="#5c3600"/><circle cx="400" cy="134" r="2.4" fill="#5c3600"/><circle cx="460" cy="134" r="2.4" fill="#5c3600"/>'+ease('translate','0 0;200 0;0 0',4.2)+'</g>'+
+  '</g>'+
+  '<rect x="-300" y="-20" width="150" height="240" fill="url(#mkShine)" opacity=".6" transform="skewX(-20)"><animate attributeName="x" from="-300" to="1500" dur="5.5s" repeatCount="indefinite"/></rect>'+
+  '</g>'+
+  
+  '</svg>'}
  function brandUp(){
   if(!document.body.classList.contains('mkpro'))return;
-  var br=document.querySelector('header.top .brand');if(!br||document.getElementById('mkWordmark'))return;
-  var txt=br.querySelector('div');if(txt)txt.style.display='none';
-  var screw='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12h8M12 8v1.5M12 14.5V16M9.3 9.3l1 1M13.7 13.7l1 1M9.3 14.7l1-1M13.7 10.3l1-1"/></svg>';
-  var gear='<svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M12 2.5v2.3M12 19.2v2.3M4.5 7.2l2 1.15M17.5 15.65l2 1.15M4.5 16.8l2-1.15M17.5 8.35l2-1.15M2.5 12h2.3M19.2 12h2.3"/></svg>';
-  var w=document.createElement('div');w.id='mkWordmark';
-  w.innerHTML='<span class="mkw-ic g1" aria-hidden="true">'+screw+'</span><span class="mkw-tx"><b>ميكانيزم</b><small>MEKANIZM</small></span><span class="mkw-ic g2 g3" aria-hidden="true">'+gear+'</span>';
-  br.appendChild(w);
+  var top=document.querySelector('header.top'),br=top&&top.querySelector('.brand'),ac=top&&top.querySelector('.top-actions');if(!br||!ac)return;
+  var nb=document.getElementById('navBtn');if(nb&&nb.parentNode!==ac)ac.prepend(nb);
+  if(!document.getElementById('mkMini'))ac.insertAdjacentHTML('beforeend','<span id="mkMini" aria-hidden="true"><i></i>ميكانيزم</span>');
+  if(document.getElementById('mkLogo'))return;
+  var w=document.createElement('div');w.id='mkLogo';w.innerHTML=logoSVG();br.appendChild(w);
+  var svg=w.querySelector('svg'),mq=window.matchMedia('(max-width:700px)'),fit=function(){svg.setAttribute('viewBox',mq.matches?'165 0 870 200':'0 0 1200 200')};
+  fit();try{mq.addEventListener('change',fit)}catch(e){try{mq.addListener(fit)}catch(e2){}}
+  var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(still&&svg.pauseAnimations)svg.pauseAnimations();
+  else if('IntersectionObserver' in window){new IntersectionObserver(function(es){es.forEach(function(x){try{x.isIntersecting?svg.unpauseAnimations():svg.pauseAnimations()}catch(e){}})}).observe(w)}
+  hdr();
  }
- function all(){paint();launch();dbPaint();chrome();brandUp()}
+ /* الشريط الجانبي بيمشي مع الشريط العلوي، واسم ميكانيزم الصغير يظهر لما اللوجو الكبير يطلع لفوق */
+ var hq=0;function hdr(){hq=0;var t=document.querySelector('header.top'),b=t&&t.querySelector('.brand');if(!t||!b)return;
+  document.documentElement.style.setProperty('--asTop',Math.max(0,Math.round(t.getBoundingClientRect().bottom))+'px');
+  t.classList.toggle('stuck',b.getBoundingClientRect().bottom<=6)}
+ window.addEventListener('scroll',function(){if(!hq){hq=1;requestAnimationFrame(hdr)}},{passive:true});
+ window.addEventListener('resize',function(){if(!hq){hq=1;requestAnimationFrame(hdr)}});
+ function all(){paint();launch();dbPaint();chrome();brandUp();pg()}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',all);else all();
  var mo=new MutationObserver(function(){clearTimeout(mo.t);mo.t=setTimeout(all,60)});
  mo.observe(document.body,{childList:true,subtree:true});
@@ -7279,7 +7425,7 @@ body.mkpro #recent .table tbody tr td:last-child{font-weight:800;color:var(--gd)
  function themeCard(){
   var th=document.getElementById('theme');if(!th||document.getElementById('mkProCard'))return;
   var c=document.createElement('div');c.className='card';c.id='mkProCard';c.style.marginBottom='14px';
-  c.innerHTML='<h3>🌑 تصميم ميكانيزم برو (غامق)</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">خلفية جرافيت غامقة، أيقونات ملوّنة لكل شاشة، مربعات كبيرة للحاجات اللي بتتفتح كتير، وكل خانة في اليومية بلون (العميل أزرق، الصنف ذهبي، البيع من غير اسم برتقاني).</p><label class="chk"><input type="checkbox" id="mkProT"'+(document.body.classList.contains('mkpro')?' checked':'')+'> شغّال</label>';
+  c.innerHTML='<h3>✨ تصميم ميكانيزم برو</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">أرضية فاتحة بألوان متداخلة، لوجو ميكانيزم المتحرك، كل شاشة ليها لون ثابت مايتكررش، رسومات مجسّمة للحاجات اللي بتتفتح كتير، وكل خانة في اليومية بلون (العميل أزرق، الصنف منجاوي، البيع من غير اسم برتقاني).</p><label class="chk"><input type="checkbox" id="mkProT"'+(document.body.classList.contains('mkpro')?' checked':'')+'> شغّال</label>';
   var tr=th.querySelector('.title-row');if(tr)tr.after(c);else th.prepend(c);
   c.querySelector('#mkProT').onchange=function(){try{localStorage.setItem('mk_pro',this.checked?'1':'0')}catch(e){}location.reload()};
  }
