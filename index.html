@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-1';
+const APP_VER='2026-10-15-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5523,7 +5523,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   window.showPage=function(id){
    var from=activeId();
    if(!busy&&from&&from!==id){stack.push(from);if(stack.length>30)stack.shift();try{history.pushState({mk:1},'')}catch(e){}}
-   return _sp.apply(this,arguments)};
+   var r=_sp.apply(this,arguments);upd();return r};
  }
  if(typeof _om==='function'){
   window.openModal=function(){
@@ -5534,15 +5534,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      var h=m.querySelector('.modal-head')||m.firstElementChild;
      if(h){var b=document.createElement('button');b.type='button';b.className='close';b.textContent='✕';b.setAttribute('aria-label','إغلاق');b.onclick=function(){window.closeModal()};h.appendChild(b)}
     }
-    history.pushState({mk:2},'');
+    history.pushState({mk:2},'');setTimeout(upd,0);
    }catch(e){}
    return r};
  }
  function back(){
   if(modalOpen()){window.closeModal();return}
-  var p=stack.pop();if(p&&typeof _sp==='function'){busy=true;try{_sp(p)}finally{busy=false}}
+  var p=stack.pop();if(p&&typeof _sp==='function'){busy=true;try{_sp(p)}finally{busy=false}upd();}
  }
- window.addEventListener('popstate',function(){back()});
+ var _cm=window.closeModal;window.closeModal=function(){var r=_cm.apply(this,arguments);upd();return r};window.addEventListener('popstate',function(){back();upd()});
  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modalOpen())window.closeModal()});
  var bg=document.getElementById('modalBg');
  if(bg)bg.addEventListener('click',function(e){if(e.target===bg)window.closeModal()});
@@ -5552,8 +5552,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   d.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;z-index:40;display:flex;gap:6px';
   d.innerHTML='<button type="button" id="mkNavBack" style="padding:6px 12px;border-radius:10px;background:#fff;color:#087f8c;border:1px solid #e4eaed;font-weight:700">رجوع</button><button type="button" id="mkNavClose" style="padding:6px 12px;border-radius:10px;background:#fff;color:#c0392b;border:1px solid #e4eaed;font-weight:700">✕</button>';
   document.body.appendChild(d);
-  document.getElementById('mkNavBack').onclick=function(){back()};
-  document.getElementById('mkNavClose').onclick=function(){stack=[];if(modalOpen())window.closeModal();if(typeof _sp==='function'){busy=true;try{_sp('dashboard')}finally{busy=false}}};
+  document.getElementById('mkNavBack').onclick=function(){back()};upd();
+  document.getElementById('mkNavClose').onclick=function(){stack=[];if(modalOpen())window.closeModal();if(typeof _sp==='function'){busy=true;try{_sp('dashboard')}finally{busy=false}upd();}};
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bar);else bar();
 })();
