@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-22';
+const APP_VER='2026-10-15-23';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6557,6 +6557,57 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   c.innerHTML='<h3>🛠️ أنظمة الشغل</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">أوردرات دلف واستانلس بخط سير، طباعة وباركود، العرض والمصاريف.</p><button type="button" class="primary" onclick="mkWk.open()">فتح</button>';
   st.appendChild(c);
  }
+ /* 📒 مسح ملصق وإنت في اليومية: فضلة (FD-) تتباع وتتخصم من الفضل، أوردر (WK-) يتسجّل ويتعلّم إنه اتسلّم */
+ async function dbWork(code){
+  var C=String(code).toUpperCase(),M;
+  if(/^FD/.test(C)){
+   var O=await get('wk_offcuts',[]),k=offCode(parseInt(C.replace(/^FD-?/,''),10)),o=O.find(function(x){return x.code===k});
+   if(!o){toast('مفيش فضلة بالكود '+k);return}
+   if(o.status==='اتباعت'||o.status==='خردة'){toast(k+' حالتها «'+o.status+'» — مش متاحة للبيع');return}
+   var p=(db.products||[]).find(function(x){return String(x.name).trim()===String(o.item).trim()});
+   var pm=function(len){if(!p||!(+p.price>0))return 0;var u=String(p.unit||'');return Math.round(/متر/.test(u)?p.price*len/100:p.price*len/(num(o.orig)||600))};
+   openModal('<div class="modal-head"><h2>🧰 بيع فضلة '+esc(o.code)+'</h2></div>'+
+    '<div class="card" style="background:var(--tint2);border:0;line-height:1.9"><b>'+esc(o.item)+(o.color?' / '+esc(o.color):'')+'</b><br>الطول المتاح: <b>'+esc(num(o.len))+' سم</b>'+(o.place?' · المكان: '+esc(o.place):'')+(o.status==='محجوزة'?'<br><span style="color:#b3261e">⚠️ الفضلة دي محجوزة</span>':'')+'</div>'+
+    '<div class="form"><div class="field"><label>بعت كام سم؟</label><input id="dwL" inputmode="decimal" value="'+esc(num(o.len))+'" style="font-size:20px;font-weight:700"></div>'+
+    '<div class="field"><label>السعر (ج)</label><input id="dwP" inputmode="decimal" value="'+(pm(num(o.len))||'')+'" style="font-size:20px;font-weight:700"></div></div>'+
+    '<div id="dwI" class="sample" style="margin-top:8px"></div>'+
+    '<div class="modal-foot"><button type="button" class="primary" id="dwOk">✔ سجّل في اليومية واخصم</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>');
+   M=document.getElementById('modal');var L=M.querySelector('#dwL'),P=M.querySelector('#dwP'),I=M.querySelector('#dwI'),pt=false;
+   function info(){var n=num(L.value),r=Math.round((num(o.len)-n)*10)/10;I.innerHTML=n>0&&n<=num(o.len)?('الباقي بعد البيع: <b>'+r+' سم</b>'+(r>0&&r<(num(CFG.minOff)||20)?' (هتتحسب خردة)':r<=0?' (الفضلة هتخلص)':'')):'<span style="color:#b3261e">الطول لازم يكون من 1 لـ '+num(o.len)+' سم</span>'}
+   L.oninput=function(){if(!pt){var v=pm(num(L.value));if(v)P.value=v}info()};P.oninput=function(){pt=true};info();L.focus();L.select();
+   M.querySelector('#dwOk').onclick=async function(){
+    var n=num(L.value),pr=num(P.value);if(!(n>0&&n<=num(o.len)))return toast('اكتب الطول صح');
+    this.disabled=true;
+    var r=await dbAdd({name:'فضلة '+o.code+' · '+o.item+(o.color?' / '+o.color:'')+' · '+n+' سم',qty:1,price:pr,note:'فضلة '+o.code});
+    if(!r){this.disabled=false;return}
+    var rest=Math.round((num(o.len)-n)*10)/10;
+    if(rest<=0)o.status='اتباعت';else{o.len=rest;if(rest<(num(CFG.minOff)||20))o.status='خردة'}
+    o.sold=(o.sold||[]).concat([{at:new Date().toISOString(),len:n,price:pr}]);
+    try{await put('wk_offcuts',O)}catch(e){errAlert(e)}
+    closeModal();toast('✔ اتسجّلت في اليومية واتخصم '+n+' سم من '+o.code+(rest>0?' (الباقي '+rest+' سم)':''));
+   };
+   return;
+  }
+  var m=/^WK-?(\d{1,6})/.exec(C);if(!m)return;
+  await loadAll();var od=ORD.find(function(x){return (x.no|0)===parseInt(m[1],10)});
+  if(!od){toast('مفيش أوردر برقم '+C);return}
+  var last=(STG[od.type]||[]).length-1,done=od.stage>=last,rem=Math.max(0,num(od.price)-num(od.paid));
+  openModal('<div class="modal-head"><h2>🛠️ '+esc(ordNo(od))+' — '+esc(od.type||'')+'</h2></div>'+
+   '<div class="card" style="background:var(--tint2);border:0;line-height:1.9">العميل: <b>'+esc(od.customer||'—')+'</b><br>المرحلة: <b>'+esc((STG[od.type]||[])[od.stage]||'')+'</b><br>السعر: <b>'+fmt(num(od.price))+' ج</b> · العربون: <b>'+fmt(num(od.paid))+' ج</b> · الباقي: <b style="color:#b3261e">'+fmt(rem)+' ج</b>'+(done?'<br>⚠️ الأوردر ده متسجّل إنه اتسلّم قبل كده':'')+'</div>'+
+   '<div class="form"><div class="field full"><label>المبلغ اللي هيتسجّل في اليومية (ج)</label><input id="dwA" inputmode="decimal" value="'+rem+'" style="font-size:20px;font-weight:700"></div></div>'+
+   '<div class="modal-foot"><button type="button" class="primary" id="dwOk">✔ سجّل في اليومية وعلّمه اتسلّم</button><button type="button" class="secondary" id="dwV">فتح الأوردر</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>');
+  M=document.getElementById('modal');
+  M.querySelector('#dwV').onclick=function(){closeModal();NS=1;viewOrder(od.id)};
+  M.querySelector('#dwOk').onclick=async function(){
+   var a=num(M.querySelector('#dwA').value);this.disabled=true;
+   var r=await dbAdd({name:(od.type||'أوردر')+' '+ordNo(od)+(od.w&&od.h?' ('+num(od.w)+'×'+num(od.h)+')':''),qty:1,price:a,person:od.customer||undefined,note:ordNo(od)});
+   if(!r){this.disabled=false;return}
+   if(!done){od.stage=last;od.hist=(od.hist||[]).concat([{n:(STG[od.type]||[])[last]||'اتسلّم',at:new Date().toISOString(),by:(window.mkT_user&&mkT_user.name)||''}])}
+   od.paid=num(od.paid)+a;
+   try{await saveOrd()}catch(e){errAlert(e)}
+   closeModal();toast('✔ '+ordNo(od)+' اتسجّل في اليومية'+(done?'':' واتعلّم إنه اتسلّم'));
+  };
+ }
  /* مسح الباركود (WK-0001 أو WK-0001-2) من أي شاشة يفتح الأوردر على طول، وبيشتغل مع أي لغة كيبورد */
  (function(){
   var buf='',last=0,sEl=null,sVal=null,bad=false;
@@ -6567,6 +6618,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    return /^[A-Za-z0-9\-]$/.test(e.key||'')?e.key.toUpperCase():null;
   }
   async function go(code){
+   var dbOn=(function(){var d=document.getElementById('daybook');var m=document.getElementById('modal');return !!(d&&d.classList.contains('active')&&!(m&&m.offsetParent!==null&&m.innerHTML.trim()))})();
+   if(dbOn&&typeof dbAdd==='function'){try{await dbWork(code)}catch(e){errAlert(e)}return}
    if(/^FD/i.test(code)){try{closeModal()}catch(e){}await loadAll();NS=1;viewOff(code.toUpperCase().replace(/^FD-?(\d+).*/,function(_,d){return offCode(parseInt(d,10))}));return}var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
    var no=parseInt(m[1],10);
    try{closeModal()}catch(e){}
@@ -6666,7 +6719,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    - أكواد WK- و FD- ليها شاشتها (أنظمة الشغل) */
 (function(){
  if(window.mkScanRouter)return;
- var GAP=55,MINLEN=3;
+ var GAP=90,MINLEN=3,SURE=35;   /* أجهزة البلوتوث الرخيصة أبطأ: لحد ٩٠ms بين الحروف، بس لو الكود مش معروف لازم يبقى سريع جدًا (جهاز أكيد) */
  var buf='',t0=0,last=0,el0=null,val0=null,bad=false;
  var CODE={Minus:'-',NumpadSubtract:'-',Period:'.',NumpadDecimal:'.',Slash:'/',NumpadDivide:'/'};
  function ch(e){
@@ -6695,7 +6748,17 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function txOpen(){return !!document.getElementById('txLines')}
  function pageOn(id){var p=document.getElementById(id);return !!(p&&p.classList.contains('active'))}
  function modalOn(){var m=document.getElementById('modal');return !!(m&&m.offsetParent!==null&&m.innerHTML.trim())}
- function prod(c){try{return window.findByCode?findByCode(c):null}catch(e){return null}}
+ /* فهرس سريع للأكواد (بيتبني مرة واحدة ويتجدد لما الأصناف تتغير) — بدل البحث في كل الأصناف مع كل مسحة */
+ var IDX=null,IDXn=-1,IDXr=null;
+ function prod(c){
+  try{
+   var P=db.products||[];
+   if(!IDX||IDXn!==P.length||IDXr!==P){IDX=new Map();P.forEach(function(p){if(p.barcode)IDX.set(String(p.barcode).trim().toUpperCase(),p)});P.forEach(function(p){var k=String(p.code||'').trim().toUpperCase();if(k&&!IDX.has(k))IDX.set(k,p)});IDXn=P.length;IDXr=P}
+   var hit=IDX.get(String(c).trim().toUpperCase());
+   if(hit&&(P.indexOf(hit)>-1))return hit;
+   return window.findByCode?findByCode(c):null;
+  }catch(e){return null}
+ }
  function sale(c){try{return (db.sales||[]).find(function(r){return r.no&&String(r.no).toUpperCase()===c})}catch(e){return null}}
 
  async function route(raw,src){
@@ -6731,12 +6794,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<button type="button" data-a="db"><span>📒</span>اليومية</button>'+
    '<button type="button" data-a="sale"><span>🧾</span>فاتورة بيع</button>'+
    (typeof isEmp==='function'&&isEmp()?'':'<button type="button" data-a="pur"><span>📦</span>فاتورة شراء</button>')+
+   '<button type="button" data-a="quo"><span>📋</span>عرض سعر</button>'+
    '<button type="button" data-a="det"><span>🔎</span>تفاصيل الصنف</button>'+
    '</div><div class="modal-foot"><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>');
   var m=document.getElementById('modal'),A={
    db:act(function(){showPage('daybook');setTimeout(function(){if(typeof dbScanAdd==='function')dbScanAdd(code).then(function(r){if(r!==false)flash('اتضاف لليومية: '+p.name)})},250)}),
    sale:act(function(){openTransaction('sale');setTimeout(function(){addByCode(code)},120)}),
    pur:act(function(){openTransaction('purchase');setTimeout(function(){addByCode(code)},120)}),
+   quo:act(function(){if(typeof openQuote==='function')openQuote();else openTransaction('sale');setTimeout(function(){addByCode(code)},120)}),
    det:act(function(){if(typeof openProduct==='function')openProduct(p.id)})};
   m.querySelectorAll('[data-a]').forEach(function(b){b.onclick=A[b.dataset.a]});
  }
@@ -6753,9 +6818,12 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(t-last>GAP){buf='';bad=false;t0=t;el0=document.activeElement;val0=(el0&&typeof el0.value==='string')?el0.value:null}
   last=t;
   if(e.key==='Enter'||e.key==='Tab'){
-   var dur=t-t0,fast=buf.length>=MINLEN&&dur<=buf.length*GAP;
+   var dur=t-t0,avg=buf.length>1?dur/(buf.length-1):999,fast=buf.length>=MINLEN&&avg<=GAP;
    var code=buf;buf='';
    if(!fast||bad)return;
+   /* ذكاء: لو السرعة مش أكيد سرعة جهاز، منتدخلش إلا لو الكود معروف (صنف/فاتورة/أوردر/فضلة) — عشان الكتابة العادية متتسرقش */
+   var known=!!(prod(code)||sale(code.toUpperCase())||/^(WK|FD)-?\d/i.test(code));
+   if(!known&&avg>SURE)return;
    var ae=document.activeElement;
    if(ownField(ae))return;                       // الخانة ليها معالجها
    if(codeField(ae)&&!txOpen()){if(e.key==='Tab')return;e.preventDefault();return}   // بيكتب كود صنف: نسيبه
