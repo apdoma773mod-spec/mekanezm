@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-8';
+const APP_VER='2026-10-15-9';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5863,5 +5863,94 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  },1500);
 })();
 </script>
+<script>
+/* mk: تحويلات الواتساب (سكرينات انستاباي/المحافظ): تتعرف من الرقم وتتسجل في حساب العميل أو المورد بعد تأكيد */
+(function(){
+ var SBc=function(){return window.mkSB||(typeof sbx==='function'?sbx():null)};
+ var ROWS={},OWNERS=[];
+ function R(fn,a){if(typeof rpc==='function')return rpc(fn,a);return SBc().rpc(fn,a||{}).then(function(r){if(r.error)throw r.error;return r.data})}
+ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function num(v){v=String(v==null?'':v).replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/[۰-۹]/g,function(d){return d.charCodeAt(0)-1776}).replace(/[٫,]/g,'.').replace(/[^\d.\-]/g,'');return parseFloat(v)||0}
+ function l10(p){return String(p||'').replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'').slice(-10)}
+ function isAdm(){return !!(window.mkT_user&&window.mkT_user.role==='admin')}
+ function tm(iso){try{return new Date(iso).toLocaleString('ar-EG',{weekday:'short',hour:'numeric',minute:'2-digit'})}catch(e){return ''}}
+ function contacts(){try{return (typeof db!=='undefined'&&db.contacts)||[]}catch(e){return []}}
+ function identify(phone){
+  var p=l10(phone);if(!p)return {kind:'unknown'};
+  if(OWNERS.some(function(o){return l10(o)===p}))return {kind:'owner'};
+  var c=contacts().filter(function(x){return l10(x.phone)===p});
+  if(c.length)return {kind:'contact',c:c[0]};
+  return {kind:'unknown'};
+ }
+ async function loadOwners(){
+  try{var r=await SBc().from('mk_settings').select('value').eq('key','wa_rules').maybeSingle();OWNERS=(r.data&&r.data.value&&r.data.value.ownerPhones)||[]}catch(e){OWNERS=[]}
+ }
+ async function list(){
+  if(!isAdm()){toast('الشاشة دي للمدير بس');return}
+  await loadOwners();
+  var N=[];
+  try{var a=await SBc().from('wa_photos').select('id,created_at,phone,name,caption,img,status').eq('status','new').order('created_at',{ascending:false}).limit(25);N=a.data||[]}catch(e){}
+  ROWS={};N.forEach(function(x){ROWS[x.id]=x});
+  var h='<div class="modal-head"><h2>💳 تحويلات الواتساب</h2></div>'+
+   '<p style="margin:0 0 8px;color:var(--muted);font-size:13px">الصور الجديدة اللي جت على رقم المحل. افتح الصورة اللي هي تحويل فلوس واكتب المبلغ، والسيستم يعرف صاحبها من الرقم.</p>';
+  h+=N.length?N.map(function(x){
+   var id=identify(x.phone),who=id.kind==='contact'?('<b style="color:#159447">'+esc(id.c.name)+'</b> ('+esc(id.c.type)+')'):id.kind==='owner'?'<b style="color:#d5a928">من رقمك الشخصي (دفع لمورد)</b>':'<b style="color:#c0392b">رقم مش مسجّل</b>';
+   return '<div class="card" style="padding:8px;margin:6px 0;display:flex;gap:10px;align-items:center"><img src="'+esc(x.img)+'" style="width:64px;height:64px;object-fit:cover;border-radius:10px;flex:none"><div style="flex:1;min-width:0;font-size:14px">'+who+'<br><small style="color:var(--muted)">'+esc(x.name||'')+' '+esc(x.phone||'')+' · '+esc(tm(x.created_at))+'</small></div><button type="button" class="primary" data-id="'+esc(x.id)+'">فتح</button></div>'}).join(''):'<div class="empty">مفيش صور جديدة</div>';
+  h+='<div class="modal-foot"><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>';
+  openModal(h);
+  document.getElementById('modal').querySelectorAll('[data-id]').forEach(function(b){b.onclick=function(){open1(b.dataset.id)}});
+ }
+ function open1(pid){
+  var x=ROWS[pid];if(!x)return;
+  var id=identify(x.phone),cs=contacts().slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'ar')});
+  var pre=id.kind==='contact'?id.c.id:'';
+  var msg=id.kind==='contact'?'العميل/المورد معروف من رقمه.':id.kind==='owner'?'جاية من رقمك الشخصي: اختار المورد اللي دفعتله.':'الرقم ده مش مسجّل عندك: اختار صاحب التحويل بنفسك.';
+  openModal('<div class="modal-head"><h2>💳 تحويل من '+esc(x.name||x.phone||'')+'</h2></div>'+
+   '<img src="'+esc(x.img)+'" style="max-width:100%;max-height:320px;display:block;margin:0 auto 8px;border-radius:10px">'+
+   (x.caption?'<div class="sample">💬 «'+esc(x.caption)+'»</div>':'')+
+   '<p style="margin:8px 0;font-size:13px">'+msg+'</p><div class="form">'+
+   '<div class="field full"><label>دوّر بالاسم</label><input id="tfQ" placeholder="اكتب جزء من الاسم"></div>'+
+   '<div class="field full"><label>الحساب اللي هيتسجّل عليه</label><select id="tfC"><option value="">— اختار —</option>'+cs.map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===pre?' selected':'')+'>'+esc(c.name)+' — '+esc(c.type)+'</option>'}).join('')+'</select></div>'+
+   '<div class="field full"><label>المبلغ (بتكتبه إنت من الصورة)</label><input id="tfA" inputmode="decimal" placeholder="0"></div></div>'+
+   '<div id="tfInfo" class="sample" style="margin-top:8px">اختار الحساب واكتب المبلغ</div>'+
+   '<div class="modal-foot"><button type="button" class="primary" id="tfOk">تأكيد وتسجيل</button><button type="button" class="secondary" id="tfIgn">مش تحويل (تجاهل)</button><button type="button" class="secondary" id="tfBk">رجوع</button></div>');
+  var m=document.getElementById('modal'),sel=m.querySelector('#tfC');
+  function info(){
+   var c=contacts().find(function(z){return z.id===sel.value}),a=num(m.querySelector('#tfA').value),el=m.querySelector('#tfInfo');
+   if(!c){el.textContent='اختار الحساب واكتب المبلغ';return}
+   el.innerHTML=c.type==='عميل'?('✅ <b>تحصيل</b> '+esc(a||0)+' ج من العميل <b>'+esc(c.name)+'</b> (بيتخصم من مديونيته)'):('✅ <b>سداد</b> '+esc(a||0)+' ج للمورد <b>'+esc(c.name)+'</b> (بيتخصم من حسابه)');
+  }
+  m.querySelector('#tfQ').oninput=function(){var q=this.value.trim();Array.prototype.forEach.call(sel.options,function(o){o.hidden=!!q&&o.value!==''&&o.textContent.indexOf(q)<0})};
+  sel.onchange=info;m.querySelector('#tfA').oninput=info;info();
+  m.querySelector('#tfBk').onclick=list;
+  m.querySelector('#tfIgn').onclick=async function(){try{await SBc().from('wa_photos').update({status:'ignored',handled_by:(window.mkT_user&&mkT_user.name)||'',handled_at:new Date().toISOString()}).eq('id',pid)}catch(e){}list()};
+  m.querySelector('#tfOk').onclick=async function(){
+   var c=contacts().find(function(z){return z.id===sel.value}),a=num(m.querySelector('#tfA').value);
+   if(!c)return toast('اختار الحساب');if(!(a>0))return toast('اكتب المبلغ');
+   var note='تحويل واتساب'+(x.phone?' من '+x.phone:'');
+   this.disabled=true;
+   try{
+    await R('mk_add_payment',{p_contact:c.id,p_amount:a,p_note:note});
+    try{await Promise.all([refreshContacts([c.id]),refreshTable('mk_payments')])}catch(e){}
+    var u=await SBc().from('wa_photos').update({status:'transfer',handled_by:(window.mkT_user&&mkT_user.name)||'',handled_at:new Date().toISOString()}).eq('id',pid);
+    if(u.error)await SBc().from('wa_photos').update({status:'ignored'}).eq('id',pid);
+    toast('✔ اتسجّل '+a+' ج على '+c.name);list();
+   }catch(e){this.disabled=false;alert('مقدرتش أسجّل التحويل:\n'+[e&&e.message,e&&e.code,e&&e.details].filter(Boolean).join('\n'))}
+  };
+ }
+ window.mkTf={open:list};
+ /* زرار في القايمة الجانبية */
+ setInterval(function(){
+  var s=document.querySelector('aside nav.nav:last-of-type');
+  if(s&&!document.getElementById('mkSideTf')){
+   var b=document.createElement('button');b.id='mkSideTf';b.type='button';b.style.display='none';
+   b.innerHTML='<span style="font-size:18px;width:20px;text-align:center">💳</span> <span>تحويلات الواتساب</span>';
+   b.onclick=function(){list()};s.appendChild(b);
+  }
+  var b2=document.getElementById('mkSideTf');if(b2)b2.style.display=isAdm()?'':'none';
+ },1500);
+})();
+</script>
+
 </body>
 </html>
