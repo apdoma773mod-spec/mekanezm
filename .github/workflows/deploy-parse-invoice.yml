@@ -23,4 +23,12 @@ jobs:
       - name: Deploy function
         run: |
           [ -f supabase/config.toml ] || supabase init --force
-          supabase functions deploy parse-invoice --project-ref tkzfjeizvanfptnqvrmr --no-verify-jwt --use-api
+          set +e
+          supabase functions deploy parse-invoice --project-ref tkzfjeizvanfptnqvrmr --no-verify-jwt --use-api > deploy.log 2>&1
+          code=$?
+          cat deploy.log
+          if [ $code -ne 0 ]; then
+            # آخر سطور الخطأ تظهر كملاحظة في صفحة الـ run (عشان تتقري من غير اللوج الكامل)
+            tail -n 6 deploy.log | sed 's/^/::error::/'
+            exit $code
+          fi
