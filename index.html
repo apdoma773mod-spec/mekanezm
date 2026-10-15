@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-01';
+const APP_VER='2026-10-16-03';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6007,9 +6007,21 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   s+='<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#18343a"/></marker></defs>';
   s+='<rect x="'+x0+'" y="'+y0+'" width="'+W+'" height="'+H+'" fill="#eef6f7" stroke="#087f8c" stroke-width="3"/>';
   s+='<rect x="'+(x0+6)+'" y="'+(y0+6)+'" width="'+(W-12)+'" height="'+(H-12)+'" fill="none" stroke="#9fc4c9" stroke-width="1" stroke-dasharray="4 3"/>';
+  /* القطاعات: جنبين + فوق وتحت، والجنب اللي بمقبض باين بلونه وشكله */
+  if(o.type==='دلفة'||o.type==='جرار'){
+   var hd=o.handle||'one',pw=12,openL=right,stile=function(x,isH){return isH?'<rect x="'+x+'" y="'+y0+'" width="'+pw+'" height="'+H+'" fill="#f2c94c" stroke="#8a6d10" stroke-width="1.5"/><rect x="'+(x+pw/2-2)+'" y="'+(y0+H*0.12)+'" width="4" height="'+(H*0.76)+'" rx="2" fill="#8a6d10"/>':'<rect x="'+x+'" y="'+y0+'" width="'+pw+'" height="'+H+'" fill="#cfdde0" stroke="#087f8c" stroke-width="1"/>'};
+   s+='<rect x="'+x0+'" y="'+y0+'" width="'+W+'" height="'+pw+'" fill="#cfdde0" stroke="#087f8c" stroke-width="1"/><rect x="'+x0+'" y="'+(y0+H-pw)+'" width="'+W+'" height="'+pw+'" fill="#cfdde0" stroke="#087f8c" stroke-width="1"/>';
+   var hL=hd==='both'||(hd==='one'&&openL),hR=hd==='both'||(hd==='one'&&!openL);
+   s+=stile(x0,hL)+stile(x0+W-pw,hR);
+   var lab={one:'مقبض على جنب الفتح',both:'مقبض على الجنبين',none:'من غير مقبض',frame:'شاسيه ثابت (من غير فتح)'}[hd]||'';
+   s+='<text x="'+(x0+W/2)+'" y="'+(y0+H-pw-8)+'" text-anchor="middle" font-size="12" fill="#8a6d10" font-weight="700">'+lab+'</text>';
+  }
   if(o.kind==='slide'){
-   var sw=Math.min(W*0.22,26*sc),sh=Math.min(H*0.06,12*sc)+8;
-   s+='<rect x="'+(x0+8)+'" y="'+(y0+8)+'" width="'+sw+'" height="'+sh+'" fill="#d5a928" stroke="#8a6d10"/><rect x="'+(x0+W-sw-8)+'" y="'+(y0+8)+'" width="'+sw+'" height="'+sh+'" fill="#d5a928" stroke="#8a6d10"/>';
+   /* فتحة العجل: تفريغة مستطيلة بركن مدوّر في الركنين اللي فوق، والعجلة جواها */
+   var sw=Math.max(18,Math.min(W*0.2,24*sc)),sh=Math.max(14,Math.min(H*0.07,10*sc)),r0=Math.min(6,sh/2);
+   [[x0,1],[x0+W,-1]].forEach(function(c){var x=c[0],d=c[1],x2=x+d*sw;
+    s+='<path d="M'+x+' '+y0+'L'+x2+' '+y0+'L'+x2+' '+(y0+sh-r0)+'Q'+x2+' '+(y0+sh)+' '+(x2-d*r0)+' '+(y0+sh)+'L'+x+' '+(y0+sh)+'Z" fill="#fff" stroke="#c0392b" stroke-width="1.6"/>'+
+     '<circle cx="'+(x+d*sw/2)+'" cy="'+(y0+sh/2+1)+'" r="'+Math.min(sh/2-2,sw/3).toFixed(1)+'" fill="#555" stroke="#222"/><circle cx="'+(x+d*sw/2)+'" cy="'+(y0+sh/2+1)+'" r="1.6" fill="#ddd"/>'});
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2)+'" text-anchor="middle" font-size="14" fill="#18343a" font-weight="700">دلفة منزلقة</text>';
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2+20)+'" text-anchor="middle" font-size="12" fill="#c0392b">فتحة العجل أعلى الركنين</text>';
   }else if(o.kind==='hinge'){
@@ -6124,9 +6136,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="bar" style="margin:10px 0"><i style="width:'+pct+'%"></i></div>'+
    '<div class="tl">'+st.map(function(s,i){var h=hist[s];return '<div class="st '+(i<c?'done':i===c?'cur':'')+'"><span class="dot">'+(i<c?'✓':i+1)+'</span><b>'+esc(s)+'</b>'+(h?'<div style="font-size:12px;color:var(--muted)">'+esc(String(h.at).slice(0,16).replace('T',' '))+(h.by?' — '+esc(h.by):'')+'</div>':'')+'</div>'}).join('')+'</div>'+
    '<div class="wkrow" style="margin-top:6px">'+(c<st.length-1?'<button type="button" class="wkbtn p" id="wkAdv">⏭️ الخطوة الجاية: '+esc(st[c+1])+'</button>':'<span class="badge green">الأوردر خلص</span>')+(c>0?'<button type="button" class="wkbtn" id="wkPrev">↩︎ رجّع خطوة</button>':'')+'</div></div>'+
+   (rodsHtml(o)?'<div class="wkc"><div class="sample">'+rodsHtml(o)+'</div></div>':'')+
    '<div class="wkc"><h3>الإجراءات</h3><div class="wkrow">'+
    '<button type="button" class="wkbtn p" id="wkPr">🖨️ طباعة ورقة التجهيز</button>'+
    '<button type="button" class="wkbtn" id="wkLb">🏷️ ملصق بباركود</button>'+
+   (rodCalc(o)?'<button type="button" class="wkbtn'+(o.rods&&o.rods.done?'':' p')+'" id="wkRods">'+(o.rods&&o.rods.done?'✔ الأعواد اتخصمت':'🪵 اخصم الأعواد من المخزون')+'</button>':'')+
    '<button type="button" class="wkbtn" id="wkInv">🧾 فاتورة بيع للعميل</button>'+
    '<button type="button" class="wkbtn" id="wkWa">📲 ابعت للصنايعي واتساب</button>'+
    '<button type="button" class="wkbtn" id="wkEd">✏️ تعديل</button>'+
@@ -6148,6 +6162,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#wkEd').onclick=function(){viewForm(id,o.type)};
   b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
   b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}};
+  var rb=b.querySelector('#wkRods');if(rb)rb.onclick=function(){rodsDeduct(o)};
   b.querySelector('#wkInv').onclick=function(){
    close();
    try{openTransaction('sale');setTimeout(function(){var q=function(i){return document.getElementById(i)};
@@ -6163,11 +6178,51 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    try{var r=await SBc().from('wa_out').insert({to_phone:ph,body:msg,imgs:[],by_name:who()});if(r.error)throw r.error;toast('✔ الرسالة في الطريق')}catch(e){errAlert(e)}};
  }
 
+ /* ---------- 🪵 حساب الأعواد للضلفة: جنبين (الارتفاع) + فوق وتحت (العرض)، والمقبض على جنب أو الجنبين أو مفيش، أو شاسيه ثابت ---------- */
+ var RODS={blum:{p:600,h:600,n:'بلوم 6 م'},bevel:{p:300,h:270,n:'شطف عادي (3 م / 2.70 م بمقبض)'}};
+ var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['frame','شاسيه ثابت (فريم بس)']];
+ function rodCalc(o){var w=num(o.w),h=num(o.h),q=Math.max(1,num(o.qty)||1);if(!(w>0&&h>0)||o.kind==='other'||(o.type!=='دلفة'&&o.type!=='جرار'))return null;
+  var hc={none:0,one:1,both:2,frame:0}[o.handle||'one'];if(hc==null)hc=1;
+  var R=RODS[o.rod]||RODS.blum,P=[],H=[],i,k;
+  for(i=0;i<q;i++){for(k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
+  return {R:R,P:P,H:H,pp:P.length?plan(P,R.p,0.5):[],hp:H.length?plan(H,R.h,0.5):[],bad:P.some(function(x){return x>R.p})||H.some(function(x){return x>R.h}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
+ }
+ function rodsHtml(o){var r=rodCalc(o);if(!r)return '';
+  var lf=r.pp.concat(r.hp).map(function(b){return Math.round(b.left)}).filter(function(x){return x>0});
+  return '🪵 <b>الأعواد ('+esc(r.R.n)+')</b>: '+(r.pp.length?'<b>'+r.pp.length+'</b> عود عادي':'')+(r.pp.length&&r.hp.length?' + ':'')+(r.hp.length?'<b>'+r.hp.length+'</b> عود بمقبض':'')+
+   ' — القطع: '+r.P.length+' عادي'+(r.H.length?' + '+r.H.length+' بمقبض':'')+' — إجمالي '+fmt(r.meters)+' م'+
+   (lf.length?'<br><small>الفضلات اللي هتفضل: '+lf.join('، ')+' سم</small>':'')+(r.bad?'<br><b style="color:#c0392b">⚠️ في قطعة أطول من العود</b>':'')+(o.rods&&o.rods.done?'<br><b style="color:#15803d">✔ الأعواد اتخصمت من المخزون</b>':'');
+ }
+ async function rodsDeduct(o){
+  var r=rodCalc(o);if(!r)return toast('الأوردر ده مالوش حساب أعواد');if(o.rods&&o.rods.done)return toast('الأعواد اتخصمت قبل كده');if(r.bad)return toast('في قطعة أطول من العود — راجع المقاسات');
+  var P=(db.products||[]),fp=function(n){n=String(n||'').trim();return n?P.find(function(x){return x.name===n}):null},pP=fp(o.rodP),pH=fp(o.rodH);
+  if(r.pp.length&&!pP)return toast('اختار صنف العود العادي من المخزون في تعديل الأوردر');
+  if(r.hp.length&&!pH)return toast('اختار صنف العود بمقبض من المخزون في تعديل الأوردر');
+  if(pP&&pH&&pP.id===pH.id&&r.pp.length+r.hp.length>num(pP.qty))return toast('مفيش أعواد كفاية: متاح '+pP.qty);
+  if(pP&&r.pp.length>num(pP.qty))return toast('مفيش أعواد عادي كفاية: متاح '+pP.qty+' ومحتاج '+r.pp.length);
+  if(pH&&r.hp.length>num(pH.qty))return toast('مفيش أعواد بمقبض كفاية: متاح '+pH.qty+' ومحتاج '+r.hp.length);
+  if(!(await ask('هيتخصم من المخزون: '+(r.pp.length?r.pp.length+' عود «'+pP.name+'»':'')+(r.pp.length&&r.hp.length?' + ':'')+(r.hp.length?r.hp.length+' عود «'+pH.name+'»':'')+'، والفضلات الكبيرة هتتسجّل في الفضل. مينفعش يترجع.','اخصم','لأ')))return;
+  var api=window.mkT&&window.mkT.api;if(!api)return toast('لازم تكون داخل على السيستم أونلاين');
+  try{
+   await api.syncNow();var note='أوردر '+ordNo(o)+' — '+o.customer+' — '+num(o.w)+'×'+num(o.h)+' ×'+(o.qty||1);
+   if(pP&&pH&&pP.id===pH.id){await api.rpc('mk_adjust_stock',{p_id:pP.id,p_qty:num(pP.qty)-r.pp.length-r.hp.length,p_note:note});await api.refreshProducts([pP.id])}
+   else{if(pP&&r.pp.length){await api.rpc('mk_adjust_stock',{p_id:pP.id,p_qty:num(pP.qty)-r.pp.length,p_note:note+' (عادي)'});await api.refreshProducts([pP.id])}
+    if(pH&&r.hp.length){await api.rpc('mk_adjust_stock',{p_id:pH.id,p_qty:num(pH.qty)-r.hp.length,p_note:note+' (بمقبض)'});await api.refreshProducts([pH.id])}}
+   api.done&&api.done();
+   var O=await get('wk_offcuts',[]),minL=num(CFG.minOff)||20,nOff=0;
+   [[r.pp,pP,r.R.p],[r.hp,pH,r.R.h]].forEach(function(z){z[0].forEach(function(bx){var lf=Math.round(bx.left*10)/10;if(lf<minL||!z[1])return;CFG.offNext=CFG.offNext||1;O.push({id:uid(),code:offCode(CFG.offNext++),item:z[1].name,color:o.color||'',len:lf,orig:z[2],place:'',status:'متاحة',date:today()});nOff++})});
+   if(nOff)await put('wk_offcuts',O);
+   o.rods={done:true,at:new Date().toISOString(),by:who(),plain:r.pp.length,handle:r.hp.length};await saveOrd();await saveCfg();
+   toast('✔ اتخصم '+(r.pp.length+r.hp.length)+' عود'+(nOff?' واتسجّل '+nOff+' فضلة':''));viewOrder(o.id);
+  }catch(e){errAlert(e)}
+ }
+
  /* ---------- النموذج ---------- */
  function fi(id,label,val,extra,type){return '<div class="wkf"><label>'+label+'</label><input id="'+id+'" '+(type?'type="'+type+'" ':'')+'value="'+esc(val)+'" '+(extra||'')+'></div>'}
  function viewForm(id,type){
   var old=id?ORD.find(function(x){return x.id===id}):null;
-  var o=old?JSON.parse(JSON.stringify(old)):{type:type||'دلفة',date:today(),customer:'',phone:'',crafter:'',kind:'hinge',w:'',h:'',qty:1,hinges:3,hingePos:'',side:'right',color:'',profile:'',mats:[{n:'',q:'',p:''}],fee:'',cost:'',price:'',paid:'',notes:'',stage:0,hist:[]};
+  var o=old?JSON.parse(JSON.stringify(old)):{type:type||'دلفة',date:today(),customer:'',phone:'',crafter:'',kind:'hinge',w:'',h:'',qty:1,hinges:3,hingePos:'',side:'right',color:'',profile:'',mats:[{n:'',q:'',p:''}],fee:'',cost:'',price:'',paid:'',notes:'',stage:0,hist:[],handle:'one',rod:'blum',rodP:'',rodH:''};
+  if(!o.handle)o.handle='one';if(!o.rod)o.rod='blum';
   var b=shell(old?'تعديل '+esc(ordNo(old)):'➕ أوردر جديد',old?function(){viewOrder(id)}:viewOrders);mark(old?'ord':'new');
   var sups=contacts().filter(function(c){return c.type==='مورد'}),custs=contacts().filter(function(c){return c.type==='عميل'});
   b.innerHTML='<div class="wkc"><h3>بيانات الأوردر</h3><div class="wkg">'+
@@ -6182,8 +6237,12 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    fi('fN','عدد المفصلات',o.hinges,'inputmode="numeric"')+
    '<div class="wkf"><label>المفصلات ناحية</label><select id="fS"><option value="right"'+(o.side==='right'?' selected':'')+'>اليمين</option><option value="left"'+(o.side==='left'?' selected':'')+'>الشمال</option></select></div>'+
    fi('fHP','مواضع المفصلات (سم من فوق، اختياري)',o.hingePos,'placeholder="مثال: 11, 105, 199"')+
-   fi('fCo','اللون',o.color)+fi('fPr','القطاع/الموديل',o.profile)+'</div>'+
-   '<div class="draw" id="fDr" style="margin-top:10px"></div></div>'+
+   fi('fCo','اللون',o.color)+fi('fPr','القطاع/الموديل',o.profile)+
+   '<div class="wkf"><label>المقبض</label><select id="fHd">'+HANDLES.map(function(x){return '<option value="'+x[0]+'"'+(o.handle===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'+
+   '<div class="wkf"><label>نوع العود</label><select id="fRod">'+Object.keys(RODS).map(function(k){return '<option value="'+k+'"'+(o.rod===k?' selected':'')+'>'+RODS[k].n+'</option>'}).join('')+'</select></div>'+
+   fi('fRP','صنف العود العادي (من المخزون)',o.rodP||'','list="wkProdL"')+fi('fRH','صنف العود بمقبض (من المخزون)',o.rodH||'','list="wkProdL"')+
+   '<datalist id="wkProdL">'+prodNames().map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist></div>'+
+   '<div class="draw" id="fDr" style="margin-top:10px"></div><div id="fRods" class="sample" style="margin-top:10px"></div></div>'+
    '<div class="wkc"><h3>الخامات</h3><div id="fM"></div><button type="button" class="wkbtn" id="fMA">➕ خامة</button></div>'+
    '<div class="wkc"><h3>الحساب (إنت اللي بتكتب الأرقام)</h3><div class="wkg">'+
    fi('fFe','أجرة الصنايعي للقطعة',o.fee,'inputmode="decimal"')+fi('fCs','التكلفة الإجمالية (فاضي = تتحسب من الخامات)',o.cost,'inputmode="decimal"')+
@@ -6200,8 +6259,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   function read(){
    o.type=q('fT').value;o.date=q('fD').value;o.customer=q('fC').value.trim();o.phone=q('fP').value.trim();o.crafter=q('fCr').value.trim();
    o.kind=q('fK').value;o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
-   o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.fee=q('fFe').value;o.cost=q('fCs').value;o.price=q('fPc').value;o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
-  function res(){read();q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';
+   o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.handle=q('fHd').value;o.rod=q('fRod').value;o.rodP=q('fRP').value.trim();o.rodH=q('fRH').value.trim();o.fee=q('fFe').value;o.cost=q('fCs').value;o.price=q('fPc').value;o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
+  function res(){read();q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;q('fRods').style.display=rh?'':'none';
    q('fRes').innerHTML='التكلفة: <b>'+fmt(cost(o))+'</b> ج — السعر: <b>'+fmt(num(o.price))+'</b> ج — الربح: <b>'+fmt(profit(o))+'</b> ج — الباقي على العميل: <b>'+fmt(num(o.price)-num(o.paid))+'</b> ج'}
   b.querySelectorAll('input:not([data-m]),select,textarea').forEach(function(x){x.addEventListener('input',res);x.addEventListener('change',res)});
   q('fMA').onclick=function(){o.mats.push({n:'',q:'',p:''});drawMats()};
@@ -6280,26 +6339,87 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   return s+'</svg>';
  }
  function iso(p,th,yaw,pitch,W,H){return render3d(shapeBoxes(p,th),yaw,pitch,W||150,H||110,1)}
+ /* مجسّم 3D خفيف (Canvas بدل SVG): بيترسم على نفس اللوحة من غير ما الصفحة تتبني من جديد، بإصبع واحد تلفّه وبإصبعين تكبّر */
+ function faces3d(boxes,yaw,pitch){
+  var mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9],i;
+  boxes.forEach(function(b){for(i=0;i<3;i++){mn[i]=Math.min(mn[i],b[i],b[i+3]);mx[i]=Math.max(mx[i],b[i],b[i+3])}});
+  var c=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2],R=Math.sqrt(Math.pow(mx[0]-mn[0],2)+Math.pow(mx[1]-mn[1],2)+Math.pow(mx[2]-mn[2],2))||1;
+  var cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch),F=[];
+  function rot(x,y,z){var x1=x*cy+z*sy,z1=-x*sy+z*cy;return [x1,y*cp-z1*sp,y*sp+z1*cp]}
+  boxes.forEach(function(b){var x0=b[0],y0=b[1],z0=b[2],x1=b[3],y1=b[4],z1=b[5],V=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+   [[0,1,2,3,0,0,-1],[4,5,6,7,0,0,1],[0,1,5,4,0,-1,0],[3,2,6,7,0,1,0],[0,3,7,4,-1,0,0],[1,2,6,5,1,0,0]].forEach(function(f){var n=rot(f[4],f[5],f[6]);if(n[2]>=0)return;
+    var pts=[V[f[0]],V[f[1]],V[f[2]],V[f[3]]].map(function(v){return rot(v[0]-c[0],v[1]-c[1],v[2]-c[2])});
+    F.push({d:(pts[0][2]+pts[1][2]+pts[2][2]+pts[3][2])/4,pts:pts,lit:Math.max(0,n[0]*0.35+n[1]*0.8+n[2]*-0.5)})})});
+  F.sort(function(a,b){return b.d-a.d});return {F:F,R:R};
+ }
  var V3={yaw:-0.7,pitch:0.55,zoom:1};
  function mount3d(el,p,th){
-  function draw(){el.innerHTML=render3d(shapeBoxes(p,th),V3.yaw,V3.pitch,420,300,V3.zoom)}
-  draw();
-  var down=false,lx=0,ly=0;
-  el.onpointerdown=function(e){down=true;lx=e.clientX;ly=e.clientY;try{el.setPointerCapture(e.pointerId)}catch(_){}};
-  el.onpointerup=el.onpointercancel=function(){down=false};
-  el.onpointermove=function(e){if(!down)return;V3.yaw+=(e.clientX-lx)*0.012;V3.pitch=Math.max(-1.45,Math.min(1.45,V3.pitch+(e.clientY-ly)*0.012));lx=e.clientX;ly=e.clientY;draw()};
-  el.onwheel=function(e){e.preventDefault();V3.zoom=Math.max(0.4,Math.min(3,V3.zoom*(e.deltaY<0?1.1:0.9)));draw()};
+  var boxes=shapeBoxes(p,th),cv=document.createElement('canvas'),ctx=cv.getContext('2d'),W=0,H=0,dpr=Math.min(2,window.devicePixelRatio||1),q=0;
+  cv.style.cssText='width:100%;max-width:560px;height:320px;display:block;margin:0 auto;touch-action:none;cursor:grab;border-radius:14px;background:radial-gradient(ellipse at 50% 35%,#ffffff,#e8edf5)';
+  el.innerHTML='';el.appendChild(cv);
+  function size(){var w=Math.min(560,el.clientWidth||560);if(w===W)return;W=w;H=320;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+  function paint(){q=0;size();var o=faces3d(boxes,V3.yaw,V3.pitch),sc=Math.min(W,H)*0.46/o.R*V3.zoom*1.6;
+   ctx.clearRect(0,0,W,H);ctx.fillStyle='rgba(20,30,60,.10)';ctx.beginPath();ctx.ellipse(W/2,H*0.86,W*0.3,14,0,0,Math.PI*2);ctx.fill();
+   o.F.forEach(function(f){var g=Math.round(118+122*Math.min(1,f.lit));ctx.beginPath();f.pts.forEach(function(pp,k){var x=W/2+pp[0]*sc,y=H/2-pp[1]*sc;k?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.closePath();
+    var gr=ctx.createLinearGradient(0,H/2-o.R*sc,0,H/2+o.R*sc);gr.addColorStop(0,'rgb('+Math.min(255,g+22)+','+Math.min(255,g+28)+','+Math.min(255,g+36)+')');gr.addColorStop(1,'rgb('+(g-14)+','+(g-8)+','+g+')');
+    ctx.fillStyle=gr;ctx.fill();ctx.strokeStyle='#3c5160';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke()});
+  }
+  function draw(){if(!q){q=1;requestAnimationFrame(paint)}}
+  paint();
+  var P={},lx=0,ly=0,pd=0;
+  cv.onpointerdown=function(e){P[e.pointerId]=[e.clientX,e.clientY];lx=e.clientX;ly=e.clientY;try{cv.setPointerCapture(e.pointerId)}catch(_){}};
+  cv.onpointerup=cv.onpointercancel=function(e){delete P[e.pointerId];pd=0};
+  cv.onpointermove=function(e){if(!P[e.pointerId])return;P[e.pointerId]=[e.clientX,e.clientY];var ks=Object.keys(P);
+   if(ks.length>=2){var a=P[ks[0]],b=P[ks[1]],d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pd)V3.zoom=Math.max(0.4,Math.min(3,V3.zoom*d/pd));pd=d;draw();return}
+   V3.yaw+=(e.clientX-lx)*0.012;V3.pitch=Math.max(-1.45,Math.min(1.45,V3.pitch+(e.clientY-ly)*0.012));lx=e.clientX;ly=e.clientY;draw()};
+  cv.onwheel=function(e){e.preventDefault();V3.zoom=Math.max(0.4,Math.min(3,V3.zoom*(e.deltaY<0?1.1:0.9)));draw()};
   return {redraw:draw,rot:function(dy,dp){V3.yaw+=dy;V3.pitch=Math.max(-1.45,Math.min(1.45,V3.pitch+dp));draw()},reset:function(){V3.yaw=-0.7;V3.pitch=0.55;V3.zoom=1;draw()}};
+ }
+ /* ---------- رسم هندسي 2D للصنايعي: اللوح مفرود + المقطع + منظر علوي + منظر جانبي، بالمقاسات والأسهم وخط الثني ---------- */
+ function techSvg(p,th){
+  var a=num(p.a),b=num(p.b),f=num(p.flange)||3,s=p.shape,nb=s==='L'?1:(s==='U'||s==='Z')?2:0,Wf=b+nb*f,t=th||0.1,K='#14213d',R='#d62828',BL='#1d4ed8';
+  if(!(a>0&&b>0))return '';
+  var o='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 560" style="width:100%;max-width:820px;background:#fff;direction:ltr" font-family="Cairo,Tahoma,Arial">'+
+   '<defs><marker id="tA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="'+BL+'"/></marker></defs>'+
+   '<rect x="1" y="1" width="818" height="558" fill="none" stroke="#9aa5b1"/><path d="M410 1V559M1 280H819" stroke="#cfd6de"/>';
+  function T(x,y,txt,sz,col,anc){return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" font-size="'+(sz||13)+'" font-weight="700" fill="'+(col||K)+'" text-anchor="'+(anc||'middle')+'">'+esc(txt)+'</text>'}
+  function D(x1,y1,x2,y2,lab,side){var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,nx=-dy/L*side,ny=dx/L*side,o2=16,X1=x1+nx*o2,Y1=y1+ny*o2,X2=x2+nx*o2,Y2=y2+ny*o2;
+   return '<path d="M'+x1+' '+y1+'L'+(X1+nx*4)+' '+(Y1+ny*4)+'M'+x2+' '+y2+'L'+(X2+nx*4)+' '+(Y2+ny*4)+'" stroke="#8aa0c8" stroke-width="1"/>'+
+    '<line x1="'+X1+'" y1="'+Y1+'" x2="'+X2+'" y2="'+Y2+'" stroke="'+BL+'" stroke-width="1.4" marker-start="url(#tA)" marker-end="url(#tA)"/>'+
+    '<g transform="translate('+((X1+X2)/2+nx*10).toFixed(1)+' '+((Y1+Y2)/2+ny*10+4).toFixed(1)+')"><rect x="-26" y="-13" width="52" height="17" rx="4" fill="#fff"/>'+T(0,0,lab,13,BL)+'</g>'}
+  var cm=function(v){return (Math.round(v*10)/10)+' سم'};
+  /* 1) اللوح مفرود */
+  var s1=Math.min(300/a,170/Wf),x0=205-a*s1/2,y0=150-Wf*s1/2,w1=a*s1,h1=Wf*s1;
+  o+=T(205,26,'① اللوح مفرود (قبل الثني)',15)+'<rect x="'+x0+'" y="'+y0+'" width="'+w1+'" height="'+h1+'" fill="#eef3fb" stroke="'+K+'" stroke-width="2"/>'+D(x0,y0,x0+w1,y0,cm(a),-1)+D(x0+w1,y0,x0+w1,y0+h1,cm(Wf),1);
+  if(nb){var fs=f*s1;o+='<line x1="'+x0+'" y1="'+(y0+fs)+'" x2="'+(x0+w1)+'" y2="'+(y0+fs)+'" stroke="'+R+'" stroke-width="2" stroke-dasharray="8 5"/>'+T(x0+w1/2,y0+fs-5,'خط الثني ↑',12,R)+D(x0,y0,x0,y0+fs,cm(f),-1);
+   if(nb===2){o+='<line x1="'+x0+'" y1="'+(y0+h1-fs)+'" x2="'+(x0+w1)+'" y2="'+(y0+h1-fs)+'" stroke="'+R+'" stroke-width="2" stroke-dasharray="8 5"/>'+T(x0+w1/2,y0+h1-fs+15,s==='Z'?'خط الثني ↓ (عكس)':'خط الثني ↑',12,R)+D(x0,y0+h1-fs,x0,y0+h1,cm(f),-1)}}
+  o+=T(205,268,nb?'العرض المفرود = '+cm(b)+' + '+nb+'×'+cm(f)+' (تقريبي من غير خصم الثني)':'قطعة مسطحة من غير ثني',11,'#5b6475');
+  /* 2) المقطع (المنظر الأمامي) */
+  var s2=Math.min(300/b,150/Math.max(f*(s==='Z'?2:1),1)),cx=615-b*s2/2,by=s==='Z'?150:200,fp=f*s2,pts;
+  if(s==='L')pts=[[cx,by-fp],[cx,by],[cx+b*s2,by]];else if(s==='U')pts=[[cx,by-fp],[cx,by],[cx+b*s2,by],[cx+b*s2,by-fp]];else if(s==='Z')pts=[[cx,by-fp],[cx,by],[cx+b*s2,by],[cx+b*s2,by+fp]];else pts=[[cx,by],[cx+b*s2,by]];
+  o+=T(615,26,'② المقطع (شكل الثنية)',15)+'<polyline points="'+pts.map(function(z){return z[0].toFixed(1)+','+z[1].toFixed(1)}).join(' ')+'" fill="none" stroke="'+K+'" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'+D(cx,by,cx+b*s2,by,cm(b),1);
+  if(nb)o+=D(cx,by-fp,cx,by,cm(f),1)+(s==='U'?D(cx+b*s2,by,cx+b*s2,by-fp,cm(f),1):'')+(s==='Z'?D(cx+b*s2,by,cx+b*s2,by+fp,cm(f),-1):'')+'<path d="M'+(cx+14)+' '+(by-4)+'a12 12 0 0 0 -10 -10" fill="none" stroke="'+R+'" stroke-width="1.5"/>'+T(cx+30,by-12,'90°',11,R);
+  o+=T(615,268,'السمك '+(Math.round(t*100)/10)+' مم',12,'#5b6475');
+  /* 3) منظر علوي */
+  var s3=Math.min(300/a,150/b),x3=205-a*s3/2,y3=420-b*s3/2;
+  o+=T(205,306,'③ منظر من فوق',15)+'<rect x="'+x3+'" y="'+y3+'" width="'+(a*s3)+'" height="'+(b*s3)+'" fill="#f4f7fb" stroke="'+K+'" stroke-width="2"/>'+D(x3,y3+b*s3,x3+a*s3,y3+b*s3,cm(a),1)+D(x3+a*s3,y3,x3+a*s3,y3+b*s3,cm(b),-1);
+  if(s==='L'||s==='U'||s==='Z')o+='<rect x="'+x3+'" y="'+y3+'" width="'+(a*s3)+'" height="5" fill="'+K+'"/>';
+  if(s==='U'||s==='Z')o+='<rect x="'+x3+'" y="'+(y3+b*s3-5)+'" width="'+(a*s3)+'" height="5" fill="'+(s==='Z'?'#94a3b8':K)+'"/>';
+  /* 4) منظر جانبي */
+  var hh=nb?f:Math.max(t*4,0.6),s4=Math.min(300/a,120/hh),x4=615-a*s4/2,y4=430-hh*s4/2;
+  o+=T(615,306,'④ منظر من الجنب',15)+'<rect x="'+x4+'" y="'+y4+'" width="'+(a*s4)+'" height="'+(hh*s4)+'" fill="#f4f7fb" stroke="'+K+'" stroke-width="2"/>'+D(x4,y4+hh*s4,x4+a*s4,y4+hh*s4,cm(a),1)+(nb?D(x4,y4,x4,y4+hh*s4,'ارتفاع '+cm(f),-1):T(615,y4-10,'قطعة مسطحة',12,'#5b6475'));
+  o+=T(410,548,(p.n?p.n+' — ':'')+cm(a)+' × '+cm(b)+(nb?' — ثنية '+cm(f)+' ('+s+')':'')+(p.q>1?' — العدد '+p.q:''),14,K);
+  return o+'</svg>';
  }
  function steelSummary(o){
   var s=o.steel;if(!s)return '';
   var th=num(s.thick)/10,ps=s.pieces||[];
   var rows=ps.map(function(p){return '<tr><td>'+esc(p.n||'قطعة')+'</td><td>'+esc(p.a)+'×'+esc(p.b)+'</td><td>×'+esc(p.q)+'</td><td>'+esc(p.shape)+(p.shape!=='مسطحة'&&p.flange?' (ثنية '+esc(p.flange)+')':'')+'</td></tr>'}).join('');
-  var imgs=ps.map(function(p){return '<div style="display:inline-block;margin:3px;text-align:center;font-size:10px;width:140px">'+iso(p,th,-0.7,0.55,140,105)+'<br>'+esc(p.n||'قطعة')+' '+esc(p.a)+'×'+esc(p.b)+'</div>'}).join('');
+  var imgs=ps.map(function(p){return '<div style="margin:6px 0;page-break-inside:avoid">'+techSvg(p,th)+'</div>'}).join('');
   var lay='';try{var r=pack(num(s.W),num(s.H),ps,num(s.gap));lay=r.sheets.map(function(sh,i){return sheetSvg(num(s.W),num(s.H),sh,i)}).join('')}catch(e){}
   return '<p style="margin:8px 0 2px"><b>الاستانلس</b></p><table><tr><td>اللوح</td><td>'+esc(s.W)+'×'+esc(s.H)+' سم</td><td>عدد الألواح</td><td>'+esc(s.sheets)+'</td></tr>'+
    '<tr><td>السمك</td><td>'+esc(s.thick||'-')+' مم</td><td>النوع / التشطيب</td><td>'+esc(s.grade||'')+' / '+esc(s.finish||'')+'</td></tr>'+rows+'</table>'+
-   '<p style="margin:8px 0 2px"><b>شكل القطع</b></p><div>'+imgs+'</div><p style="margin:8px 0 2px"><b>تقطيع الألواح</b></p><div>'+lay+'</div>';
+   '<p style="margin:8px 0 2px"><b>رسم القطع للصنايعي (مقاسات بالسنتي)</b></p><div>'+imgs+'</div><p style="margin:8px 0 2px"><b>تقطيع الألواح</b></p><div>'+lay+'</div>';
  }
  /* قراءة رسالة واتساب: مقاسات (60×120) وعدد وشكل */
  function parseMsg(t){
@@ -6329,6 +6449,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="wkc"><h3>القطع <small style="color:var(--muted)">(اضغط 👁️ لعرضها 3D)</small></h3><div id="sP"></div><button type="button" class="wkbtn" id="sPA">➕ قطعة</button></div>'+
    '<div class="wkc"><h3>المجسّم 3D <small style="color:var(--muted)">(اسحب بإصبعك أو الماوس عشان تلفّه)</small></h3><div class="draw" id="s3d"></div>'+
    '<div class="wkrow" style="margin-top:8px;justify-content:center"><button type="button" class="wkbtn" id="rL">⟲ يمين</button><button type="button" class="wkbtn" id="rR">⟳ شمال</button><button type="button" class="wkbtn" id="rU">⬆</button><button type="button" class="wkbtn" id="rD">⬇</button><button type="button" class="wkbtn" id="rZ">↺ إعادة</button></div></div>'+
+   '<div class="wkc"><h3>📐 رسم الصنايعي (2D) <small style="color:var(--muted)">(ده اللي بيتطبع في الورقة)</small></h3><div id="s2d" style="overflow:auto"></div></div>'+
    '<div class="wkc"><h3>النتيجة وتقطيع الألواح</h3><div id="sR"></div><div id="sL"></div></div>'+
    '<div class="wkc"><h3>بيانات الأوردر</h3><div class="wkg">'+fi('sC','العميل',old?old.customer:(pre&&pre.customer)||'')+fi('sPh','تليفون',old?old.phone:(pre&&pre.phone)||'')+fi('sCr','الصنايعي',old?old.crafter:'')+fi('sPc','سعر البيع (بتكتبه إنت)',old?old.price:'','inputmode="decimal"')+fi('sPd','العربون',old?old.paid:'','inputmode="decimal"')+'</div>'+
    '<div class="wkf" style="margin-top:8px"><label>ملاحظات للصنايعي</label><textarea id="sNo" rows="2">'+esc(old?old.notes:(pre&&pre.note)||'')+'</textarea></div>'+
@@ -6336,8 +6457,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   function q(i){return b.querySelector('#'+i)}
   function show3d(){
    var p=S.pieces[SEL],el=q('s3d');if(!p)return;
-   if(!(num(p.a)>0&&num(p.b)>0)){el.innerHTML='<span style="color:var(--muted)">اكتب طول وعرض القطعة وهيظهر المجسّم</span>';return}
+   if(!(num(p.a)>0&&num(p.b)>0)){el.innerHTML='<span style="color:var(--muted)">اكتب طول وعرض القطعة وهيظهر المجسّم</span>';var d0=q('s2d');if(d0)d0.innerHTML='';return}
    V=mount3d(el,{a:num(p.a),b:num(p.b),shape:p.shape,flange:num(p.flange)||3},num(S.thick)/10);
+   var d2=q('s2d');if(d2)d2.innerHTML=techSvg({n:p.n,a:num(p.a),b:num(p.b),q:num(p.q)||1,shape:p.shape,flange:num(p.flange)||3},num(S.thick)/10);
   }
   function drawP(){
    q('sP').innerHTML=S.pieces.map(function(p,i){return '<div class="wkg" style="margin-bottom:8px;align-items:end;'+(i===SEL?'background:#eef6f7;padding:6px;border-radius:10px':'')+'">'+
