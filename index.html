@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-7';
+const APP_VER='2026-10-15-8';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5841,5 +5841,27 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 })();
 </script>
 
+<script>
+/* mk: «أنظمة الشغل» و«كلمات الواتساب المفتاحية» في القايمة الجانبية (أدمن فقط) */
+(function(){
+ function mk(id,label,fn){
+  var b=document.createElement('button');b.id=id;b.type='button';b.style.display='none';
+  b.innerHTML='<span style="font-size:18px;width:20px;text-align:center">'+label.ico+'</span> <span>'+label.t+'</span>';
+  b.onclick=function(){try{fn()}catch(e){toast('الشاشة لسه بتتحمّل، جرّب تاني')}};
+  return b;
+ }
+ function add(){
+  var s=document.querySelector('aside nav.nav:last-of-type');if(!s||document.getElementById('mkSideKw'))return !!document.getElementById('mkSideKw');
+  s.appendChild(mk('mkSideWk',{ico:'🛠️',t:'أنظمة الشغل'},function(){window.mkWk.menu()}));
+  s.appendChild(mk('mkSideKw',{ico:'🔑',t:'كلمات الواتساب المفتاحية'},function(){window.mkKw.open()}));
+  return true;
+ }
+ setInterval(function(){
+  add();
+  var adm=!!(window.mkT_user&&window.mkT_user.role==='admin');
+  ['mkSideWk','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
+ },1500);
+})();
+</script>
 </body>
 </html>
