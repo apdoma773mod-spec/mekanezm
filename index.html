@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-17';
+const APP_VER='2026-10-15-18';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2091,11 +2091,21 @@ const n2=v=>r2(+v||0);
 const ownerWa=()=>db.settings.ownerPhone||db.settings.phone||'';
 /* الطباعة جوه السيستم نفسه (مش نافذة جديدة) — عشان على أيقونة الآيفون يبقى فيه زرار رجوع */
 function closePrint(){let x=document.getElementById('mkPrint');if(x)x.remove();document.body.classList.remove('mkp-on')}
-function printHTML(html){closePrint();
+function mkIsMob(){return /iPad|iPhone|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+ function mkTabPrint(html){
+  if(!mkIsMob())return false;
+  var w=null;try{w=window.open('','_blank')}catch(e){}
+  if(!w)return false;
+  var bar='<div id="mkb" style="position:sticky;top:0;z-index:99;background:#fff;border-bottom:1px solid #ccc;padding:10px;display:flex;gap:10px;justify-content:space-between;direction:rtl;font-family:Tahoma,Arial"><button type="button" onclick="window.close();setTimeout(function(){history.length>1&&history.back()},200)" style="padding:12px 18px;font-size:16px;border-radius:12px;border:1px solid #bbb;background:#fff">→ رجوع للسيستم</button><button type="button" onclick="window.print()" style="padding:12px 18px;font-size:16px;border-radius:12px;border:0;background:#087f8c;color:#fff">🖨️ اطبع</button></div><style>@media print{#mkb{display:none!important}}</style>';
+  var h=/<body[^>]*>/i.test(html)?html.replace(/<body[^>]*>/i,function(m){return m+bar}):bar+html;
+  try{w.document.open();w.document.write(h);w.document.close();return true}catch(e){try{w.close()}catch(_){}return false}
+ }
+ window.addEventListener('afterprint',function(){document.body.classList.remove('mkp-on')});
+ function printHTML(html){closePrint();if(mkTabPrint(html))return;
  document.body.insertAdjacentHTML('beforeend','<div id="mkPrint"><div class="mkpbar"><button type="button" id="mkpBack">→ رجوع</button><b>معاينة الطباعة</b><button type="button" id="mkpGo">🖨️ اطبع</button></div><iframe id="mkpF" title="طباعة"></iframe></div>');
- document.body.classList.add('mkp-on');let f=document.getElementById('mkpF');f.srcdoc=html;
+ let f=document.getElementById('mkpF');f.srcdoc=html;
  document.getElementById('mkpBack').onclick=closePrint;
- document.getElementById('mkpGo').onclick=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){toast('الطباعة مااشتغلتش')}}}
+ document.getElementById('mkpGo').onclick=()=>{try{document.body.classList.add('mkp-on');f.contentWindow.focus();f.contentWindow.print()}catch(e){document.body.classList.remove('mkp-on');toast('الطباعة مااشتغلتش')}setTimeout(()=>document.body.classList.remove('mkp-on'),1500)}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('mkPrint'))closePrint()});
 window.mkPrintHTML=printHTML;window.mkClosePrint=closePrint;
 const PRINT_HEAD='<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap">';
