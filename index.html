@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-23';
+const APP_VER='2026-10-15-24';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6737,8 +6737,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   clearTimeout(d._t);d._t=setTimeout(function(){d.style.opacity='0'},1800);
  }
  /* خانات ليها معالج باركود بتاعها: نسيبها تشتغل */
- var OWN=['txSearch','scanTyped','wkQ'];
- function ownField(e){if(!e)return false;if(OWN.indexOf(e.id)>-1)return true;if(e.dataset&&e.dataset.scanOwn)return true;var sec=e.closest&&e.closest('#daybook');return !!(sec&&e.tagName==='INPUT'&&/بحث|صنف|باركود/.test(e.placeholder||''))}
+ /* الكيبورد عربي أو إنجليزي مش فارق: بناخد الحرف من مكان الزرار نفسه (e.code)، فـ «ةن-0042» بتتقري «MK-0042».
+    عشان كده المسحة بيقراها النظام هنا في كل الخانات (حتى بحث الفاتورة واليومية) بدل ما الخانة تاخد الحروف العربي */
+ var OWN=['scanTyped','wkQ'];
+ function ownField(e){if(!e)return false;if(OWN.indexOf(e.id)>-1)return true;return !!(e.dataset&&e.dataset.scanOwn)}
  function codeField(e){
   if(!e||!/^(INPUT|TEXTAREA)$/.test(e.tagName))return false;
   var s=[e.id,e.name,e.placeholder,e.getAttribute('aria-label'),e.closest&&e.closest('label')&&e.closest('label').textContent].join(' ');
@@ -6826,7 +6828,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(!known&&avg>SURE)return;
    var ae=document.activeElement;
    if(ownField(ae))return;                       // الخانة ليها معالجها
-   if(codeField(ae)&&!txOpen()){if(e.key==='Tab')return;e.preventDefault();return}   // بيكتب كود صنف: نسيبه
+   if(codeField(ae)&&!txOpen()){   // بيسجّل كود صنف: نكتبه في الخانة بالإنجليزي الصح حتى لو الكيبورد عربي
+    if(e.key!=='Tab')e.preventDefault();
+    if(ae===el0&&val0!==null){ae.value=val0+code;try{ae.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
+    return;
+   }
    if(/^(WK|FD)-?\d/i.test(code))return;          // معالج أنظمة الشغل
    e.preventDefault();e.stopPropagation();
    if(el0&&val0!==null&&typeof el0.value==='string'&&el0.value!==val0){el0.value=val0;try{el0.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
