@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-5';
+const APP_VER='2026-10-15-6';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5625,16 +5625,16 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    var x=rec.slice().reverse()[+b.dataset.k];
    try{var r=await SBc().rpc('wa_rules_promote',{p_msg_id:'',p_phone:x.phone,p_name:x.name,p_body:x.text});if(r.error)throw r.error;b.textContent='✔ اتحوّلت لطلب';b.disabled=true}catch(e){toast('مقدرتش: '+(e.message||e))}}});
   m.querySelector('#kwSave').onclick=async function(){
-   try{var v=collect();var r=await SBc().from('mk_settings').upsert([{key:KEY,value:v}],{onConflict:'key'});if(r.error)throw r.error;toast('✔ اتحفظت القواعد');closeModal()}catch(e){toast('مقدرتش أحفظ: '+(e.message||e))}};
+   try{var v=collect();var r=await SBc().from('mk_settings').upsert([{key:KEY,value:v}],{onConflict:'key'});if(r.error)throw r.error;toast('✔ اتحفظت القواعد');closeModal()}catch(e){alert('مقدرتش أحفظ:\n'+[e&&e.message,e&&e.code,e&&e.details,e&&e.hint].filter(Boolean).join('\n'))}};
  }
  async function open(){
-  if(typeof isAdmin==='function'&&!isAdmin())return toast('الشاشة دي للمدير بس');
+  if(!(window.mkT_user&&window.mkT_user.role==='admin'))return toast('الشاشة دي للمدير بس');
   await load();draw();
  }
  window.mkKw={open:open};
  function addCard(){
   var s=document.getElementById('settings');if(!s||document.getElementById('kwCard'))return;
-  if(typeof isAdmin==='function'&&!isAdmin())return;
+  if(!(window.mkT_user&&window.mkT_user.role==='admin'))return;
   var c=document.createElement('div');c.className='card';c.id='kwCard';c.style.marginTop='14px';
   c.innerHTML='<h3>🔑 كلمات الواتساب المفتاحية</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">الرسايل اللي مفيهاش كلمة منهم بتتجاهل. تضيف وتعدّل بنفسك.</p><button type="button" class="primary" onclick="mkKw.open()">فتح الشاشة</button>';
   s.appendChild(c);
@@ -5659,7 +5659,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function today(){return new Date().toISOString().slice(0,10)}
  async function get(k,def){try{var r=await SBc().from('mk_settings').select('value').eq('key',k).maybeSingle();return (r.data&&r.data.value)||def}catch(e){return def}}
  async function put(k,v){var r=await SBc().from('mk_settings').upsert([{key:k,value:v}],{onConflict:'key'});if(r.error)throw r.error}
- function adminOnly(){if(typeof isAdmin==='function'&&!isAdmin()){toast('الشاشة دي للمدير بس');return false}return true}
+ function adminOnly(){if(!(window.mkT_user&&window.mkT_user.role==='admin')){toast('الشاشة دي للمدير بس');return false}return true}
  function inp(id,label,val,type,extra){return '<div class="field"><label>'+label+'</label><input id="'+id+'" '+(type?'type="'+type+'" ':'')+'value="'+esc(val)+'" '+(extra||'')+'></div>'}
 
  /* ---------- القائمة الرئيسية ---------- */
@@ -5752,7 +5752,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   m.querySelector('#lfSave').onclick=async function(){
    var v=read();if(!v.customer||!v.w||!v.h)return toast('اكتب العميل والمقاس');
    if(i>=0)LEAF[i]=v;else LEAF.push(v);
-   try{await put(K.leaf,LEAF);toast('✔ اتحفظت');leaf()}catch(e){toast('مقدرتش أحفظ: '+(e.message||e))}};
+   try{await put(K.leaf,LEAF);toast('✔ اتحفظت');leaf()}catch(e){alert('مقدرتش أحفظ:\n'+[e&&e.message,e&&e.code,e&&e.details,e&&e.hint].filter(Boolean).join('\n'))}};
  }
 
  /* ---------- بضاعة العرض ---------- */
@@ -5831,7 +5831,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  window.mkWk={menu:function(){if(adminOnly())menu()},leaf:leaf,disp:disp,exps:exps,steel:steel};
  function addCard(){
   var s=document.getElementById('settings');if(!s||document.getElementById('wkCard'))return;
-  if(typeof isAdmin==='function'&&!isAdmin())return;
+  if(!(window.mkT_user&&window.mkT_user.role==='admin'))return;
   var c=document.createElement('div');c.className='card';c.id='wkCard';c.style.marginTop='14px';
   c.innerHTML='<h3>🛠️ أنظمة الشغل</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">دلف الألمنيوم، بضاعة العرض، مصاريف المعرض، حاسبة الاستانلس.</p><button type="button" class="primary" onclick="mkWk.menu()">فتح</button>';
   s.appendChild(c);
