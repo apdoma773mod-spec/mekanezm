@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-15-35';
+const APP_VER='2026-10-15-36';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6687,7 +6687,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  })();
  var tw=setInterval(function(){addCard();if(document.getElementById('wkCard'))clearInterval(tw)},1500);
  var _sp0=window.showPage;if(typeof _sp0==='function'){window.showPage=function(id){var r=_sp0.apply(this,arguments);if(id==='settings')setTimeout(addCard,50);return r}}
- window.mkWk={menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
+ window.mkWk={go:async function(k){if(!isAdm()){toast('الشاشة دي للمدير بس');return}await loadAll();NS=1;({ord:viewOrders,new:function(){viewForm(null,'دلفة')},steel:function(){viewSteel(null)},off:function(){viewOff()},disp:viewDisp,exp:viewExps}[k]||viewOrders)()},menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
 })();
 </script>
 
@@ -7472,6 +7472,12 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   tf:['#0EA5E9','<rect x="3" y="4" width="8" height="15" rx="2"/><path d="M14 9h7v8h-7z"/><path d="M8 3.5c4-1.5 8 0 10 4"/>'],
   site:['#4338CA','<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'],
   custTerms:['#94A3B8','<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8" r="1.4"/>'],
+  wkOrd:['#9A3412','<path d="M8 4h8v3H8z"/><path d="M6 5.5H5v15h14v-15h-1"/><path d="m8.5 11 1.5 1.5 3-3M8.5 16.5h7"/>'],
+  wkLeaf:['#A16207','<path d="M6 3h11v18H6z"/><path d="M9 6h5v12H9zM15 11v3"/>'],
+  wkSteel:['#3F5873','<path d="M3 11l9-5 9 5-9 5z"/><path d="M3 11v4l9 5 9-5v-4"/>'],
+  wkOff:['#86198F','<path d="M3 18h16M5 14h11M4 10h7M6 6h4"/>'],
+  wkDisp:['#4C1D95','<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 9h16M4 15h16"/>'],
+  wkExp:['#7F1D1D','<path d="M6 3h11v18l-2.7-1.8-2.8 1.8-2.8-1.8L6 21z"/><path d="M9 8h5M9 12h5"/>'],
   logout:['#111827','<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h10"/>']
  };
  function ic(k){var d=I[k];return d?'<span class="mkic" style="--c:'+d[0]+'">'+P+d[1]+E+'</span>':''}
@@ -7500,6 +7506,12 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   productNew:'<ellipse class="sh" cx="30" cy="57" rx="22" ry="3.5"/>'+iso(30,56,18,22)+'<path class="kt" style="stroke-width:1.4" d="M16 39v-8M18.5 40.2v-8M21.5 41.8v-8M24 43v-8"/><circle class="md" cx="49.5" cy="17.5" r="11"/><circle class="m" cx="49" cy="16" r="11"/><path class="mi" style="stroke-width:3.2" d="M49 10v12M43 16h12"/>',
   quotes:sh('<path class="w" d="M12 6h23l11 11v40H12z"/>')+'<path class="ws" d="M35 6v11h11z"/><path class="kt" d="M17 22h20M17 28h20M17 34h13"/><g transform="rotate(-18 46 45)"><path class="md" d="M34 41.5h15l6.5 6.5-6.5 6.5H34z"/><path class="m" d="M33 40h15l6.5 6.5L48 53H33z"/><circle class="w" cx="37.5" cy="46.5" r="2"/><path class="mi" style="stroke-width:2" d="M42 44.5h5M42 48.5h3.5"/></g>',
   sales:'<g transform="rotate(-8 30 32)">'+rc(16,8,26,40,'ws')+'</g>'+sh(rc(10,8,28,42,'w'))+'<path class="kt" d="M15 16h18M15 22h18M15 28h12M15 34h16"/><circle style="fill:none;stroke:#FFC21A;stroke-width:3.4" cx="46" cy="45" r="10"/><path class="ml" d="M41 45l3.5 3.5 6.5-7"/>',
+  wkOrd:sh('<rect class="w" x="12" y="10" width="34" height="46" rx="4"/>')+'<rect class="g" x="21" y="6" width="16" height="9" rx="3"/><path class="k" d="M18 24l3 3 5-5M18 35l3 3 5-5"/><path class="kt" d="M30 25h10M30 36h10M18 46h22"/><circle class="sh" cx="49.5" cy="48" r="11"/><g class="spin"><path class="m" d="'+gp(48,46,11,8,3.4)+'"/><circle class="md" cx="48" cy="46" r="4.2"/><circle class="w" cx="48" cy="46" r="2.2"/></g>',
+  wkLeaf:'<path class="ws" d="M42 8l8 4v42l-8 4z"/><path class="w" d="M14 8h28v50H14z"/><rect class="k" style="stroke-width:2" x="19" y="13" width="18" height="40" rx="1.5"/><circle class="g" cx="17.5" cy="18" r="3"/><circle class="g" cx="17.5" cy="48" r="3"/><rect class="m" x="33" y="27" width="3" height="12" rx="1.5"/><g transform="rotate(35 50 40)"><rect class="m" x="47" y="20" width="6" height="26"/><rect class="md" x="50" y="20" width="3" height="26"/><path class="w" d="M47 46h6l-3 6z"/><path class="kf" d="M49 50h2l-1 2z"/></g>',
+  wkSteel:'<ellipse class="sh" cx="33" cy="56" rx="26" ry="3.5"/><path class="w" d="M8 30 32 18 58 30 34 42z"/><path class="w9" d="M8 30 34 42v10L8 40z"/><path class="ws" d="M34 42 58 30v10L34 52z"/><path class="kt" d="M18 29.5l13-6.5M25 33l13-6.5M32 36.5l13-6.5"/><path class="ml" style="stroke-width:2.4" d="M9 22 31 11"/><path class="ml" style="stroke-width:2.4" d="M26.5 10.5 31 11l-1.8 4.2M13.5 23.5 9 22l1.8-4.2"/><circle class="md" cx="50.5" cy="15.5" r="6"/><circle class="m" cx="50" cy="14.5" r="6"/><path class="mi" style="stroke-width:1.8" d="M47.5 14.5h5M50 12v5"/>',
+  wkOff:(function(){var b=function(x,y,l){return '<path class="w" d="M'+x+' '+y+'h'+l+'l5-4h-'+l+'z"/><rect class="w9" x="'+x+'" y="'+y+'" width="'+l+'" height="7"/><path class="ws" d="M'+(x+l)+' '+y+'l5-4v7l-5 4z"/>'};return '<ellipse class="sh" cx="32" cy="58" rx="26" ry="3"/>'+b(6,50,46)+b(10,40,34)+b(8,30,22)+b(12,20,13)})()+'<rect class="md" x="41" y="11" width="16" height="16" rx="4"/><rect class="m" x="40" y="10" width="16" height="16" rx="4"/><circle class="md" cx="48" cy="18" r="4"/><path class="m" d="M40 21H24v4h16z"/><path class="kt" style="stroke:#7a4d00;stroke-width:1.2" d="M27 21v2M31 21v2M35 21v2"/>',
+  wkDisp:'<rect class="sh" x="10.5" y="11" width="48" height="50" rx="3"/><rect class="w" x="8" y="8" width="48" height="50" rx="3"/><rect class="sc" x="12" y="12" width="40" height="42" rx="2"/><rect class="w" x="12" y="27" width="40" height="3"/><rect class="w" x="12" y="42" width="40" height="3"/><rect class="m" x="16" y="18" width="8" height="9" rx="1"/><rect class="md" x="27" y="15" width="6" height="12" rx="1"/><rect class="kf" x="37" y="21" width="12" height="3" rx="1.5"/><rect class="kf" x="16" y="35" width="3" height="7" rx="1"/><rect class="m" x="24" y="33" width="10" height="9" rx="1"/><circle class="md" cx="43" cy="38" r="4"/><rect class="m" x="16" y="48" width="30" height="5" rx="1"/><path class="wl" style="stroke-width:2" d="M58 4v6M55 7h6"/>',
+  wkExp:sh(rc(10,6,26,40,'w'))+'<path class="kt" d="M15 14h16M15 20h16M15 26h10"/><g transform="rotate(-12 44 44)"><rect class="sh" x="30.5" y="37" width="30" height="17" rx="2.5"/><rect class="w" x="28" y="34" width="30" height="17" rx="2.5"/><circle class="k" style="stroke-width:2" cx="43" cy="42.5" r="4.6"/><path class="kt" d="M32 38.5v8M54 38.5v8"/></g><path class="ml" d="M46 22l9-9M48 13h7v7"/>',
   purchases:'<g transform="rotate(-8 28 30)">'+rc(14,6,24,38,'ws')+'</g>'+sh(rc(8,6,26,40,'w'))+'<path class="kt" d="M13 14h16M13 20h16M13 26h10M13 32h14"/>'+iso(46,59,12,13)
  };
  function ill(k){var s=IL[k],d=I[k];return s&&d?'<span class="mkill" style="--c:'+d[0]+'"><svg viewBox="0 0 64 64" aria-hidden="true">'+s+'</svg></span>':ic(k)}
@@ -7526,7 +7538,12 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   ['daybook','يومية المحل','اكتب البيعة على طول',function(){showPage('daybook')},0,'dbCount'],
   ['waorders','طلبات الواتساب','اللي جت النهارده',function(){showPage('waorders')}],
   ['tf','تحويلات الواتساب','بتتقري لوحدها',function(){window.mkTf&&mkTf.open()},1],
-  ['mkSideWk','أنظمة الشغل','دلف، استانلس، فضل',function(){window.mkWk&&mkWk.menu()},1],
+  ['wkOrd','الأوردرات','خط سير كل أوردر',function(){window.mkWk&&mkWk.go('ord')},1],
+  ['wkLeaf','أوردر دلفة','دلفة جديدة برسمة',function(){window.mkWk&&mkWk.go('new')},1],
+  ['wkSteel','الاستانلس','حاسبة وتقطيع',function(){window.mkWk&&mkWk.go('steel')},1],
+  ['wkOff','الفضل','الفضلات والقص',function(){window.mkWk&&mkWk.go('off')},1],
+  ['wkDisp','العرض','بضاعة العرض',function(){window.mkWk&&mkWk.go('disp')},1],
+  ['wkExp','مصاريف الشغل','اللي اتصرف على الأوردرات',function(){window.mkWk&&mkWk.go('exp')},1],
   ['products','الأصناف والمخزون','بحث ورصيد وأسعار',function(){showPage('products')}],
   ['contacts','العملاء والموردين','الحسابات والأرصدة',function(){showPage('contacts')}],
   ['debts','الديون والتذكير','مين عليه فلوس',function(){showPage('debts')},1],
@@ -7538,7 +7555,7 @@ body.mkpro.mkdark .dbent,body.mkpro.mkdark .dbg{background:var(--g2)}
   var box=document.getElementById('mkLaunch');
   if(!box){box=document.createElement('div');box.id='mkLaunch';box.className='mkLaunch';var tr=d.querySelector('.title-row');if(tr)tr.after(box);else d.prepend(box)}
   var e=emp(),L=T.filter(function(t){return !(t[4]&&e)&&(t[0]!=='shipping'||document.getElementById('shipping'))&&(t[0]!=='waorders'||document.getElementById('waorders'))&&(t[0]!=='debts'||document.getElementById('debts'))});
-  var sig='v2'+String(e)+L.map(function(t){return t[0]+(t[5]?cnt(t[5]):'')}).join(',');if(box.dataset.sig===sig)return;box.dataset.sig=sig;
+  var sig='v3'+String(e)+L.map(function(t){return t[0]+(t[5]?cnt(t[5]):'')}).join(',');if(box.dataset.sig===sig)return;box.dataset.sig=sig;
   box.innerHTML=L.map(function(t){var n=t[5]?cnt(t[5]):0;return '<button type="button" data-i="'+T.indexOf(t)+'" style="--c:'+I[t[0]][0]+'">'+(n?'<span class="cnt">'+n+'</span>':'')+ill(t[0])+'<span>'+t[1]+(t[2]?'<small>'+t[2]+'</small>':'')+'</span></button>'}).join('');
   box.querySelectorAll('button').forEach(function(b){b.onclick=function(){try{T[+b.dataset.i][3]()}catch(err){toast('الشاشة لسه بتتحمّل، جرّب تاني')}}});
  }
