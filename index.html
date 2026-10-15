@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-06';
+const APP_VER='2026-10-16-08';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6075,7 +6075,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     (withPrice?'<tr><td>السعر</td><td>'+fmt(num(o.price))+' ج</td><td>العربون</td><td>'+fmt(num(o.paid))+' ج</td></tr>':'')+'</table>'+
     (mats?'<p style="margin:6px 0 2px"><b>الخامات</b></p><table><tr><th>الصنف</th><th>الكمية</th>'+(withPrice?'<th>السعر</th>':'')+'</tr>'+mats+'</table>':'')+
     ((o.kind==='hinge'||o.kind==='slide')?'<div class="c" style="margin-top:8px">'+svg(o,paper==='a4')+'</div>':'')+
-    (o.type==='استانلس'&&o.steel?steelSummary(o):'')+
+    (o.type==='استانلس'&&o.steel?steelSummary(o,paper):'')+
     '<p style="margin:8px 0 2px"><b>خط السير</b></p><div>'+st.map(function(s){return '<span style="display:inline-block;margin-left:10px"><i class="bx"></i>'+esc(s)+'</span>'}).join('')+'</div>';
   }
   var bc='<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script><script>window.onload=function(){document.querySelectorAll("svg.bc").forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:"CODE128",displayValue:true,fontSize:12,margin:0,height:'+(paper==='lab'?'22':'40')+'})}catch(e){}})}<\/script>';
@@ -6432,11 +6432,43 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   o+=T(410,548,(p.n?p.n+' — ':'')+(s==='U'?'عرض الباب '+cm(a)+' × تخانة الباب '+cm(b):cm(a)+' × '+cm(b))+(nb?' — ثنية '+cm(f)+' ('+s+')':'')+(p.q>1?' — العدد '+p.q:''),14,K);
   return o+'</svg>';
  }
- function steelSummary(o){
+ /* رسم الصنايعي لورق الفواتير (رول 80/58): كلام كبير، خطوط تقيلة أبيض وأسود، رسمتين بس (شكل الثنية + اللوح مفرود) تحت بعض */
+ function techRoll(p,th){
+  var a=num(p.a),b=num(p.b),f=num(p.flange)||3,s=p.shape,nb=s==='L'?1:(s==='U'||s==='Z')?2:0,Wf=b+nb*f;if(!(a>0&&b>0))return '';
+  var cm=function(v){return (Math.round(v*10)/10)+' سم'},big='font-size:17px;font-weight:800;line-height:1.55';
+  var lab=s==='U'?['عرض الباب','تخانة الباب']:s==='L'?['الطول','عرض القاعدة']:s==='Z'?['الطول','المسافة بين الثنيتين']:['الطول','العرض'];
+  var box='<div style="border:2.5px solid #000;border-radius:6px;padding:6px 8px;margin:6px 0;'+big+'">'+(p.n?'<div style="font-size:19px;text-align:center;border-bottom:2px solid #000;margin-bottom:4px">'+esc(p.n)+(num(p.q)>1?' — العدد '+num(p.q):'')+'</div>':(num(p.q)>1?'<div style="text-align:center">العدد '+num(p.q)+'</div>':''))+
+   '<div>'+lab[0]+': <span style="font-size:22px">'+cm(a)+'</span></div><div>'+lab[1]+': <span style="font-size:22px">'+cm(b)+'</span></div>'+
+   (nb?'<div>ارتفاع الثنية: <span style="font-size:22px">'+cm(f)+'</span>'+(nb===2?' (×2)':'')+'</div><div>اللوح مفرود: <span style="font-size:20px">'+cm(a)+' × '+cm(Wf)+'</span></div>':'<div>قطعة مسطحة من غير ثني</div>')+'</div>';
+  function T(x,y,t,sz){return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" font-size="'+(sz||24)+'" font-weight="800" fill="#000" text-anchor="middle" font-family="Cairo,Tahoma,Arial">'+esc(t)+'</text>'}
+  function D(x1,y1,x2,y2,t,side){var dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,nx=-dy/L*side,ny=dx/L*side,o=26,X1=x1+nx*o,Y1=y1+ny*o,X2=x2+nx*o,Y2=y2+ny*o,mx=(X1+X2)/2+nx*20,my=(Y1+Y2)/2+ny*20+8;
+   return '<path d="M'+x1+' '+y1+'L'+(X1+nx*5)+' '+(Y1+ny*5)+'M'+x2+' '+y2+'L'+(X2+nx*5)+' '+(Y2+ny*5)+'" stroke="#000" stroke-width="1.5"/><line x1="'+X1+'" y1="'+Y1+'" x2="'+X2+'" y2="'+Y2+'" stroke="#000" stroke-width="2.5" marker-start="url(#rA)" marker-end="url(#rA)"/>'+
+    '<rect x="'+(mx-52)+'" y="'+(my-24)+'" width="104" height="31" fill="#fff"/>'+T(mx,my,t,24)}
+  var defs='<defs><marker id="rA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#000"/></marker></defs>';
+  var out=box;
+  /* ① شكل الثنية (المقطع) */
+  if(nb){var bw=230,fh=s==='Z'?95:150,x0=85,y0=s==='Z'?135:200,pts;
+   if(s==='L')pts=[[x0,y0-fh],[x0,y0],[x0+bw,y0]];else if(s==='U')pts=[[x0,y0-fh],[x0,y0],[x0+bw,y0],[x0+bw,y0-fh]];else pts=[[x0,y0-fh],[x0,y0],[x0+bw,y0],[x0+bw,y0+fh]];
+   var H1=s==='Z'?330:290;
+   out+='<div style="font-size:17px;font-weight:800;text-align:center;margin-top:8px">① شكل الثنية</div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 '+H1+'" style="width:100%;height:auto;direction:ltr">'+defs+
+    '<polyline points="'+pts.map(function(z){return z.join(',')}).join(' ')+'" fill="none" stroke="#000" stroke-width="9" stroke-linejoin="miter" stroke-linecap="square"/>'+
+    D(x0,y0,x0+bw,y0,cm(b),1)+D(x0,y0-fh,x0,y0,cm(f),1)+(s==='U'?D(x0+bw,y0,x0+bw,y0-fh,cm(f),1):'')+(s==='Z'?D(x0+bw,y0,x0+bw,y0+fh,cm(f),-1):'')+
+    (s==='U'?T(x0+bw/2,y0-fh/2,'تخانة الباب',22):'')+'</svg>'}
+  /* ② اللوح مفرود بخطوط الثني */
+  var W2=300,H2=Math.max(110,Math.min(230,W2*Wf/a)),x2=55,y2=40,fs=nb?H2*f/Wf:0;
+  out+='<div style="font-size:17px;font-weight:800;text-align:center;margin-top:8px">'+(nb?'② اللوح مفرود قبل الثني':'① القطعة')+'</div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 '+(H2+120)+'" style="width:100%;height:auto;direction:ltr">'+defs+
+   '<rect x="'+x2+'" y="'+y2+'" width="'+W2+'" height="'+H2+'" fill="none" stroke="#000" stroke-width="5"/>'+D(x2,y2+H2,x2+W2,y2+H2,cm(a),1)+D(x2+W2,y2,x2+W2,y2+H2,cm(Wf),-1);
+  if(nb){out+='<line x1="'+x2+'" y1="'+(y2+fs)+'" x2="'+(x2+W2)+'" y2="'+(y2+fs)+'" stroke="#000" stroke-width="3.5" stroke-dasharray="14 8"/>'+T(x2+W2/2,y2+fs/2+9,cm(f),22);
+   if(nb===2)out+='<line x1="'+x2+'" y1="'+(y2+H2-fs)+'" x2="'+(x2+W2)+'" y2="'+(y2+H2-fs)+'" stroke="#000" stroke-width="3.5" stroke-dasharray="14 8"/>'+T(x2+W2/2,y2+H2-fs/2+9,cm(f),22)}
+  out+='</svg>'+(nb?'<div style="font-size:15px;font-weight:800;text-align:center">الخط المتقطّع = مكان الثني'+(s==='Z'?' (التانية عكس الأولى)':'')+'</div>':'');
+  return '<div style="page-break-inside:avoid;border-top:3px dashed #000;padding-top:6px;margin-top:8px">'+out+'</div>';
+ }
+ function steelSummary(o,paper){
   var s=o.steel;if(!s)return '';
   var th=num(s.thick)/10,ps=s.pieces||[];
   var rows=ps.map(function(p){return '<tr><td>'+esc(p.n||'قطعة')+'</td><td>'+esc(p.a)+'×'+esc(p.b)+'</td><td>×'+esc(p.q)+'</td><td>'+esc(p.shape)+(p.shape!=='مسطحة'&&p.flange?' (ثنية '+esc(p.flange)+')':'')+'</td></tr>'}).join('');
-  var imgs=ps.map(function(p){return '<div style="margin:6px 0;page-break-inside:avoid">'+techSvg(p,th)+'</div>'}).join('');
+  var roll=paper==='r80'||paper==='r58';
+  var imgs=ps.map(function(p){return roll?techRoll(p,th):'<div style="margin:6px 0;page-break-inside:avoid">'+techSvg(p,th)+'</div>'}).join('');
   var lay='';try{var r=pack(num(s.W),num(s.H),ps,num(s.gap));lay=r.sheets.map(function(sh,i){return sheetSvg(num(s.W),num(s.H),sh,i)}).join('')}catch(e){}
   return '<p style="margin:8px 0 2px"><b>الاستانلس</b></p><table><tr><td>اللوح</td><td>'+esc(s.W)+'×'+esc(s.H)+' سم</td><td>عدد الألواح</td><td>'+esc(s.sheets)+'</td></tr>'+
    '<tr><td>السمك</td><td>'+esc(s.thick||'-')+' مم</td><td>النوع / التشطيب</td><td>'+esc(s.grade||'')+' / '+esc(s.finish||'')+'</td></tr>'+rows+'</table>'+
