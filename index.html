@@ -447,7 +447,12 @@ function applyTheme(){
  r.setProperty('--tint',mix(T.primary,.12));r.setProperty('--tint2',mix(T.primary,.06));r.setProperty('--tintb',mix(T.primary,.25));
  let [R,G,B]=hx(T.primary);r.setProperty('--ring',`rgba(${R},${G},${B},.12)`);r.setProperty('--onblue',textOn(T.primary));r.setProperty('--onaccent',textOn(T.accent));
  let b=document.body.style;b.fontFamily=fontStack(T.font);
- if(T.bgImg){let [br,bg_,bb]=hx(T.bg),a=1-T.bgClarity/100;b.backgroundImage=`linear-gradient(rgba(${br},${bg_},${bb},${a}),rgba(${br},${bg_},${bb},${a})),url(${T.bgImg})`;b.backgroundSize='cover';b.backgroundPosition='center';b.backgroundAttachment='fixed'}else{b.backgroundImage='none'}
+ /* صورة الخلفية في طبقة ثابتة بمقاس الشاشة بس: كانت متمدّدة على طول الصفحة كلها (background-size:cover على body) وده كان بيخلي رسم الشاشة على الآيفون بطيء جدًا */
+ {let L=document.getElementById('mkThBg');b.backgroundImage='none';b.backgroundAttachment='';
+  if(T.bgImg){let [br,bg_,bb]=hx(T.bg),a=1-T.bgClarity/100,k=T.bgImg.length+'|'+T.bg+'|'+T.bgClarity;
+   if(!L){L=document.createElement('div');L.id='mkThBg';L.setAttribute('aria-hidden','true');L.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:-2;pointer-events:none;background-size:cover;background-position:center;background-repeat:no-repeat';document.body.prepend(L)}
+   if(L.dataset.k!==k){L.dataset.k=k;L.style.backgroundImage=`linear-gradient(rgba(${br},${bg_},${bb},${a}),rgba(${br},${bg_},${bb},${a})),url(${T.bgImg})`}}
+  else if(L)L.remove()}
  let bl=document.getElementById('brandLogo');if(bl){if(T.logo&&T.logoHeader){bl.src=T.logo;bl.style.display='block'}else bl.style.display='none'}
  let mt=document.getElementById('metaTheme');if(mt)mt.content=T.primary;
 }
@@ -1622,7 +1627,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-35';
+const APP_VER='2026-10-16-36';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
