@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-43';
+const APP_VER='2026-10-16-44';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8547,6 +8547,27 @@ window.openSplit=function(){if(!(window.mkT_user&&window.mkT_user.role==='admin'
 /* زرار في صفحة المنتجات */
 function btn(){let sec=document.getElementById('products');if(!sec||document.getElementById('mkSplitB'))return;let row=sec.querySelector('.title-row .btnrow')||sec.querySelector('.title-row');if(!row)return;let b=document.createElement('button');b.id='mkSplitB';b.type='button';b.className='secondary';b.textContent='🔪 فك لفة / تقسيم';b.onclick=openSplit;row.appendChild(b)}
 let ra=window.renderAll;if(typeof ra==='function')window.renderAll=function(){ra.apply(this,arguments);try{btn()}catch(e){}};
+})();
+</script>
+<script>
+/* ميكانيزم — 💾 النسخ الاحتياطية: نسخة تلقائية كل يوم + قائمة آخر ٣٠ يوم + تنزيل أي نسخة + «نسخة دلوقتي» */
+(function(){
+const SB=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin'),$=id=>document.getElementById(id);
+let L=null,busy=false;
+async function list(){try{let r=await SB().from('mk_backups').select('day,made_at').order('day',{ascending:false}).limit(31);if(r.error)throw r.error;L=r.data||[]}catch(e){L=[]}paint()}
+async function now(){if(busy)return;busy=true;paint();try{let r=await SB().rpc('mk_backup_now');if(r.error)throw r.error;toast('✔ اتعملت نسخة احتياطية')}catch(e){toast('⚠️ النسخة ماتعملتش: '+String(e.message||e).slice(0,100))}busy=false;await list()}
+async function dl(day){try{toast('جاري تجهيز النسخة...');let r=await SB().from('mk_backups').select('data').eq('day',day).maybeSingle();if(r.error||!r.data)throw r.error||new Error('مش موجودة');await saveFile('mekanizm-backup-'+day+'.json',new Blob([JSON.stringify(r.data.data)],{type:'application/json'}));toast('اتنزلت')}catch(e){toast('⚠️ '+String(e.message||e).slice(0,100))}}
+function paint(){let host=$('settings');if(!host||!adm())return;let c=$('mkBkCard');if(!c){c=document.createElement('div');c.id='mkBkCard';c.className='card';c.style.marginTop='14px';host.appendChild(c)}
+ let last=L&&L[0],age=last?Math.round((Date.now()-new Date(last.made_at))/864e5):null;
+ c.innerHTML=`<h3 style="margin:0 0 8px">💾 النسخ الاحتياطية</h3><div style="line-height:1.9;color:var(--muted);font-size:14px">${L==null?'جاري التحميل...':last?`آخر نسخة: <b style="color:${age>2?'var(--danger)':'var(--green)'}">${esc(last.day)}</b> (${age<1?'النهاردة':'من '+age+' يوم'}). السيستم بيعمل نسخة تلقائي كل يوم أول ما تفتحه، وبيحتفظ بآخر ٣٠ يوم.`:'مفيش نسخ لسه.'}</div>
+ <button type="button" id="mkBkNow" class="primary" style="width:100%;padding:15px;margin:10px 0" ${busy?'disabled':''}>${busy?'جاري...':'نسخة احتياطية دلوقتي'}</button>
+ ${(L||[]).slice(0,10).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--border)"><span>${esc(x.day)} <small style="color:var(--muted)">${new Date(x.made_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</small></span><button type="button" data-bk="${esc(x.day)}" class="secondary" style="padding:9px 14px;width:auto">⬇️ تنزيل</button></div>`).join('')}
+ <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8">استرجاع نسخة بيتم بمساعدتنا عشان مايمسحش شغل جديد بالغلط.</div>`;
+ let b=$('mkBkNow');if(b)b.onclick=now;c.querySelectorAll('[data-bk]').forEach(x=>x.onclick=()=>dl(x.dataset.bk))}
+/* نسخة يومية تلقائية (مرة في اليوم من أول جهاز مدير يفتح) */
+async function auto(){if(!adm()||!SB()||!window.mkT)return;try{let k='mk_bk_day',t=isoToday();if(localStorage.getItem(k)===t)return;let r=await SB().from('mk_backups').select('day').order('day',{ascending:false}).limit(1);if(r.error)return;if(!r.data||!r.data[0]||r.data[0].day<t){let x=await SB().rpc('mk_backup_now');if(x.error)return}localStorage.setItem(k,t)}catch(e){}}
+let boot=0,ra=window.renderAll;if(typeof ra==='function')window.renderAll=function(){ra.apply(this,arguments);try{if(!boot&&window.mkT_user){boot=1;setTimeout(auto,15000)}if(!$('mkBkCard')&&$('settings')&&adm())list()}catch(e){}};
+let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp.apply(this,arguments);if(id==='settings')try{list()}catch(e){}};
 })();
 </script>
 </body>
