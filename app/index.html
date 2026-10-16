@@ -316,7 +316,7 @@ function openProduct(editId=null){
  <div class="field"><label>الوحدة</label><select id="punit"><option ${p?.unit==='قطعة'?'selected':''}>قطعة</option><option ${p?.unit==='كرتونة'?'selected':''}>كرتونة</option><option ${p?.unit==='متر'?'selected':''}>متر</option><option ${p?.unit==='طقم'?'selected':''}>طقم</option></select></div>
  </div><div class="modal-foot"><button class="primary">حفظ التعديلات</button>${p?`<button type="button" class="secondary danger" onclick="closeModal();deleteProduct('${p.id}')">حذف الصنف</button>`:''}<button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`)
 }
-function submitProduct(ev,id){ev.preventDefault();let x={id:id||crypto.randomUUID(),code:pcode.value.trim(),name:pname.value.trim(),cat:pcat.value.trim(),qty:+pqty.value,cost:+pcost.value,price:+pprice.value,min:+pmin.value,unit:punit.value};if(id){let i=db.products.findIndex(p=>p.id===id);db.products[i]=x}else db.products.push(x);save();closeModal();toast('تم حفظ المنتج')}
+function submitProduct(ev,id){ev.preventDefault();let x={id:id||crypto.randomUUID(),code:pcode.value.trim(),name:pname.value.trim(),cat:pcat.value.trim(),qty:+pqty.value,cost:+pcost.value,price:+pprice.value,min:+pmin.value,unit:punit.value};if(x.code&&db.products.some(p=>p.id!==x.id&&String(p.code).trim()===x.code)){toast('الكود ده مستخدم لصنف تاني. استخدم كود مختلف.');pcode.focus();return}if(id){let i=db.products.findIndex(p=>p.id===id);db.products[i]=Object.assign({},db.products[i],x)}else db.products.push(x);codeNote(x);save();closeModal();toast('تم حفظ المنتج')}
 async function deleteProduct(id){let dp=db.products.find(x=>x.id===id),uses=dp?db.sales.filter(r=>r.product===dp.name).length+db.purchases.filter(r=>r.product===dp.name).length:0;if(await ask('حذف المنتج نهائياً؟ '+(uses?'الصنف ده ظاهر في '+uses+' حركة بيع وشراء، وهتفضل في الفواتير القديمة باسمه. ':'')+'كوده ('+(dp&&dp.code||'')+') مش هيتعاد لصنف تاني.','حذف')){codeNote(dp);db.products=db.products.filter(x=>x.id!==id);save();toast('تم حذف المنتج')}}
 function renderProducts(){let q=(document.getElementById('productSearch')?.value||'').toLowerCase(),f=document.getElementById('stockFilter')?.value||'all';let arr=db.products.filter(p=>(p.name+' '+p.code).toLowerCase().includes(q)).filter(p=>f==='all'||(f==='out'&&p.qty<=0)||(f==='low'&&p.qty>0&&p.qty<=p.min));document.getElementById('productsBody').innerHTML=arr.length?arr.map(p=>`<tr class="prow" onclick="openProduct('${p.id}')"><td>${esc(p.code)}</td><td><span class="pico"><svg class="i"><use href="#i-box"/></svg></span><b>${esc(p.name)}</b></td><td>${esc(p.cat)}</td><td>${p.qty} ${p.unit}</td><td>${money(p.cost)}</td><td>${money(p.price)}</td><td>${p.qty<=0?'<span class="badge red">نفد</span>':p.qty<=p.min?'<span class="badge red">منخفض</span>':'<span class="badge green">متوفر</span>'}</td></tr>`).join(''):`<tr><td colspan="7"><div class="empty">لا توجد منتجات حتى الآن. اضغط «منتج جديد» للبدء.</div></td></tr>`}
 let paidTouched=false;
@@ -1627,7 +1627,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-37';
+const APP_VER='2026-10-16-38';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6085,7 +6085,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var w=Math.max(1,num(o.w)),h=Math.max(1,num(o.h)),maxW=big?300:220,maxH=big?460:320,sc=Math.min(maxW/w,maxH/h),W=w*sc,H=h*sc,x0=70,y0=36,hl=10;
   var right=(o.side||'right')==='right';
   var s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(W+x0+110)+' '+(H+y0+56)+'" style="width:100%;max-width:'+(W+x0+110)+'px;background:#fff;font-family:Tahoma,Arial">';
-  s+='<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#18343a"/></marker></defs>';
+  s+='<defs><marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#18343a"/></marker><pattern id="fh" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V8" stroke="#9fc4c9" stroke-width="1.4"/></pattern></defs>';
   s+='<rect x="'+x0+'" y="'+y0+'" width="'+W+'" height="'+H+'" fill="#eef6f7" stroke="#087f8c" stroke-width="3"/>';
   s+='<rect x="'+(x0+6)+'" y="'+(y0+6)+'" width="'+(W-12)+'" height="'+(H-12)+'" fill="none" stroke="#9fc4c9" stroke-width="1" stroke-dasharray="4 3"/>';
   /* القطاعات: جنبين + فوق وتحت، والجنب اللي بمقبض باين بلونه وشكله */
@@ -6097,6 +6097,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    var lab={one:'مقبض على جنب الفتح',both:'مقبض على الجنبين',none:'من غير مقبض',ext:'مقبض خارجي (لطش)',frame:'شاسيه ثابت (من غير فتح)'}[hd]||'';
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H-pw-8)+'" text-anchor="middle" font-size="12" fill="#8a6d10" font-weight="700">'+lab+'</text>';
   }
+  /* شاسيه ثابت: إطار حوالين لوح (مراية أو غيره) — من غير مقبض ولا فتح */
+  if(o.kind==='frame'){var fp=Math.max(10,Math.min(18,W*0.08));s+='<rect x="'+(x0+fp)+'" y="'+(y0+fp)+'" width="'+(W-2*fp)+'" height="'+(H-2*fp)+'" fill="url(#fh)" stroke="#087f8c" stroke-width="2"/><text x="'+(x0+W/2)+'" y="'+(y0+H/2+60<y0+H-fp-6?y0+H/2+44:y0+H-fp-8)+'" text-anchor="middle" font-size="12" fill="#18343a" font-weight="700">لوح داخل الإطار (مراية أو غيره)</text>'}
+  /* مقبض خارجي (لطش): ماسورة على وش الضلفة، النجار هو اللي بيركبها */
+  if((o.handle||'')==='ext'&&o.kind!=='frame'){var hxx=(o.side||'right')==='right'?x0+W*0.14:x0+W*0.86,hh=Math.max(30,Math.min(H*0.3,110));s+='<rect x="'+(hxx-4)+'" y="'+(y0+H/2-hh/2)+'" width="8" height="'+hh+'" rx="4" fill="#f2c94c" stroke="#8a6d10" stroke-width="1.6"/><text x="'+hxx+'" y="'+(y0+H/2-hh/2-6)+'" text-anchor="middle" font-size="11" fill="#8a6d10" font-weight="700">مقبض خارجي (لطش)</text>'}
   if(o.kind==='slide'){
    /* فتحة العجل: تفريغة مستطيلة بركن مدوّر في الركنين اللي فوق، والعجلة جواها */
    var sw=Math.max(18,Math.min(W*0.2,24*sc)),sh=Math.max(14,Math.min(H*0.07,10*sc)),r0=Math.min(6,sh/2);
@@ -8173,6 +8177,30 @@ window.invNotesSave=function(key,id){db.invNotes=db.invNotes||{};let g=i=>docume
  if(o.recv||o.miss||o.gotDate||o.got)db.invNotes[key]=o;else delete db.invNotes[key];save();toast('اتحفظ');openInvoiceModal(id);window.mkPortalSoon&&mkPortalSoon()};
 let oi=window.openInvoiceModal;
 if(oi)window.openInvoiceModal=function(id){oi.apply(this,arguments);try{let r=db.sales.find(x=>x.id===id);if(!r)return;let o=document.getElementById('invOut');if(o&&!document.getElementById('invNb')){let key=r.no||r.id,n=(db.invNotes||{})[key],b=document.createElement('button');b.id='invNb';b.className='secondary';b.style.cssText='width:100%;padding:14px;margin-top:10px';b.textContent='📦 استلام وناقص'+(n&&n.miss?' (فيه ناقص)':'');b.onclick=()=>invNotes(key,id);o.parentNode.insertBefore(b,o)}}catch(e){}};
+})();
+</script>
+<script>
+/* ميكانيزم — 📅 ملخص النهاردة في أول لوحة التحكم: أرقام اليوم + اختصارات كبيرة (خفيف، من غير أنيميشن) */
+(function(){
+let nMsg=0,lastQ=0;
+function pull(){if(Date.now()-lastQ<120000||!window.mkSB||!window.mkT_user)return;lastQ=Date.now();
+ window.mkSB.from('mk_portal_msgs').select('id',{count:'exact',head:true}).eq('seen',false).then(r=>{if(r&&!r.error&&r.count!==nMsg){nMsg=r.count||0;paint()}}).catch(()=>{})}
+function paint(){
+ let host=document.getElementById('dashboard');if(!host)return;
+ let k=+isoToday().replace(/-/g,''),isT=r=>{try{return dKey(r)===k}catch(e){return false}},
+  sg=db.sales.filter(isT),tot=sumBy(sg.filter(x=>!x.ship),x=>x.total),inv=new Set(sg.map(x=>x.no||x.id)).size,
+  coll=sumBy(sg,paidOf)+sumBy((db.payments||[]).filter(isT),x=>x.amount),
+  exp=sumBy((db.expenses||[]).filter(isT),x=>x.amount),low=db.products.filter(p=>p.qty<=p.min).length,
+  debt=owed(),dbN=db.contacts.filter(c=>c.type==='عميل'&&(+c.balance||0)>0.5).length,
+  T=(ic,l,v,go,col)=>`<button type="button" onclick="${go}" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border:1px solid var(--border,#e5e7ef);border-radius:14px;background:var(--card,#fff);text-align:right;min-height:84px;min-width:0;cursor:pointer;color:inherit;font:inherit"><span style="font-size:24px;line-height:1">${ic}</span><small style="color:var(--muted);font-size:11px">${l}</small><b style="font-size:14px;${col?'color:'+col:''}">${v}</b></button>`;
+ let h=`<div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 10px">📅 النهاردة</h3><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">`+
+  T('💰','مبيعات النهاردة',money(tot),"showPage('sales')")+T('🧾','فواتير النهاردة',inv,"showPage('sales')")+
+  T('📥','اتحصّل النهاردة',money(coll),"showPage('cash')",'var(--green)')+T('📤','مصروفات النهاردة',money(exp),"showPage('cash')",exp?'var(--danger)':'')+
+  T('⚠️','أصناف قربت تخلص',low,"showPage('reorder')",low?'var(--danger)':'')+T('👥','فلوس عند العملاء',money(debt),"showPage('debts')")+
+  (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"showPage('contacts')",'var(--danger)'):'')+`</div></div>`;
+ let el=document.getElementById('mkToday');if(!el){el=document.createElement('div');el.id='mkToday';let tr=host.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):host.prepend(el)}
+ if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+let o=window.renderDashboard;if(typeof o==='function')window.renderDashboard=function(){o.apply(this,arguments);try{paint();pull()}catch(e){}};
 })();
 </script>
 </body>
