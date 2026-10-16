@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-23';
+const APP_VER='2026-10-16-24';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6024,6 +6024,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<rect x="'+cx+'" y="'+(d<0?ey:ey-7)+'" width="'+wls+'" height="7" fill="url(#sH)" stroke="'+K+'" stroke-width="1.5"/>'+
      '<circle cx="'+(cx+wls/2)+'" cy="'+(ey+d*5)+'" r="'+Math.min(8,wls/2)+'" fill="#fff" stroke="'+K+'" stroke-width="2"/><circle cx="'+(cx+wls/2)+'" cy="'+(ey+d*5)+'" r="2" fill="#000"/>'})});
   s+=D(x0,y0,x0+wos,y0,q(wo),-1,14,26)+D(x0,y0+H,x0+W,y0+H,'العرض '+q(num(o.w)),1,16,30)+D(x0,y0,x0,y0+H,'الارتفاع '+q(num(o.h)),1,15,24);
+  var hd0=o.handle||'one',right0=(o.side||'right')==='right',hdLab={one:'مقبض على '+(right0?'اليمين':'الشمال'),both:'مقبض على الجنبين',none:'من غير مقبض',frame:'شاسيه ثابت (من غير مقبض)'}[hd0]||'';
+  if(hdLab){var hdX=hd0==='both'?x0+W/2:(hd0==='one'&&!right0?x0+16:x0+W-16);
+   s+='<rect x="'+(hd0==='both'?x0+pw+6:(hd0==='one'&&!right0?x0+pw:x0+W-pw-16)).toFixed(1)+'" y="'+(y0+H*0.12).toFixed(1)+'" width="16" height="'+(H*0.76).toFixed(1)+'" fill="#f2c94c" stroke="#8a6d10" stroke-width="1.5"/>'+
+    (hd0==='both'?'<rect x="'+(x0+W-pw-16)+'" y="'+(y0+H*0.12).toFixed(1)+'" width="16" height="'+(H*0.76).toFixed(1)+'" fill="#f2c94c" stroke="#8a6d10" stroke-width="1.5"/>':'')+
+    T(hdX,y0+H+112,hdLab,14,'middle',700).replace('fill="'+K+'"','fill="#8a6d10"')}
   /* ② تفصيلة مكبّرة للراس: الجناح بيقعد بره، والجزء العالي بس هو اللي بيخش في الخلع */
   var dy=y0+H+150,dx=34,RL=410,RH=46,kk=Math.min(14,300/Math.max(1,(wo||11)+(wg||9))),A=(wo||11)*kk,G=(wg||wl||9)*kk,B=(wl||6)*kk,C=A+(G-B)/2;
   s+=T(VB/2,dy-70,'② تفصيلة قص فتحة العجلة في الراس',17);
