@@ -1180,7 +1180,7 @@ function openPurchaseView(id){let r=db.purchases.find(x=>x.id===id);if(!r)return
 function invItems(G){let P=G.filter(x=>!x.ship);return (P.length?esc(P[0].product)+(P.length>1?` <span class="badge">+${P.length-1} صنف</span>`:''):'—')+(G.some(x=>x.ship)?' <span class="badge">🚚 نقل</span>':'')}
 function renderInvLists(){
  let sg=invFilter(groupInv(db.sales,r=>r.no||r.id),'salesQ',r=>r.no||''),pg=invFilter(groupInv(db.purchases,r=>r.gid||r.id),'purchasesQ',r=>r.pno||'');
- salesCount.textContent=sg.length+' فاتورة بيع';purchasesCount.textContent=pg.length+' فاتورة شراء';
+ {let sT=sumBy(sg,G=>sumBy(G,x=>x.total)),sR=sumBy(sg,G=>sumBy(G,x=>x.rem||0)),pT=sumBy(pg,G=>sumBy(G,x=>x.total)),pR=sumBy(pg,G=>sumBy(G,x=>x.rem||0));salesCount.textContent=sg.length+' فاتورة بيع — إجمالي '+money(sT)+(sR>0?' • متبقي '+money(sR):'');purchasesCount.textContent=pg.length+' فاتورة شراء'+(isEmp()?'':' — إجمالي '+money(pT)+(pR>0?' • متبقي '+money(pR):''));}
  salesBody.innerHTML=sg.length?sg.map(G=>{let r=G[0],T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="openInvoiceModal('${r.id}')"><td><b>${esc(invNo(r))}</b></td><td>${r.date}</td><td>${esc(r.person||'—')}</td><td>${invItems(G)}</td><td>${money(T)}</td><td>${rem>0?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</td></tr>`}).join(''):'<tr><td colspan="6"><div class="empty">لا توجد فواتير بيع.</div></td></tr>';
  purchasesBody.innerHTML=pg.length?pg.map(G=>{let r=G[0],T=sumBy(G,x=>x.total),rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="openPurchaseView('${r.id}')"><td><b>${esc(r.pno||'—')}</b></td><td>${r.date}</td><td>${esc(r.person||'—')}</td><td>${invItems(G)}</td><td>${isEmp()?'—':money(T)}</td><td>${isEmp()?'—':rem>0?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</td></tr>`}).join(''):'<tr><td colspan="6"><div class="empty">لا توجد فواتير شراء.</div></td></tr>'}
 
@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-46';
+const APP_VER='2026-10-16-47';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
