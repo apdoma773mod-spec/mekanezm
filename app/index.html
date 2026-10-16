@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-26';
+const APP_VER='2026-10-16-27';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6028,7 +6028,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<rect x="'+cx+'" y="'+(d<0?ey:ey-7)+'" width="'+wls+'" height="7" fill="url(#sH)" stroke="'+K+'" stroke-width="1.5"/>'+
      '<circle cx="'+(cx+wls/2)+'" cy="'+(ey+d*5)+'" r="'+Math.min(8,wls/2)+'" fill="#fff" stroke="'+K+'" stroke-width="2"/><circle cx="'+(cx+wls/2)+'" cy="'+(ey+d*5)+'" r="2" fill="#000"/>'})});
   s+=D(x0,y0,x0+wos,y0,q(wo),-1,14,26)+D(x0,y0+H,x0+W,y0+H,'العرض '+q(num(o.w)),1,16,30)+D(x0,y0,x0,y0+H,'الارتفاع '+q(num(o.h)),1,15,24);
-  var hd0=o.handle||'one',right0=(o.side||'right')==='right',hdLab={one:'مقبض على '+(right0?'اليمين':'الشمال'),both:'مقبض على الجنبين',none:'من غير مقبض',frame:'شاسيه ثابت (من غير مقبض)'}[hd0];
+  var hd0=o.handle||'one',right0=(o.side||'right')==='right',hdLab={one:'مقبض على '+(right0?'اليمين':'الشمال'),both:'مقبض على الجنبين',none:'من غير مقبض',ext:'مقبض خارجي (لطش)',frame:'شاسيه ثابت (من غير مقبض)'}[hd0];
   if(hdLab)s+=T(x0+W/2,y0+H+112,hdLab,14,'middle',700).replace('fill="'+K+'"','fill="#8a6d10"');
   /* ② تفصيلة مكبّرة للراس: الجناح بيقعد بره، والجزء العالي بس هو اللي بيخش في الخلع */
   var dy=y0+H+150,dx=34,RL=410,RH=46,kk=Math.min(14,300/Math.max(1,(wo||11)+(wg||9))),A=(wo||11)*kk,G=(wg||wl||9)*kk,B=(wl||6)*kk,C=A+(G-B)/2;
@@ -6062,7 +6062,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    s+='<rect x="'+x0+'" y="'+y0+'" width="'+W+'" height="'+pw+'" fill="#cfdde0" stroke="#087f8c" stroke-width="1"/><rect x="'+x0+'" y="'+(y0+H-pw)+'" width="'+W+'" height="'+pw+'" fill="#cfdde0" stroke="#087f8c" stroke-width="1"/>';
    var hL=hd==='both'||(hd==='one'&&openL),hR=hd==='both'||(hd==='one'&&!openL);
    s+=stile(x0,hL)+stile(x0+W-pw,hR);
-   var lab={one:'مقبض على جنب الفتح',both:'مقبض على الجنبين',none:'من غير مقبض',frame:'شاسيه ثابت (من غير فتح)'}[hd]||'';
+   var lab={one:'مقبض على جنب الفتح',both:'مقبض على الجنبين',none:'من غير مقبض',ext:'مقبض خارجي (لطش)',frame:'شاسيه ثابت (من غير فتح)'}[hd]||'';
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H-pw-8)+'" text-anchor="middle" font-size="12" fill="#8a6d10" font-weight="700">'+lab+'</text>';
   }
   if(o.kind==='slide'){
@@ -6085,7 +6085,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2)+'" text-anchor="middle" font-size="14" fill="#18343a" font-weight="700">دلفة بمفصلات ('+ys.length+')</text>';
    s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2+20)+'" text-anchor="middle" font-size="12" fill="#596a70">المفصلات على '+(right?'اليمين':'الشمال')+'</text>';
   }else{
-   s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2)+'" text-anchor="middle" font-size="14" fill="#18343a" font-weight="700">'+esc(o.type||'قطعة')+'</text>';
+   s+='<text x="'+(x0+W/2)+'" y="'+(y0+H/2)+'" text-anchor="middle" font-size="14" fill="#18343a" font-weight="700">'+esc(o.kind==='frame'?'شاسيه ثابت':(o.type||'قطعة'))+'</text>';
   }
   s+='<line x1="'+x0+'" y1="'+(y0+H+22)+'" x2="'+(x0+W)+'" y2="'+(y0+H+22)+'" stroke="#18343a" marker-start="url(#ar)" marker-end="url(#ar)"/>';
   s+='<text x="'+(x0+W/2)+'" y="'+(y0+H+42)+'" text-anchor="middle" font-size="14" font-weight="700">العرض '+esc(num(o.w))+' سم</text>';
@@ -6123,7 +6123,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     (o.notes?'<tr><td>ملاحظات</td><td colspan="3">'+esc(o.notes)+'</td></tr>':'')+
     (withPrice?'<tr><td>السعر</td><td>'+fmt(num(o.price))+' ج</td><td>العربون</td><td>'+fmt(num(o.paid))+' ج</td></tr>':'')+'</table>'+
     (mats?'<p style="margin:6px 0 2px"><b>الخامات</b></p><table><tr><th>الصنف</th><th>الكمية</th>'+(withPrice?'<th>السعر</th>':'')+'</tr>'+mats+'</table>':'')+
-    ((o.kind==='hinge'||o.kind==='slide')?'<div class="c" style="margin-top:8px">'+svg(o,paper==='a4')+'</div>':'')+
+    ((o.kind==='hinge'||o.kind==='slide'||o.kind==='frame')?'<div class="c" style="margin-top:8px">'+svg(o,paper==='a4')+'</div>':'')+
     (o.type==='استانلس'&&o.steel?steelSummary(o,paper):'')+
     '<p style="margin:8px 0 2px"><b>خط السير</b></p><div>'+st.map(function(s){return '<span style="display:inline-block;margin-left:10px"><i class="bx"></i>'+esc(s)+'</span>'}).join('')+'</div>';
   }
@@ -6198,7 +6198,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="wkc"><h3>التفاصيل</h3><table><tr><td>العميل</td><td>'+esc(o.customer)+(o.phone?' — '+esc(o.phone):'')+'</td></tr><tr><td>الصنايعي</td><td>'+esc(o.crafter||'—')+'</td></tr>'+
    '<tr><td>التكلفة</td><td>'+fmt(cost(o))+' ج</td></tr><tr><td>سعر البيع</td><td>'+fmt(num(o.price))+' ج</td></tr><tr><td>الربح</td><td><b>'+fmt(profit(o))+' ج</b></td></tr><tr><td>العربون</td><td>'+fmt(num(o.paid))+' ج (باقي '+fmt(num(o.price)-num(o.paid))+' ج)</td></tr>'+
    (o.notes?'<tr><td>ملاحظات</td><td>'+esc(o.notes)+'</td></tr>':'')+'</table></div>'+
-   ((o.kind==='hinge'||o.kind==='slide')?'<div class="wkc"><h3>الرسم</h3><div class="draw">'+svg(o,true)+'</div></div>':'')+
+   ((o.kind==='hinge'||o.kind==='slide'||o.kind==='frame')?'<div class="wkc"><h3>الرسم</h3><div class="draw">'+svg(o,true)+'</div></div>':'')+
    (o.steel?'<div class="wkc"><h3>الاستانلس</h3>'+steelSummary(o).replace(/<p[^>]*>.*?<\/p>/,'')+'</div>':'');
   function adv(d){
    var n=Math.min(st.length-1,Math.max(0,c+d));o.stage=n;
@@ -6275,9 +6275,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var allOk=needs.every(function(nd){return (db.products||[]).some(function(p){return String(p.name).trim()===nd.name})});
   return '<div class="sample" style="margin-top:6px;background:var(--tint2)">'+rows.join('<br>')+(allOk?'<div style="margin-top:6px"><button type="button" class="wkbtn p" id="wkRodCut">📦 خصم الأعواد من المخزون</button></div>':'')+'</div>';
  }
- var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['frame','شاسيه ثابت (فريم بس)']];
+ var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['ext','مقبض خارجي (لطش) — الأعواد كلها عادية'],['frame','شاسيه ثابت (فريم بس)']];
  function rodCalc(o){var w=num(o.w),h=num(o.h),q=Math.max(1,num(o.qty)||1);if(!(w>0&&h>0)||o.kind==='other'||(o.type!=='دلفة'&&o.type!=='جرار'))return null;
-  var hc={none:0,one:1,both:2,frame:0}[o.handle||'one'];if(hc==null)hc=1;
+  var hc={none:0,one:1,both:2,ext:0,frame:0}[o.handle||'one'];if(hc==null)hc=1;
   var T=rodType(o.rod),P=[],H=[],i,k;
   for(i=0;i<q;i++){for(k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
   return {T:T,P:P,H:H,pp:P.length?plan(P,T.pLen,0.5):[],hp:H.length?plan(H,T.hLen,0.5):[],bad:P.some(function(x){return x>T.pLen})||H.some(function(x){return x>T.hLen}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
@@ -6305,7 +6305,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var b=shell('🧮 حاسبة الأعواد');mark('rods');
   function draw(){
    var R=rodType(RC.rod),P=[],H=[],work={fee:0,price:0,n:0},r0=rates();
-   RC.rows.forEach(function(x){var w=num(x.w),h=num(x.h),q=Math.max(1,num(x.q)||1);if(!(w>0&&h>0))return;var hc={none:0,one:1,both:2,frame:0}[x.handle];if(hc==null)hc=1;
+   RC.rows.forEach(function(x){var w=num(x.w),h=num(x.h),q=Math.max(1,num(x.q)||1);if(!(w>0&&h>0))return;var hc={none:0,one:1,both:2,ext:0,frame:0}[x.handle];if(hc==null)hc=1;
     for(var i=0;i<q;i++){for(var k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
     if(x.handle!=='frame'){work.n+=q;work.fee+=q*(x.kind==='slide'?r0.sF:r0.hF);work.price+=q*(x.kind==='slide'?r0.sP:r0.hP)}});
    var pp=P.length?plan(P,R.pLen,0.5):[],hp=H.length?plan(H,R.hLen,0.5):[],bad=P.some(function(x){return x>R.pLen})||H.some(function(x){return x>R.hLen});
@@ -6332,17 +6332,18 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function viewForm(id,type){
   var old=id?ORD.find(function(x){return x.id===id}):null;
   var o=old?JSON.parse(JSON.stringify(old)):{type:type||'دلفة',date:today(),customer:'',phone:'',crafter:'',kind:'hinge',w:'',h:'',qty:1,hinges:3,hingePos:'',side:'right',color:'',profile:'',mats:[{n:'',q:'',p:''}],fee:'',cost:'',price:'',paid:'',notes:'',stage:0,hist:[],handle:'one',rod:'blum',rodP:'',rodH:'',wOff:'11',wWing:'9',wLen:'6'};
-  if(!o.handle)o.handle='one';if(!o.rod)o.rod=rodTypeDefs()[0].k;
+  if(!o.handle)o.handle='one';if(!o.rod)o.rod=rodTypeDefs()[0].k;if(o.handle==='frame')o.kind='frame';if(o.type==='جرار'&&o.kind!=='slide'&&o.kind!=='frame')o.kind='slide';if(o.type==='استانلس'||o.type==='أخرى')o.kind='other';
   var b=shell(old?'تعديل '+esc(ordNo(old)):'➕ أوردر جديد',old?function(){viewOrder(id)}:viewOrders);mark(old?'ord':'new');
   var sups=contacts().filter(function(c){return c.type==='مورد'}),custs=contacts().filter(function(c){return c.type==='عميل'});
   b.innerHTML='<div class="wkc"><h3>بيانات الأوردر</h3><div class="wkg">'+
-   '<div class="wkf"><label>النوع</label><select id="fT">'+TYPES.map(function(t){return '<option'+(t===o.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
+   '<div class="wkf" style="display:none"><label>النوع</label><select id="fT">'+TYPES.map(function(t){return '<option'+(t===o.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
+   '<div class="wkf"><label>النوع</label><select id="fK"><option value="hinge"'+(o.kind==='hinge'?' selected':'')+'>مفصلي</option><option value="slide"'+(o.kind==='slide'?' selected':'')+'>جرار</option><option value="frame"'+(o.kind==='frame'?' selected':'')+'>شاسيه ثابت (مراية أو غيره)</option><option value="other"'+(o.kind==='other'?' selected':'')+'>أخرى</option></select></div>'+
    fi('fD','التاريخ',o.date,'','date')+
    '<div class="wkf"><label>العميل</label><input id="fC" list="wkCust" value="'+esc(o.customer)+'"><datalist id="wkCust">'+custs.map(function(c){return '<option value="'+esc(c.name)+'">'}).join('')+'</datalist></div>'+
    fi('fP','تليفون العميل',o.phone,'inputmode="tel"')+
    '<div class="wkf"><label>الصنايعي</label><input id="fCr" list="wkSup" value="'+esc(o.crafter)+'"><datalist id="wkSup">'+sups.map(function(c){return '<option value="'+esc(c.name)+'">'}).join('')+'</datalist></div></div></div>'+
    '<div class="wkc"><h3>المقاسات والشكل</h3><div class="wkg">'+
-   '<div class="wkf"><label>الشكل</label><select id="fK"><option value="hinge"'+(o.kind==='hinge'?' selected':'')+'>بمفصلات</option><option value="slide"'+(o.kind==='slide'?' selected':'')+'>منزلقة</option><option value="other"'+(o.kind==='other'?' selected':'')+'>أخرى</option></select></div>'+
+   
    fi('fW','العرض (سم)',o.w,'inputmode="decimal"')+fi('fH','الارتفاع (سم)',o.h,'inputmode="decimal"')+fi('fQ','الكمية',o.qty,'inputmode="numeric"')+
    fi('fN','عدد المفصلات',o.hinges,'inputmode="numeric"')+
    '<div class="wkf"><label>المفصلات ناحية</label><select id="fS"><option value="right"'+(o.side==='right'?' selected':'')+'>اليمين</option><option value="left"'+(o.side==='left'?' selected':'')+'>الشمال</option></select></div>'+
@@ -6369,9 +6370,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    b.querySelectorAll('[data-md]').forEach(function(x){x.onclick=function(){o.mats.splice(+x.dataset.md,1);if(!o.mats.length)o.mats.push({n:'',q:'',p:''});drawMats();res()}})}
   function read(){
    o.type=q('fT').value;o.date=q('fD').value;o.customer=q('fC').value.trim();o.phone=q('fP').value.trim();o.crafter=q('fCr').value.trim();
-   o.kind=q('fK').value;o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
+   o.kind=q('fK').value;q('fT').value={hinge:'دلفة',slide:'جرار',frame:'دلفة',other:q('fT').value==='جرار'||q('fT').value==='دلفة'?'أخرى':q('fT').value}[o.kind]||'دلفة';o.type=q('fT').value;if(o.kind==='frame')q('fHd').value='frame';else if(q('fHd').value==='frame')q('fHd').value='one';o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
    o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.handle=q('fHd').value;o.rod=q('fRod').value;o.wOff=q('fWo').value.trim();o.wWing=q('fWg').value.trim();o.wLen=q('fWl').value.trim();o.fee=q('fFe').value;o.priceEach=q('fPe').value;o.price=String(Math.round(num(o.priceEach)*(num(o.qty)||1)*100)/100);o.cost='';o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
-  function res(){read();var sl=o.kind==='slide';['fN','fS','fHP'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'none':''});['fWo','fWg','fWl'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'':'none'});q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;
+  function res(){read();var sl=o.kind==='slide',hg=o.kind==='hinge',fr=o.kind==='frame';['fN','fS','fHP'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=hg?'':'none'});['fWo','fWg','fWl'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'':'none'});['fHd'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=fr||o.kind==='other'?'none':''});['fT','fHd'].forEach(function(i){if(q(i)._lab)q(i)._lab()});q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;
    var qn=num(o.qty)||1,fT=num(o.fee)*qn,pT=num(o.price),mt=(o.mats||[]).reduce(function(x,m){return x+num(m.q)*num(m.p)},0);
    q('fRes').innerHTML='الصنايعي: '+qn+' × '+fmt(num(o.fee))+' = <b>'+fmt(fT)+'</b> ج<br>على الزبون: '+qn+' × '+fmt(num(o.priceEach))+' = <b>'+fmt(pT)+'</b> ج<br>'+(mt?'خامات تانية: <b>'+fmt(mt)+'</b> ج<br>':'')+'ربحك: <b style="font-size:18px">'+fmt(pT-fT-mt)+'</b> ج — الباقي على الزبون: <b>'+fmt(pT-num(o.paid))+'</b> ج';
    if(!rh){q('fRods').innerHTML='<span style="color:var(--muted)">اكتب العرض والارتفاع وهتظهر الأعواد</span>';q('fRods').style.display=''}}
@@ -6382,7 +6383,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    var bt=document.createElement('button');bt.type='button';
    bt.style.cssText='width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--border,#e4eaed);border-radius:10px;background:#fff;color:#14172e;font:inherit;font-size:16px;font-weight:700;text-align:right';
    function lab(){var op=s.options[s.selectedIndex];bt.textContent=(op?op.text:'')+'  ▾'}
-   lab();s.style.display='none';s.parentNode.insertBefore(bt,s);
+   lab();s._lab=lab;s.style.display='none';s.parentNode.insertBefore(bt,s);
    s.addEventListener('change',lab);
    bt.onclick=function(){
     var old=document.getElementById('wkSheet');if(old)old.remove();
