@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-44';
+const APP_VER='2026-10-16-45';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7388,8 +7388,8 @@ body.mkpro aside .nav button .badge{margin-right:auto;background:var(--gd);color
 body.mkpro .mobile-nav{background:rgba(255,255,255,.94);border-top:1px solid var(--ln);box-shadow:0 -10px 30px rgba(26,29,58,.10)}
 body.mkpro .mobile-nav button{color:var(--tx3)}
 body.mkpro .mobile-nav button.active{color:var(--tx);font-weight:800}
-body.mkpro .mobile-nav .mkic{width:30px;height:30px;border-radius:10px}
-body.mkpro .mobile-nav .mkic svg{width:17px;height:17px}
+body.mkpro .mobile-nav .mkic{width:36px;height:36px;border-radius:12px}
+body.mkpro .mobile-nav .mkic svg{width:21px;height:21px}
 body.mkpro .mobile-nav button:not(.active) .mkic{filter:saturate(.75)}
 body.mkpro .mobile-nav button.active .mkic{outline:2px solid var(--gd);outline-offset:2px}
 
