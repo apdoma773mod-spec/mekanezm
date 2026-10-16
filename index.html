@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-24';
+const APP_VER='2026-10-16-25';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6373,6 +6373,30 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(!rh){q('fRods').innerHTML='<span style="color:var(--muted)">اكتب العرض والارتفاع وهتظهر الأعواد</span>';q('fRods').style.display=''}}
   b.querySelectorAll('input:not([data-m]),select,textarea').forEach(function(x){x.addEventListener('input',res);x.addEventListener('change',res)});
   q('fMA').onclick=function(){o.mats.push({n:'',q:'',p:''});drawMats()};
+  /* اختيارات من تحت (bottom sheet) بدل قايمة الموبايل الأصلية: أخف وأأمن على آيفون وأندرويد */
+  function sheetPick(id){try{var s=q(id);if(!s||!s.options)return;
+   var bt=document.createElement('button');bt.type='button';
+   bt.style.cssText='width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--border,#e4eaed);border-radius:10px;background:#fff;color:#14172e;font:inherit;font-size:16px;font-weight:700;text-align:right';
+   function lab(){var op=s.options[s.selectedIndex];bt.textContent=(op?op.text:'')+'  ▾'}
+   lab();s.style.display='none';s.parentNode.insertBefore(bt,s);
+   s.addEventListener('change',lab);
+   bt.onclick=function(){
+    var old=document.getElementById('wkSheet');if(old)old.remove();
+    var ov=document.createElement('div');ov.id='wkSheet';
+    ov.style.cssText='position:fixed;left:0;right:0;top:0;bottom:0;z-index:60;background:rgba(0,0,0,.45)';
+    var bx=document.createElement('div');
+    bx.style.cssText='position:absolute;left:0;right:0;bottom:0;max-height:70%;overflow:auto;background:#fff;color:#14172e;border-radius:20px 20px 0 0;padding:10px 14px 28px;direction:rtl';
+    var hd=document.createElement('div');hd.style.cssText='width:44px;height:5px;border-radius:3px;background:#c7ccd6;margin:4px auto 12px';bx.appendChild(hd);
+    function shut(){ov.remove()}
+    ov.onclick=function(e){if(e.target===ov)shut()};
+    for(var i=0;i<s.options.length;i++)(function(i){
+     var b=document.createElement('button');b.type='button';b.textContent=s.options[i].text;
+     b.style.cssText='display:block;width:100%;min-height:50px;margin:0 0 8px;padding:12px;border-radius:12px;font:inherit;font-size:17px;font-weight:700;text-align:right;border:2px solid '+(i===s.selectedIndex?'#3d5af1':'#d9e1e4')+';background:'+(i===s.selectedIndex?'#e8edff':'#fff')+';color:#14172e';
+     b.onclick=function(){s.selectedIndex=i;shut();s.dispatchEvent(new Event('change',{bubbles:true}))};
+     bx.appendChild(b)})(i);
+    ov.appendChild(bx);document.body.appendChild(ov)}
+  }catch(e){var s2=q(id);if(s2)s2.style.display=''}}
+  ['fT','fK','fS','fHd','fRod'].forEach(sheetPick);
   drawMats();res();
   if(!old){var autoW=function(){if(!(o.type==='دلفة'||o.type==='جرار')||o.handle==='frame')return;var wc=workCalc(o);if(!q('fFe').dataset.t)q('fFe').value=wc.fee;if(!q('fPe').dataset.t)q('fPe').value=wc.price;res()};['fFe','fPe'].forEach(function(i){q(i).addEventListener('input',function(){this.dataset.t=1})});['fQ','fK','fT','fHd'].forEach(function(i){q(i).addEventListener('change',autoW);q(i).addEventListener('input',autoW)});autoW()}
   async function save(after){
@@ -7258,6 +7282,7 @@ body.mkpro.mk-nofx #mkBgFx .b{display:none}
 #mkBgFx .b4{right:-16vmax;bottom:-24vmax;background:radial-gradient(circle,rgba(13,148,136,.38),rgba(13,148,136,0) 66%);animation-duration:45s;animation-delay:-4s}
 #mkBgFx .b5{left:30vmax;top:8vmax;width:44vmax;height:44vmax;background:radial-gradient(circle,rgba(124,58,237,.26),rgba(124,58,237,0) 66%);animation-duration:52s;animation-delay:-23s}
 #mkBgFx .pg{position:absolute;left:50%;top:-30vmax;width:110vmax;height:80vmax;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,var(--pgw,transparent),transparent);transition:background .4s}
+body.mk-bgd *{animation-play-state:paused!important}
 @keyframes mkDrift{0%{transform:translate(0,0) scale(1)}35%{transform:translate(9vmax,6vmax) scale(1.12)}70%{transform:translate(-6vmax,11vmax) scale(.92)}100%{transform:translate(5vmax,-5vmax) scale(1.06)}}
 @media (prefers-reduced-motion:reduce){#mkBgFx .b{animation:none}}
 body.mkpro.mkdark{--fxa:.55}
@@ -7948,7 +7973,7 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
   if(document.getElementById('mkLogo'))return;
   var w=document.createElement('div');w.id='mkLogo';w.innerHTML=logoSVG()+'<div class="mkbrand" role="img" aria-label="ميكانيزم"><i></i></div>';br.appendChild(w);
   try{var lg=window.MK_LOGO||'',bi=w.querySelector('.mkbrand i');if(lg){bi.style.webkitMaskImage=bi.style.maskImage='url('+lg+')'}}catch(e){}
-  document.addEventListener('visibilitychange',function(){try{document.hidden?svg.pauseAnimations():svg.unpauseAnimations()}catch(e){}});
+  document.addEventListener('visibilitychange',function(){try{document.body.classList.toggle('mk-bgd',document.hidden)}catch(e){}try{document.hidden?svg.pauseAnimations():svg.unpauseAnimations()}catch(e){}});
   var svg=w.querySelector('svg'),mq=window.matchMedia('(max-width:700px)'),fit=function(){svg.setAttribute('viewBox',mq.matches?'400 0 900 200':'0 0 1700 200')};
   fit();try{mq.addEventListener('change',fit)}catch(e){try{mq.addListener(fit)}catch(e2){}}
   var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;

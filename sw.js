@@ -2,7 +2,7 @@
    السيستم (index.html): من النت الأول، ولو مفيش نت أو النت بطيء بيفتح النسخة المحفوظة.
    المكتبات والخطوط: بتتحفظ أول مرة وبعد كده بتفتح من الجهاز.
    الموقع (shop.html) والسيرفر (Supabase) مش بيعدّوا على هنا خالص. */
-const CACHE = 'mk-system-v2';
+const CACHE = 'mk-system-v3';
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const APP = new URL('./', self.location).href;
 
@@ -27,11 +27,23 @@ function networkFirst(req, key, ms) {
   return timeout(net, ms).catch(() => caches.match(key).then(m => m || net));
 }
 
+/* يفتح فورًا من النسخة المحفوظة (من غير شاشة سودا لو النت بطيء) ويحدّث النسخة في الخلفية؛ فحص النسخة الجديدة (?v=) بيروح للنت على طول */
+function swr(req, key) {
+  return caches.match(key).then(m => {
+    const net = fetch(req, { cache: 'no-store' }).then(res => {
+      if (res.ok) { const cp = res.clone(); caches.open(CACHE).then(c => c.put(key, cp)); }
+      return res;
+    });
+    if (m) { net.catch(() => {}); return m; }
+    return net;
+  });
+}
+
 self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
   const u = new URL(r.url);
-  if (isApp(u)) { e.respondWith(networkFirst(r, APP, 6000)); return; }
+  if (isApp(u)) { if (/[?&]v=/.test(u.search)) return; e.respondWith(swr(r, APP)); return; }
   if (u.origin === self.location.origin && /manifest\.webmanifest$/.test(u.pathname)) { e.respondWith(networkFirst(r, r.url.split('?')[0], 6000)); return; }
   if (CDN.test(r.url)) {
     e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => {
