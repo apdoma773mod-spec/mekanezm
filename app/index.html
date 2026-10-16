@@ -1627,7 +1627,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-38';
+const APP_VER='2026-10-16-39';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8201,6 +8201,153 @@ function paint(){
  let el=document.getElementById('mkToday');if(!el){el=document.createElement('div');el.id='mkToday';let tr=host.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):host.prepend(el)}
  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
 let o=window.renderDashboard;if(typeof o==='function')window.renderDashboard=function(){o.apply(this,arguments);try{paint();pull()}catch(e){}};
+})();
+</script>
+<script>
+/* ميكانيزم — 📊 مركز التقارير: فلتر فترة + ~٢٥ تقرير تفصيلي + فرز + بحث + طباعة PDF + Excel + واتساب */
+(function(){
+const R={pre:'month',from:0,to:99999999,cur:null,q:'',sort:null};
+const S_={};  // آخر نتيجة تقرير
+const pd=v=>String(v).padStart(2,'0'),K=d=>d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+const kd=k=>new Date(Math.floor(k/10000),Math.floor(k/100)%100-1,k%100),kl=k=>kd(k).toLocaleDateString('ar-EG',{day:'numeric',month:'short',year:'numeric'});
+const PRE=[['day','النهاردة'],['yday','امبارح'],['week','الأسبوع'],['month','الشهر'],['pmonth','الشهر اللي فات'],['q3','٣ شهور'],['year','السنة'],['all','الكل'],['cus','فترة مخصصة']];
+function setPre(p){R.pre=p;let n=new Date(),t=K(n),a=new Date(n);
+ if(p==='day')R.from=R.to=t;else if(p==='yday'){a.setDate(a.getDate()-1);R.from=R.to=K(a)}
+ else if(p==='week'){a.setDate(a.getDate()-((a.getDay()+1)%7));R.from=K(a);R.to=t}
+ else if(p==='month'){R.from=t-t%100+1;R.to=t}
+ else if(p==='pmonth'){R.from=K(new Date(n.getFullYear(),n.getMonth()-1,1));R.to=K(new Date(n.getFullYear(),n.getMonth(),0))}
+ else if(p==='q3'){R.from=K(new Date(n.getFullYear(),n.getMonth()-2,1));R.to=t}
+ else if(p==='year'){R.from=n.getFullYear()*10000+101;R.to=t}
+ else if(p==='all'){R.from=0;R.to=99999999}}
+setPre('month');
+const inR=(r,a,b)=>{let k=dKey(r);return k>=(a==null?R.from:a)&&k<=(b==null?R.to:b)};
+const cst=r=>rowCost(r)*(+r.qty||0),nz=v=>v||'بدون';
+const rngTxt=()=>R.pre==='all'?'كل الفترات':R.from===R.to?kl(R.from):'من '+kl(R.from||20000101)+' إلى '+kl(R.to);
+const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
+function cat(r){let p=findP(r);return (p&&p.cat)||'بدون تصنيف'}
+function grp(arr,kf){let m=new Map();arr.forEach(x=>{let k=kf(x),o=m.get(k);if(!o)m.set(k,o=[]);o.push(x)});return m}
+const inv=a=>new Set(a.map(x=>x.no||x.gid||x.id)).size;
+/* حسبة الأداء لفترة (بتتستخدم في الملخص والمقارنة) */
+function perf(a,b){let I=r=>inR(r,a,b),S=db.sales.filter(I),it=S.filter(x=>!x.ship),shp=sumBy(S.filter(x=>x.ship),x=>x.total),
+ rt=db.returns.filter(r=>r.type==='sale'&&I(r)),prt=db.returns.filter(r=>r.type==='purchase'&&I(r)),
+ tot=sumBy(it,x=>x.total),rtT=sumBy(rt,x=>x.total),cogs=sumBy(it,cst)-sumBy(rt,cst),net=tot-rtT,gross=net-cogs,
+ exp=sumBy(db.expenses.filter(I),x=>x.amount),P=db.purchases.filter(I),pur=sumBy(P,x=>x.total)-sumBy(prt,x=>x.total),
+ pays=sumBy(db.payments.filter(I),x=>x.amount),n=inv(S);
+ return {tot,shp,rtT,net,cogs,gross,exp,np:gross+shp-exp,n,avg:n?(tot+shp)/n:0,coll:sumBy(S,paidOf)+pays,rem:sumBy(S,x=>x.rem||0),pur,qty:sumBy(it,x=>x.qty)}}
+function prevRange(){let d=Math.round((kd(R.to)-kd(R.from||R.to))/864e5)+1,e=kd(R.from||R.to);e.setDate(e.getDate()-1);let s=new Date(e);s.setDate(s.getDate()-(d-1));return [K(s),K(e)]}
+/* حركة الخزنة */
+function cashIn(a,b){let I=r=>inR(r,a,b);return {in:sumBy(db.sales.filter(I),paidOf)+sumBy(db.payments.filter(I),x=>x.amount)+sumBy(db.returns.filter(r=>r.type==='purchase'&&I(r)),x=>x.total),
+ out:sumBy(db.purchases.filter(I),paidOf)+sumBy(db.expenses.filter(I),x=>x.amount)+sumBy(sp().filter(I),x=>x.amount)+sumBy(db.returns.filter(r=>r.type==='sale'&&I(r)),x=>x.total)}}
+const lastSale=new Map();
+function lastSales(){lastSale.clear();db.sales.forEach(r=>{if(r.ship)return;let k=dKey(r),p=findP(r),id=p?p.id:r.product;if(k>(lastSale.get(id)||0))lastSale.set(id,k)})}
+const C=(h,t)=>({h,t});   // t: s نص / n رقم / m فلوس / p نسبة / d تاريخ
+const bx=(l,v,c)=>[l,v,c];
+const mon=v=>money(v);
+/* ===== تعريف التقارير ===== */
+const REP={
+perf:{g:'المبيعات والأرباح',i:'📈',t:'ملخص الأداء',d:'مبيعات وتكلفة وأرباح ومصروفات',b(){let p=perf(R.from,R.to);
+ let rows=[['المبيعات',p.tot,100],['(–) المرتجعات',-p.rtT,pct(p.rtT,p.tot)],['صافي المبيعات',p.net,100],['(–) تكلفة البضاعة',-p.cogs,pct(p.cogs,p.net)],['مجمل الربح',p.gross,pct(p.gross,p.net)],['(+) إيراد النقل',p.shp,pct(p.shp,p.net)],['(–) المصروفات',-p.exp,pct(p.exp,p.net)],['صافي الربح',p.np,pct(p.np,p.net)]];
+ return {sum:[bx('صافي المبيعات',mon(p.net)),bx('مجمل الربح',mon(p.gross),p.gross<0?'r':'g'),bx('صافي الربح',mon(p.np),p.np<0?'r':'g'),bx('عدد الفواتير',p.n),bx('متوسط الفاتورة',mon(p.avg)),bx('اتحصّل',mon(p.coll),'g'),bx('متبقي على العملاء من الفترة',mon(p.rem),p.rem>0?'r':''),bx('مشتريات الفترة',mon(p.pur))],
+  cols:[C('البند','s'),C('القيمة','m'),C('% من صافي المبيعات','p')],rows,nosort:1}}},
+cmp:{g:'المبيعات والأرباح',i:'⚖️',t:'مقارنة بالفترة اللي قبلها',d:'الفترة الحالية مقابل نفس المدة السابقة',b(){let [a,b]=prevRange(),x=perf(R.from,R.to),y=perf(a,b),L=[['صافي المبيعات','net'],['تكلفة البضاعة','cogs'],['مجمل الربح','gross'],['المصروفات','exp'],['صافي الربح','np'],['عدد الفواتير','n'],['متوسط الفاتورة','avg'],['المشتريات','pur'],['المحصّل','coll']];
+ return {sum:[bx('الفترة الحالية',rngTxt()),bx('الفترة السابقة',kl(a)+' – '+kl(b))],cols:[C('البند','s'),C('الحالية','m'),C('السابقة','m'),C('الفرق','m'),C('التغيّر','p')],rows:L.map(([l,k])=>[l,x[k],y[k],x[k]-y[k],y[k]?pct(x[k]-y[k],Math.abs(y[k])):0]),nosort:1}}},
+daily:{g:'المبيعات والأرباح',i:'📅',t:'المبيعات اليومية',d:'كل يوم: فواتير ومبيعات وربح وتحصيل',b(){let S=db.sales.filter(r=>inR(r)),m=grp(S,r=>dKey(r)),rows=[...m].map(([k,a])=>{let it=a.filter(x=>!x.ship),t=sumBy(it,x=>x.total);return [k,inv(a),t,sumBy(it,x=>x.total-cst(x)),sumBy(a,paidOf)]}).sort((x,y)=>y[0]-x[0]);
+ return {sum:[bx('أيام فيها بيع',rows.length),bx('إجمالي المبيعات',mon(sumBy(rows,r=>r[2]))),bx('إجمالي الربح',mon(sumBy(rows,r=>r[3])),'g'),bx('متوسط اليوم',mon(rows.length?sumBy(rows,r=>r[2])/rows.length:0))],
+  cols:[C('اليوم','d'),C('فواتير','n'),C('المبيعات','m'),C('الربح','m'),C('المحصّل','m')],rows,chart:rows.slice(0,31).reverse().map(r=>[String(r[0]%100),r[2]]),foot:['الإجمالي',sumBy(rows,r=>r[1]),sumBy(rows,r=>r[2]),sumBy(rows,r=>r[3]),sumBy(rows,r=>r[4])],dsort:[0,-1]}}},
+byItem:{g:'المبيعات والأرباح',i:'📦',t:'المبيعات بالصنف',d:'كمية وإجمالي وربح كل صنف',b(){return itemRep(false)}},
+margin:{g:'المبيعات والأرباح',i:'💎',t:'هامش الربح بالصنف',d:'مين بيكسّب ومين خسران أو هامشه ضعيف',b(){return itemRep(true)}},
+byCat:{g:'المبيعات والأرباح',i:'🗂️',t:'المبيعات بالتصنيف',d:'مبيعات وأرباح كل تصنيف',b(){let S=db.sales.filter(r=>inR(r)&&!r.ship),m=grp(S,cat),tot=sumBy(S,x=>x.total),rows=[...m].map(([k,a])=>{let t=sumBy(a,x=>x.total),p=t-sumBy(a,cst);return [k,sumBy(a,x=>x.qty),t,p,pct(p,t),pct(t,tot)]}).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('عدد التصنيفات',rows.length),bx('إجمالي المبيعات',mon(tot))],cols:[C('التصنيف','s'),C('الكمية','n'),C('المبيعات','m'),C('الربح','m'),C('هامش %','p'),C('حصته %','p')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[2]])}}},
+byCust:{g:'العملاء والديون',i:'👥',t:'المبيعات بالعميل',d:'فواتير وإجمالي وربح ومتبقي كل عميل',b(){let S=db.sales.filter(r=>inR(r)),m=grp(S,r=>(r.person||'').trim()||'عميل نقدي'),rows=[...m].map(([k,a])=>{let it=a.filter(x=>!x.ship),t=sumBy(a,x=>x.total);return [k,inv(a),t,sumBy(it,x=>x.total-cst(x)),sumBy(a,paidOf),sumBy(a,x=>x.rem||0)]}).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('عدد العملاء',rows.length),bx('إجمالي',mon(sumBy(rows,r=>r[2]))),bx('الربح',mon(sumBy(rows,r=>r[3])),'g'),bx('متبقي',mon(sumBy(rows,r=>r[5])),'r')],cols:[C('العميل','s'),C('فواتير','n'),C('المبيعات','m'),C('الربح','m'),C('المدفوع','m'),C('المتبقي','m')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[2]]),go:r=>`contactReport('${esc(r[0]).replace(/'/g,'')}','عميل','${R.from?k2(R.from):''}','${R.to<99999999?k2(R.to):''}')`}}},
+invSales:{g:'المبيعات والأرباح',i:'🧾',t:'فواتير البيع',d:'قائمة الفواتير بالحالة (مدفوعة / متبقي)',b(){let m=grp(db.sales.filter(r=>inR(r)),r=>r.no||r.id),rows=[...m].map(([k,a])=>{let r=a[0],t=sumBy(a,x=>x.total),rm=sumBy(a,x=>x.rem||0);return {c:[invNo(r),r.date,(r.person||'').trim()||'نقدي',t,sumBy(a,paidOf),rm,rm>0.5?'متبقي':'مدفوعة'],go:`openInvoiceModal('${r.id}')`}});
+ return {sum:[bx('عدد الفواتير',rows.length),bx('إجمالي',mon(sumBy(rows,r=>r.c[3]))),bx('متبقي',mon(sumBy(rows,r=>r.c[5])),'r'),bx('فواتير فيها متبقي',rows.filter(r=>r.c[5]>0.5).length)],cols:[C('الفاتورة','s'),C('التاريخ','s'),C('العميل','s'),C('الإجمالي','m'),C('المدفوع','m'),C('المتبقي','m'),C('الحالة','s')],rows,rich:1}}},
+returns:{g:'المبيعات والأرباح',i:'↩️',t:'المرتجعات',d:'مرتجعات البيع والشراء بالتفصيل',b(){let L=db.returns.filter(r=>inR(r)),rows=L.map(r=>[r.date,r.type==='sale'?'مرتجع بيع':'مرتجع شراء',r.product,r.person||'—',r.qty,r.total,r.note||'']);
+ return {sum:[bx('عدد المرتجعات',L.length),bx('مرتجع بيع',mon(sumBy(L.filter(r=>r.type==='sale'),x=>x.total)),'r'),bx('مرتجع شراء',mon(sumBy(L.filter(r=>r.type==='purchase'),x=>x.total)))],cols:[C('التاريخ','s'),C('النوع','s'),C('الصنف','s'),C('الاسم','s'),C('الكمية','n'),C('القيمة','m'),C('ملاحظة','s')],rows}}},
+purSup:{g:'المشتريات',i:'🚚',t:'المشتريات بالمورد',d:'كل مورد: فواتير وإجمالي ومدفوع ومتبقي',b(){let P=db.purchases.filter(r=>inR(r)),m=grp(P,r=>(r.person||'').trim()||'بدون مورد'),rows=[...m].map(([k,a])=>[k,inv(a),sumBy(a,x=>x.total),sumBy(a,paidOf),sumBy(a,x=>x.rem||0)]).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('عدد الموردين',rows.length),bx('إجمالي المشتريات',mon(sumBy(rows,r=>r[2]))),bx('متبقي للموردين',mon(sumBy(rows,r=>r[4])),'r')],cols:[C('المورد','s'),C('فواتير','n'),C('الإجمالي','m'),C('المدفوع','m'),C('المتبقي','m')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[2]])}}},
+purItem:{g:'المشتريات',i:'🛒',t:'المشتريات بالصنف',d:'كمية وتكلفة كل صنف اشتريته وآخر سعر',b(){let P=db.purchases.filter(r=>inR(r)&&!r.ship),m=grp(P,r=>r.product),rows=[...m].map(([k,a])=>{let q=sumBy(a,x=>x.qty),t=sumBy(a,x=>x.total);return [k,q,t,q?t/q:0,Math.min(...a.map(x=>q?+x.price||0:0).filter(Boolean),Infinity)===Infinity?0:Math.min(...a.map(x=>+x.price||0).filter(Boolean)),Math.max(...a.map(x=>+x.price||0),0)]}).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('عدد الأصناف',rows.length),bx('إجمالي',mon(sumBy(rows,r=>r[2])))],cols:[C('الصنف','s'),C('الكمية','n'),C('الإجمالي','m'),C('متوسط السعر','m'),C('أقل سعر','m'),C('أعلى سعر','m')],rows}}},
+invPur:{g:'المشتريات',i:'🧾',t:'فواتير الشراء',d:'قائمة فواتير الشراء بالحالة',b(){let m=grp(db.purchases.filter(r=>inR(r)),r=>r.gid||r.id),rows=[...m].map(([k,a])=>{let r=a[0],t=sumBy(a,x=>x.total),rm=sumBy(a,x=>x.rem||0);return {c:[r.pno||'—',r.date,(r.person||'').trim()||'—',t,sumBy(a,paidOf),rm,rm>0.5?'متبقي':'مدفوعة'],go:`openPurchaseView('${r.id}')`}});
+ return {sum:[bx('عدد الفواتير',rows.length),bx('إجمالي',mon(sumBy(rows,r=>r.c[3]))),bx('متبقي',mon(sumBy(rows,r=>r.c[5])),'r')],cols:[C('الفاتورة','s'),C('التاريخ','s'),C('المورد','s'),C('الإجمالي','m'),C('المدفوع','m'),C('المتبقي','m'),C('الحالة','s')],rows,rich:1}}},
+expCat:{g:'المصروفات',i:'💸',t:'المصروفات بالبند',d:'مصروفات كل بند ونسبته',b(){let E=db.expenses.filter(r=>inR(r)),m=grp(E,r=>(r.cat||'').trim()||'أخرى'),tot=sumBy(E,x=>x.amount),rows=[...m].map(([k,a])=>[k,a.length,sumBy(a,x=>x.amount),pct(sumBy(a,x=>x.amount),tot)]).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('إجمالي المصروفات',mon(tot),'r'),bx('عدد البنود',rows.length),bx('عدد العمليات',E.length)],cols:[C('البند','s'),C('عمليات','n'),C('الإجمالي','m'),C('النسبة %','p')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[2]])}}},
+expList:{g:'المصروفات',i:'📝',t:'المصروفات تفصيلي',d:'كل مصروف بتاريخه وبيانه',b(){let E=db.expenses.filter(r=>inR(r)).sort((a,b)=>dKey(b)-dKey(a)),rows=E.map(r=>[r.date,r.cat||'أخرى',r.note||'',+r.amount||0]);
+ return {sum:[bx('إجمالي',mon(sumBy(E,x=>x.amount)),'r'),bx('عدد',E.length)],cols:[C('التاريخ','s'),C('البند','s'),C('البيان','s'),C('المبلغ','m')],rows,foot:['الإجمالي','','',sumBy(E,x=>x.amount)]}}},
+stockVal:{g:'المخزون',i:'🏬',t:'قيمة المخزون',d:'كل صنف: كمية × تكلفة وربح متوقع',b(){let L=db.products.map(p=>[p.code||'',p.name,p.cat||'بدون تصنيف',+p.qty||0,+p.cost||0,(+p.qty||0)*(+p.cost||0),+p.price||0,Math.max(0,+p.qty||0)*((+p.price||0)-(+p.cost||0))]).sort((a,b)=>b[5]-a[5]),v=sumBy(L,r=>r[5]);
+ return {sum:[bx('عدد الأصناف',L.length),bx('قيمة المخزون (تكلفة)',mon(v)),bx('قيمته بسعر البيع',mon(sumBy(L,r=>Math.max(0,r[3])*r[6]))),bx('ربح متوقع',mon(sumBy(L,r=>r[7])),'g')],cols:[C('الكود','s'),C('الصنف','s'),C('التصنيف','s'),C('الكمية','n'),C('التكلفة','m'),C('القيمة','m'),C('سعر البيع','m'),C('ربح متوقع','m')],rows:L,foot:['','الإجمالي','','',  '',v,'',sumBy(L,r=>r[7])],nofilt:1}}},
+stockCat:{g:'المخزون',i:'🗂️',t:'المخزون بالتصنيف',d:'قيمة وكمية كل تصنيف',b(){let m=grp(db.products,p=>p.cat||'بدون تصنيف'),tot=sumBy(db.products,p=>(+p.qty||0)*(+p.cost||0)),rows=[...m].map(([k,a])=>{let v=sumBy(a,p=>(+p.qty||0)*(+p.cost||0));return [k,a.length,sumBy(a,p=>+p.qty),v,pct(v,tot)]}).sort((a,b)=>b[3]-a[3]);
+ return {sum:[bx('إجمالي القيمة',mon(tot))],cols:[C('التصنيف','s'),C('أصناف','n'),C('الكمية','n'),C('القيمة','m'),C('النسبة %','p')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[3]])}}},
+stockLow:{g:'المخزون',i:'⚠️',t:'نواقص المخزون',d:'أصناف وصلت لحد الطلب أو خلصت',b(){lastSales();let L=db.products.filter(p=>(+p.qty||0)<=(+p.min||0)).map(p=>{let k=lastSale.get(p.id)||lastSale.get(p.name)||0;return [p.code||'',p.name,p.cat||'—',+p.qty||0,+p.min||0,Math.max(0,(+p.min||0)*2-(+p.qty||0)),k]}).sort((a,b)=>a[3]-b[3]);
+ return {sum:[bx('أصناف ناقصة',L.length,L.length?'r':'g'),bx('خلصت تمامًا',L.filter(r=>r[3]<=0).length,'r')],cols:[C('الكود','s'),C('الصنف','s'),C('التصنيف','s'),C('المتاح','n'),C('حد الطلب','n'),C('المقترح شراؤه','n'),C('آخر بيع','d')],rows:L,nofilt:1}}},
+stockDead:{g:'المخزون',i:'🧊',t:'الأصناف الراكدة',d:'عليها رصيد ومتباعتش من ٦٠ يوم أو أكتر',b(){lastSales();let lim=K(new Date(Date.now()-60*864e5)),L=db.products.filter(p=>(+p.qty||0)>0).map(p=>[p.code||'',p.name,p.cat||'—',+p.qty,(+p.qty)*(+p.cost||0),lastSale.get(p.id)||lastSale.get(p.name)||0]).filter(r=>r[5]<lim).sort((a,b)=>b[4]-a[4]);
+ return {sum:[bx('أصناف راكدة',L.length),bx('فلوس واقفة',mon(sumBy(L,r=>r[4])),'r'),bx('ماتباعتش خالص',L.filter(r=>!r[5]).length)],cols:[C('الكود','s'),C('الصنف','s'),C('التصنيف','s'),C('الكمية','n'),C('قيمتها (تكلفة)','m'),C('آخر بيع','d')],rows:L,nofilt:1}}},
+stockMove:{g:'المخزون',i:'🔄',t:'حركة الأصناف',d:'مشتريات ومبيعات ومرتجعات كل صنف في الفترة',b(){let m=new Map(),g=n=>{let o=m.get(n);if(!o)m.set(n,o={b:0,s:0,rs:0,rp:0});return o};
+ db.purchases.filter(r=>inR(r)&&!r.ship).forEach(r=>g(r.product).b+=+r.qty||0);db.sales.filter(r=>inR(r)&&!r.ship).forEach(r=>g(r.product).s+=+r.qty||0);db.returns.filter(r=>inR(r)).forEach(r=>{let o=g(r.product);if(r.type==='sale')o.rs+=+r.qty||0;else o.rp+=+r.qty||0});
+ let rows=[...m].map(([k,o])=>{let p=db.products.find(x=>x.name===k);return [k,o.b,o.s,o.rs,o.rp,p?+p.qty||0:0]}).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('أصناف اتحركت',rows.length)],cols:[C('الصنف','s'),C('اشتريت','n'),C('بعت','n'),C('مرتجع بيع','n'),C('مرتجع شراء','n'),C('الرصيد الحالي','n')],rows}}},
+debtC:{g:'العملاء والديون',i:'💰',t:'ديون العملاء وأعمارها',d:'مين عليه كام ومن إمتى (أعمار الديون)',b(){let now=K(new Date()),age=k=>k?Math.round((kd(now)-kd(k))/864e5):999,la=new Map();db.sales.forEach(r=>{let n=(r.person||'').trim(),k=dKey(r);if(k>(la.get(n)||0))la.set(n,k)});db.payments.forEach(r=>{let n=(r.name||'').trim(),k=dKey(r);if(n&&k>(la.get(n+'|p')||0))la.set(n+'|p',k)});
+ let L=db.contacts.filter(c=>c.type==='عميل'&&(+c.balance||0)>0.5).map(c=>{let n=c.name.trim(),ls=la.get(n)||0,lp=la.get(n+'|p')||0;return [c.name,c.phone||'—',+c.balance,ls,lp,age(ls)]}).sort((a,b)=>b[2]-a[2]),B=(a,b)=>sumBy(L.filter(r=>r[5]>=a&&r[5]<=b),r=>r[2]);
+ return {sum:[bx('إجمالي الديون',mon(sumBy(L,r=>r[2])),'r'),bx('عدد المديونين',L.length),bx('٠–٣٠ يوم',mon(B(0,30))),bx('٣١–٦٠ يوم',mon(B(31,60))),bx('٦١–٩٠ يوم',mon(B(61,90)),'r'),bx('أكتر من ٩٠',mon(B(91,9999)),'r')],cols:[C('العميل','s'),C('التليفون','s'),C('عليه','m'),C('آخر فاتورة','d'),C('آخر دفعة','d'),C('عمر الدين (يوم)','n')],rows:L,nofilt:1,go:r=>`openContactFile('${(db.contacts.find(c=>c.name===r[0])||{}).id}')`}}},
+debtS:{g:'العملاء والديون',i:'🏭',t:'مستحقات الموردين',d:'اللي عليك للموردين',b(){let L=db.contacts.filter(c=>c.type!=='عميل'&&Math.abs(+c.balance||0)>0.5).map(c=>[c.name,c.phone||'—',+c.balance||0,balTxt(c)]).sort((a,b)=>b[2]-a[2]);
+ return {sum:[bx('عدد الموردين',L.length),bx('الإجمالي',mon(sumBy(L,r=>r[2])))],cols:[C('المورد','s'),C('التليفون','s'),C('الرصيد','m'),C('الحالة','s')],rows:L,nofilt:1}}},
+cash:{g:'الحسابات',i:'🏦',t:'حركة الخزنة',d:'داخل وخارج ورصيد كل يوم',b(){let ks=new Set();[db.sales,db.payments,db.purchases,db.expenses,sp(),db.returns].forEach(a=>a.forEach(r=>{if(inR(r))ks.add(dKey(r))}));let days=[...ks].sort((a,b)=>a-b),open=R.from?(()=>{let c=cashIn(0,R.from-1);return c.in-c.out})():0,run=open,rows=days.map(k=>{let c=cashIn(k,k);run+=c.in-c.out;return [k,c.in,c.out,c.in-c.out,run]}),tin=sumBy(rows,r=>r[1]),tout=sumBy(rows,r=>r[2]);
+ return {sum:[bx('رصيد أول الفترة',mon(open)),bx('داخل',mon(tin),'g'),bx('خارج',mon(tout),'r'),bx('رصيد آخر الفترة',mon(run),run<0?'r':'g'),bx('الرصيد دلوقتي',mon(cashNow()))],cols:[C('اليوم','d'),C('داخل','m'),C('خارج','m'),C('الصافي','m'),C('الرصيد','m')],rows,chart:rows.slice(-31).map(r=>[String(r[0]%100),r[4]]),dsort:[0,1],foot:['الإجمالي',tin,tout,tin-tout,run]}}},
+dailyHour:{g:'المبيعات والأرباح',i:'🗓️',t:'المبيعات بيوم الأسبوع',d:'أنهي أيام الأسبوع الأقوى',b(){let N=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],m=new Map();db.sales.filter(r=>inR(r)&&!r.ship).forEach(r=>{let k=dKey(r);if(!k)return;let d=kd(k).getDay(),o=m.get(d)||{t:0,n:new Set(),days:new Set()};o.t+=+r.total||0;o.n.add(r.no||r.id);o.days.add(k);m.set(d,o)});
+ let rows=[...m].map(([d,o])=>[N[d],o.days.size,o.n.size,o.t,o.days.size?o.t/o.days.size:0]).sort((a,b)=>b[3]-a[3]);return {sum:[bx('أقوى يوم',rows[0]?rows[0][0]:'—','g')],cols:[C('اليوم','s'),C('عدد الأيام','n'),C('فواتير','n'),C('المبيعات','m'),C('متوسط اليوم','m')],rows,chart:rows.map(r=>[r[0],r[3]])}}}
+};
+const k2=k=>{k=String(k);return k.slice(0,4)+'-'+k.slice(4,6)+'-'+k.slice(6)};
+function itemRep(mg){let S=db.sales.filter(r=>inR(r)&&!r.ship),m=grp(S,r=>r.product),RT=grp(db.returns.filter(r=>r.type==='sale'&&inR(r)),r=>r.product),tot=sumBy(S,x=>x.total),
+ rows=[...m].map(([k,a])=>{let q=sumBy(a,x=>x.qty),t=sumBy(a,x=>x.total),c=sumBy(a,cst),p=t-c,p0=findP(a[0]);return [k,q,(p0&&p0.unit)||'',t,q?t/q:0,p,pct(p,t),(RT.get(k)||[]).length]}).sort((a,b)=>mg?a[6]-b[6]:b[3]-a[3]);
+ return {sum:[bx('عدد الأصناف',rows.length),bx('إجمالي المبيعات',mon(tot)),bx('الربح',mon(sumBy(rows,r=>r[5])),'g'),bx('أصناف بخسارة',rows.filter(r=>r[5]<0).length,'r'),bx('هامش ضعيف (أقل من ١٠٪)',rows.filter(r=>r[6]<10&&r[5]>=0).length)],
+ cols:[C('الصنف','s'),C('الكمية','n'),C('الوحدة','s'),C('المبيعات','m'),C('متوسط السعر','m'),C('الربح','m'),C('هامش %','p'),C('مرتجعات','n')],rows,chart:mg?null:rows.slice(0,12).map(r=>[r[0],r[3]]),warn:r=>r[5]<0?'r':(r[6]<10?'y':'')}}
+/* ===== العرض ===== */
+const fm=(v,t)=>t==='m'?money(v):t==='p'?(Math.round(v*10)/10).toLocaleString('ar-EG')+'٪':t==='n'?(Math.round(v*100)/100).toLocaleString('ar-EG'):t==='d'?(v?kl(v):'—'):esc(v);
+const raw=(v,t)=>t==='d'?(v?k2(v):''):v;
+function host(){let o=document.getElementById('mkRp');if(!o){o=document.createElement('div');o.id='mkRp';o.style.cssText='position:fixed;inset:0;z-index:40;background:var(--bg,#f5f7f8);color:var(--text,#18343a);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;direction:rtl';document.body.appendChild(o)}return o}
+function chips(){return `<div style="display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch">${PRE.map(([k,l])=>`<button type="button" data-pre="${k}" style="flex:none;padding:10px 16px;border-radius:99px;border:1.5px solid ${R.pre===k?'var(--blue,#087f8c)':'var(--border,#e4eaed)'};background:${R.pre===k?'var(--blue,#087f8c)':'var(--card,#fff)'};color:${R.pre===k?'#fff':'inherit'};font-weight:700;white-space:nowrap">${l}</button>`).join('')}</div>`+(R.pre==='cus'?`<div style="display:flex;gap:8px;margin-bottom:8px"><input type="date" id="rpF" value="${R.from?k2(R.from):''}" style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:12px"><input type="date" id="rpT" value="${R.to<99999999?k2(R.to):''}" style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:12px"></div>`:'')+`<div style="font-size:13px;color:var(--muted);margin-bottom:6px">${esc(rngTxt())}</div>`}
+function wire(box,redo){box.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{let p=b.dataset.pre;if(p==='cus'){R.pre='cus'}else setPre(p);redo()});
+ let f=box.querySelector('#rpF'),t=box.querySelector('#rpT');if(f)f.onchange=()=>{R.from=f.value?+f.value.replace(/-/g,''):0;redo(1)};if(t)t.onchange=()=>{R.to=t.value?+t.value.replace(/-/g,''):99999999;redo(1)}}
+const bc={g:'var(--green,#159447)',r:'var(--danger,#c0392b)',y:'#b7791f'};
+function sumH(s){return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">${s.map(([l,v,c])=>`<div style="background:var(--card,#fff);border:1px solid var(--border,#e4eaed);border-radius:14px;padding:10px 12px;min-width:0"><div style="font-size:12px;color:var(--muted)">${l}</div><div style="font-size:17px;font-weight:800;${c?'color:'+bc[c]:''}">${v}</div></div>`).join('')}</div>`}
+function chartH(ch){if(!ch||!ch.length)return '';let mx=Math.max(1,...ch.map(x=>Math.abs(x[1])));return `<div style="background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin:8px 0;max-height:300px;overflow:auto">${ch.map(([l,v])=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span style="flex:0 0 78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l)}</span><span style="flex:1;background:var(--tint2,#eef4f5);border-radius:6px;height:16px;overflow:hidden"><i style="display:block;height:100%;width:${Math.max(2,Math.abs(v)/mx*100)}%;background:${v<0?'var(--danger)':'var(--blue,#087f8c)'}"></i></span><b style="flex:0 0 auto;font-size:12px">${money(v)}</b></div>`).join('')}</div>`}
+function rowsOf(d){let rows=d.rows.map(r=>r.c?r:{c:r,go:d.go?d.go(r):''}),q=VN(R.q).split(' ').filter(Boolean);
+ if(q.length)rows=rows.filter(r=>{let h=VN(r.c.join(' '));return q.every(w=>h.includes(w))});
+ let s=R.sort||(d.dsort?{i:d.dsort[0],dir:d.dsort[1]}:null);if(s&&!d.nosort)rows=rows.slice().sort((a,b)=>{let x=a.c[s.i],y=b.c[s.i];return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'ar'))*s.dir});
+ return rows}
+function tableH(d,rows){let s=R.sort;return `<div style="overflow:auto;background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;max-height:62vh;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:${Math.max(320,d.cols.length*92)}px;font-size:14px"><thead><tr>${d.cols.map((c,i)=>`<th data-s="${i}" style="position:sticky;top:0;background:var(--blue,#087f8c);color:#fff;padding:11px 8px;text-align:right;white-space:nowrap;font-size:13px">${c.h}${s&&s.i===i?(s.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((r,ri)=>{let w=d.warn?d.warn(r.c):'';return `<tr data-g="${ri}" style="border-bottom:1px solid var(--border);${r.go?'cursor:pointer;':''}${w==='r'?'background:rgba(192,57,43,.09)':w==='y'?'background:rgba(183,121,31,.09)':''}">${r.c.map((v,i)=>`<td style="padding:10px 8px;${d.cols[i].t==='s'?'':'white-space:nowrap;'}${(d.cols[i].t==='m'&&v<0)?'color:var(--danger);':''}">${fm(v,d.cols[i].t)}</td>`).join('')}</tr>`}).join(''):`<tr><td colspan="${d.cols.length}" style="padding:24px;text-align:center;color:var(--muted)">مفيش بيانات في الفترة دي.</td></tr>`}${d.foot&&!R.q?`<tr style="font-weight:800;background:var(--tint2,#eef4f5)">${d.foot.map((v,i)=>`<td style="padding:10px 8px">${v===''?'':fm(v,d.cols[i].t)}</td>`).join('')}</tr>`:''}</tbody></table></div>`}
+function draw(keep){let def=REP[R.cur],box=host(),d;try{d=def.b()}catch(e){console.warn(e);d={sum:[],cols:[C('خطأ','s')],rows:[['حصل خطأ في التقرير']]}}S_.d=d;S_.def=def;
+ let sc=box.scrollTop,rows=rowsOf(d);S_.rows=rows;
+ box.innerHTML=`<div style="position:sticky;top:0;z-index:2;background:var(--bg,#f5f7f8);padding:12px 14px 4px;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><button type="button" id="rpBack" style="flex:none;padding:12px 16px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border);font-weight:700">→ رجوع</button><h2 style="margin:0;font-size:19px">${def.i} ${def.t}</h2></div>${chips()}</div>
+ <div style="padding:6px 14px 90px;max-width:900px;margin:0 auto">${sumH(d.sum||[])}${chartH(d.chart)}
+ ${d.nofilt||d.nosort?'':`<input id="rpQ" placeholder="🔍 ابحث جوه التقرير..." value="${esc(R.q)}" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;margin:8px 0;background:var(--card,#fff);color:inherit">`}
+ ${d.nosort?'':`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${rows.length} صف — اضغط على عنوان العمود للفرز</div>`}${tableH(d,rows)}
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px"><button type="button" id="rpPdf" class="primary" style="padding:15px 6px;border-radius:12px;background:var(--blue,#087f8c);color:#fff;font-weight:700">🖨️ طباعة / PDF</button><button type="button" id="rpXls" style="padding:15px 6px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border);font-weight:700">📊 Excel</button><button type="button" id="rpWa" style="padding:15px 6px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border);font-weight:700">📲 واتساب</button></div></div>`;
+ box.querySelector('#rpBack').onclick=close;wire(box,()=>{R.sort=null;draw()});
+ let q=box.querySelector('#rpQ');if(q)q.oninput=()=>{R.q=q.value;clearTimeout(draw._t);draw._t=setTimeout(()=>{draw(1);let x=document.getElementById('rpQ');if(x){x.focus();x.setSelectionRange(x.value.length,x.value.length)}},250)};
+ box.querySelectorAll('th[data-s]').forEach(th=>th.onclick=()=>{if(d.nosort)return;let i=+th.dataset.s;R.sort=R.sort&&R.sort.i===i?{i,dir:-R.sort.dir}:{i,dir:d.cols[i].t==='s'?1:-1};draw(1)});
+ box.querySelectorAll('tr[data-g]').forEach(tr=>{let r=rows[+tr.dataset.g];if(r&&r.go)tr.onclick=()=>{try{(0,eval)(r.go)}catch(e){}}});
+ box.querySelector('#rpPdf').onclick=pdf;box.querySelector('#rpXls').onclick=xls;box.querySelector('#rpWa').onclick=wa;
+ box.style.display='block';document.body.style.overflow='hidden';box.scrollTop=keep?sc:0}
+function close(){let b=document.getElementById('mkRp');if(b)b.style.display='none';document.body.style.overflow='';R.cur=null;R.sort=null;R.q='';home()}
+function plain(){let d=S_.d;return {head:d.cols.map(c=>c.h),rows:S_.rows.map(r=>r.c),types:d.cols.map(c=>c.t)}}
+function pdf(){let d=S_.d,p=plain(),T=(h,rs)=>`<table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rs.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+ let body=`<div style="margin-bottom:8px;color:#555">${esc(rngTxt())}</div><div class="stats">${(d.sum||[]).slice(0,8).map(([l,v])=>`<div><small>${l}</small><b>${v}</b></div>`).join('')}</div>`+T(p.head,p.rows.map(r=>r.map((v,i)=>fm(v,p.types[i]))).concat(d.foot?[d.foot.map((v,i)=>v===''?'':fm(v,p.types[i]))]:[])),title=S_.def.t;
+ printA4(title,body,{landscape:p.head.length>6})}
+async function xls(){let p=plain(),d=S_.d,q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',L=[[S_.def.t],[rngTxt()],[],p.head,...p.rows.map(r=>r.map((v,i)=>raw(v,p.types[i]))),...(d.foot?[d.foot]:[])];
+ await saveFile('تقرير-'+S_.def.t.replace(/\s+/g,'-')+'-'+isoToday()+'.csv',new Blob(['﻿'+L.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));toast('اتنزل ملف Excel')}
+function wa(){let d=S_.d,p=plain(),t=`📊 ${S_.def.t}\n${rngTxt()}\n\n`+(d.sum||[]).map(([l,v])=>`• ${l}: ${v}`).join('\n')+'\n\n'+p.rows.slice(0,12).map((r,i)=>`${i+1}. ${r.slice(0,3).map((v,j)=>fm(v,p.types[j]).replace(/<[^>]+>/g,'')).join(' — ')}`).join('\n')+(p.rows.length>12?`\n... و${p.rows.length-12} صف كمان`:'')+`\n\n${db.settings.companyName||'ميكانيزم'}`;
+ if(navigator.share){navigator.share({text:t}).catch(()=>{})}else{let u='https://wa.me/?text='+encodeURIComponent(t);if(!window.open(u,'_blank'))location.href=u}}
+/* ===== الصفحة الرئيسية للتقارير (فوق القديم) ===== */
+function home(){let sec=document.getElementById('reports');if(!sec)return;let el=document.getElementById('mkRepHome');if(!el){el=document.createElement('div');el.id='mkRepHome';let tr=sec.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):sec.prepend(el)}
+ let p=perf(R.from,R.to),gs=[...new Set(Object.values(REP).map(x=>x.g))];
+ el.innerHTML=`<div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 6px">📊 مركز التقارير</h3>${chips()}
+ <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:6px 0 12px">${[['صافي المبيعات',p.net],['مجمل الربح',p.gross],['صافي الربح',p.np]].map(([l,v])=>`<div style="border:1px solid var(--border);border-radius:12px;padding:8px 10px;min-width:0"><small style="color:var(--muted);font-size:11px">${l}</small><div style="font-weight:800;font-size:14px;${v<0?'color:var(--danger)':''}">${money(v)}</div></div>`).join('')}</div>
+ ${gs.map(g=>`<h4 style="margin:14px 0 8px">${g}</h4><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${Object.entries(REP).filter(([k,x])=>x.g===g).map(([k,x])=>`<button type="button" data-rp="${k}" style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--card,#fff);color:inherit;text-align:right;min-height:92px"><span style="font-size:26px;line-height:1">${x.i}</span><b style="font-size:14px">${x.t}</b><small style="color:var(--muted);font-size:11px;line-height:1.4">${x.d}</small></button>`).join('')}</div>`).join('')}</div>`;
+ wire(el,()=>home());el.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{R.cur=b.dataset.rp;R.sort=null;R.q='';draw()})}
+let o=window.renderReports;if(typeof o==='function')window.renderReports=function(){o.apply(this,arguments);try{if(document.getElementById('reports').classList.contains('active'))home()}catch(e){}};
+window.mkReports={open:id=>{R.cur=id;draw()},home};
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-page="reports"]'))setTimeout(home,60)});
 })();
 </script>
 </body>
