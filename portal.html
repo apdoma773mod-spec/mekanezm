@@ -92,8 +92,13 @@ function pick(e){for(const f of e.target.files){if(f.size>50*1024*1024){alert('�
 function showThumbs(){const t=$('th');if(!t)return;t.innerHTML='';files.forEach((f,i)=>{const d=document.createElement('div');if(f.type.startsWith('image/')){const im=document.createElement('img');im.src=URL.createObjectURL(f);d.appendChild(im)}else d.textContent='🎬 '+f.name.slice(0,18);d.onclick=()=>{files.splice(i,1);showThumbs()};t.appendChild(d)})}
 async function up(f,i){
  const ext=(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5)||'bin',p=T+'/'+Date.now()+'-'+i+'.'+ext;
- const r=await fetch(URL_+'/storage/v1/object/portal/'+p,{method:'POST',headers:{...H,'Content-Type':f.type||'application/octet-stream'},body:f});
- if(!r.ok){let t='';try{t=(await r.text()).slice(0,120)}catch(e){}throw new Error('UP:'+r.status+(t?' '+t:''))}return {u:URL_+'/storage/v1/object/public/portal/'+p,t:f.type.startsWith('video/')?'v':'i'}}
+ // بعض الموبايلات بتبعت نوع الملف فاضي أو غريب: بنحدده من الامتداد، والمخزن بيقبل الأنواع دي بس
+ const MIME={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',heic:'image/heic',heif:'image/heic',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm'};
+ let mt=MIME[ext]||(f.type&&/^(image|video)\//.test(f.type)?f.type:(f.type&&f.type.startsWith('video/')?'video/mp4':'image/jpeg'));
+ if(f.type&&MIME[ext]&&f.type!==mt&&!/^(image|video)\//.test(f.type))mt=MIME[ext];
+ const r=await fetch(URL_+'/storage/v1/object/portal/'+p,{method:'POST',headers:{...H,'Content-Type':mt},body:f});
+ if(!r.ok){let t='';try{t=(await r.text()).slice(0,120)}catch(e){}throw new Error('UP:'+r.status+(t?' '+t:''))}
+ return {u:URL_+'/storage/v1/object/public/portal/'+p,t:mt.startsWith('video/')?'v':'i'}}
 async function send(){
  const body=$('body').value.trim();if(!body&&!files.length){$('st').textContent='اكتب طلبك أو أرفق صورة الأول.';return}
  const b=$('send');b.disabled=true;$('st').textContent='جاري الإرسال...';
