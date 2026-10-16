@@ -17,11 +17,13 @@
  window.setTimeout=function(f,ms){return ST(wrap(f,'بعد'),ms)};
  var AEL=EventTarget.prototype.addEventListener;EventTarget.prototype.addEventListener=function(t,f,o){if(typeof f==='function'&&/^(scroll|input|change|click|touchstart|touchmove|visibilitychange|focus|resize)$/.test(t)){var w=f.__mkw||(f.__mkw=wrap(f,'حدث '+t));return AEL.call(this,t,w,o)}return AEL.call(this,t,f,o)};
  var REL=EventTarget.prototype.removeEventListener;EventTarget.prototype.removeEventListener=function(t,f,o){return REL.call(this,t,f&&f.__mkw||f,o)};
- var last=performance.now();SI(function(){var n=performance.now(),d=n-last-250;last=n;if(d>0){lag+=d;if(d>lagMax)lagMax=d;if(d>300)slow++;if(Date.now()-t0>15000){L2+=d;if(d>M2)M2=d;if(d>300)N2++}}},250);
+ var last=performance.now(),hid=0,FR=0,FS=0,FB=0,lf=0;AEL.call(document,'visibilitychange',function(){hid=1});
+ (function fr(t){if(!document.hidden&&lf){var g=t-lf;if(g<1000){FR++;if(g>50)FS++;if(g>200)FB++}}lf=document.hidden?0:t;RAF.call(window,fr)})(performance.now());
+ SI(function(){var n=performance.now(),d=n-last-250;last=n;if(hid||document.hidden){hid=document.hidden?1:0;return}if(d>0){lag+=d;if(d>lagMax)lagMax=d;if(d>300)slow++;if(Date.now()-t0>15000){L2+=d;if(d>M2)M2=d;if(d>300)N2++}}},250);
  function show(){var b=document.getElementById('mkDiagBox');if(b){b.remove();return}var sec=Math.round((Date.now()-t0)/1000);
   var L=Object.keys(S).map(function(k){return [k,S[k]]}).sort(function(a,b){return b[1].ms-a[1].ms}).slice(0,10);
   b=document.createElement('div');b.id='mkDiagBox';b.style.cssText='position:fixed;left:6px;right:6px;top:40px;bottom:90px;z-index:2147483647;background:#fff;color:#000;border:3px solid #c0392b;border-radius:14px;padding:10px;overflow:auto;font:13px/1.5 Tahoma,Arial;direction:ltr;text-align:left';
-  b.innerHTML='<b style="font-size:16px">📊 '+sec+' ثانية</b><br>أول ما فتح: أطول تهنيج '+Math.round(lagMax)+'ms<br><b style="font-size:16px;color:#c0392b">بعد أول 15 ثانية: تقطيع '+N2+' مرة، أطول '+Math.round(M2)+'ms، مجموع '+Math.round(L2)+'ms</b>'+(sec<60?'<br><b style="color:#c0392b">⏳ استخدم السيستم لحد ما العداد يعدّي 60 ثانية وبعدين اضغط تاني</b>':'')+'<hr>'+(SL.length?'<div style="background:#fde8e8;padding:6px;border-radius:8px;margin-bottom:8px"><b>اللي علّق أكتر من ثانية:</b><br>'+SL.map(function(x){return x.replace(/</g,'&lt;')}).join('<br>')+'</div>':'')+L.map(function(x){return '<div style="margin:0 0 6px"><b>'+Math.round(x[1].ms)+'ms</b> ('+x[1].n+' مرة) — '+x[0].replace(/</g,'&lt;')+'</div>'}).join('')+'<div style="color:#c0392b;margin-top:8px">صوّر الشاشة دي وابعتها. للقفل اضغط 📊 تاني.</div>';
+  b.innerHTML='<b style="font-size:16px">📊 '+sec+' ثانية</b><br><b style="font-size:16px;color:#1f3fb8">الرسم على الشاشة: '+FR+' فريم، منهم '+FS+' بطيء و'+FB+' واقف ('+(FR?Math.round(FS*100/FR):0)+'% بطيء)</b><br>أول ما فتح: أطول تهنيج '+Math.round(lagMax)+'ms<br><b style="font-size:16px;color:#c0392b">بعد أول 15 ثانية: تقطيع '+N2+' مرة، أطول '+Math.round(M2)+'ms، مجموع '+Math.round(L2)+'ms</b>'+(sec<60?'<br><b style="color:#c0392b">⏳ استخدم السيستم لحد ما العداد يعدّي 60 ثانية وبعدين اضغط تاني</b>':'')+'<hr>'+(SL.length?'<div style="background:#fde8e8;padding:6px;border-radius:8px;margin-bottom:8px"><b>اللي علّق أكتر من ثانية:</b><br>'+SL.map(function(x){return x.replace(/</g,'&lt;')}).join('<br>')+'</div>':'')+L.map(function(x){return '<div style="margin:0 0 6px"><b>'+Math.round(x[1].ms)+'ms</b> ('+x[1].n+' مرة) — '+x[0].replace(/</g,'&lt;')+'</div>'}).join('')+'<div style="color:#c0392b;margin-top:8px">صوّر الشاشة دي وابعتها. للقفل اضغط 📊 تاني.</div>';
   document.body.appendChild(b)}
  function btn(){if(!document.body){ST(btn,300);return}var x=document.createElement('button');x.type='button';x.textContent='📊';x.style.cssText='position:fixed;right:10px;bottom:90px;z-index:2147483647;width:52px;height:52px;border-radius:50%;border:3px solid #c0392b;background:#fff;font-size:24px';x.onclick=show;document.body.appendChild(x)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
@@ -1620,7 +1622,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-34';
+const APP_VER='2026-10-16-35';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
