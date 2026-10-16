@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-45';
+const APP_VER='2026-10-16-46';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8568,6 +8568,49 @@ function paint(){let host=$('settings');if(!host||!adm())return;let c=$('mkBkCar
 async function auto(){if(!adm()||!SB()||!window.mkT)return;try{let k='mk_bk_day',t=isoToday();if(localStorage.getItem(k)===t)return;let r=await SB().from('mk_backups').select('day').order('day',{ascending:false}).limit(1);if(r.error)return;if(!r.data||!r.data[0]||r.data[0].day<t){let x=await SB().rpc('mk_backup_now');if(x.error)return}localStorage.setItem(k,t)}catch(e){}}
 let boot=0,ra=window.renderAll;if(typeof ra==='function')window.renderAll=function(){ra.apply(this,arguments);try{if(!boot&&window.mkT_user){boot=1;setTimeout(auto,15000)}if(!$('mkBkCard')&&$('settings')&&adm())list()}catch(e){}};
 let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp.apply(this,arguments);if(id==='settings')try{list()}catch(e){}};
+})();
+</script>
+<script>
+/* mk: 📱 تحكم في القايمة السفلية للموبايل (حجم / شكل / ألوان / أسماء) — من المظهر والتخصيص */
+(function(){
+ var K='mk_nav',D={sz:'M',shape:'soft',lab:1,mono:0};
+ var SZ={S:['صغيرة',30],M:['متوسطة',36],L:['كبيرة',46]};
+ var SH={round:['دائرة',1],soft:['مستدير',.33],square:['مربع',.12]};
+ function get(){try{return Object.assign({},D,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){return Object.assign({},D)}}
+ function put(o){try{localStorage.setItem(K,JSON.stringify(o))}catch(e){}apply();card()}
+ function apply(){
+  var o=get(),S=(SZ[o.sz]||SZ.M)[1],I=Math.round(S*.58),sh=SH[o.shape]||SH.soft,R=sh[1]===1?'50%':Math.round(S*sh[1])+'px';
+  var css='body.mkpro .mobile-nav .mkic,body.mkpro.mkdark .mobile-nav .mkic{width:'+S+'px!important;height:'+S+'px!important;border-radius:'+R+'!important}'+
+   'body.mkpro .mobile-nav .mkic svg,body.mkpro.mkdark .mobile-nav .mkic svg{width:'+I+'px!important;height:'+I+'px!important}'+
+   (o.mono?'body.mkpro .mobile-nav .mkic,body.mkpro.mkdark .mobile-nav .mkic{filter:grayscale(1)!important}':'')+
+   (o.lab?'':'body.mkpro .mobile-nav button span:not(.mkic){display:none!important}');
+  var st=document.getElementById('mkNavSt');if(!st){st=document.createElement('style');st.id='mkNavSt';document.head.appendChild(st)}
+  st.textContent=css;
+ }
+ function btn(group,val,label,on){return '<button type="button" data-g="'+group+'" data-v="'+val+'" style="padding:9px 12px;border-radius:12px;border:2px solid '+(on?'#FFBE0B':'var(--ln2)')+';background:var(--card);color:var(--tx);font-weight:700;'+(on?'box-shadow:0 0 0 3px rgba(255,190,11,.3);':'')+'">'+label+'</button>'}
+ function card(){
+  var th=document.getElementById('theme');if(!th)return;
+  var c=document.getElementById('mkNavCard');if(!c){c=document.createElement('div');c.className='card';c.id='mkNavCard';c.style.marginBottom='14px';
+   var pc=document.getElementById('mkProCard');if(pc)pc.after(c);else th.prepend(c)}
+  var o=get();
+  c.innerHTML='<h3 style="margin:0 0 6px">📱 القايمة السفلية (الموبايل)</h3>'+
+   '<p style="margin:0 0 10px;color:var(--muted);font-size:13px">غيّر حجم الأيقونات وشكلها. التغيير بيتطبق فوراً على الجهاز ده.</p>'+
+   '<div style="font-weight:700;margin:8px 0 6px">الحجم</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+   Object.keys(SZ).map(function(k){return btn('sz',k,SZ[k][0],o.sz===k)}).join('')+'</div>'+
+   '<div style="font-weight:700;margin:12px 0 6px">الشكل</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+   Object.keys(SH).map(function(k){return btn('shape',k,SH[k][0],o.shape===k)}).join('')+'</div>'+
+   '<div style="font-weight:700;margin:12px 0 6px">الألوان</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+   btn('mono',0,'ملوّنة',!o.mono)+btn('mono',1,'أبيض ورمادي',!!o.mono)+'</div>'+
+   '<div style="font-weight:700;margin:12px 0 6px">الأسماء تحت الأيقونات</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+   btn('lab',1,'ظاهرة',!!o.lab)+btn('lab',0,'مخفية',!o.lab)+'</div>';
+  c.querySelectorAll('button[data-g]').forEach(function(b){b.onclick=function(){var n=get(),g=b.dataset.g,v=b.dataset.v;
+   if(g==='sz')n.sz=v;else if(g==='shape')n.shape=v;else if(g==='mono')n.mono=+v;else if(g==='lab')n.lab=+v;put(n)}});
+ }
+ apply();
+ function boot(){card()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else setTimeout(boot,600);
+ setTimeout(boot,1500);
+ window.mkNavSet=put;
 })();
 </script>
 </body>
