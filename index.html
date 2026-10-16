@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-22';
+const APP_VER='2026-10-16-23';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1610,13 +1610,13 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  window.addEventListener('offline',upd);window.addEventListener('online',()=>{upd();if(!window.mkSB){toast('النت رجع — اقفل السيستم وافتحه تاني عشان يتزامن');return}if(!lg.classList.contains('show'))window.mkSB.auth.getSession().then(x=>{if(!x.data.session)lg.classList.add('show')}).catch(()=>{})});
  upd()})();
 (function(){let last=0,shown=false;
- async function check(){if(shown||Date.now()-last<60000)return;last=Date.now();
+ async function check(){if(shown||Date.now()-last<30000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
    if(m&&m[1]!==APP_VER){shown=true;let b=document.createElement('button');b.textContent='🔄 في نسخة جديدة من السيستم — اضغط هنا للتحديث';
     b.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:100000;background:#159447;color:#fff;border:0;border-radius:99px;padding:12px 18px;font-weight:800;box-shadow:0 6px 18px #0004;max-width:92vw';
     b.onclick=async()=>{b.textContent='جاري التحديث...';try{if(window.cloudFlush)await cloudFlush()}catch(e){}location.replace(location.pathname+'?v='+Date.now())};document.body.appendChild(b)}}catch(e){}}
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
- window.addEventListener('focus',check);setInterval(check,10*60000);setTimeout(check,5000)})();
+ window.addEventListener('focus',check);setInterval(check,2*60000);setTimeout(check,3000)})();
 </script>
 <script>
 /* =====================================================================

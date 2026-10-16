@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-20';
+const APP_VER='2026-10-16-23';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1610,13 +1610,13 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  window.addEventListener('offline',upd);window.addEventListener('online',()=>{upd();if(!window.mkSB){toast('النت رجع — اقفل السيستم وافتحه تاني عشان يتزامن');return}if(!lg.classList.contains('show'))window.mkSB.auth.getSession().then(x=>{if(!x.data.session)lg.classList.add('show')}).catch(()=>{})});
  upd()})();
 (function(){let last=0,shown=false;
- async function check(){if(shown||Date.now()-last<60000)return;last=Date.now();
+ async function check(){if(shown||Date.now()-last<30000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
    if(m&&m[1]!==APP_VER){shown=true;let b=document.createElement('button');b.textContent='🔄 في نسخة جديدة من السيستم — اضغط هنا للتحديث';
     b.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:100000;background:#159447;color:#fff;border:0;border-radius:99px;padding:12px 18px;font-weight:800;box-shadow:0 6px 18px #0004;max-width:92vw';
     b.onclick=async()=>{b.textContent='جاري التحديث...';try{if(window.cloudFlush)await cloudFlush()}catch(e){}location.replace(location.pathname+'?v='+Date.now())};document.body.appendChild(b)}}catch(e){}}
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
- window.addEventListener('focus',check);setInterval(check,10*60000);setTimeout(check,5000)})();
+ window.addEventListener('focus',check);setInterval(check,2*60000);setTimeout(check,3000)})();
 </script>
 <script>
 /* =====================================================================
@@ -6179,7 +6179,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="bar" style="margin:10px 0"><i style="width:'+pct+'%"></i></div>'+
    '<div class="tl">'+st.map(function(s,i){var h=hist[s];return '<div class="st '+(i<c?'done':i===c?'cur':'')+'"><span class="dot">'+(i<c?'✓':i+1)+'</span><b>'+esc(s)+'</b>'+(h?'<div style="font-size:12px;color:var(--muted)">'+esc(String(h.at).slice(0,16).replace('T',' '))+(h.by?' — '+esc(h.by):'')+'</div>':'')+'</div>'}).join('')+'</div>'+
    '<div class="wkrow" style="margin-top:6px">'+(c<st.length-1?'<button type="button" class="wkbtn p" id="wkAdv">⏭️ الخطوة الجاية: '+esc(st[c+1])+'</button>':'<span class="badge green">الأوردر خلص</span>')+(c>0?'<button type="button" class="wkbtn" id="wkPrev">↩︎ رجّع خطوة</button>':'')+'</div></div>'+
-   (rodsHtml(o)?'<div class="wkc"><div class="sample">'+rodsHtml(o)+'</div></div>':'')+
+   (rodsHtml(o)?'<div class="wkc"><div class="sample">'+rodsHtml(o)+'</div>'+rodStockLine(o)+'</div>':'')+
    '<div class="wkc"><h3>الإجراءات</h3><div class="wkrow">'+
    '<button type="button" class="wkbtn p" id="wkPr">🖨️ طباعة ورقة التجهيز</button>'+
    '<button type="button" class="wkbtn" id="wkLb">🏷️ ملصق بباركود</button>'+
@@ -6206,6 +6206,20 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
   b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}};
   var ol=b.querySelector('#wkOffL');if(ol)ol.onclick=function(){printLeftLabels(o)};
+  var rc=b.querySelector('#wkRodCut');if(rc)rc.onclick=async function(){
+   var needs=rodNeeds(o),prods=needs.map(function(nd){return {nd:nd,prod:(db.products||[]).find(function(p){return String(p.name).trim()===nd.name})}});
+   if(!prods.length||prods.some(function(x){return !x.prod}))return;
+   var msg='هتخصم من المخزون:\n'+prods.map(function(x){return '• '+x.nd.need+' عود «'+x.nd.name+'»'}).join('\n')+'\n\nمينفعش يترجع. تتأكد؟';
+   if(!(await ask(msg,'خصم','لأ')))return;
+   rc.disabled=true;
+   try{
+    var api=window.mkT&&window.mkT.api;
+    for(var i=0;i<prods.length;i++){var x=prods[i];
+     if(api){await api.syncNow();await api.rpc('mk_adjust_stock',{p_id:x.prod.id,p_qty:num(x.prod.qty)-x.nd.need,p_note:'خصم أعواد '+ordNo(o)+' ('+o.type+' '+num(o.w)+'×'+num(o.h)+'): '+x.nd.need+' عود'});await api.refreshProducts([x.prod.id]);api.done&&api.done()}
+    }
+    o.rodsDeducted=true;await saveOrd();toast('✔ الأعواد اتخصمت من المخزون');viewOrder(id);
+   }catch(e){rc.disabled=false;errAlert(e)}
+  };
   ['wkPr','wkLb'].forEach(function(id){var x=b.querySelector('#'+id);if(x&&offLeft(o).length)x.addEventListener('click',function(){setTimeout(async function(){if(await ask('الشغل ده طلع منه '+offLeft(o).length+' فضلة. تطبع ليبل ليهم كمان؟','اطبع','لأ'))printLeftLabels(o)},1500)})});
   b.querySelector('#wkInv').onclick=function(){
    close();
@@ -6223,17 +6237,48 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  }
 
  /* ---------- 🪵 حساب الأعواد للضلفة: جنبين (الارتفاع) + فوق وتحت (العرض)، والمقبض على جنب أو الجنبين أو مفيش، أو شاسيه ثابت ---------- */
- var RODS={blum:{p:600,h:600,n:'بلوم 6 م'},bevel:{p:300,h:270,n:'شطف عادي (3 م / 2.70 م بمقبض)'}};
+ /* فئات الأعواد: قابلة للتعديل من إعدادات أنظمة الشغل (عود عادي ومقبض كل واحد ممكن يبقى منتج مختلف). لو عبده ماعدّلش حاجة، بتستخدم القايمة دي كبداية. */
+ function rodTypeDefs(){
+  if(CFG.rodTypes&&CFG.rodTypes.length)return CFG.rodTypes;
+  return [
+   {k:'blumG',n:'بلوم G',pLen:600,pProd:'عود بدون 6 م بلوم G',hLen:600,hProd:'عود بمقبض 6 م بلوم'},
+   {k:'blumR',n:'بلوم R',pLen:600,pProd:'عود بدون 6 م بلوم R',hLen:600,hProd:'عود بمقبض 6 م بلوم'},
+   {k:'blumGG',n:'بلوم GG',pLen:600,pProd:'عود بدون 6 م بلوم GG',hLen:600,hProd:'عود بمقبض 6 م بلوم'},
+   {k:'bevL',n:'شطف خفيف',pLen:300,pProd:'بدون 3 متر خفيف',hLen:270,hProd:'بمقبض 3 م خفيف'},
+   {k:'bevM',n:'شطف وسط',pLen:300,pProd:'بدون 3 متر وسط',hLen:270,hProd:'بمقبض 3 م وسط'},
+   {k:'bevH',n:'شطف تقيل',pLen:300,pProd:'بدون 3 متر تقيل',hLen:270,hProd:'بمقبض 3 م تقيل'}
+  ];
+ }
+ function rodType(k){var L=rodTypeDefs();return L.find(function(x){return x.k===k})||L[0]}
+ /* خصم الأعواد من المخزون: العود العادي والمقبض ممكن يبقوا منتجين مختلفين، كل واحد بيتخصم من منتجه */
+ function rodNeeds(o){
+  var r=rodCalc(o);if(!r)return [];var m={};
+  if(r.pp.length)m[r.T.pProd]=(m[r.T.pProd]||0)+r.pp.length;
+  if(r.hp.length)m[r.T.hProd]=(m[r.T.hProd]||0)+r.hp.length;
+  return Object.keys(m).map(function(n){return {name:n,need:m[n]}});
+ }
+ function rodStockLine(o){
+  if(o.handle==='frame')return '';
+  var needs=rodNeeds(o);if(!needs.length)return '';
+  if(o.rodsDeducted)return '<div class="sample" style="margin-top:6px;background:var(--tint2)">✔ الأعواد اتخصمت من المخزون</div>';
+  var rows=needs.map(function(nd){
+   var prod=(db.products||[]).find(function(p){return String(p.name).trim()===nd.name});
+   if(!prod)return '⚠️ مفيش منتج اسمه «'+esc(nd.name)+'» بالظبط في المخزون — سجّله عشان أقدر أخصم منه';
+   return '📦 «'+esc(nd.name)+'»: متاح <b>'+esc(prod.qty)+'</b> — محتاج <b>'+nd.need+'</b>'+(num(prod.qty)<nd.need?' <b style="color:var(--danger)">(مش كفاية)</b>':'');
+  });
+  var allOk=needs.every(function(nd){return (db.products||[]).some(function(p){return String(p.name).trim()===nd.name})});
+  return '<div class="sample" style="margin-top:6px;background:var(--tint2)">'+rows.join('<br>')+(allOk?'<div style="margin-top:6px"><button type="button" class="wkbtn p" id="wkRodCut">📦 خصم الأعواد من المخزون</button></div>':'')+'</div>';
+ }
  var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['frame','شاسيه ثابت (فريم بس)']];
  function rodCalc(o){var w=num(o.w),h=num(o.h),q=Math.max(1,num(o.qty)||1);if(!(w>0&&h>0)||o.kind==='other'||(o.type!=='دلفة'&&o.type!=='جرار'))return null;
   var hc={none:0,one:1,both:2,frame:0}[o.handle||'one'];if(hc==null)hc=1;
-  var R=RODS[o.rod]||RODS.blum,P=[],H=[],i,k;
+  var T=rodType(o.rod),P=[],H=[],i,k;
   for(i=0;i<q;i++){for(k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
-  return {R:R,P:P,H:H,pp:P.length?plan(P,R.p,0.5):[],hp:H.length?plan(H,R.h,0.5):[],bad:P.some(function(x){return x>R.p})||H.some(function(x){return x>R.h}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
+  return {T:T,P:P,H:H,pp:P.length?plan(P,T.pLen,0.5):[],hp:H.length?plan(H,T.hLen,0.5):[],bad:P.some(function(x){return x>T.pLen})||H.some(function(x){return x>T.hLen}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
  }
  function rodsHtml(o){var r=rodCalc(o);if(!r)return '';
   var lf=r.pp.concat(r.hp).map(function(b){return Math.round(b.left)}).filter(function(x){return x>0});
-  return '🪵 <b>الخامات — الأعواد ('+esc(r.R.n)+')</b>: '+(r.pp.length?'<b>'+r.pp.length+'</b> عود عادي':'')+(r.pp.length&&r.hp.length?' + ':'')+(r.hp.length?'<b>'+r.hp.length+'</b> عود بمقبض':'')+
+  return '🪵 <b>الخامات — الأعواد ('+esc(r.T.n)+')</b>: '+(r.pp.length?'<b>'+r.pp.length+'</b> عود «'+esc(r.T.pProd)+'»':'')+(r.pp.length&&r.hp.length?' + ':'')+(r.hp.length?'<b>'+r.hp.length+'</b> عود «'+esc(r.T.hProd)+'»':'')+
    ' — القطع: '+r.P.length+' عادي'+(r.H.length?' + '+r.H.length+' بمقبض':'')+' — إجمالي '+fmt(r.meters)+' م'+
    (lf.length?'<br><small>الفضلات اللي هتفضل: '+lf.join('، ')+' سم</small>':'')+(r.bad?'<br><b style="color:#c0392b">⚠️ في قطعة أطول من العود</b>':'')+'<br><small>الأعواد بتتباع للنجار في فاتورة، والفضلات بتاعته.</small>';
  }
@@ -6253,13 +6298,13 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function viewRods(){
   var b=shell('🧮 حاسبة الأعواد');mark('rods');
   function draw(){
-   var R=RODS[RC.rod]||RODS.blum,P=[],H=[],work={fee:0,price:0,n:0},r0=rates();
+   var R=rodType(RC.rod),P=[],H=[],work={fee:0,price:0,n:0},r0=rates();
    RC.rows.forEach(function(x){var w=num(x.w),h=num(x.h),q=Math.max(1,num(x.q)||1);if(!(w>0&&h>0))return;var hc={none:0,one:1,both:2,frame:0}[x.handle];if(hc==null)hc=1;
     for(var i=0;i<q;i++){for(var k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
     if(x.handle!=='frame'){work.n+=q;work.fee+=q*(x.kind==='slide'?r0.sF:r0.hF);work.price+=q*(x.kind==='slide'?r0.sP:r0.hP)}});
-   var pp=P.length?plan(P,R.p,0.5):[],hp=H.length?plan(H,R.h,0.5):[],bad=P.some(function(x){return x>R.p})||H.some(function(x){return x>R.h});
+   var pp=P.length?plan(P,R.pLen,0.5):[],hp=H.length?plan(H,R.hLen,0.5):[],bad=P.some(function(x){return x>R.pLen})||H.some(function(x){return x>R.hLen});
    var lf=pp.concat(hp).map(function(x){return Math.round(x.left)}).filter(function(x){return x>0});
-   b.innerHTML='<div class="wkc"><h3>نوع العود</h3><div class="wkf"><select id="rcR">'+Object.keys(RODS).map(function(k){return '<option value="'+k+'"'+(RC.rod===k?' selected':'')+'>'+RODS[k].n+'</option>'}).join('')+'</select></div></div>'+
+   b.innerHTML='<div class="wkc"><h3>نوع العود</h3><div class="wkf"><select id="rcR">'+rodTypeDefs().map(function(t){return '<option value="'+t.k+'"'+(RC.rod===t.k?' selected':'')+'>'+esc(t.n)+'</option>'}).join('')+'</select></div></div>'+
     '<div class="wkc"><h3>مقاسات الدرف</h3>'+RC.rows.map(function(x,i){return '<div class="wkg" style="margin-bottom:8px;align-items:end">'+
      '<div class="wkf"><label>العرض (سم)</label><input data-r="w" data-i="'+i+'" value="'+esc(x.w)+'" inputmode="decimal"></div><div class="wkf"><label>الارتفاع (سم)</label><input data-r="h" data-i="'+i+'" value="'+esc(x.h)+'" inputmode="decimal"></div>'+
      '<div class="wkf"><label>العدد</label><input data-r="q" data-i="'+i+'" value="'+esc(x.q)+'" inputmode="numeric"></div>'+
@@ -6281,7 +6326,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function viewForm(id,type){
   var old=id?ORD.find(function(x){return x.id===id}):null;
   var o=old?JSON.parse(JSON.stringify(old)):{type:type||'دلفة',date:today(),customer:'',phone:'',crafter:'',kind:'hinge',w:'',h:'',qty:1,hinges:3,hingePos:'',side:'right',color:'',profile:'',mats:[{n:'',q:'',p:''}],fee:'',cost:'',price:'',paid:'',notes:'',stage:0,hist:[],handle:'one',rod:'blum',rodP:'',rodH:'',wOff:'11',wWing:'9',wLen:'6'};
-  if(!o.handle)o.handle='one';if(!o.rod)o.rod='blum';
+  if(!o.handle)o.handle='one';if(!o.rod)o.rod=rodTypeDefs()[0].k;
   var b=shell(old?'تعديل '+esc(ordNo(old)):'➕ أوردر جديد',old?function(){viewOrder(id)}:viewOrders);mark(old?'ord':'new');
   var sups=contacts().filter(function(c){return c.type==='مورد'}),custs=contacts().filter(function(c){return c.type==='عميل'});
   b.innerHTML='<div class="wkc"><h3>بيانات الأوردر</h3><div class="wkg">'+
@@ -6299,7 +6344,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    fi('fWo','من أول الراس لحد أول العجلة (سم)',o.wOff||'','inputmode="decimal"')+fi('fWg','طول جناح العجلة (سم)',o.wWing||'','inputmode="decimal"')+fi('fWl','طول الجزء اللي بيخش في الخلع (سم)',o.wLen||'','inputmode="decimal"')+
    fi('fCo','اللون',o.color)+fi('fPr','القطاع/الموديل',o.profile)+
    '<div class="wkf"><label>المقبض</label><select id="fHd">'+HANDLES.map(function(x){return '<option value="'+x[0]+'"'+(o.handle===x[0]?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></div>'+
-   '<div class="wkf"><label>نوع العود</label><select id="fRod">'+Object.keys(RODS).map(function(k){return '<option value="'+k+'"'+(o.rod===k?' selected':'')+'>'+RODS[k].n+'</option>'}).join('')+'</select></div>'+
+   '<div class="wkf"><label>نوع العود</label><select id="fRod">'+rodTypeDefs().map(function(t){return '<option value="'+t.k+'"'+(o.rod===t.k?' selected':'')+'>'+esc(t.n)+'</option>'}).join('')+'</select></div>'+
    '</div>'+
    '<div class="draw" id="fDr" style="margin-top:10px"></div></div>'+
    '<div class="wkc"><h3>🔧 حسبة المصنعية</h3><div class="wkg">'+
@@ -6797,11 +6842,18 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<p style="color:var(--muted);font-size:13px">لو الطباعة بتطلع مقصوصة أو مزاحة لناحية، جرّب رول 80 مم أو 58 مم حسب طابعتك.</p></div>'+
    '<div class="wkc"><h3>مراحل خط السير (سطر لكل مرحلة)</h3><div class="wkg">'+TYPES.map(function(t){return '<div class="wkf"><label>'+t+'</label><textarea data-t="'+t+'" rows="7">'+esc(stages(t).join('\n'))+'</textarea></div>'}).join('')+'</div></div>'+
    '<div class="wkc"><h3>💰 أسعار المصنعية للدرفة</h3><div class="wkg">'+(function(r){return fi('cHF','الصنايعي — درفة مفصلي',r.hF,'inputmode="decimal"')+fi('cSF','الصنايعي — درفة جرار',r.sF,'inputmode="decimal"')+fi('cHP','على الزبون — درفة مفصلي',r.hP,'inputmode="decimal"')+fi('cSP','على الزبون — درفة جرار',r.sP,'inputmode="decimal"')})(rates())+'</div></div>'+
+   '<div class="wkc"><h3>🪵 فئات الأعواد</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">سطر لكل فئة، بالترتيب ده وبينهم شرطة مايلة /: اسم الفئة / طول العود العادي بالسم / اسم منتج العود العادي في المخزون (بالظبط) / طول عود المقبض بالسم / اسم منتج عود المقبض في المخزون (بالظبط). لو العود العادي والمقبض بنفس الاسم والطول، اكتبهم نفس الحاجة في الخانتين.</p>'+
+   '<textarea id="cRod" rows="8" style="width:100%;min-height:170px;font-size:16px;line-height:1.9">'+esc(rodTypeDefs().map(function(t){return [t.n,t.pLen,t.pProd,t.hLen,t.hProd].join(' / ')}).join('\n'))+'</textarea></div>'+
    '<button type="button" class="wkbtn p" id="cS">💾 حفظ الإعدادات</button>';
   b.querySelector('#cS').onclick=async function(){
    CFG.rates={hF:num(b.querySelector('#cHF').value),sF:num(b.querySelector('#cSF').value),hP:num(b.querySelector('#cHP').value),sP:num(b.querySelector('#cSP').value)};
    CFG.paper=b.querySelector('#cP').value;CFG.stages=CFG.stages||{};
    b.querySelectorAll('[data-t]').forEach(function(x){var l=x.value.split('\n').map(function(s){return s.trim()}).filter(Boolean);if(l.length>=2)CFG.stages[x.dataset.t]=l});
+   var rodLines=b.querySelector('#cRod').value.split('\n').map(function(s){return s.trim()}).filter(Boolean);
+   var rodRows=rodLines.map(function(ln,i){var f=ln.split('/').map(function(s){return s.trim()});if(f.length<5||!f[0])return null;
+    return {k:'rt'+i,n:f[0],pLen:num(f[1])||600,pProd:f[2],hLen:num(f[3])||600,hProd:f[4]};
+   }).filter(Boolean);
+   if(rodRows.length)CFG.rodTypes=rodRows;
    try{localStorage.setItem('wk_paper',CFG.paper)}catch(e){}
    try{await saveCfg();toast('✔ اتحفظت الإعدادات')}catch(e){errAlert(e)}};
  }
