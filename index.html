@@ -1618,7 +1618,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-31';
+const APP_VER='2026-10-16-32';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8013,9 +8013,10 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
   hdr();
  }
  /* الشريط الجانبي بيمشي مع الشريط العلوي، واسم ميكانيزم الصغير يظهر لما اللوجو الكبير يطلع لفوق */
- var hq=0;function hdr(){hq=0;var t=document.querySelector('header.top'),b=t&&t.querySelector('.brand');if(!t||!b)return;
-  document.documentElement.style.setProperty('--asTop',Math.max(0,Math.round(t.getBoundingClientRect().bottom))+'px');
-  t.classList.toggle('stuck',b.getBoundingClientRect().bottom<=6)}
+ var hq=0,hT=-1,hS=null;function hdr(){hq=0;var t=document.querySelector('header.top'),b=t&&t.querySelector('.brand');if(!t||!b)return;
+  /* بنكتب بس لما القيمة تتغير: الكتابة في كل حركة سكرول كانت بتعيد حساب شكل الصفحة كلها وتقيّل الآيفون */
+  var v=Math.max(0,Math.round(t.getBoundingClientRect().bottom));if(v!==hT){hT=v;document.documentElement.style.setProperty('--asTop',v+'px')}
+  var st=b.getBoundingClientRect().bottom<=6;if(st!==hS){hS=st;t.classList.toggle('stuck',st)}}
  window.addEventListener('scroll',function(){if(!hq){hq=1;requestAnimationFrame(hdr)}},{passive:true});
  window.addEventListener('resize',function(){if(!hq){hq=1;requestAnimationFrame(hdr)}});
  /* ══ الأرضية: عبده بيختار لونها من «المظهر» (أبيض، أصفر، أسود، أي لون) + الألوان المتداخلة شغالة/مقفولة ══ */
