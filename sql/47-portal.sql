@@ -3,7 +3,6 @@
 
 create table if not exists public.mk_portal(
   token text primary key,
-  org uuid not null default public.mk_org() references public.mk_orgs(id) on delete cascade,
   cid text not null default '',
   name text not null default '',
   snap jsonb not null default '{}'::jsonb,
@@ -16,7 +15,6 @@ create policy mk_portal_all on public.mk_portal for all to authenticated using (
 
 create table if not exists public.mk_portal_msgs(
   id uuid primary key default gen_random_uuid(),
-  org uuid references public.mk_orgs(id) on delete cascade,
   token text not null references public.mk_portal(token) on delete cascade,
   name text not null default '',
   body text not null default '',
@@ -59,8 +57,8 @@ begin
   if coalesce(btrim(p_body), '') = '' and coalesce(jsonb_array_length(p_media), 0) = 0 then return false; end if;
   select count(*) into n from public.mk_portal_msgs where token = p_token and created_at > now() - interval '1 hour';
   if n >= 20 then return false; end if;   -- حماية من الإزعاج
-  insert into public.mk_portal_msgs(org, token, name, body, media)
-  values (r.org, p_token, r.name, left(coalesce(p_body, ''), 4000), case when jsonb_typeof(p_media) = 'array' then p_media else '[]'::jsonb end);
+  insert into public.mk_portal_msgs(token, name, body, media)
+  values (p_token, r.name, left(coalesce(p_body, ''), 4000), case when jsonb_typeof(p_media) = 'array' then p_media else '[]'::jsonb end);
   perform public.mk_alert('portal', '🔗 العميل ' || r.name || ' بعت طلب من رابطه' || E'\n' || left(coalesce(p_body, ''), 300)
     || case when coalesce(jsonb_array_length(p_media), 0) > 0 then E'\n📎 مرفقات: ' || jsonb_array_length(p_media) else '' end);
   return true;

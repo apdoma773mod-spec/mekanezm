@@ -1,12 +1,10 @@
 -- ميكانيزم: التشغيل الكامل (بوابة العميل + الشركتين + هيدرولك). الصقه كله في SQL Editor واضغط Run مرة واحدة.
--- الترتيب: 47 ثم 48 ثم 49. فيه نسخة احتياطية تلقائية في الأول (bak_20261016).
 
 -- ميكانيزم (tkzfjeizvanfptnqvrmr) — 🔗 بوابة العميل: رابط خاص بكل عميل يشوف منه حسابه وفواتيره ويكتب طلبه ويبعت صور/فيديو
 -- تشغيله مرة واحدة في SQL Editor. العميل مابيدخلش غير بالتوكن السري بتاع رابطه، ومابيشوفش غير حسابه.
 
 create table if not exists public.mk_portal(
   token text primary key,
-  org uuid not null default public.mk_org() references public.mk_orgs(id) on delete cascade,
   cid text not null default '',
   name text not null default '',
   snap jsonb not null default '{}'::jsonb,
@@ -19,7 +17,6 @@ create policy mk_portal_all on public.mk_portal for all to authenticated using (
 
 create table if not exists public.mk_portal_msgs(
   id uuid primary key default gen_random_uuid(),
-  org uuid references public.mk_orgs(id) on delete cascade,
   token text not null references public.mk_portal(token) on delete cascade,
   name text not null default '',
   body text not null default '',
@@ -62,8 +59,8 @@ begin
   if coalesce(btrim(p_body), '') = '' and coalesce(jsonb_array_length(p_media), 0) = 0 then return false; end if;
   select count(*) into n from public.mk_portal_msgs where token = p_token and created_at > now() - interval '1 hour';
   if n >= 20 then return false; end if;   -- حماية من الإزعاج
-  insert into public.mk_portal_msgs(org, token, name, body, media)
-  values (r.org, p_token, r.name, left(coalesce(p_body, ''), 4000), case when jsonb_typeof(p_media) = 'array' then p_media else '[]'::jsonb end);
+  insert into public.mk_portal_msgs(token, name, body, media)
+  values (p_token, r.name, left(coalesce(p_body, ''), 4000), case when jsonb_typeof(p_media) = 'array' then p_media else '[]'::jsonb end);
   perform public.mk_alert('portal', '🔗 العميل ' || r.name || ' بعت طلب من رابطه' || E'\n' || left(coalesce(p_body, ''), 300)
     || case when coalesce(jsonb_array_length(p_media), 0) > 0 then E'\n📎 مرفقات: ' || jsonb_array_length(p_media) else '' end);
   return true;
@@ -193,7 +190,6 @@ grant execute on function public.mk_save_invoice(jsonb) to authenticated;
 -- ===== م3: الشركاء =====
 create table if not exists public.mk_partners(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   name text not null,
@@ -203,7 +199,6 @@ create table if not exists public.mk_partners(
   active boolean not null default true);
 create table if not exists public.mk_partner_moves(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   partner_id uuid not null references public.mk_partners(id) on delete cascade,
@@ -217,7 +212,6 @@ create index if not exists mk_partner_moves_p on public.mk_partner_moves(partner
 -- ===== م4: السيارة =====
 create table if not exists public.mk_vehicles(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   name text not null,
@@ -226,7 +220,6 @@ create table if not exists public.mk_vehicles(
   active boolean not null default true);
 create table if not exists public.mk_vehicle_log(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   vehicle_id uuid not null references public.mk_vehicles(id) on delete cascade,
@@ -243,7 +236,6 @@ create index if not exists mk_vehicle_log_v on public.mk_vehicle_log(vehicle_id,
 -- ===== م5: أوردرات هيدرولك الميدانية (ميكانيزم هي اللي بتنفّذ) =====
 create table if not exists public.mk_field_orders(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),   -- الشركة صاحبة الأوردر
   no text not null default '',

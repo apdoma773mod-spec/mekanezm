@@ -28,7 +28,6 @@ grant execute on function public.mk_save_invoice(jsonb) to authenticated;
 -- ===== م3: الشركاء =====
 create table if not exists public.mk_partners(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   name text not null,
@@ -38,7 +37,6 @@ create table if not exists public.mk_partners(
   active boolean not null default true);
 create table if not exists public.mk_partner_moves(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   partner_id uuid not null references public.mk_partners(id) on delete cascade,
@@ -52,7 +50,6 @@ create index if not exists mk_partner_moves_p on public.mk_partner_moves(partner
 -- ===== م4: السيارة =====
 create table if not exists public.mk_vehicles(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   name text not null,
@@ -61,7 +58,6 @@ create table if not exists public.mk_vehicles(
   active boolean not null default true);
 create table if not exists public.mk_vehicle_log(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),
   vehicle_id uuid not null references public.mk_vehicles(id) on delete cascade,
@@ -78,7 +74,6 @@ create index if not exists mk_vehicle_log_v on public.mk_vehicle_log(vehicle_id,
 -- ===== م5: أوردرات هيدرولك الميدانية (ميكانيزم هي اللي بتنفّذ) =====
 create table if not exists public.mk_field_orders(
   id uuid primary key default gen_random_uuid(),
-  org uuid default public.mk_org(),
   created_at timestamptz not null default now(),
   co text not null default 'hy' check (co in ('mk','hy')),   -- الشركة صاحبة الأوردر
   no text not null default '',
