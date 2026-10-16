@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-25';
+const APP_VER='2026-10-16-26';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1609,6 +1609,10 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  new MutationObserver(upd).observe(lg,{attributes:true,attributeFilter:['class']});
  window.addEventListener('offline',upd);window.addEventListener('online',()=>{upd();if(!window.mkSB){toast('النت رجع — اقفل السيستم وافتحه تاني عشان يتزامن');return}if(!lg.classList.contains('show'))window.mkSB.auth.getSession().then(x=>{if(!x.data.session)lg.classList.add('show')}).catch(()=>{})});
  upd()})();
+/* آيفون: لما ترجع للسيستم من الخلفية الشاشة ساعات بتفضل سودا لحد ما تتلمس — نجبرها تترسم تاني */
+(function(){function rp(){var d=document.documentElement;d.style.opacity='.99';requestAnimationFrame(function(){requestAnimationFrame(function(){d.style.opacity=''})})}
+ document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(rp,60)});
+ window.addEventListener('pageshow',function(e){if(e.persisted)setTimeout(rp,60)})})();
 (function(){let last=0,shown=false;
  async function check(){if(shown||Date.now()-last<30000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
@@ -7285,6 +7289,8 @@ body.mkpro.mk-nofx #mkBgFx .b{display:none}
 body.mk-bgd *{animation-play-state:paused!important}
 @keyframes mkDrift{0%{transform:translate(0,0) scale(1)}35%{transform:translate(9vmax,6vmax) scale(1.12)}70%{transform:translate(-6vmax,11vmax) scale(.92)}100%{transform:translate(5vmax,-5vmax) scale(1.06)}}
 @media (prefers-reduced-motion:reduce){#mkBgFx .b{animation:none}}
+/* موبايل: من غير الدواير الكبيرة الملونة ورا الشاشة — بتقيّل آيفون وبتطلع شاشة سودا لما ترجع من الخلفية */
+@media (hover:none) and (pointer:coarse){body.mkpro #mkBgFx{display:none}}
 body.mkpro.mkdark{--fxa:.55}
 body.mkpro.pg-on{--pgw:color-mix(in srgb,var(--pg) 30%,transparent)}
 body.mkpro.pg-strong{--pgw:color-mix(in srgb,var(--pg) 45%,transparent)}
