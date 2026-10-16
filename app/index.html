@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-48';
+const APP_VER='2026-10-16-49';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8198,6 +8198,7 @@ if(oi)window.openInvoiceModal=function(id){oi.apply(this,arguments);try{let r=db
 let nMsg=0,lastQ=0;
 function pull(){if(Date.now()-lastQ<120000||!window.mkSB||!window.mkT_user)return;lastQ=Date.now();
  window.mkSB.from('mk_portal_msgs').select('id',{count:'exact',head:true}).eq('seen',false).then(r=>{if(r&&!r.error&&r.count!==nMsg){nMsg=r.count||0;paint()}}).catch(()=>{})}
+window.mkMsgPull=function(){lastQ=0;pull()};
 function paint(){
  let host=document.getElementById('dashboard');if(!host)return;
  let k=+isoToday().replace(/-/g,''),isT=r=>{try{return dKey(r)===k&&inCo(r)}catch(e){return false}},
@@ -8210,7 +8211,7 @@ function paint(){
   T('💰','مبيعات النهاردة',money(tot),"showPage('sales')")+T('🧾','فواتير النهاردة',inv,"showPage('sales')")+
   T('📥','اتحصّل النهاردة',money(coll),"showPage('cash')",'var(--green)')+T('📤','مصروفات النهاردة',money(exp),"showPage('cash')",exp?'var(--danger)':'')+
   T('⚠️','أصناف قربت تخلص',low,"showPage('reorder')",low?'var(--danger)':'')+T('👥','فلوس عند العملاء',money(debt),"showPage('debts')")+
-  (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"showPage('contacts')",'var(--danger)'):'')+`</div></div>`;
+  (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"mkNewMsgs()",'var(--danger)'):'')+`</div></div>`;
  let el=document.getElementById('mkToday');if(!el){el=document.createElement('div');el.id='mkToday';let tr=host.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):host.prepend(el)}
  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
 let o=window.renderDashboard;if(typeof o==='function')window.renderDashboard=function(){o.apply(this,arguments);try{paint();pull()}catch(e){}};
@@ -8614,6 +8615,40 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else setTimeout(boot,600);
  setTimeout(boot,1500);
  window.mkNavSet=put;
+})();
+</script>
+
+<script>
+/* ميكانيزم — 🔗 طلبات العملاء الجديدة (من رابط البوابة): قايمة بكل الطلبات اللي لسه ماتشافتش */
+(function(){
+ function nameOf(m){let c=(db.contacts||[]).find(x=>x.ptok&&x.ptok===m.token);return c?{c,name:c.name}:{c:null,name:m.name||'عميل'}}
+ function show(L){
+  let body=L.length?L.map(function(m){let o=nameOf(m),med=(m.media||[]).length;
+    return `<div class="card" style="margin-bottom:10px;border-right:4px solid var(--danger,#c0392b)">
+     <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(o.name)}</b><small style="color:var(--muted)">${new Date(m.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'})}</small></div>
+     <div style="white-space:pre-wrap;margin:8px 0;line-height:1.8">${esc(m.body||'(من غير نص)')}</div>
+     ${med?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">📎 ${med} مرفق</div>`:''}
+     <div class="btnrow">${o.c?`<button class="primary" onclick="mkMsgOpen('${o.c.id}','${m.id}')">فتح ملف العميل</button>`:''}<button class="secondary" onclick="mkMsgRead('${m.id}')">✔ اتقرا</button></div>
+    </div>`}).join('')
+   :'<div class="card"><div class="empty">مفيش طلبات جديدة 👌</div></div>';
+  openModal(`<div class="modal-head"><h2>🔗 طلبات العملاء الجديدة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="form">${body}</div>`);
+ }
+ window.mkNewMsgs=async function(){
+  if(!window.mkSB){toast('مش متصل بالسيرفر دلوقتي');return}
+  let r=await window.mkSB.from('mk_portal_msgs').select('*').eq('seen',false).order('created_at',{ascending:false}).limit(50);
+  if(r.error){toast('ماقدرتش أجيب الطلبات: '+r.error.message);return}
+  window.mkMsgList=r.data||[];show(window.mkMsgList);
+ };
+ window.mkMsgRead=async function(id){
+  let r=await window.mkSB.from('mk_portal_msgs').update({seen:true}).eq('id',id);
+  if(r.error){toast(r.error.message);return}
+  window.mkMsgList=(window.mkMsgList||[]).filter(x=>x.id!==id);show(window.mkMsgList);
+  if(window.mkMsgPull)mkMsgPull();
+ };
+ window.mkMsgOpen=async function(cid,id){
+  await mkMsgRead(id);
+  if(window.openContactFile)openContactFile(cid);
+ };
 })();
 </script>
 </body>

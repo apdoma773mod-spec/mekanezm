@@ -2,7 +2,7 @@
    السيستم (index.html): من النت الأول، ولو مفيش نت أو النت بطيء بيفتح النسخة المحفوظة.
    المكتبات والخطوط: بتتحفظ أول مرة وبعد كده بتفتح من الجهاز.
    الموقع (shop.html) والسيرفر (Supabase) مش بيعدّوا على هنا خالص. */
-const CACHE = 'mkapp-v30';
+const CACHE = 'mkapp-v31';
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const APP = new URL('./', self.location).href;
 
