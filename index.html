@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-28';
+const APP_VER='2026-10-16-29';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1614,13 +1614,13 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventLi
  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(rp,60)});
  window.addEventListener('pageshow',function(e){if(e.persisted)setTimeout(rp,60)})})();
 (function(){let last=0,shown=false;
- async function check(){if(shown||Date.now()-last<30000)return;last=Date.now();
+ async function check(){if(shown||Date.now()-last<60000)return;last=Date.now();
   try{let t=await (await fetch(location.pathname+'?v='+Date.now(),{cache:'no-store'})).text(),m=t.match(/const APP_VER='([^']+)'/);
    if(m&&m[1]!==APP_VER){shown=true;let b=document.createElement('button');b.textContent='🔄 في نسخة جديدة من السيستم — اضغط هنا للتحديث';
     b.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:100000;background:#159447;color:#fff;border:0;border-radius:99px;padding:12px 18px;font-weight:800;box-shadow:0 6px 18px #0004;max-width:92vw';
     b.onclick=async()=>{b.textContent='جاري التحديث...';try{if(window.cloudFlush)await cloudFlush()}catch(e){}location.replace(location.pathname+'?v='+Date.now())};document.body.appendChild(b)}}catch(e){}}
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check()});
- window.addEventListener('focus',check);setInterval(check,2*60000);setTimeout(check,3000)})();
+ setInterval(check,10*60000);setTimeout(check,4000)})();
 </script>
 <script>
 /* =====================================================================
@@ -8048,7 +8048,7 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
  function L3(c){var f=function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])}
  function effBg(el){for(var e=el;e&&e.nodeType===1;e=e.parentElement){var cs=getComputedStyle(e);if(cs.backgroundImage&&cs.backgroundImage!=='none')return null;var b=rgb(cs.backgroundColor);if(b&&b[3]>=.6)return b;if(e===document.body)break}
   var h=(getComputedStyle(document.body).getPropertyValue('--bgc')||'#f7f6fb').trim(),n=parseInt(h.replace('#',''),16);return isNaN(n)?[247,246,251,1]:[n>>16&255,n>>8&255,n&255,1]}
- function fixText(){if(!document.body.classList.contains('mkpro'))return;
+ function fixText(){if(!document.body.classList.contains('mkpro'))return;if(!document.body.classList.contains('mkdark')&&window.matchMedia&&matchMedia('(hover:none) and (pointer:coarse)').matches)return;
   var S=[document.getElementById('wkApp'),document.getElementById('modal'),document.querySelector('main .page.active'),document.querySelector('aside')].filter(Boolean),n=0;
   S.forEach(function(sc){var all=sc.querySelectorAll('*');for(var i=0;i<all.length&&n<1800;i++){var el=all[i];if(CKD.has(el))continue;CKD.add(el);
    var tag=el.tagName;if(tag==='SVG'||tag==='svg'||tag==='PATH'||tag==='path'||el.closest('svg,canvas,[style*="-10000px"],#mkPrint'))continue;
