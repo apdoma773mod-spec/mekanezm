@@ -1645,7 +1645,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-60';
+const APP_VER='2026-10-16-61';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7825,6 +7825,54 @@ body.mkpro.mkdark .table td,body.mkpro.mkdark td{color:#ffffff;font-weight:600}
 body.mkpro.mkdark .table th,body.mkpro.mkdark th{color:#eef2f6;font-weight:800}
 body.mkpro.mkdark .sample{color:#ffffff}
 body.mkpro.mkdark .empty{color:#cfd8e0}
+</style>
+<style id="mkPro">
+/* ميكانيزم برو v2 — نظام تصميم واحد: لون براند واحد، من غير تدرجات ولا blur ولا ظلال تقيلة (DESIGN-DONE.md) */
+body.mkpro{--brand:#E8B04A;--brand-ink:#1A1306;--r-f:10px;--r-c:16px;--r-s:24px;--sh1:0 1px 2px rgba(0,0,0,.25)}
+body.mkpro #mkBgFx{display:none!important}
+body.mkpro *:not(#mkThBg):not(#mkThBg *){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.mkpro .card,body.mkpro .stat,body.mkpro .quick button,body.mkpro .modal,body.mkpro .mkbox{background-image:none!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)}
+body.mkpro .stat::before{display:none!important}
+body.mkpro .stat .ic,body.mkpro .stat .mkic{background:color-mix(in srgb,currentColor 14%,transparent)!important;box-shadow:none!important}
+body.mkpro.pg-strong main .page.active .card{border-top:1px solid var(--ln)!important}
+/* أيقونات: شيب 40 مسطّح بدل المجسّم */
+body.mkpro .mkic{width:40px;height:40px;border-radius:12px;color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,transparent);box-shadow:none}
+body.mkpro .mkic::after{display:none}
+body.mkpro .mkic svg{width:22px;height:22px;stroke-width:1.75;filter:none}
+body.mkpro .mkill{width:52px;height:52px;border-radius:14px;background:var(--cc);box-shadow:none;transform:none;transition:none}
+body.mkpro .mkill::after{display:none}
+body.mkpro .mkill svg{width:40px;height:40px;filter:none}
+body.mkpro .mobile-nav .mkic{width:36px;height:36px}
+body.mkpro .mobile-nav{box-shadow:none;background:var(--card)}
+body.mkpro .mobile-nav button.active{color:var(--text)}
+body.mkpro .mobile-nav button.active .mkic{outline:0;background:var(--brand);color:var(--brand-ink)}
+body.mkpro aside{background:var(--card)}
+body.mkpro aside .nav button.active{background:color-mix(in srgb,var(--brand) 16%,transparent);box-shadow:none;color:var(--text)}
+body.mkpro aside .nav button.active::after{box-shadow:none;background:var(--brand)}
+/* هيدر: مسطّح وأقصر على الموبايل */
+body.mkpro .brand{background:#0B1650!important;box-shadow:inset 0 -2px 0 var(--brand)!important}
+body.mkpro .top-actions{box-shadow:none;background:var(--card)}
+body.mkpro .icon-btn{box-shadow:none}
+body.mkpro #mkStat{box-shadow:none}
+@media(max-width:900px){body.mkpro{--logoH:84px;--actH:56px}}
+/* أزرار */
+body.mkpro button.primary,body.mkpro .btn.primary,body.mkpro .primary{background:var(--brand)!important;color:var(--brand-ink)!important;background-image:none!important;box-shadow:none!important;border-radius:var(--r-f)}
+body.mkpro button.primary,body.mkpro .btn,body.mkpro .modal button,body.mkpro #hyBody button{min-height:48px;border-radius:var(--r-f)}
+body.mkpro #hyBody .btn.primary,body.mkpro #hyBody button.primary{background:var(--brand)!important;color:var(--brand-ink)!important}
+body.mkpro input,body.mkpro select,body.mkpro textarea{border-radius:var(--r-f)}
+body.mkpro .mkSh,body.mkpro #mkSh>div{border-radius:var(--r-s) var(--r-s) 0 0}
+/* مالي وأداء */
+body.mkpro .stat strong,body.mkpro .kpi{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+body.mkpro #recent>*,body.mkpro .list>*,body.mkpro #hyBody .card{content-visibility:auto;contain-intrinsic-size:auto 72px}
+body.mkpro *{text-shadow:none!important}
+body.mkpro .mkic,body.mkpro .mkill,body.mkpro #mkMini i{animation:none!important}
+body.mkpro .mkLaunch button{background:var(--card)!important;background-image:none!important;color:var(--text)!important;border:1px solid var(--ln)!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)!important;transform:none!important;min-height:120px}
+body.mkpro .mkLaunch button::before,body.mkpro .mkLaunch button::after{display:none!important}
+body.mkpro .mkLaunch button:hover{background:var(--g3)!important;transform:none!important;box-shadow:var(--sh1)!important}
+body.mkpro .mkLaunch small{color:var(--muted)!important}
+body.mkpro .mkLaunch .mkill{width:48px;height:48px;border-radius:12px}
+body.mkpro .mkLaunch .mkill svg{width:36px;height:36px}
+body.mkpro .mkLaunch .cnt{background:var(--brand);color:var(--brand-ink);box-shadow:none}
 </style>
 <script>
 /* mk: ميكانيزم برو — أيقونات بلون ثابت لكل شاشة (مايتكررش) + رسومات مجسّمة + لوجو متحرك كبير + لون لكل شاشة */
