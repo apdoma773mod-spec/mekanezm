@@ -8,7 +8,9 @@
 (function(){var on=/[?&]diag=1/.test(location.search);try{if(on)localStorage.setItem('mk_diag','1');if(/[?&]diag=0/.test(location.search))localStorage.removeItem('mk_diag');on=localStorage.getItem('mk_diag')==='1'}catch(e){}
  if(!on)return;var S={},t0=Date.now(),lag=0,lagMax=0,slow=0,L2=0,M2=0,N2=0;
  function key(f){try{return String(f).replace(/\s+/g,' ').slice(0,55)}catch(e){return '?'}}
- function wrap(f,kind){if(typeof f!=='function')return f;var k=kind+': '+key(f);return function(){var a=performance.now();try{return f.apply(this,arguments)}finally{var d=performance.now()-a,m=S[k]||(S[k]={n:0,ms:0});m.n++;m.ms+=d}}}
+ var SL=[];function wrap(f,kind){if(typeof f!=='function')return f;var k=kind+': '+key(f);var w=function(){var a=performance.now();try{return f.apply(this,arguments)}finally{var d=performance.now()-a,m=S[k]||(S[k]={n:0,ms:0});m.n++;m.ms+=d;if(d>700){SL.push(Math.round(d)+'ms — '+k);if(SL.length>12)SL.shift()}}};try{w.prototype=f.prototype}catch(e){}return w}
+ function wrapGlobals(){Object.getOwnPropertyNames(window).forEach(function(n){try{var d=Object.getOwnPropertyDescriptor(window,n);if(!d||!d.writable||typeof d.value!=='function'||/^[A-Z]/.test(n)||n.indexOf('webkit')===0)return;var f=d.value;if(/\[native code\]/.test(Function.prototype.toString.call(f)))return;var w=wrap(f,'دالة '+n);for(var p in f)try{w[p]=f[p]}catch(e){}window[n]=w}catch(e){}})}
+ window.addEventListener('load',function(){ST(wrapGlobals,2500)});
  var MO=window.MutationObserver;window.MutationObserver=function(cb){return new MO(wrap(cb,'مراقب'))};window.MutationObserver.prototype=MO.prototype;
  var SI=window.setInterval,ST=window.setTimeout,RAF=window.requestAnimationFrame;
  window.setInterval=function(f,ms){return SI(wrap(f,'كل '+Math.round((ms||0)/1000)+'ث'),ms)};
@@ -19,7 +21,7 @@
  function show(){var b=document.getElementById('mkDiagBox');if(b){b.remove();return}var sec=Math.round((Date.now()-t0)/1000);
   var L=Object.keys(S).map(function(k){return [k,S[k]]}).sort(function(a,b){return b[1].ms-a[1].ms}).slice(0,10);
   b=document.createElement('div');b.id='mkDiagBox';b.style.cssText='position:fixed;left:6px;right:6px;top:40px;bottom:90px;z-index:2147483647;background:#fff;color:#000;border:3px solid #c0392b;border-radius:14px;padding:10px;overflow:auto;font:13px/1.5 Tahoma,Arial;direction:ltr;text-align:left';
-  b.innerHTML='<b style="font-size:16px">📊 '+sec+' ثانية</b><br>أول ما فتح: أطول تهنيج '+Math.round(lagMax)+'ms<br><b style="font-size:16px;color:#c0392b">بعد أول 15 ثانية: تقطيع '+N2+' مرة، أطول '+Math.round(M2)+'ms، مجموع '+Math.round(L2)+'ms</b>'+(sec<60?'<br><b style="color:#c0392b">⏳ استخدم السيستم لحد ما العداد يعدّي 60 ثانية وبعدين اضغط تاني</b>':'')+'<hr>'+L.map(function(x){return '<div style="margin:0 0 6px"><b>'+Math.round(x[1].ms)+'ms</b> ('+x[1].n+' مرة) — '+x[0].replace(/</g,'&lt;')+'</div>'}).join('')+'<div style="color:#c0392b;margin-top:8px">صوّر الشاشة دي وابعتها. للقفل اضغط 📊 تاني.</div>';
+  b.innerHTML='<b style="font-size:16px">📊 '+sec+' ثانية</b><br>أول ما فتح: أطول تهنيج '+Math.round(lagMax)+'ms<br><b style="font-size:16px;color:#c0392b">بعد أول 15 ثانية: تقطيع '+N2+' مرة، أطول '+Math.round(M2)+'ms، مجموع '+Math.round(L2)+'ms</b>'+(sec<60?'<br><b style="color:#c0392b">⏳ استخدم السيستم لحد ما العداد يعدّي 60 ثانية وبعدين اضغط تاني</b>':'')+'<hr>'+(SL.length?'<div style="background:#fde8e8;padding:6px;border-radius:8px;margin-bottom:8px"><b>اللي علّق أكتر من ثانية:</b><br>'+SL.map(function(x){return x.replace(/</g,'&lt;')}).join('<br>')+'</div>':'')+L.map(function(x){return '<div style="margin:0 0 6px"><b>'+Math.round(x[1].ms)+'ms</b> ('+x[1].n+' مرة) — '+x[0].replace(/</g,'&lt;')+'</div>'}).join('')+'<div style="color:#c0392b;margin-top:8px">صوّر الشاشة دي وابعتها. للقفل اضغط 📊 تاني.</div>';
   document.body.appendChild(b)}
  function btn(){if(!document.body){ST(btn,300);return}var x=document.createElement('button');x.type='button';x.textContent='📊';x.style.cssText='position:fixed;right:10px;bottom:90px;z-index:2147483647;width:52px;height:52px;border-radius:50%;border:3px solid #c0392b;background:#fff;font-size:24px';x.onclick=show;document.body.appendChild(x)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',btn);else btn();
@@ -1618,7 +1620,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-33';
+const APP_VER='2026-10-16-34';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
