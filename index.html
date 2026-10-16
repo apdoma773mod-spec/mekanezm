@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-49';
+const APP_VER='2026-10-16-50';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8628,7 +8628,7 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b>${esc(o.name)}</b><small style="color:var(--muted)">${new Date(m.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'})}</small></div>
      <div style="white-space:pre-wrap;margin:8px 0;line-height:1.8">${esc(m.body||'(من غير نص)')}</div>
      ${med?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">📎 ${med} مرفق</div>`:''}
-     <div class="btnrow">${o.c?`<button class="primary" onclick="mkMsgOpen('${o.c.id}','${m.id}')">فتح ملف العميل</button>`:''}<button class="secondary" onclick="mkMsgRead('${m.id}')">✔ اتقرا</button></div>
+     <div class="btnrow">${o.c?`<button class="primary" onclick="mkMsgOpen('${o.c.id}','${m.id}')">فتح ملف العميل</button>`:''}<button class="primary" onclick="mkOrderFromMsg('${m.id}')">🧾 حوّلها لفاتورة</button><button class="secondary" onclick="mkMsgRead('${m.id}')">✔ اتقرا</button></div>
     </div>`}).join('')
    :'<div class="card"><div class="empty">مفيش طلبات جديدة 👌</div></div>';
   openModal(`<div class="modal-head"><h2>🔗 طلبات العملاء الجديدة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="form">${body}</div>`);
@@ -8648,6 +8648,75 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
  window.mkMsgOpen=async function(cid,id){
   await mkMsgRead(id);
   if(window.openContactFile)openContactFile(cid);
+ };
+})();
+</script>
+<script>
+/* ميكانيزم — 🧾 تحويل رسالة العميل لفاتورة: قراءة الأصناف بالعامية + مطابقة ذكية مع المنتجات (المراجعة قبل الحفظ) */
+(function(){
+ function norm(s){
+  return String(s||'').replace(/[ً-ٟـ]/g,'')
+   .replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[ؤئ]/g,'ء').replace(/ء/g,'')
+   .replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d)}).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)})
+   .toLowerCase().replace(/[^؀-ۿa-z0-9\s×*\/.]/g,' ').replace(/\s+/g,' ').trim();
+ }
+ var NUM0={واحد:1,واحده:1,وحده:1,اتنين:2,اثنين:2,اثنان:2,تلاته:3,ثلاثه:3,اربعه:4,اربعة:4,خمسه:5,خمس:5,سته:6,ست:6,سبعه:7,سبع:7,تمنيه:8,تمانيه:8,ثمانيه:8,تسعه:9,تسع:9,عشره:10,عشر:10,عشرين:20,تلاتين:30,اربعين:40,خمسين:50,ميه:100,مية:100,الف:1000};
+ var NUM={}; Object.keys(NUM0).forEach(function(k){NUM[norm(k)]=NUM0[k]});
+ var SYN0={مجر:['مجري','درج'],مجري:['مجري','درج'],درج:['درج','مجري'],سمت:['سوفت','سمت'],سوفت:['سوفت'],soft:['سوفت'],مفصلات:['مفصل'],مفصله:['مفصل'],مفصل:['مفصل'],كولين:['كولين'],كولينات:['كولين'],كوالين:['كولين'],كولين:['كولين'],اهرم:['اهرم','ذراع'],ذراع:['ذراع','اهرم'],سفلي:['سفلي'],سفلى:['سفلي'],علوي:['علوي'],علوى:['علوي'],مقبض:['مقبض'],ماسكه:['مقبض'],ابواب:['باب'],باب:['باب']};
+ var SYN={}; Object.keys(SYN0).forEach(function(k){SYN[norm(k)]=SYN0[k].map(norm)});
+ var STOP=new Set(['عدد','بتاع','بتاعت','بتاعه','من','ال','و','محتاج','عايز','عاوز','ابعت','لو','سمحت','مقاس','نوع','فيه','في','ده','دي','كام','اطلب','ممكن']);
+ function expand(words){var out=new Set();words.forEach(function(w){out.add(w);(SYN[w]||[]).forEach(function(x){out.add(x)})});return out}
+ function parseLine(raw){
+  var t=norm(raw);if(!t)return null;var qty=1,size='',m;
+  if((m=t.match(/(\d+(?:\.\d+)?)\s*(سم|ملي|مم|متر|م)(?=\s|$)/))){size=m[1];t=(t.slice(0,m.index)+' '+t.slice(m.index+m[0].length)).replace(/\s+/g,' ').trim()}
+  if((m=t.match(/^(\d+(?:\.\d+)?)\s*(?:[×*x]\s*)?(?=\s|$)/))){qty=+m[1];t=t.slice(m[0].length).trim()}
+  else if((m=t.match(/^(?:[×*x]\s*)?(\d+)\s*[×*x]?\s+/))){qty=+m[1];t=t.slice(m[0].length).trim()}
+  else{var w=t.split(' ')[0];if(NUM[w]!=null){qty=NUM[w];t=t.slice(w.length).trim()}}
+  if((m=t.match(/\s[×*x]\s*(\d+)$/))){qty=+m[1];t=t.slice(0,m.index).trim()}
+  var words=t.split(' ').filter(function(w){return w&&!STOP.has(w)&&!/^[×*x]$/.test(w)&&!NUM[w]});
+  return {raw:String(raw).trim(),qty:qty||1,size:size,words:words};
+ }
+ function matches(line,products){
+  var q=[...new Set(line.words)];if(!q.length)return [];
+  var res=products.map(function(p){
+   var pn=norm(p.name),pt=expand(pn.split(' ')),hit=0;
+   q.forEach(function(w){var ok=false,qs=expand([w]);qs.forEach(function(v){pt.forEach(function(x){if(ok)return;if(x===v||(v.length>=3&&x.length>=3&&(x.indexOf(v)===0||v.indexOf(x)===0)))ok=true})});if(ok)hit++});
+   var s=hit/q.length;if(line.size&&pn.split(' ').indexOf(line.size)>=0)s+=0.15;
+   return {p:p,s:Math.min(1,s)};
+  });
+  return res.filter(function(x){return x.s>=0.5}).sort(function(a,b){return b.s-a.s}).slice(0,4);
+ }
+ window.mkOrderParse=function(text,products){
+  return String(text||'').split(/\n|،|,|\+|؛|;/).map(parseLine).filter(Boolean).map(function(l){
+   var mm=matches(l,products||[]);return {line:l,cands:mm,best:mm.length?mm[0].p.id:''}});
+ };
+ var ROWS=[];
+ window.mkOrderFromMsg=function(id){
+  var m=(window.mkMsgList||[]).find(function(x){return x.id===id});if(!m){toast('الرسالة مش موجودة');return}
+  var c=(db.contacts||[]).find(function(x){return x.ptok&&x.ptok===m.token});
+  var prods=prodsCo();ROWS=mkOrderParse(m.body,prods);
+  var all=prods.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ar')});
+  var opts=function(sel){return '<option value="">— اختار صنف —</option>'+all.map(function(p){return '<option value="'+p.id+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+' ('+p.qty+' '+esc(p.unit||'')+')</option>'}).join('')};
+  var rows=ROWS.map(function(r,i){var conf=r.best?'':'border-right:4px solid var(--danger,#c0392b)';
+   return '<div class="card" style="margin-bottom:8px;'+conf+'"><div style="font-size:13px;color:var(--muted)">من الرسالة: '+esc(r.line.raw)+'</div>'+
+   (r.best?'':'<div style="color:var(--danger,#c0392b);font-weight:700;margin:4px 0">⚠️ مش متعرف عليه، اختار الصح</div>')+
+   '<div style="display:flex;gap:8px;margin-top:6px;align-items:center"><input type="number" min="0" step="0.01" value="'+r.line.qty+'" id="mkOq'+i+'" style="width:90px;padding:10px;font-size:16px"><select id="mkOp'+i+'" style="flex:1;padding:10px;font-size:15px">'+opts(r.best)+'</select></div></div>'}).join('');
+  openModal('<div class="modal-head"><h2>🧾 تحويل طلب لفاتورة'+(c?' — '+esc(c.name):'')+'</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="form">'+
+   (ROWS.length?'<div class="note" style="margin-bottom:10px">راجع الأصناف والكميات. أي صنف مش متعرف عليه اختاره يدوي. مفيش حاجة بتتسجل غير لما تضغط إنشاء الفاتورة.</div>'+rows:'<div class="card"><div class="empty">مالقيتش أصناف في الرسالة. اكتبها يدوي في الفاتورة.</div></div>')+
+   '<button class="primary" style="width:100%;padding:16px;margin-top:8px" onclick="mkOrderCreate(\''+id+'\')">إنشاء فاتورة بيع</button></div>');
+ };
+ window.mkOrderCreate=async function(msgId){
+  var m=(window.mkMsgList||[]).find(function(x){return x.id===msgId});
+  var c=m?(db.contacts||[]).find(function(x){return x.ptok&&x.ptok===m.token}):null;
+  var items=[];ROWS.forEach(function(r,i){var pid=(document.getElementById('mkOp'+i)||{}).value,q=+((document.getElementById('mkOq'+i)||{}).value||0);if(pid&&q>0)items.push({pid:pid,q:q})});
+  if(!items.length){toast('اختار صنف واحد على الأقل');return}
+  openTransaction('sale');
+  document.querySelectorAll('#txLines .txl').forEach(function(x){x.remove()});
+  if(c){var pn=document.getElementById('txPerson');if(pn){pn.value=c.name;try{fillCust()}catch(e){}}}
+  items.forEach(function(it){var d=addLine(it.pid);var q=d.querySelector('.lq');if(q)q.value=it.q});
+  try{updRem()}catch(e){}
+  if(m){try{await window.mkSB.from('mk_portal_msgs').update({seen:true}).eq('id',m.id);if(window.mkMsgPull)mkMsgPull()}catch(e){}}
+  toast('راجع الفاتورة واحفظها');
  };
 })();
 </script>
