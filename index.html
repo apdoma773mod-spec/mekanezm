@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-68';
+const APP_VER='2026-10-17-69';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5654,7 +5654,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  var KEY='wa_rules',STAT='wa_rules_stat';
  var SBc=function(){return window.mkSB||(typeof sbx==='function'?sbx():null)};
  var TYPES=['طلب','دلف','استانلس','بامبو','تحويل','استفسار سعر','استفسار توفّر','استفسار صور','استفسار أسعار','غيره'];
- var D={enabled:true,windowMin:10,ownerPhones:[],blockPhones:[],allowPhones:[],ignoreSaved:false,never:[],photos:{byCaption:true,byWindow:true,fromKnown:true},rules:[{phrases:['طلب','اوردر','order'],type:'طلب',scope:'both',mode:'contains',on:true},{phrases:['تحويل','حولت','حولتلك','ايصال تحويل','انستاباي','instapay'],type:'تحويل',scope:'both',mode:'contains',on:true}]};
+ var D={enabled:true,windowMin:10,phoneNotes:{},ownerPhones:[],blockPhones:[],allowPhones:[],ignoreSaved:false,never:[],photos:{byCaption:true,byWindow:true,fromKnown:true},rules:[{phrases:['طلب','اوردر','order'],type:'طلب',scope:'both',mode:'contains',on:true},{phrases:['تحويل','حولت','حولتلك','ايصال تحويل','انستاباي','instapay'],type:'تحويل',scope:'both',mode:'contains',on:true}]};
  var CFG=null,ST=null;
  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  /* نفس محرك المطابقة اللي في الجسر (wa-filter.js v2) بالظبط */
@@ -5674,75 +5674,114 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   try{var a=await SBc().from('mk_settings').select('value').eq('key',KEY).maybeSingle();CFG=Object.assign({},D,(a.data&&a.data.value)||{});if(!Array.isArray(CFG.rules)||!CFG.rules.length)CFG.rules=D.rules.slice();CFG.photos=Object.assign({},D.photos,CFG.photos||{})}catch(e){CFG=JSON.parse(JSON.stringify(D))}
   try{var b=await SBc().from('mk_settings').select('value').eq('key',STAT).maybeSingle();ST=(b.data&&b.data.value)||null}catch(e){ST=null}
  }
+ /* ===== الشاشة الجديدة: صفحة كاملة بتبويبات ===== */
+ var TAB='over',DIRTY=false,TABS=[['over','نظرة عامة'],['rules','القواعد'],['nums','الأرقام'],['photos','الصور'],['never','الممنوعات'],['test','تجربة'],['recent','المتجاهَل'],['backup','نسخة احتياطية']];
+ var PRESETS=[
+  {n:'استانلس',phrases:['استانلس','ستانلس','استلس','ستنلس','استيل','ستيل'],type:'استانلس'},
+  {n:'دلف',phrases:['دلف','دلفة','دلفه','دلف مطبخ'],type:'دلف'},
+  {n:'بامبو',phrases:['بامبو','بامبوا'],type:'بامبو'},
+  {n:'طلب / أوردر',phrases:['طلب','اوردر','order','عايز','محتاج','ابعتلي'],type:'طلب'},
+  {n:'تحويل فلوس',phrases:['تحويل','حولت','حولتلك','ايصال تحويل','انستاباي','instapay'],type:'تحويل'},
+  {n:'سؤال عن السعر',phrases:['بكام','سعر','اسعار','بكم','كام سعر'],type:'استفسار سعر'},
+  {n:'سؤال عن التوفّر',phrases:['متوفر','متاح','موجود عندكم','عندكم'],type:'استفسار توفّر'},
+  {n:'طلب صورة',phrases:['صورة','صور','ابعتلي صورة'],type:'استفسار صور'}];
+ var TIPS={'طلب':'رسالة طلب بضاعة','دلف':'طلب دلفة','استانلس':'طلب استانلس (شاشة تجهيز القطعة)','بامبو':'طلب بامبو','تحويل':'تحويل فلوس / إيصال','استفسار سعر':'سؤال عن سعر صنف','استفسار توفّر':'سؤال عن توفّر صنف','استفسار صور':'طلب صور','استفسار أسعار':'طلب قايمة أسعار','غيره':'نوع تاني'};
+ function scr(){var s=document.getElementById('kwScr');if(!s){s=document.createElement('div');s.id='kwScr';s.style.cssText='position:fixed;inset:0;z-index:900;background:var(--bg,#f5f7f8);color:var(--text,#18343a);display:flex;flex-direction:column';document.body.appendChild(s)}return s}
+ function numTxt(arr){var N=CFG.phoneNotes||{};return(arr||[]).map(function(p){return p+(N[p]?'  '+N[p]:'')}).join('\n')}
+ function parseNums(txt){var list=[],notes={},bad=0;String(txt||'').split(/\n|،|;/).forEach(function(line){line=line.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).trim();if(!line)return;var all=line.match(/\+?\d[\d\s\-]{8,}\d/g)||[];var nums=all.map(function(x){return x.replace(/\D/g,'')}).filter(function(x){return x.length>=10&&x.length<=15});
+   if(!nums.length){bad++;return}
+   if(nums.length===1){var note=line.replace(all[0],'').replace(/^[\s\-:،]+|[\s\-:،]+$/g,'');if(list.indexOf(nums[0])<0)list.push(nums[0]);if(note)notes[nums[0]]=note}else nums.forEach(function(n){if(list.indexOf(n)<0)list.push(n)})});
+  return{list:list,notes:notes,bad:bad}}
+ function collect(){var m=document.getElementById('kwScr');if(!m)return CFG;
+  var q=function(s){return m.querySelector(s)};
+  if(TAB==='over'&&q('#kwEn'))CFG.enabled=q('#kwEn').checked;
+  if(TAB==='rules'){var rules=[];m.querySelectorAll('[data-i]').forEach(function(c){var ph=c.querySelector('.kwP').value.split(/[,،\n\/]/).map(function(x){return x.trim()}).filter(Boolean);
+    if(!ph.length)return;rules.push({name:c.querySelector('.kwNm').value.trim(),phrases:ph,not:lst(c.querySelector('.kwN').value),type:c.querySelector('.kwT').value,scope:c.querySelector('.kwS').value,mode:c.querySelector('.kwM').value,fuzzy:c.querySelector('.kwF').checked,on:c.querySelector('.kwO').checked})});CFG.rules=rules}
+  if(TAB==='nums'){var N=CFG.phoneNotes={};[['kwOwn','ownerPhones'],['kwBlk','blockPhones'],['kwAlw','allowPhones']].forEach(function(p){var r=parseNums(q('#'+p[0]).value);CFG[p[1]]=r.list;Object.keys(r.notes).forEach(function(k){N[k]=r.notes[k]})})}
+  if(TAB==='photos'){CFG.photos={byCaption:q('#kwPc').checked,byWindow:q('#kwPw').checked,fromKnown:q('#kwPk').checked}}
+  if(TAB==='never'){CFG.never=lst(q('#kwNev').value);CFG.ignoreSaved=q('#kwSav').checked}
+  return CFG}
+ function stat(){return (ST&&ST.at&&Date.now()-new Date(ST.at).getTime()<5*60000)}
+ function sec(t,sub,body){return '<div class="card" style="padding:14px;margin:0 0 12px"><div style="font-size:17px;font-weight:800">'+t+'</div>'+(sub?'<div style="font-size:13px;color:var(--muted);line-height:1.9;margin:4px 0 10px">'+sub+'</div>':'<div style="height:8px"></div>')+body+'</div>'}
+ function tgl(id,on,t,sub){return '<label style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--border,#e4eaed)"><input id="'+id+'" type="checkbox"'+(on?' checked':'')+' style="width:26px;height:26px;flex:none;margin-top:2px"><span><b style="font-size:15px">'+t+'</b><br><span style="font-size:13px;color:var(--muted);line-height:1.8">'+sub+'</span></span></label>'}
+ function bigTa(id,val,ph,rows){return '<textarea id="'+id+'" rows="'+(rows||8)+'" placeholder="'+esc(ph||'')+'" style="width:100%;min-height:'+((rows||8)*30)+'px;font-size:17px;line-height:1.9;padding:12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit;direction:ltr;text-align:left;font-family:inherit">'+esc(val||'')+'</textarea>'}
  function ruleRow(r,i){
-  return '<div class="card" style="padding:10px;margin:8px 0" data-i="'+i+'">'+
-  '<div class="form">'+
-  '<div class="field full"><label>الكلمة أو العبارة (كل كلمة في سطر جديد، أو بينهم شرطة /)</label><textarea class="kwP" rows="5" style="min-height:120px;font-size:17px;line-height:1.9" placeholder="اكتب الكلمة، واضغط Enter، واكتب اللي بعدها&#10;مثال:&#10;استانلس&#10;استلس&#10;دلف استانلس">'+esc((r.phrases||[]).join('\n'))+'</textarea></div>'+
-  '<div class="field full"><label>إلا لو فيها (اختياري، كل كلمة في سطر)</label><textarea class="kwN" rows="3" style="min-height:90px;font-size:17px;line-height:1.9">'+esc((r.not||[]).join('\n'))+'</textarea></div>'+
-  '<div class="field"><label>النوع</label><select class="kwT">'+TYPES.map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
-  '<div class="field"><label>الرقم</label><select class="kwS"><option value="both"'+(r.scope==='both'?' selected':'')+'>الاتنين</option><option value="shop"'+(r.scope==='shop'?' selected':'')+'>رقم المحل</option><option value="owner"'+(r.scope==='owner'?' selected':'')+'>رقم عبده</option></select></div>'+
-  '<div class="field"><label>المطابقة</label><select class="kwM"><option value="contains"'+(r.mode==='contains'?' selected':'')+'>تحتوي</option><option value="starts"'+(r.mode==='starts'?' selected':'')+'>تبدأ بـ</option><option value="exact"'+(r.mode==='exact'?' selected':'')+'>تطابق تماماً</option></select></div>'+
-  '<div class="field"><label class="chk"><input type="checkbox" class="kwO"'+(r.on!==false?' checked':'')+'> مفعّلة</label><button type="button" class="secondary danger kwDel" style="margin-top:6px">حذف</button></div>'+
-  '</div></div>';
- }
- function collect(){
-  var m=document.getElementById('modal');if(!m)return CFG;
-  var rules=[];m.querySelectorAll('[data-i]').forEach(function(c){
-   var ph=c.querySelector('.kwP').value.split(/[,،\n\/]/).map(function(x){return x.trim()}).filter(Boolean);
-   if(!ph.length)return;
-   rules.push({phrases:ph,not:lst(c.querySelector('.kwN').value),type:c.querySelector('.kwT').value,scope:c.querySelector('.kwS').value,mode:c.querySelector('.kwM').value,on:c.querySelector('.kwO').checked})});
-  CFG.rules=rules;
-  CFG.enabled=m.querySelector('#kwEn').checked;
-  CFG.windowMin=Math.max(1,parseInt(m.querySelector('#kwWin').value,10)||10);
-  CFG.ownerPhones=phones(m.querySelector('#kwOwn').value);
-  CFG.blockPhones=phones(m.querySelector('#kwBlk').value);
-  CFG.allowPhones=phones(m.querySelector('#kwAlw').value);
-  CFG.never=lst(m.querySelector('#kwNev').value);
-  CFG.ignoreSaved=m.querySelector('#kwSav').checked;
-  CFG.photos={byCaption:m.querySelector('#kwPc').checked,byWindow:m.querySelector('#kwPw').checked,fromKnown:m.querySelector('#kwPk').checked};
-  return CFG;
- }
+  return '<div class="card" style="padding:12px;margin:0 0 12px;border-right:5px solid '+(r.on===false?'#9ca3af':'var(--blue,#087f8c)')+'" data-i="'+i+'">'+
+  '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input class="kwNm" value="'+esc(r.name||'')+'" placeholder="اسم للقاعدة (اختياري) — مثال: طلبات الاستانلس" style="flex:1;min-width:0;font-weight:800;font-size:16px;padding:12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit"><label style="display:flex;align-items:center;gap:6px;font-weight:700;flex:none"><input type="checkbox" class="kwO" style="width:24px;height:24px"'+(r.on!==false?' checked':'')+'> مفعّلة</label></div>'+
+  '<label style="font-size:13px;color:var(--muted)">الكلمات أو العبارات (كل واحدة في سطر)</label>'+
+  '<textarea class="kwP" rows="6" style="width:100%;min-height:150px;font-size:17px;line-height:1.9;padding:12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit" placeholder="اكتب الكلمة واضغط Enter واكتب اللي بعدها&#10;مثال:&#10;استانلس&#10;استلس&#10;دلف استانلس">'+esc((r.phrases||[]).join('\n'))+'</textarea>'+
+  '<label style="font-size:13px;color:var(--muted);display:block;margin-top:8px">إلا لو فيها (اختياري — الرسالة اللي فيها أي كلمة هنا القاعدة دي ماتنطبقش عليها)</label>'+
+  '<textarea class="kwN" rows="3" style="width:100%;min-height:90px;font-size:16px;line-height:1.9;padding:12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit">'+esc((r.not||[]).join('\n'))+'</textarea>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+  '<div><label style="font-size:13px;color:var(--muted)">تتحوّل لنوع</label><select class="kwT" style="width:100%;min-height:48px;border-radius:12px">'+TYPES.map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
+  '<div><label style="font-size:13px;color:var(--muted)">بتتطبق على رسايل</label><select class="kwS" style="width:100%;min-height:48px;border-radius:12px"><option value="both"'+(r.scope==='both'?' selected':'')+'>رقم المحل ورقم عبده</option><option value="shop"'+(r.scope==='shop'?' selected':'')+'>رقم المحل بس</option><option value="owner"'+(r.scope==='owner'?' selected':'')+'>رقم عبده بس</option></select></div>'+
+  '<div><label style="font-size:13px;color:var(--muted)">طريقة المطابقة</label><select class="kwM" style="width:100%;min-height:48px;border-radius:12px"><option value="contains"'+(r.mode!=='starts'&&r.mode!=='exact'?' selected':'')+'>الكلمة موجودة في أي مكان</option><option value="starts"'+(r.mode==='starts'?' selected':'')+'>الرسالة تبدأ بيها</option><option value="exact"'+(r.mode==='exact'?' selected':'')+'>الرسالة كلها هي الكلمة بالظبط</option></select></div>'+
+  '<div style="display:flex;align-items:flex-end"><label style="display:flex;align-items:center;gap:8px;font-weight:700;min-height:48px"><input type="checkbox" class="kwF" style="width:24px;height:24px"'+(r.fuzzy!==false?' checked':'')+'> يسامح في الغلطات الإملائية</label></div></div>'+
+  '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="secondary kwUp" style="flex:1;min-height:46px">▲ فوق</button><button type="button" class="secondary kwDn" style="flex:1;min-height:46px">▼ تحت</button><button type="button" class="secondary kwCp" style="flex:1;min-height:46px">⧉ نسخ</button><button type="button" class="secondary danger kwDel" style="flex:1;min-height:46px">🗑 حذف</button></div></div>'}
+ function pageOver(rec){var act=CFG.rules.filter(function(r){return r.on!==false}).length;
+  return sec('حالة الجسر','',' <div style="font-size:16px;font-weight:800;color:'+(stat()?'#15803d':'#dc2626')+'">'+(stat()?'🟢 الجسر شغّال':'🔴 الجسر مش باعت أخبار')+'</div><div style="font-size:13px;color:var(--muted);line-height:2;margin-top:6px">'+(ST&&ST.at?'آخر خبر: '+new Date(ST.at).toLocaleTimeString('ar-EG')+'<br>':'')+(ST&&ST.src?'القواعد اللي شغّالة دلوقتي: <b>'+({server:'من السيستم',cache:'نسخة محفوظة على جهاز الجسر',default:'الوضع الصارم'}[ST.src]||ST.src)+'</b><br>':'')+'دخل النهارده: <b>'+(ST&&ST.accepted||0)+'</b> — اتجاهل: <b>'+(ST&&ST.ignored||0)+'</b>'+(ST&&ST.known?'<br>عملاء وموردين معروفين: <b>'+ST.known+'</b>':'')+'</div>')+
+  sec('الفلتر','لو شغّال، السيستم ماياخدش أي رسالة أو صورة إلا لو ليها سبب واضح (كلمة مقبولة، أو رقم مسموح). غير كده بتتجاهل ومابتتخزنش.',tgl('kwEn',CFG.enabled!==false,'الفلتر شغّال','لو قفلته هتدخل كل الرسايل من كل الأرقام.'))+
+  sec('الرسالة بتعدّي إزاي؟','الترتيب اللي السيستم بيمشي عليه مع كل رسالة:','<ol style="margin:0;padding-right:20px;line-height:2.2;font-size:15px"><li>لو الرقم في <b>أرقام بتتجاهل دايمًا</b> ← تتجاهل.</li><li>لو الرسالة فيها <b>عبارة ممنوعة</b> ← تتجاهل.</li><li>لو الرقم في <b>أرقام بتدخل دايمًا</b> ← تدخل.</li><li>لو فيها كلمة من <b>القواعد</b> ← تدخل بنوع القاعدة.</li><li>الصور: بتدخل لو التعليق فيه كلمة، أو جت بعد رسالة مقبولة بوقت قصير، أو من عميل معروف.</li><li>غير كده ← تتجاهل.</li></ol>')+
+  sec('ملخّص إعداداتك','','<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">'+[[act+' / '+CFG.rules.length,'قواعد مفعّلة'],[(CFG.allowPhones||[]).length,'أرقام بتدخل دايمًا'],[(CFG.blockPhones||[]).length,'أرقام بتتجاهل'],[(CFG.never||[]).length,'عبارات ممنوعة'],[(CFG.ownerPhones||[]).length,'أرقامك الشخصية'],[rec.length,'اتجاهل آخر 24 ساعة']].map(function(x){return '<div style="padding:12px;border-radius:12px;background:var(--card,#fff);border:1px solid var(--border,#e4eaed)"><div style="font-size:22px;font-weight:800">'+x[0]+'</div><div style="font-size:12px;color:var(--muted)">'+x[1]+'</div></div>'}).join('')+'</div>')}
+ function pageRules(){return '<div style="margin:0 0 10px"><div style="font-size:13px;color:var(--muted);margin-bottom:6px">قواعد جاهزة (اضغط تضيفها، وتعدّلها براحتك):</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+PRESETS.map(function(p,i){return '<button type="button" class="secondary kwPre" data-p="'+i+'" style="min-height:44px">+ '+p.n+'</button>'}).join('')+'</div></div>'+
+  '<div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:10px">القواعد بتتقري من فوق لتحت، وأول قاعدة تنطبق هي اللي بتحدد النوع.</div>'+CFG.rules.map(ruleRow).join('')+'<button type="button" class="primary" id="kwAdd" style="width:100%;min-height:54px">➕ قاعدة جديدة</button>'}
+ function pageNums(){var inv=function(t){return t};return sec('📱 أرقامك الشخصية','أي صورة من الأرقام دي بتدخل دايمًا كتحويل لمورد. اكتب كل رقم في سطر، وتقدر تكتب جنبه اسم (مثال: <span dir="ltr">01012345678 موبايل عبده التاني</span>).',bigTa('kwOwn',numTxt(CFG.ownerPhones),'01xxxxxxxxx',5))+
+  sec('✅ أرقام بتدخل دايمًا','صنايعية وعملاء شغالين معاك: كل رسالة منهم بتدخل حتى من غير كلمة.',bigTa('kwAlw',numTxt(CFG.allowPhones),'01xxxxxxxxx  اسم الصنايعي',6))+
+  sec('⛔ أرقام بتتجاهل دايمًا','أهل وأصحاب وجروبات: ولا رسالة منهم بتدخل حتى لو فيها كلمة.',bigTa('kwBlk',numTxt(CFG.blockPhones),'01xxxxxxxxx  اسم',6))+
+  '<div style="font-size:12px;color:var(--muted);line-height:1.8">الرقم بيتكتب بأي شكل (٠١٠… أو +٢٠١٠… أو فيه مسافات). الأرقام الغلط (أقل من 10 أرقام) مابتتحفظش.</div>'}
+ function pagePhotos(){return sec('الصور بتدخل إمتى؟','',tgl('kwPc',CFG.photos.byCaption!==false,'صورة معاها تعليق فيه كلمة مقبولة','الصورة بتدخل لو التعليق اللي مكتوب عليها فيه كلمة من القواعد.')+tgl('kwPw',CFG.photos.byWindow!==false,'صورة بعد رسالة مقبولة','لو واحد بعت رسالة اتقبلت، أي صورة بيبعتها بعدها بوقت قصير بتدخل كمان (عشان يبعت الطلب ويبعت صورته).')+tgl('kwPk',CFG.photos.fromKnown!==false,'صور العملاء والموردين المسجّلين','صورة من رقم متسجل في السيستم بتدخل من غير تعليق (زي إيصالات التحويل).'))+
+  sec('مدة قبول الصور بعد الرسالة','الصورة اللي تيجي بعد الرسالة المقبولة في المدة دي بتدخل. بعدها بتتجاهل. المدة الحالية: <b>'+(CFG.windowMin||10)+' دقيقة</b>.','<div id="kwWin" style="display:flex;gap:6px;flex-wrap:wrap">'+[2,5,10,15,30,60].map(function(n){var on=(CFG.windowMin||10)===n;return '<button type="button" data-w="'+n+'" class="kwWb" style="min-width:76px;min-height:48px;border-radius:12px;font-weight:800;border:2px solid '+(on?'#FFBE0B':'var(--border,#ddd)')+';background:'+(on?'var(--brand,#E8B04A)':'var(--card,#fff)')+';color:'+(on?'var(--brand-ink,#1A1306)':'inherit')+'">'+n+' د</button>'}).join('')+'</div>')}
+ function pageNever(){return sec('🚫 عبارات ممنوعة','أي رسالة فيها واحدة من العبارات دي بتتجاهل حتى لو فيها كلمة مقبولة. اكتب كل عبارة في سطر. مثال: «اهلا وسهلا» أو «صباح الخير».',bigTa('kwNev',(CFG.never||[]).join('\n'),'عبارة في كل سطر',8))+
+  sec('أرقام متسجّلة في موبايل المحل','',tgl('kwSav',!!CFG.ignoreSaved,'تجاهل أي رقم متسجّل في موبايل المحل','حتى لو الرسالة فيها كلمة مقبولة. (مش مفيد لو عندك عملاء متسجلين ومحتاج طلباتهم).'))}
+ function evalMsg(t,ph){var m=document.getElementById('kwScr');collect();var out=[];ph=String(ph||'').replace(/\D/g,'');
+  if(ph){var has=function(a){return(a||[]).some(function(x){return x===ph||(x.slice(-10)===ph.slice(-10))})};if(has(CFG.blockPhones))return{ok:false,why:'الرقم ده في «أرقام بتتجاهل دايمًا»'};}
+  if(CFG.enabled===false)return{ok:true,why:'الفلتر مقفول: كل الرسايل بتتقبل'};
+  if(neverHit(t))return{ok:false,why:'فيها عبارة من الممنوعة'};
+  if(ph&&(CFG.allowPhones||[]).some(function(x){return x.slice(-10)===ph.slice(-10)}))return{ok:true,why:'الرقم ده في «أرقام بتدخل دايمًا»'};
+  var hits=CFG.rules.filter(function(x){return x.on!==false&&hit(x,t)});
+  return hits.length?{ok:true,why:'اتطابقت مع قاعدة: '+esc((hits[0].name||(hits[0].phrases||[]).join('، '))),type:hits[0].type,more:hits.slice(1)}:{ok:false,why:'مفيش قاعدة اتطابقت'}}
+ function pageTest(rec){return sec('🧪 جرّب رسالة','اكتب نص رسالة وشوف إيه اللي هيحصل بيها بالقواعد الحالية.',bigTa('kwTest','','اكتب نص الرسالة هنا...',5)+'<input id="kwTph" inputmode="tel" placeholder="رقم المرسل (اختياري)" style="width:100%;min-height:50px;margin-top:8px;font-size:16px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit"><div id="kwRes" style="margin-top:10px;padding:12px;border-radius:12px;background:var(--card,#fff);border:1px solid var(--border,#e4eaed);font-size:16px;line-height:1.9">—</div>')+
+  (rec.length?sec('جرّب على آخر المتجاهَل','هنشوف لو القواعد الحالية (بعد تعديلك) كانت هتقبل أي رسالة من اللي اتجاهلت آخر 24 ساعة.','<button type="button" class="secondary" id="kwRetro" style="width:100%;min-height:50px">▶ شغّل التجربة</button><div id="kwRetroOut" style="margin-top:8px"></div>'):'')}
+ function pageRecent(rec){return sec('المتجاهَل آخر 24 ساعة ('+rec.length+')','لو في رسالة اتجاهلت غلط، اعتبرها طلب، أو اعمل منها قاعدة.',rec.length?rec.slice().reverse().map(function(x,i){return '<div class="card" style="padding:10px;margin:8px 0"><div style="font-size:12px;color:var(--muted)">'+esc(x.name||'')+' <span dir="ltr">'+esc(x.phone||'')+'</span>'+(x.why?' · <b>'+esc(x.why)+'</b>':'')+'</div><div style="white-space:pre-line;margin:6px 0">'+esc(x.text)+'</div><div style="display:flex;gap:8px"><button type="button" class="secondary kwPro" data-k="'+i+'" style="flex:1;min-height:46px">اعتبرها طلب</button><button type="button" class="secondary kwMk" data-k="'+i+'" style="flex:1;min-height:46px">اعمل قاعدة</button><button type="button" class="secondary kwBl" data-k="'+i+'" style="flex:1;min-height:46px">⛔ تجاهل الرقم</button></div></div>'}).join(''):'<div class="empty">مفيش</div>')}
+ function pageBackup(){return sec('نسخة احتياطية','انسخ الإعدادات دي واحفظها، أو الصق إعدادات قديمة وارجّعها.',bigTa('kwJson',JSON.stringify(CFG,null,1),'',10)+'<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="secondary" id="kwJcp" style="flex:1;min-height:50px">📋 نسخ</button><button type="button" class="secondary" id="kwJdl" style="flex:1;min-height:50px">⬇ تنزيل ملف</button><button type="button" class="secondary" id="kwJrs" style="flex:1;min-height:50px">↩ استرجاع من النص</button></div>')+
+  sec('رجوع للوضع الافتراضي','بيمسح قواعدك ويرجّع القاعدتين الأساسيتين (طلب، تحويل).','<button type="button" class="secondary danger" id="kwReset" style="width:100%;min-height:50px">إعادة ضبط كل حاجة</button>')}
  function draw(){
-  var rec=((ST&&ST.recent)||[]).filter(function(x){return Date.now()-x.at<864e5});
-  var h='<div class="modal-head"><h2>🔑 كلمات الواتساب المفتاحية</h2></div>'+
-  '<p style="margin:0 0 8px;color:var(--muted);font-size:13px">أي رسالة أو صورة من غير سبب واضح بتتجاهل ومش بتتخزن (ولا حتى بتتكتب في السجل). القواعد بتتحمّل في الجسر كل دقيقة.</p>'+
-  '<div class="sample" style="margin-bottom:8px">'+(ST&&ST.at&&Date.now()-new Date(ST.at).getTime()<5*60000?'🟢 الجسر شغّال':'🔴 الجسر مش باعت أخبار (مقفول أو الدالة لسه متشغّلتش)')+(ST&&ST.src?' · القواعد من: <b>'+({server:'السيستم',cache:'نسخة الجهاز',default:'الوضع الصارم'}[ST.src]||ST.src)+'</b>':'')+' · دخل النهارده: <b>'+(ST&&ST.accepted||0)+'</b> · اتجاهل: <b>'+(ST&&ST.ignored||0)+'</b>'+(ST&&ST.known?' · عملاء/موردين معروفين: <b>'+ST.known+'</b>':'')+'</div>'+
-  '<div class="form"><div class="field"><label class="chk"><input id="kwEn" type="checkbox"'+(CFG.enabled!==false?' checked':'')+'> الفلتر شغّال</label></div>'+
-  '<div class="field"><label>نافذة الصور (دقايق)</label><input id="kwWin" type="number" min="1" value="'+(CFG.windowMin||10)+'"></div>'+
-  '<div class="field full"><label>📱 أرقامك الشخصية (صورها بتدخل دايمًا كتحويلات لموردين)</label><input id="kwOwn" value="'+esc((CFG.ownerPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx 01xxxxxxxxx"></div>'+
-  '<div class="field full"><label>⛔ أرقام بتتجاهل دايمًا (أهل وأصحاب)</label><input id="kwBlk" value="'+esc((CFG.blockPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx"></div>'+
-  '<div class="field full"><label>✅ أرقام بتدخل دايمًا (صنايعية شغالين معاك)</label><input id="kwAlw" value="'+esc((CFG.allowPhones||[]).join(' '))+'" placeholder="01xxxxxxxxx"></div>'+
-  '<div class="field full"><label>🚫 عبارات لو موجودة الرسالة تتجاهل حتى لو فيها كلمة (كل عبارة في سطر)</label><textarea id="kwNev" rows="3" style="min-height:90px;font-size:17px;line-height:1.9">'+esc((CFG.never||[]).join('\n'))+'</textarea></div>'+
-  '<div class="field full"><label class="chk"><input id="kwSav" type="checkbox"'+(CFG.ignoreSaved?' checked':'')+'> تجاهل أي رقم متسجّل في موبايل المحل (حتى لو فيه كلمة)</label></div>'+
-  '<div class="field"><label class="chk"><input id="kwPc" type="checkbox"'+(CFG.photos.byCaption!==false?' checked':'')+'> صورة بتعليق فيه كلمة تتقبل</label></div>'+
-  '<div class="field"><label class="chk"><input id="kwPw" type="checkbox"'+(CFG.photos.byWindow!==false?' checked':'')+'> صورة بعد رسالة بكلمة تتقبل</label></div>'+
-  '<div class="field full"><label class="chk"><input id="kwPk" type="checkbox"'+(CFG.photos.fromKnown!==false?' checked':'')+'> صور العملاء والموردين المتسجلين في السيستم تدخل (تحويلات من غير تعليق)</label></div></div>'+
-  '<h3 style="margin:14px 0 4px">القواعد</h3><div id="kwRules">'+CFG.rules.map(ruleRow).join('')+'</div>'+
-  '<button type="button" class="secondary" id="kwAdd">➕ قاعدة جديدة</button>'+
-  '<h3 style="margin:16px 0 4px">🧪 جرّب رسالة</h3><textarea id="kwTest" rows="2" style="width:100%" placeholder="اكتب نص رسالة..."></textarea><div id="kwRes" class="sample" style="margin-top:6px">—</div>'+
-  '<h3 style="margin:16px 0 4px">المتجاهَل آخر ٢٤ ساعة ('+rec.length+')</h3><div id="kwRec">'+
-  (rec.length?rec.slice().reverse().map(function(x,i){return'<div class="card" style="padding:8px;margin:5px 0"><div style="font-size:12px;color:var(--muted)">'+esc(x.name||'')+' '+esc(x.phone||'')+(x.why?' · <b>'+esc(x.why)+'</b>':'')+'</div><div style="white-space:pre-line">'+esc(x.text)+'</div><button type="button" class="secondary kwPro" data-k="'+i+'" style="margin-top:6px">اعتبرها طلب</button></div>'}).join(''):'<div class="empty">مفيش</div>')+'</div>'+
-  '<div class="modal-foot"><button type="button" class="primary" id="kwSave">حفظ</button><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>';
-  openModal(h);
-  var m=document.getElementById('modal');
-  m.querySelector('#kwAdd').onclick=function(){collect();CFG.rules.push({phrases:[],type:'طلب',scope:'both',mode:'contains',on:true});draw()};
-  m.querySelectorAll('.kwDel').forEach(function(b){b.onclick=function(){var i=+b.closest('[data-i]').dataset.i;collect();CFG.rules.splice(i,1);if(!CFG.rules.length)CFG.rules=D.rules.slice();draw()}});
-  m.querySelector('#kwTest').oninput=function(){
-   collect();var t=this.value,res=m.querySelector('#kwRes');
-   if(!t.trim()){res.textContent='—';return}
-   if(CFG.enabled===false){res.textContent='✅ الفلتر مقفول: كل الرسايل بتتقبل';return}
-   if(neverHit(t)){res.innerHTML='🚫 هتتجاهل — فيها عبارة من الممنوعة';return}
-   var r=CFG.rules.filter(function(x){return x.on!==false}).find(function(x){return hit(x,t)});
-   res.innerHTML=r?'✅ هتتقبل — نوع: <b>'+esc(r.type)+'</b> (قاعدة: '+esc((r.phrases||[]).join('، '))+')':'🚫 هتتجاهل'};
-  m.querySelectorAll('.kwPro').forEach(function(b){b.onclick=async function(){
-   var x=rec.slice().reverse()[+b.dataset.k];
-   try{var r=await SBc().rpc('wa_rules_promote',{p_msg_id:'',p_phone:x.phone,p_name:x.name,p_body:x.text});if(r.error)throw r.error;b.textContent='✔ اتحوّلت لطلب';b.disabled=true}catch(e){toast('مقدرتش: '+(e.message||e))}}});
-  m.querySelector('#kwSave').onclick=async function(){
-   try{var v=collect();var r=await SBc().from('mk_settings').upsert([{key:KEY,value:v}],{onConflict:'key'});if(r.error)throw r.error;toast('✔ اتحفظت القواعد');closeModal()}catch(e){alert('مقدرتش أحفظ:\n'+[e&&e.message,e&&e.code,e&&e.details,e&&e.hint].filter(Boolean).join('\n'))}};
+  var rec=((ST&&ST.recent)||[]).filter(function(x){return Date.now()-x.at<864e5});var s=scr();
+  s.innerHTML='<div style="flex:none;padding:10px 14px 0;border-bottom:1px solid var(--border,#e4eaed);background:var(--bg,#f5f7f8)"><div style="display:flex;align-items:center;gap:10px"><button type="button" id="kwBack" style="flex:none;padding:12px 16px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border,#ddd);font-weight:800;color:inherit">→ رجوع</button><h2 style="margin:0;font-size:19px;flex:1">🔑 كلمات الواتساب المفتاحية</h2></div>'+
+   '<div style="display:flex;gap:8px;overflow-x:auto;padding:10px 0 8px">'+TABS.map(function(t){var on=TAB===t[0];return '<button type="button" data-kt="'+t[0]+'" style="flex:none;padding:11px 16px;border-radius:99px;font-weight:800;white-space:nowrap;border:1.5px solid '+(on?'var(--blue,#087f8c)':'var(--border,#e4eaed)')+';background:'+(on?'var(--blue,#087f8c)':'var(--card,#fff)')+';color:'+(on?'#fff':'inherit')+'">'+t[1]+'</button>'}).join('')+'</div></div>'+
+   '<div id="kwBody" style="flex:1;overflow-y:auto;padding:12px 14px 110px;-webkit-overflow-scrolling:touch"><div style="max-width:760px;margin:0 auto">'+({over:pageOver,rules:pageRules,nums:pageNums,photos:pagePhotos,never:pageNever,test:pageTest,recent:pageRecent,backup:pageBackup}[TAB]||pageOver)(rec)+'</div></div>'+
+   '<div style="position:absolute;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg,#f5f7f8);border-top:1px solid var(--border,#e4eaed);display:flex;gap:8px;align-items:center"><span id="kwDirty" style="flex:1;font-size:13px;color:#d97706;font-weight:700">'+(DIRTY?'⚠️ فيه تعديلات لسه ماتحفظتش':'')+'</span><button type="button" class="primary" id="kwSave" style="min-width:140px;min-height:52px;font-size:17px;font-weight:800">💾 حفظ</button></div>';
+  var m=s,q=function(x){return m.querySelector(x)};
+  var mark=function(){if(!DIRTY){DIRTY=true;var d=q('#kwDirty');if(d)d.textContent='⚠️ فيه تعديلات لسه ماتحفظتش'}};
+  m.addEventListener('input',mark);m.addEventListener('change',mark);
+  var go=function(t){collect();TAB=t;draw()};
+  q('#kwBack').onclick=function(){collect();if(DIRTY&&!confirm('فيه تعديلات ماتحفظتش. تقفل من غير حفظ؟'))return;DIRTY=false;s.remove()};
+  m.querySelectorAll('[data-kt]').forEach(function(b){b.onclick=function(){go(b.dataset.kt)}});
+  var qa=q('#kwAdd');if(qa)qa.onclick=function(){collect();CFG.rules.push({phrases:[],type:'طلب',scope:'both',mode:'contains',fuzzy:true,on:true});DIRTY=true;draw();setTimeout(function(){var L=document.querySelectorAll('#kwScr .kwP');if(L.length)L[L.length-1].focus()},50)};
+  m.querySelectorAll('.kwPre').forEach(function(b){b.onclick=function(){collect();var p=PRESETS[+b.dataset.p];CFG.rules.push({name:p.n,phrases:p.phrases.slice(),not:[],type:p.type,scope:'both',mode:'contains',fuzzy:true,on:true});DIRTY=true;draw();toast('اتضافت «'+p.n+'» — راجعها واضغط حفظ')}});
+  var mv=function(cls,fn){m.querySelectorAll(cls).forEach(function(b){b.onclick=function(){var i=+b.closest('[data-i]').dataset.i;collect();fn(i);DIRTY=true;draw()}})};
+  mv('.kwDel',function(i){CFG.rules.splice(i,1);if(!CFG.rules.length)CFG.rules=D.rules.slice()});
+  mv('.kwUp',function(i){if(i>0){var x=CFG.rules.splice(i,1)[0];CFG.rules.splice(i-1,0,x)}});
+  mv('.kwDn',function(i){if(i<CFG.rules.length-1){var x=CFG.rules.splice(i,1)[0];CFG.rules.splice(i+1,0,x)}});
+  mv('.kwCp',function(i){CFG.rules.splice(i+1,0,JSON.parse(JSON.stringify(CFG.rules[i])))});
+  m.querySelectorAll('.kwWb').forEach(function(b){b.onclick=function(){collect();CFG.windowMin=+b.dataset.w;DIRTY=true;draw()}});
+  var tt=q('#kwTest');if(tt){var run=function(){var t=tt.value,res=q('#kwRes');if(!t.trim()){res.textContent='—';return}var r=evalMsg(t,q('#kwTph').value);res.innerHTML=(r.ok?'✅ <b>هتتقبل</b>':'🚫 <b>هتتجاهل</b>')+'<br><span style="font-size:14px;color:var(--muted)">'+r.why+(r.type?' — النوع: <b>'+esc(r.type)+'</b>':'')+(r.more&&r.more.length?'<br>وكمان اتطابقت قواعد تانية: '+r.more.map(function(x){return esc(x.name||(x.phrases||[])[0]||'')}).join('، '):'')+'</span>'};tt.oninput=run;q('#kwTph').oninput=run}
+  var rt=q('#kwRetro');if(rt)rt.onclick=function(){collect();var o=rec.map(function(x){var r=evalMsg(x.text,x.phone);return '<div style="padding:8px 0;border-top:1px dashed var(--border,#ddd)"><b style="color:'+(r.ok?'#15803d':'#9ca3af')+'">'+(r.ok?'✅ هتتقبل':'🚫 تتجاهل')+(r.type?' ('+esc(r.type)+')':'')+'</b><div style="white-space:pre-line;font-size:14px">'+esc(x.text)+'</div></div>'}).join('');q('#kwRetroOut').innerHTML=o};
+  var P=rec.slice().reverse();
+  m.querySelectorAll('.kwPro').forEach(function(b){b.onclick=async function(){var x=P[+b.dataset.k];try{var r=await SBc().rpc('wa_rules_promote',{p_msg_id:'',p_phone:x.phone,p_name:x.name,p_body:x.text});if(r.error)throw r.error;b.textContent='✔ اتحوّلت لطلب';b.disabled=true}catch(e){toast('مقدرتش: '+(e.message||e))}}});
+  m.querySelectorAll('.kwMk').forEach(function(b){b.onclick=function(){var x=P[+b.dataset.k];CFG.rules.push({phrases:[String(x.text||'').split(/\s+/).slice(0,3).join(' ')],not:[],type:'طلب',scope:'both',mode:'contains',fuzzy:true,on:true});DIRTY=true;TAB='rules';draw();toast('اتضافت قاعدة — عدّل الكلمات واضغط حفظ')}});
+  m.querySelectorAll('.kwBl').forEach(function(b){b.onclick=function(){var x=P[+b.dataset.k],n=String(x.phone||'').replace(/\D/g,'');if(n.length<10)return toast('الرقم مش واضح');if((CFG.blockPhones||[]).indexOf(n)<0)(CFG.blockPhones=CFG.blockPhones||[]).push(n);if(x.name){(CFG.phoneNotes=CFG.phoneNotes||{})[n]=x.name}DIRTY=true;b.textContent='✔ اتضاف للمتجاهَلين';b.disabled=true}});
+  var jc=q('#kwJcp');if(jc)jc.onclick=function(){var t=q('#kwJson');t.select();try{document.execCommand('copy');toast('اتنسخ')}catch(e){}};
+  var jd=q('#kwJdl');if(jd)jd.onclick=function(){try{saveFile('wa-rules-'+new Date().toISOString().slice(0,10)+'.json',new Blob([JSON.stringify(CFG,null,1)],{type:'application/json'}))}catch(e){toast('التنزيل مش متاح')}};
+  var jr=q('#kwJrs');if(jr)jr.onclick=function(){try{var v=JSON.parse(q('#kwJson').value);if(!v||!Array.isArray(v.rules))throw 0;if(!confirm('تستبدل الإعدادات الحالية بالنص ده؟'))return;CFG=Object.assign({},D,v);CFG.photos=Object.assign({},D.photos,CFG.photos||{});DIRTY=true;draw()}catch(e){toast('النص مش إعدادات صح')}};
+  var rs=q('#kwReset');if(rs)rs.onclick=function(){if(!confirm('تمسح كل القواعد والأرقام وترجع للافتراضي؟'))return;CFG=JSON.parse(JSON.stringify(D));DIRTY=true;draw()};
+  q('#kwSave').onclick=async function(){
+   try{var v=collect();var bad=0;['ownerPhones','blockPhones','allowPhones'].forEach(function(k){v[k]=(v[k]||[]).filter(function(x){return x.length>=10})});
+    var r=await SBc().from('mk_settings').upsert([{key:KEY,value:v}],{onConflict:'key'});if(r.error)throw r.error;DIRTY=false;toast('✔ اتحفظت القواعد — الجسر هياخدها خلال دقيقة');var d=q('#kwDirty');if(d)d.textContent='✔ اتحفظت'}catch(e){alert('مقدرتش أحفظ:\n'+[e&&e.message,e&&e.code,e&&e.details,e&&e.hint].filter(Boolean).join('\n'))}};
  }
  async function open(){
   if(!(window.mkT_user&&window.mkT_user.role==='admin'))return toast('الشاشة دي للمدير بس');
-  await load();draw();
+  await load();TAB='over';DIRTY=false;draw();
  }
  window.mkKw={open:open};
  function addCard(){
