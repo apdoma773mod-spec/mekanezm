@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-20';
+const APP_VER='2026-10-16-21';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6179,7 +6179,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="bar" style="margin:10px 0"><i style="width:'+pct+'%"></i></div>'+
    '<div class="tl">'+st.map(function(s,i){var h=hist[s];return '<div class="st '+(i<c?'done':i===c?'cur':'')+'"><span class="dot">'+(i<c?'✓':i+1)+'</span><b>'+esc(s)+'</b>'+(h?'<div style="font-size:12px;color:var(--muted)">'+esc(String(h.at).slice(0,16).replace('T',' '))+(h.by?' — '+esc(h.by):'')+'</div>':'')+'</div>'}).join('')+'</div>'+
    '<div class="wkrow" style="margin-top:6px">'+(c<st.length-1?'<button type="button" class="wkbtn p" id="wkAdv">⏭️ الخطوة الجاية: '+esc(st[c+1])+'</button>':'<span class="badge green">الأوردر خلص</span>')+(c>0?'<button type="button" class="wkbtn" id="wkPrev">↩︎ رجّع خطوة</button>':'')+'</div></div>'+
-   (rodsHtml(o)?'<div class="wkc"><div class="sample">'+rodsHtml(o)+'</div></div>':'')+
+   (rodsHtml(o)?'<div class="wkc"><div class="sample">'+rodsHtml(o)+'</div>'+rodStockLine(o)+'</div>':'')+
    '<div class="wkc"><h3>الإجراءات</h3><div class="wkrow">'+
    '<button type="button" class="wkbtn p" id="wkPr">🖨️ طباعة ورقة التجهيز</button>'+
    '<button type="button" class="wkbtn" id="wkLb">🏷️ ملصق بباركود</button>'+
@@ -6206,6 +6206,17 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
   b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}};
   var ol=b.querySelector('#wkOffL');if(ol)ol.onclick=function(){printLeftLabels(o)};
+  var rc=b.querySelector('#wkRodCut');if(rc)rc.onclick=async function(){
+   var r=rodCalc(o),need=r.pp.length+r.hp.length,prod=(db.products||[]).find(function(p){return String(p.name).trim()===r.R.n});
+   if(!prod)return;
+   if(!(await ask('هتخصم '+need+' عود «'+r.R.n+'» من المخزون. مينفعش يترجع. تتأكد؟','خصم','لأ')))return;
+   rc.disabled=true;
+   try{
+    var api=window.mkT&&window.mkT.api;
+    if(api){await api.syncNow();await api.rpc('mk_adjust_stock',{p_id:prod.id,p_qty:num(prod.qty)-need,p_note:'خصم أعواد '+ordNo(o)+' ('+o.type+' '+num(o.w)+'×'+num(o.h)+'): '+need+' عود'});await api.refreshProducts([prod.id]);api.done&&api.done()}
+    o.rodsDeducted=true;await saveOrd();toast('✔ اتخصم '+need+' عود من المخزون');viewOrder(id);
+   }catch(e){rc.disabled=false;errAlert(e)}
+  };
   ['wkPr','wkLb'].forEach(function(id){var x=b.querySelector('#'+id);if(x&&offLeft(o).length)x.addEventListener('click',function(){setTimeout(async function(){if(await ask('الشغل ده طلع منه '+offLeft(o).length+' فضلة. تطبع ليبل ليهم كمان؟','اطبع','لأ'))printLeftLabels(o)},1500)})});
   b.querySelector('#wkInv').onclick=function(){
    close();
@@ -6224,6 +6235,17 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 
  /* ---------- 🪵 حساب الأعواد للضلفة: جنبين (الارتفاع) + فوق وتحت (العرض)، والمقبض على جنب أو الجنبين أو مفيش، أو شاسيه ثابت ---------- */
  var RODS={blum:{p:600,h:600,n:'بلوم 6 م'},bevel:{p:300,h:270,n:'شطف عادي (3 م / 2.70 م بمقبض)'}};
+ /* خصم الأعواد من المخزون: بيدوّر على منتج بنفس اسم نوع العود بالظبط (زي "بلوم 6 م")، لو لقاه بيخصم عدد الأعواد اللي اتحسبت. مرة واحدة بس لكل أوردر. */
+ function rodStockLine(o){
+  var r=rodCalc(o);if(!r||o.handle==='frame')return '';
+  var need=r.pp.length+r.hp.length;if(!need)return '';
+  var prod=(db.products||[]).find(function(p){return String(p.name).trim()===r.R.n});
+  if(o.rodsDeducted)return '<div class="sample" style="margin-top:6px;background:var(--tint2)">✔ اتخصم من المخزون — <b>'+need+'</b> عود «'+esc(r.R.n)+'»</div>';
+  if(!prod)return '<div class="sample" style="margin-top:6px;color:var(--danger)">⚠️ مفيش منتج اسمه «'+esc(r.R.n)+'» بالظبط في المخزون — سجّله عشان أقدر أخصم الأعواد منه</div>';
+  return '<div class="sample" style="margin-top:6px;background:var(--tint2)">📦 متاح في المخزون من «'+esc(r.R.n)+'»: <b>'+esc(prod.qty)+'</b> عود — محتاج <b>'+need+'</b> عود'+
+   (num(prod.qty)<need?' <b style="color:var(--danger)">(مش كفاية)</b>':'')+
+   '<div style="margin-top:6px"><button type="button" class="wkbtn p" id="wkRodCut">📦 خصم '+need+' عود من المخزون</button></div></div>';
+ }
  var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['frame','شاسيه ثابت (فريم بس)']];
  function rodCalc(o){var w=num(o.w),h=num(o.h),q=Math.max(1,num(o.qty)||1);if(!(w>0&&h>0)||o.kind==='other'||(o.type!=='دلفة'&&o.type!=='جرار'))return null;
   var hc={none:0,one:1,both:2,frame:0}[o.handle||'one'];if(hc==null)hc=1;
