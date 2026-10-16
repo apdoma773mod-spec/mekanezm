@@ -79,8 +79,15 @@ const GSCHEMA = {
   required: ["items"],
 };
 
+// الفاتورة: بنجرب الموديل السريع الأول. لو مارجعش أصناف أو فشل، بنجرب الموديل الأقوى (أبطأ شوية بس أدق)
+const INV_STRONG = Deno.env.get("INVOICE_STRONG_MODEL") || "gemini-2.5-pro";
 async function viaGemini(key: string, image: string, mt: string) {
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+  const first = await viaGeminiOne(key, image, mt, GEMINI_MODEL);
+  if (first.ok && (await first.clone().text()).match(/"text"\s*:\s*"[^"]+"/)) return first;
+  return viaGeminiOne(key, image, mt, INV_STRONG);
+}
+async function viaGeminiOne(key: string, image: string, mt: string, model: string) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "x-goog-api-key": key, "content-type": "application/json" },
     body: JSON.stringify({
