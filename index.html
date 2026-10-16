@@ -305,6 +305,8 @@ window.mkCoOn=false;
 const CO_NAME={mk:'ميكانيزم',hy:'هيدرولك'};
 function curCo(){if(!window.mkCoOn)return 'mk';try{return localStorage.getItem('mk_co')==='hy'?'hy':'mk'}catch(e){return 'mk'}}
 const coOf=r=>(r&&r.co)||'mk';
+/* فاتورة هيدرولك؟ (بالشركة المسجّلة، أو من ملاحظة أوردر ميداني لو العمود ماوصلش) */
+const isHyInv=G=>{if(!window.mkCoOn)return false;G=Array.isArray(G)?G:[G];return G.some(x=>x&&(x.co==='hy'||/أوردر ميداني|المندوب:/.test(String(x.note||''))))};
 const inCo=r=>!window.mkCoOn||coOf(r)===curCo();
 function codeNote(p){try{let S=db.settings=db.settings||{},c=String(p&&p.code||'').trim(),mp=c.match(/^P(\d+)$/i),n=mp?parseInt(mp[1],10):(String(parseInt(c,10))===c?parseInt(c,10):0);if(n>(+S.codeHi||0))S.codeHi=n;if(mp)S.codeP=1}catch(e){}}
 function nextCode(){let S=db.settings||{},m=+S.codeHi||0,hp=!!S.codeP;(db.products||[]).forEach(p=>{let c=String(p.code||'').trim(),mp=c.match(/^P(\d+)$/i);if(mp){hp=true;m=Math.max(m,parseInt(mp[1],10));return}let n=parseInt(c,10);if(String(n)===c&&n>m)m=n});return hp?'P'+String(m+1).padStart(4,'0'):String(m+1)}
@@ -444,7 +446,7 @@ async function shareInvoice(){
  catch(e){if(e&&e.name==='AbortError')return}
  await saveInvoice();toast('المتصفح ده مش بيدعم المشاركة المباشرة — الملف اتحفظ على الجهاز، افتحه وابعته من الواتساب')}
 function whatsInvoice(){
- if(!lastInv)return;let r=lastInv.r,msg=`أهلاً ${r.person||''}\nدي فاتورتك رقم ${invNo(r)} من ${db.settings.companyName||'ميكانيزم'}\nالإجمالي: ${money(r.total)}\nشكراً لتعاملك معانا 🙏`,
+ if(!lastInv)return;let r=lastInv.r,msg=`أهلاً ${r.person||''}\nدي فاتورتك رقم ${invNo(r)} من ${isHyInv(invGroup('sale',r.no||r.id))?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')}\nالإجمالي: ${money(r.total)}\nشكراً لتعاملك معانا 🙏`,
  a=document.createElement('a');a.href='https://wa.me/'+waNum(r.phone)+'?text='+encodeURIComponent(msg);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();toast('ابعت ملف الـ PDF مع الرسالة')}
 
 /* ===== المظهر والتخصيص ===== */
@@ -1195,7 +1197,7 @@ function renderInvLists(){
 function srcBadge(r){try{let n=String(r.note||''),m=n.match(/أوردر ميداني\s+(\S+)/),hy=window.mkCoOn&&typeof coOf==='function'&&coOf(r)==='hy',mp=n.match(/المندوب:\s*([^—\n]+)/);if(!m&&!hy&&!mp)return '';
  return '<br>'+(hy?'<span class="badge" style="background:#ffedd5;color:#9a3412">هيدرولك</span> ':'')+(m?'<span class="badge" style="background:#e0f2fe;color:#075985">من أوردر ميداني '+esc(m[1])+'</span> ':'')+(mp?'<span class="badge" style="background:#f3e8ff;color:#6b21a8">مندوب: '+esc(mp[1].trim())+'</span>':'')}catch(e){return ''}}
 function invoiceHTML(r){
- let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),HY=window.mkCoOn&&coOf(r)==='hy',T=HY?Object.assign({},db.theme,{logoInv:false,logo:'',watermark:false}):db.theme,shop=esc(HY?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')),addr=esc((HY&&coIdent('hy').addr)||(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'))+(HY&&coIdent('hy').tax?' — ض.ب: '+esc(coIdent('hy').tax):''),ph=esc((HY&&coIdent('hy').phone)||db.settings.phone||''),
+ let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),HY=isHyInv(G),T=HY?Object.assign({},db.theme,{logoInv:false,logo:'',watermark:false}):db.theme,shop=esc(HY?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')),addr=esc((HY&&coIdent('hy').addr)||(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'))+(HY&&coIdent('hy').tax?' — ض.ب: '+esc(coIdent('hy').tax):''),ph=esc(HY?(coIdent('hy').phone||''):(db.settings.phone||'')),
  H=HY?coIdent('hy').color:T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
  wm=T.watermark&&T.logo?`<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`:'';
@@ -1648,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-66';
+const APP_VER='2026-10-17-67';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2391,8 +2393,8 @@ window.closingHistory=async function(){try{let r=await window.mkSB.from('mk_clos
 /* ---------- 🧾 إيصال حراري 80 مم ---------- */
 window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;let G=invGroup('sale',r.no||r.id),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),T=sumBy(G,x=>x.total),P=sumBy(G,paidOf),R=sumBy(G,x=>x.rem||0);
  printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:80mm auto;margin:0}body{margin:0;width:80mm}*{font-family:Cairo,Tahoma,sans-serif;color:#000}.w{width:72mm;margin:0 auto;padding:3mm 0;font-size:11pt}.c{text-align:center}.b{font-weight:800}hr{border:0;border-top:1px dashed #000;margin:2mm 0}table{width:100%;border-collapse:collapse}td{padding:1mm 0;vertical-align:top}.l{text-align:left;white-space:nowrap}.sm{font-size:9pt}.big{font-size:14pt}</style></head><body><div class="w">
- ${db.theme&&db.theme.logo?`<div class="c"><img src="${db.theme.logo}" style="max-width:40mm;max-height:18mm"></div>`:''}
- <div class="c b big">${esc(db.settings.companyName||'ميكانيزم')}</div>${db.settings.address?`<div class="c sm">${esc(db.settings.address)}</div>`:''}${db.settings.phone?`<div class="c sm" dir="ltr">${esc(db.settings.phone)}</div>`:''}<hr>
+ ${!isHyInv(G)&&db.theme&&db.theme.logo?`<div class="c"><img src="${db.theme.logo}" style="max-width:40mm;max-height:18mm"></div>`:''}
+ <div class="c b big">${esc(isHyInv(G)?coIdent('hy').name:(db.settings.companyName||'ميكانيزم'))}</div>${isHyInv(G)?(coIdent('hy').addr?`<div class="c sm">${esc(coIdent('hy').addr)}</div>`:''):(db.settings.address?`<div class="c sm">${esc(db.settings.address)}</div>`:'')}${(isHyInv(G)?coIdent('hy').phone:db.settings.phone)?`<div class="c sm" dir="ltr">${esc(isHyInv(G)?coIdent('hy').phone:db.settings.phone)}</div>`:''}<hr>
  <div class="sm">فاتورة: <b>${esc(invNo(r))}</b><br>التاريخ: ${esc(r.date)}<br>العميل: ${esc(r.person||'عميل نقدي')}${r.phone?' — <span dir="ltr">'+esc(r.phone)+'</span>':''}</div><hr>
  <table>${GI.map(x=>`<tr><td colspan="2"><b>${esc(x.product)}</b></td></tr><tr class="sm"><td>${x.qty} × ${money(x.price!=null?x.price:x.total/(x.qty||1))}</td><td class="l">${money(x.total)}</td></tr>`).join('')}</table><hr>
  <table>${SH?`<tr><td>إجمالي الأصناف</td><td class="l">${money(T-SH)}</td></tr><tr><td>النقل</td><td class="l">${money(SH)}</td></tr>`:''}<tr class="b big"><td>الإجمالي</td><td class="l">${money(T)}</td></tr><tr><td>المدفوع</td><td class="l">${money(P)}</td></tr>${R>0?`<tr class="b"><td>المتبقي</td><td class="l">${money(R)}</td></tr>`:''}</table><hr>
