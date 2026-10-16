@@ -40,5 +40,10 @@ dashboard (+كارت «النهاردة»), products, sales, purchases, returns,
 - الاختبار: Playwright chromium على `python3 -m http.server` + mock لـ mkSB/mkT.api. ممنوع `pkill -f`.
 - Commit trailers: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` و`Claude-Session: https://claude.ai/code/session_013ZMJ8w8sa5arGXXCCACS8W`.
 
+## ملفات جديدة (آخر جلسة)
+- `sql/50-scan-cron.sql` جدولة قراءة الفواتير كل دقيقة (محتاج استبدال السر قبل التشغيل).
+- `supabase/functions/scan-worker/index.ts` قراءة فواتير المشتريات في الخلفية (محتاج نشر + سر WORKER_SECRET).
+- `supabase/functions/parse-invoice/index.ts` بيجرب موديل أقوى لو السريع مرجعش أصناف (محتاج نشر).
+
 ## متفتح/ناقص
 تحقق Safari للشاشات الجديدة، رسم الإطار/المقبض الخارجي، أيقونات أكبر، تحسينات اليومية/الفواتير/المشتريات، قاعدة نصيب الشركاء (حاليًا % من ربح هيدرولك + تمويل + سحب)، تحديث HANDOFF.md على كمبيوتر المحل.
