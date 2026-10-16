@@ -325,7 +325,7 @@ function openProduct(editId=null){
  <div class="field"><label>سعر الشراء</label><input id="pcost" type="number" min="0" step="0.01" value="${p?.cost??0}"></div>
  <div class="field"><label>سعر البيع</label><input id="pprice" type="number" min="0" step="0.01" value="${p?.price??0}"></div>
  <div class="field"><label>حد التنبيه</label><input id="pmin" type="number" min="0" step="1" value="${p?.min??5}"></div>
- <div class="field"><label>الوحدة</label><select id="punit"><option ${p?.unit==='قطعة'?'selected':''}>قطعة</option><option ${p?.unit==='كرتونة'?'selected':''}>كرتونة</option><option ${p?.unit==='متر'?'selected':''}>متر</option><option ${p?.unit==='طقم'?'selected':''}>طقم</option></select></div>
+ <div class="field"><label>الوحدة</label><select id="punit">${[...new Set(['قطعة','كرتونة','متر','طقم','لفة','رول','علبة','كيس','زوج','دستة','عبوة','كيلو','لتر','لوح'].concat(p&&p.unit?[p.unit]:[]))].map(u=>`<option ${p?.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
  </div><div class="modal-foot"><button class="primary">حفظ التعديلات</button>${p?`<button type="button" class="secondary danger" onclick="closeModal();deleteProduct('${p.id}')">حذف الصنف</button>`:''}<button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`)
 }
 function submitProduct(ev,id){ev.preventDefault();let x={id:id||crypto.randomUUID(),code:pcode.value.trim(),name:pname.value.trim(),cat:pcat.value.trim(),qty:+pqty.value,cost:+pcost.value,price:+pprice.value,min:+pmin.value,unit:punit.value};if(x.code&&db.products.some(p=>p.id!==x.id&&String(p.code).trim()===x.code)){toast('الكود ده مستخدم لصنف تاني. استخدم كود مختلف.');pcode.focus();return}if(id){let i=db.products.findIndex(p=>p.id===id);db.products[i]=Object.assign({},db.products[i],x)}else db.products.push(x);codeNote(x);save();closeModal();toast('تم حفظ المنتج')}
@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-42';
+const APP_VER='2026-10-16-43';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8293,6 +8293,8 @@ stockVal:{g:'المخزون',i:'🏬',t:'قيمة المخزون',d:'كل صنف
  return {sum:[bx('عدد الأصناف',L.length),bx('قيمة المخزون (تكلفة)',mon(v)),bx('قيمته بسعر البيع',mon(sumBy(L,r=>Math.max(0,r[3])*r[6]))),bx('ربح متوقع',mon(sumBy(L,r=>r[7])),'g')],cols:[C('الكود','s'),C('الصنف','s'),C('التصنيف','s'),C('الكمية','n'),C('التكلفة','m'),C('القيمة','m'),C('سعر البيع','m'),C('ربح متوقع','m')],rows:L,foot:['','الإجمالي','','',  '',v,'',sumBy(L,r=>r[7])],nofilt:1}}},
 stockCat:{g:'المخزون',i:'🗂️',t:'المخزون بالتصنيف',d:'قيمة وكمية كل تصنيف',b(){let m=grp(PR(),p=>p.cat||'بدون تصنيف'),tot=sumBy(PR(),p=>(+p.qty||0)*(+p.cost||0)),rows=[...m].map(([k,a])=>{let v=sumBy(a,p=>(+p.qty||0)*(+p.cost||0));return [k,a.length,sumBy(a,p=>+p.qty),v,pct(v,tot)]}).sort((a,b)=>b[3]-a[3]);
  return {sum:[bx('إجمالي القيمة',mon(tot))],cols:[C('التصنيف','s'),C('أصناف','n'),C('الكمية','n'),C('القيمة','m'),C('النسبة %','p')],rows,chart:rows.slice(0,12).map(r=>[r[0],r[3]])}}},
+stockLoc:{g:'المخزون',i:'📍',t:'المخزون بمكان التخزين',d:'كل مكان في المحل فيه كام صنف وقيمته (من «مكانه في المحل»)',b(){let LM=window.mkLocMap||{},P=PR(),m=grp(P,p=>(LM[p.id]||'').trim()||'من غير مكان'),tot=sumBy(P,p=>(+p.qty||0)*(+p.cost||0)),rows=[...m].map(([k,a])=>{let v=sumBy(a,p=>(+p.qty||0)*(+p.cost||0));return [k,a.length,sumBy(a,p=>+p.qty||0),v,pct(v,tot)]}).sort((a,b)=>b[3]-a[3]);
+ return {sum:[bx('عدد الأماكن',rows.filter(r=>r[0]!=='من غير مكان').length),bx('أصناف من غير مكان',(m.get('من غير مكان')||[]).length,(m.get('من غير مكان')||[]).length?'r':'g'),bx('القيمة',mon(tot))],cols:[C('المكان','s'),C('أصناف','n'),C('الكمية','n'),C('القيمة','m'),C('النسبة %','p')],rows}}},
 stockLow:{g:'المخزون',i:'⚠️',t:'نواقص المخزون',d:'أصناف وصلت لحد الطلب أو خلصت',b(){lastSales();let L=PR().filter(p=>(+p.qty||0)<=(+p.min||0)).map(p=>{let k=lastSale.get(p.id)||lastSale.get(p.name)||0;return [p.code||'',p.name,p.cat||'—',+p.qty||0,+p.min||0,Math.max(0,(+p.min||0)*2-(+p.qty||0)),k]}).sort((a,b)=>a[3]-b[3]);
  return {sum:[bx('أصناف ناقصة',L.length,L.length?'r':'g'),bx('خلصت تمامًا',L.filter(r=>r[3]<=0).length,'r')],cols:[C('الكود','s'),C('الصنف','s'),C('التصنيف','s'),C('المتاح','n'),C('حد الطلب','n'),C('المقترح شراؤه','n'),C('آخر بيع','d')],rows:L,nofilt:1}}},
 stockDead:{g:'المخزون',i:'🧊',t:'الأصناف الراكدة',d:'عليها رصيد ومتباعتش من ٦٠ يوم أو أكتر',b(){lastSales();let lim=K(new Date(Date.now()-60*864e5)),L=PR().filter(p=>(+p.qty||0)>0).map(p=>[p.code||'',p.name,p.cat||'—',+p.qty,(+p.qty)*(+p.cost||0),lastSale.get(p.id)||lastSale.get(p.name)||0]).filter(r=>r[5]<lim).sort((a,b)=>b[4]-a[4]);
@@ -8331,7 +8333,7 @@ function rowsOf(d){let rows=d.rows.map(r=>r.c?r:{c:r,go:d.go?d.go(r):''}),q=VN(R
  let s=R.sort||(d.dsort?{i:d.dsort[0],dir:d.dsort[1]}:null);if(s&&!d.nosort)rows=rows.slice().sort((a,b)=>{let x=a.c[s.i],y=b.c[s.i];return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'ar'))*s.dir});
  return rows}
 function tableH(d,rows){let s=R.sort;return `<div style="overflow:auto;background:var(--card,#fff);border:1px solid var(--border);border-radius:14px;max-height:62vh;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;min-width:${Math.max(320,d.cols.length*92)}px;font-size:14px"><thead><tr>${d.cols.map((c,i)=>`<th data-s="${i}" style="position:sticky;top:0;background:var(--blue,#087f8c);color:#fff;padding:11px 8px;text-align:right;white-space:nowrap;font-size:13px">${c.h}${s&&s.i===i?(s.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map((r,ri)=>{let w=d.warn?d.warn(r.c):'';return `<tr data-g="${ri}" style="border-bottom:1px solid var(--border);${r.go?'cursor:pointer;':''}${w==='r'?'background:rgba(192,57,43,.09)':w==='y'?'background:rgba(183,121,31,.09)':''}">${r.c.map((v,i)=>`<td style="padding:10px 8px;${d.cols[i].t==='s'?'':'white-space:nowrap;'}${(d.cols[i].t==='m'&&v<0)?'color:var(--danger);':''}">${fm(v,d.cols[i].t)}</td>`).join('')}</tr>`}).join(''):`<tr><td colspan="${d.cols.length}" style="padding:24px;text-align:center;color:var(--muted)">مفيش بيانات في الفترة دي.</td></tr>`}${d.foot&&!R.q?`<tr style="font-weight:800;background:var(--tint2,#eef4f5)">${d.foot.map((v,i)=>`<td style="padding:10px 8px">${v===''?'':fm(v,d.cols[i].t)}</td>`).join('')}</tr>`:''}</tbody></table></div>`}
-function draw(keep){let def=REP[R.cur],box=host(),d;try{d=def.b()}catch(e){console.warn(e);d={sum:[],cols:[C('خطأ','s')],rows:[['حصل خطأ في التقرير']]}}S_.d=d;S_.def=def;
+function draw(keep){if(R.cur==='stockLoc'&&!window.mkLocMap&&!draw._ld&&window.mkSB){draw._ld=1;(async()=>{let m={};try{for(let f=0;;f+=1000){let r=await window.mkSB.from('mk_product_info').select('product_id,loc').range(f,f+999);if(r.error||!r.data||!r.data.length)break;r.data.forEach(x=>{if(x.loc)m[x.product_id]=x.loc});if(r.data.length<1000)break}}catch(e){}window.mkLocMap=m;draw._ld=0;if(R.cur==='stockLoc')draw(1)})()}let def=REP[R.cur],box=host(),d;try{d=def.b()}catch(e){console.warn(e);d={sum:[],cols:[C('خطأ','s')],rows:[['حصل خطأ في التقرير']]}}S_.d=d;S_.def=def;
  let sc=box.scrollTop,rows=rowsOf(d);S_.rows=rows;
  box.innerHTML=`<div style="position:sticky;top:0;z-index:2;background:var(--bg,#f5f7f8);padding:12px 14px 4px;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><button type="button" id="rpBack" style="flex:none;padding:12px 16px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border);font-weight:700">→ رجوع</button><h2 style="margin:0;font-size:19px">${def.i} ${def.t}</h2></div>${chips()}</div>
  <div style="padding:6px 14px 90px;max-width:900px;margin:0 auto">${sumH(d.sum||[])}${chartH(d.chart)}
@@ -8514,6 +8516,37 @@ WIRE.id=function(){let g=$('idGo');if(g)g.onclick=()=>run(async()=>{let v={};['m
 window.mkHy={open:show};
 /* تحميل حركات الشركاء + الهوية مرة في البداية (عشان الخزنة والتقارير يحسبوها صح) */
 let boot=0;const o=window.renderAll;if(typeof o==='function')window.renderAll=function(){o.apply(this,arguments);if(window.mkCoOn&&!boot){boot=1;setTimeout(()=>{load().then(()=>{try{renderAll()}catch(e){}})},2500)}};
+})();
+</script>
+<script>
+/* ميكانيزم — 📦 المخزون: مكان التخزين + وحدات أكتر + «فك لفة / تقسيم» (لفة ← متر، كرتونة ← قطعة) */
+(function(){
+const A=()=>window.mkT&&window.mkT.api,$=id=>document.getElementById(id),num=v=>{v=parseFloat(String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));return isNaN(v)?0:v};
+/* فك لفة / تقسيم */
+const SP={s:null,t:null};
+function pick(boxId,kind){let q=VN($(boxId+'Q').value).split(' ').filter(Boolean),L=q.length?prodsCo().filter(p=>q.every(w=>VN(p.name+' '+p.code).includes(w))).slice(0,6):[];
+ $(boxId+'R').innerHTML=L.map(p=>`<div data-p="${p.id}" style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-top:6px"><b>${esc(p.name)}</b> <small style="color:var(--muted)">رصيد ${p.qty} ${esc(p.unit||'')}</small></div>`).join('');
+ $(boxId+'R').querySelectorAll('[data-p]').forEach(d=>d.onclick=()=>{SP[kind]=d.dataset.p;draw()})}
+function draw(){let s=db.products.find(x=>x.id===SP.s),t=db.products.find(x=>x.id===SP.t),ratio=num(($('spRatio')||{}).value||SP.ratio||0),qty=num(($('spQty')||{}).value||SP.qty||0);SP.ratio=ratio||SP.ratio;SP.qty=qty||SP.qty;
+ let add=ratio*qty,unitCost=s&&ratio?(+s.cost||0)/ratio:0,newCost=t&&add>0?(((+t.qty||0)*(+t.cost||0))+add*unitCost)/((+t.qty||0)+add):0;
+ openModal(`<div class="modal-head"><h2>🔪 فك لفة / تقسيم صنف</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div style="line-height:1.9;color:var(--muted);font-size:14px">مثال: لفة ٥٠ متر ← متر. بتخصم لفات من الصنف الكبير وتزوّد الصغير بالعدد المقابل، والتكلفة بتتوزع لوحدها.</div>
+ <div class="field"><label>الصنف الكبير (اللي هتفكه)</label>${s?`<div style="padding:12px;border:1.5px solid var(--green);border-radius:10px"><b>${esc(s.name)}</b> — رصيد ${s.qty} ${esc(s.unit||'')} <button type="button" id="spS0" style="float:left;border:0;background:transparent;color:var(--danger)">تغيير</button></div>`:`<input id="spSQ" placeholder="🔍 ابحث عن الصنف الكبير" style="width:100%;padding:14px"><div id="spSR"></div>`}</div>
+ <div class="field"><label>الصنف الصغير (اللي هيتزوّد)</label>${t?`<div style="padding:12px;border:1.5px solid var(--green);border-radius:10px"><b>${esc(t.name)}</b> — رصيد ${t.qty} ${esc(t.unit||'')} <button type="button" id="spT0" style="float:left;border:0;background:transparent;color:var(--danger)">تغيير</button></div>`:`<input id="spTQ" placeholder="🔍 ابحث عن الصنف الصغير" style="width:100%;padding:14px"><div id="spTR"></div>`}</div>
+ <div class="field"><label>الوحدة الكبيرة فيها كام وحدة صغيرة؟</label><input id="spRatio" type="number" step="any" inputmode="decimal" value="${ratio||''}" placeholder="مثال: 50"></div>
+ <div class="field"><label>هتفك كام وحدة كبيرة؟</label><input id="spQty" type="number" step="any" inputmode="decimal" value="${qty||''}" placeholder="مثال: 2"></div>
+ ${s&&t&&add>0?`<div class="card" style="background:var(--tint2);border:0;line-height:2">${esc(s.name)}: ${s.qty} ← <b>${Math.round((s.qty-qty)*100)/100}</b><br>${esc(t.name)}: ${t.qty} ← <b>${Math.round((+t.qty+add)*100)/100}</b><br>تكلفة الوحدة الصغيرة: <b>${money(unitCost)}</b>${(+t.cost||0)!==Math.round(newCost*100)/100?` (المتوسط الجديد ${money(newCost)})`:''}</div>`:''}
+ <button class="primary" id="spGo" style="width:100%;padding:16px;margin-top:10px" ${s&&t&&add>0&&qty<=s.qty?'':'disabled'}>تنفيذ الفك</button>${s&&qty>s.qty?'<div style="color:var(--danger);margin-top:6px">الكمية أكبر من رصيد الصنف الكبير.</div>':''}`);
+ if($('spSQ'))$('spSQ').oninput=()=>pick('spS','s');if($('spTQ'))$('spTQ').oninput=()=>pick('spT','t');if($('spS0'))$('spS0').onclick=()=>{SP.s=null;draw()};if($('spT0'))$('spT0').onclick=()=>{SP.t=null;draw()};
+ ['spRatio','spQty'].forEach(i=>{$(i).oninput=()=>{SP.ratio=num($('spRatio').value);SP.qty=num($('spQty').value);clearTimeout(draw._t);draw._t=setTimeout(()=>{let a=document.activeElement&&document.activeElement.id;draw();if(a&&$(a)){$(a).focus();$(a).setSelectionRange&&0}},350)}});
+ if($('spGo'))$('spGo').onclick=async()=>{if(s.id===t.id)return toast('اختار صنفين مختلفين');if(!A())return toast('محتاج السيستم أونلاين');$('spGo').disabled=true;
+  try{let sq=Math.round((s.qty-qty)*100)/100,tq=Math.round((+t.qty+add)*100)/100;await A().syncNow();await A().rpc('mk_adjust_stock',{p_id:s.id,p_qty:sq,p_note:'فك '+qty+' '+(s.unit||'')+' ← '+add+' '+t.name});await A().rpc('mk_adjust_stock',{p_id:t.id,p_qty:tq,p_note:'من فك '+qty+' '+s.name});
+   await A().refreshProducts([s.id,t.id]);let t2=db.products.find(x=>x.id===t.id);if(t2){t2.cost=Math.round(newCost*100)/100;save();await A().syncNow()}A().done();closeModal();toast('✔ اتفك: '+qty+' ← '+add);SP.s=SP.t=null;SP.ratio=SP.qty=0}
+  catch(e){toast('⚠️ '+(A().errMsg?A().errMsg(e):e.message));$('spGo').disabled=false}}}
+window.openSplit=function(){if(!(window.mkT_user&&window.mkT_user.role==='admin'))return toast('دي للمدير بس');SP.s=SP.t=null;SP.ratio=SP.qty=0;draw()};
+/* زرار في صفحة المنتجات */
+function btn(){let sec=document.getElementById('products');if(!sec||document.getElementById('mkSplitB'))return;let row=sec.querySelector('.title-row .btnrow')||sec.querySelector('.title-row');if(!row)return;let b=document.createElement('button');b.id='mkSplitB';b.type='button';b.className='secondary';b.textContent='🔪 فك لفة / تقسيم';b.onclick=openSplit;row.appendChild(b)}
+let ra=window.renderAll;if(typeof ra==='function')window.renderAll=function(){ra.apply(this,arguments);try{btn()}catch(e){}};
 })();
 </script>
 </body>
