@@ -1645,7 +1645,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-61';
+const APP_VER='2026-10-16-62';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7828,52 +7828,100 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
 </style>
 <style id="mkPro">
 /* ميكانيزم برو v2 — نظام تصميم واحد: لون براند واحد، من غير تدرجات ولا blur ولا ظلال تقيلة (DESIGN-DONE.md) */
-body.mkpro{--brand:#E8B04A;--brand-ink:#1A1306;--r-f:10px;--r-c:16px;--r-s:24px;--sh1:0 1px 2px rgba(0,0,0,.25)}
-body.mkpro #mkBgFx{display:none!important}
-body.mkpro *:not(#mkThBg):not(#mkThBg *){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-body.mkpro .card,body.mkpro .stat,body.mkpro .quick button,body.mkpro .modal,body.mkpro .mkbox{background-image:none!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)}
-body.mkpro .stat::before{display:none!important}
-body.mkpro .stat .ic,body.mkpro .stat .mkic{background:color-mix(in srgb,currentColor 14%,transparent)!important;box-shadow:none!important}
-body.mkpro.pg-strong main .page.active .card{border-top:1px solid var(--ln)!important}
+body.mkpro:not(.mk-rich){--brand:#E8B04A;--brand-ink:#1A1306;--r-f:10px;--r-c:var(--rc,16px);--r-s:24px;--sh1:0 1px 2px rgba(0,0,0,.25)}
+body.mkpro:not(.mk-rich) #mkBgFx{display:none!important}
+body.mkpro:not(.mk-rich) *:not(#mkThBg):not(#mkThBg *){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+body.mkpro:not(.mk-rich) .card,body.mkpro:not(.mk-rich) .stat,body.mkpro:not(.mk-rich) .quick button,body.mkpro:not(.mk-rich) .modal,body.mkpro:not(.mk-rich) .mkbox{background-image:none!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)}
+body.mkpro:not(.mk-rich) .stat::before{display:none!important}
+body.mkpro:not(.mk-rich) .stat .ic,body.mkpro:not(.mk-rich) .stat .mkic{background:color-mix(in srgb,currentColor 14%,transparent)!important;box-shadow:none!important}
+body.mkpro:not(.mk-rich).pg-strong main .page.active .card{border-top:1px solid var(--ln)!important}
 /* أيقونات: شيب 40 مسطّح بدل المجسّم */
-body.mkpro .mkic{width:40px;height:40px;border-radius:12px;color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,transparent);box-shadow:none}
-body.mkpro .mkic::after{display:none}
-body.mkpro .mkic svg{width:22px;height:22px;stroke-width:1.75;filter:none}
-body.mkpro .mkill{width:52px;height:52px;border-radius:14px;background:var(--cc);box-shadow:none;transform:none;transition:none}
-body.mkpro .mkill::after{display:none}
-body.mkpro .mkill svg{width:40px;height:40px;filter:none}
-body.mkpro .mobile-nav .mkic{width:36px;height:36px}
-body.mkpro .mobile-nav{box-shadow:none;background:var(--card)}
-body.mkpro .mobile-nav button.active{color:var(--text)}
-body.mkpro .mobile-nav button.active .mkic{outline:0;background:var(--brand);color:var(--brand-ink)}
-body.mkpro aside{background:var(--card)}
-body.mkpro aside .nav button.active{background:color-mix(in srgb,var(--brand) 16%,transparent);box-shadow:none;color:var(--text)}
-body.mkpro aside .nav button.active::after{box-shadow:none;background:var(--brand)}
+body.mkpro:not(.mk-rich) .mkic{width:40px;height:40px;border-radius:12px;color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,transparent);box-shadow:none}
+body.mkpro:not(.mk-rich) .mkic::after{display:none}
+body.mkpro:not(.mk-rich) .mkic svg{width:22px;height:22px;stroke-width:1.75;filter:none}
+body.mkpro:not(.mk-rich) .mkill{width:52px;height:52px;border-radius:14px;background:var(--cc);box-shadow:none;transform:none;transition:none}
+body.mkpro:not(.mk-rich) .mkill::after{display:none}
+body.mkpro:not(.mk-rich) .mkill svg{width:40px;height:40px;filter:none}
+body.mkpro:not(.mk-rich) .mobile-nav .mkic{width:36px;height:36px}
+body.mkpro:not(.mk-rich) .mobile-nav{box-shadow:none;background:var(--card)}
+body.mkpro:not(.mk-rich) .mobile-nav button.active{color:var(--text)}
+body.mkpro:not(.mk-rich) .mobile-nav button.active .mkic{outline:0;background:var(--brand);color:var(--brand-ink)}
+body.mkpro:not(.mk-rich) aside{background:var(--card)}
+body.mkpro:not(.mk-rich) aside .nav button.active{background:color-mix(in srgb,var(--brand) 16%,transparent);box-shadow:none;color:var(--text)}
+body.mkpro:not(.mk-rich) aside .nav button.active::after{box-shadow:none;background:var(--brand)}
 /* هيدر: مسطّح وأقصر على الموبايل */
-body.mkpro .brand{background:#0B1650!important;box-shadow:inset 0 -2px 0 var(--brand)!important}
-body.mkpro .top-actions{box-shadow:none;background:var(--card)}
-body.mkpro .icon-btn{box-shadow:none}
-body.mkpro #mkStat{box-shadow:none}
-@media(max-width:900px){body.mkpro{--logoH:84px;--actH:56px}}
+body.mkpro:not(.mk-rich) .brand{background:var(--bnBg,#0B1650)!important;box-shadow:inset 0 -2px 0 var(--brand)!important}
+body.mkpro:not(.mk-rich) .top-actions{box-shadow:none;background:var(--card)}
+body.mkpro:not(.mk-rich) .icon-btn{box-shadow:none}
+body.mkpro:not(.mk-rich) #mkStat{box-shadow:none}
+@media(max-width:900px){body.mkpro:not(.mk-rich){--logoH:84px;--actH:56px}}
 /* أزرار */
-body.mkpro button.primary,body.mkpro .btn.primary,body.mkpro .primary{background:var(--brand)!important;color:var(--brand-ink)!important;background-image:none!important;box-shadow:none!important;border-radius:var(--r-f)}
-body.mkpro button.primary,body.mkpro .btn,body.mkpro .modal button,body.mkpro #hyBody button{min-height:48px;border-radius:var(--r-f)}
-body.mkpro #hyBody .btn.primary,body.mkpro #hyBody button.primary{background:var(--brand)!important;color:var(--brand-ink)!important}
-body.mkpro input,body.mkpro select,body.mkpro textarea{border-radius:var(--r-f)}
-body.mkpro .mkSh,body.mkpro #mkSh>div{border-radius:var(--r-s) var(--r-s) 0 0}
+body.mkpro:not(.mk-rich) button.primary,body.mkpro:not(.mk-rich) .btn.primary,body.mkpro:not(.mk-rich) .primary{background:var(--brand)!important;color:var(--brand-ink)!important;background-image:none!important;box-shadow:none!important;border-radius:var(--r-f)}
+body.mkpro:not(.mk-rich) button.primary,body.mkpro:not(.mk-rich) .btn,body.mkpro:not(.mk-rich) .modal button,body.mkpro:not(.mk-rich) #hyBody button{min-height:48px;border-radius:var(--r-f)}
+body.mkpro:not(.mk-rich) #hyBody .btn.primary,body.mkpro:not(.mk-rich) #hyBody button.primary{background:var(--brand)!important;color:var(--brand-ink)!important}
+body.mkpro:not(.mk-rich) input,body.mkpro:not(.mk-rich) select,body.mkpro:not(.mk-rich) textarea{border-radius:var(--r-f)}
+body.mkpro:not(.mk-rich) .mkSh,body.mkpro:not(.mk-rich) #mkSh>div{border-radius:var(--r-s) var(--r-s) 0 0}
 /* مالي وأداء */
-body.mkpro .stat strong,body.mkpro .kpi{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
-body.mkpro #recent>*,body.mkpro .list>*,body.mkpro #hyBody .card{content-visibility:auto;contain-intrinsic-size:auto 72px}
-body.mkpro *{text-shadow:none!important}
-body.mkpro .mkic,body.mkpro .mkill,body.mkpro #mkMini i{animation:none!important}
-body.mkpro .mkLaunch button{background:var(--card)!important;background-image:none!important;color:var(--text)!important;border:1px solid var(--ln)!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)!important;transform:none!important;min-height:120px}
-body.mkpro .mkLaunch button::before,body.mkpro .mkLaunch button::after{display:none!important}
-body.mkpro .mkLaunch button:hover{background:var(--g3)!important;transform:none!important;box-shadow:var(--sh1)!important}
-body.mkpro .mkLaunch small{color:var(--muted)!important}
-body.mkpro .mkLaunch .mkill{width:48px;height:48px;border-radius:12px}
-body.mkpro .mkLaunch .mkill svg{width:36px;height:36px}
-body.mkpro .mkLaunch .cnt{background:var(--brand);color:var(--brand-ink);box-shadow:none}
+body.mkpro:not(.mk-rich) .stat strong,body.mkpro:not(.mk-rich) .kpi{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+body.mkpro:not(.mk-rich) #recent>*,body.mkpro:not(.mk-rich) .list>*,body.mkpro:not(.mk-rich) #hyBody .card{content-visibility:auto;contain-intrinsic-size:auto 72px}
+body.mkpro:not(.mk-rich) *{text-shadow:none!important}
+body.mkpro:not(.mk-rich) .mkic,body.mkpro:not(.mk-rich) .mkill,body.mkpro:not(.mk-rich) #mkMini i{animation:none!important}
+body.mkpro:not(.mk-rich) .mkLaunch button{background:var(--card)!important;background-image:none!important;color:var(--text)!important;border:1px solid var(--ln)!important;box-shadow:var(--sh1)!important;border-radius:var(--r-c)!important;transform:none!important;min-height:120px}
+body.mkpro:not(.mk-rich) .mkLaunch button::before,body.mkpro:not(.mk-rich) .mkLaunch button::after{display:none!important}
+body.mkpro:not(.mk-rich) .mkLaunch button:hover{background:var(--g3)!important;transform:none!important;box-shadow:var(--sh1)!important}
+body.mkpro:not(.mk-rich) .mkLaunch small{color:var(--muted)!important}
+body.mkpro:not(.mk-rich) .mkLaunch .mkill{width:48px;height:48px;border-radius:12px}
+body.mkpro:not(.mk-rich) .mkLaunch .mkill svg{width:36px;height:36px}
+body.mkpro:not(.mk-rich) .mkLaunch .cnt{background:var(--brand);color:var(--brand-ink);box-shadow:none}
+
+/* تحكّم من شاشة المظهر */
+body.mkpro.mk-nobrand .brand{display:none!important}
+body.mkpro.mk-nobrand{--logoH:0px!important}
+body.mkpro.mk-noanim *{animation:none!important}
+body.mkpro.mk-noanim #mkLogo *{animation:none!important;transition:none!important}
+body.mkpro.mk-bnsm{--logoH:64px!important}
+body.mkpro.mk-bnlg{--logoH:150px!important}
+@media(max-width:900px){body.mkpro.mk-bnsm{--logoH:56px!important}body.mkpro.mk-bnlg{--logoH:118px!important}}
+body.mkpro.mk-bncolor .brand{background:var(--bnBg)!important}
 </style>
+<script>
+/* ميكانيزم — تحكّم كامل في الشكل: لون البراند، البانر العلوي، الحركة، الشكل مسطّح/مجسّم، تدوير الكروت */
+(function(){
+var K='mk_ui',D={brand:'#E8B04A',bn:'show',bnh:'n',bnc:'',anim:1,rich:0,rc:16};
+function get(){var o=Object.assign({},D);try{var v=JSON.parse(localStorage.getItem(K)||'null');if(v)o=Object.assign(o,v)}catch(e){}return o}
+function lum(h){var n=parseInt(h.slice(1),16),f=function(c){c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};return .2126*f(n>>16&255)+.7152*f(n>>8&255)+.0722*f(n&255)}
+function apply(){var o=get(),B=document.body;if(!B)return;var ink=lum(o.brand)>.4?'#1A1306':'#ffffff';
+ B.style.setProperty('--brand',o.brand);B.style.setProperty('--brand-ink',ink);B.style.setProperty('--gd',o.brand);B.style.setProperty('--gold',o.brand);B.style.setProperty('--gdI',ink);B.style.setProperty('--rc',o.rc+'px');
+ B.classList.toggle('mk-nobrand',o.bn==='hide');B.classList.toggle('mk-bnsm',o.bnh==='s');B.classList.toggle('mk-bnlg',o.bnh==='l');
+ if(/^#[0-9a-f]{6}$/i.test(o.bnc||'')){B.style.setProperty('--bnBg',o.bnc);B.classList.add('mk-bncolor')}else{B.style.removeProperty('--bnBg');B.classList.remove('mk-bncolor')}
+ B.classList.toggle('mk-noanim',!o.anim);B.classList.toggle('mk-rich',!!o.rich)}
+function set(k,v){var o=get();o[k]=v;try{localStorage.setItem(K,JSON.stringify(o))}catch(e){}apply();fill()}
+var BR=[['#E8B04A','ذهبي'],['#FFBE0B','منجاوي'],['#1F3FB8','أزرق'],['#0d9488','تركواز'],['#16a34a','أخضر'],['#e11d48','أحمر'],['#7c3aed','بنفسجي'],['#ea580c','برتقالي'],['#0f172a','كحلي غامق']];
+var BN=[['','تلقائي (كحلي)'],['#0B1650','كحلي'],['#1F3FB8','أزرق'],['#0f172a','أسود مزرق'],['#111111','أسود'],['#14532d','أخضر غامق'],['#7f1d1d','عنابي'],['#FFBE0B','منجاوي'],['#ffffff','أبيض']];
+function sw(id,list,cur){return '<div id="'+id+'" style="display:flex;flex-wrap:wrap;gap:8px">'+list.map(function(p){return '<button type="button" data-v="'+p[0]+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;min-height:44px;border-radius:12px;border:2px solid '+(p[0]===cur?'#FFBE0B':'var(--border,#ddd)')+';background:var(--card,#fff);color:inherit;font-weight:700"><i style="width:20px;height:20px;border-radius:6px;border:1px solid #0003;background:'+(p[0]||'linear-gradient(135deg,#0B1650,#1A34A8)')+'"></i>'+p[1]+'</button>'}).join('')+'</div>'}
+function seg(id,list,cur){return '<div id="'+id+'" style="display:flex;gap:8px;flex-wrap:wrap">'+list.map(function(p){var on=String(p[0])===String(cur);return '<button type="button" data-v="'+p[0]+'" style="flex:1;min-width:84px;min-height:46px;padding:8px 12px;border-radius:12px;font-weight:800;border:2px solid '+(on?'#FFBE0B':'var(--border,#ddd)')+';background:'+(on?'var(--brand,#E8B04A)':'var(--card,#fff)')+';color:'+(on?'var(--brand-ink,#1A1306)':'inherit')+'">'+p[1]+'</button>'}).join('')+'</div>'}
+function fill(){var c=document.getElementById('mkUiCard');if(!c)return;var o=get();
+ c.innerHTML='<h3>🎛️ تحكّم في الشكل</h3><p style="margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.8">كل حاجة هنا بتتغيّر فورًا وبتتحفظ على الجهاز ده.</p>'+
+ '<b>الشكل العام</b><div style="margin:6px 0 14px">'+seg('uiRich',[[0,'مسطّح احترافي'],[1,'مجسّم (القديم)']],o.rich?1:0)+'</div>'+
+ '<b>اللون الأساسي (الأصفر بتاع ميكانيزم)</b><div style="margin:6px 0 8px">'+sw('uiBr',BR,o.brand)+'</div><label style="display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:14px">لون براحتك <input type="color" id="uiBrC" value="'+o.brand+'" style="width:54px;height:40px;padding:2px;border-radius:10px"></label>'+
+ '<b>الشعار والبانر اللي فوق</b><div style="margin:6px 0 8px">'+seg('uiBn',[['show','ظاهر'],['hide','مخفي']],o.bn)+'</div>'+
+ '<div style="margin-bottom:8px;font-size:13px;color:var(--muted)">الارتفاع</div>'+seg('uiBnh',[['s','صغير'],['n','عادي'],['l','كبير']],o.bnh)+
+ '<div style="margin:12px 0 6px;font-size:13px;color:var(--muted)">لون خلفية البانر</div>'+sw('uiBnc',BN,o.bnc||'')+'<label style="display:flex;align-items:center;gap:8px;font-weight:700;margin:8px 0 14px">لون براحتك <input type="color" id="uiBnC" value="'+(o.bnc||'#0B1650')+'" style="width:54px;height:40px;padding:2px;border-radius:10px"></label>'+
+ '<b>الحركة (اللوجو والأيقونات)</b><div style="margin:6px 0 14px">'+seg('uiAn',[[1,'شغّالة'],[0,'واقفة (أسرع)']],o.anim?1:0)+'</div>'+
+ '<b>استدارة الكروت</b><div style="margin:6px 0 4px"><input type="range" id="uiRc" min="4" max="28" step="2" value="'+o.rc+'" style="width:100%"></div>'+
+ '<button type="button" id="uiReset" style="margin-top:12px;min-height:46px;width:100%;border-radius:12px;border:1px solid var(--border,#ddd);background:var(--card,#fff);color:inherit;font-weight:800">↺ رجّع الإعدادات الافتراضية</button>';
+ var q=function(i){return c.querySelector(i)},each=function(id,fn){c.querySelectorAll('#'+id+' button').forEach(function(b){b.onclick=function(){fn(b.dataset.v)}})};
+ each('uiRich',function(v){set('rich',+v)});each('uiBr',function(v){set('brand',v)});each('uiBn',function(v){set('bn',v)});each('uiBnh',function(v){set('bnh',v)});each('uiBnc',function(v){set('bnc',v)});each('uiAn',function(v){set('anim',+v)});
+ q('#uiBrC').onchange=function(){set('brand',this.value)};q('#uiBnC').onchange=function(){set('bnc',this.value)};q('#uiRc').onchange=function(){set('rc',+this.value)};
+ q('#uiReset').onclick=function(){try{localStorage.removeItem(K)}catch(e){}apply();fill()}}
+function mount(){var th=document.getElementById('theme');if(!th||document.getElementById('mkUiCard'))return;var c=document.createElement('div');c.className='card';c.id='mkUiCard';c.style.marginBottom='14px';
+ var a=document.getElementById('mkProCard');if(a)a.after(c);else{var tr=th.querySelector('.title-row');if(tr)tr.after(c);else th.prepend(c)}fill()}
+apply();document.addEventListener('DOMContentLoaded',apply);
+var t;new MutationObserver(function(){clearTimeout(t);t=setTimeout(function(){mount()},250)}).observe(document.documentElement,{childList:true,subtree:true});
+window.mkUi={set:set,get:get};
+})();
+</script>
+
 <script>
 /* mk: ميكانيزم برو — أيقونات بلون ثابت لكل شاشة (مايتكررش) + رسومات مجسّمة + لوجو متحرك كبير + لون لكل شاشة */
 (function(){
