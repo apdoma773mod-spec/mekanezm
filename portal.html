@@ -93,14 +93,19 @@ function showThumbs(){const t=$('th');if(!t)return;t.innerHTML='';files.forEach(
 async function up(f,i){
  const ext=(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5)||'bin',p=T+'/'+Date.now()+'-'+i+'.'+ext;
  const r=await fetch(URL_+'/storage/v1/object/portal/'+p,{method:'POST',headers:{...H,'Content-Type':f.type||'application/octet-stream'},body:f});
- if(!r.ok)throw new Error('رفع');return {u:URL_+'/storage/v1/object/public/portal/'+p,t:f.type.startsWith('video/')?'v':'i'}}
+ if(!r.ok){let t='';try{t=(await r.text()).slice(0,120)}catch(e){}throw new Error('UP:'+r.status+(t?' '+t:''))}return {u:URL_+'/storage/v1/object/public/portal/'+p,t:f.type.startsWith('video/')?'v':'i'}}
 async function send(){
  const body=$('body').value.trim();if(!body&&!files.length){$('st').textContent='اكتب طلبك أو أرفق صورة الأول.';return}
  const b=$('send');b.disabled=true;$('st').textContent='جاري الإرسال...';
  try{const media=[];for(let i=0;i<files.length;i++){$('st').textContent=`برفع المرفق ${i+1} من ${files.length}...`;media.push(await up(files[i],i))}
-  const ok=await rpc('mk_portal_send',{p_token:T,p_body:body,p_media:media});
-  if(!ok)throw new Error('x');files=[];$('body').value='';showThumbs();$('st').textContent='✅ وصل طلبك. هنرد عليك في أقرب وقت.';setTimeout(load,1200)}
- catch(e){$('st').textContent='ماتبعتش. اتأكد من النت وجرّب تاني.'}
+  let ok;try{ok=await rpc('mk_portal_send',{p_token:T,p_body:body,p_media:media})}catch(e){throw new Error('RPC:'+(e.message||''))}
+  if(!ok)throw new Error('REJ');files=[];$('body').value='';showThumbs();$('st').textContent='✅ وصل طلبك. هنرد عليك في أقرب وقت.';setTimeout(load,1200)}
+ catch(e){const m=String(e&&e.message||'');
+  let why=m.startsWith('UP:')?'ماقدرناش نرفع أحد المرفقات ('+m.slice(3,60)+'). جرّب صورة أصغر أو فيديو أقصر.'
+   :m==='REJ'?'السيستم رفض الطلب. ممكن تكون بعت طلبات كتير في ساعة واحدة، جرّب بعد شوية، أو كلم المحل.'
+   :m.startsWith('RPC:')?'الطلب ماوصلش للسيرفر: '+m.slice(4,120)
+   :'مافيش اتصال بالنت دلوقتي. اتأكد من النت وجرّب تاني.';
+  $('st').textContent='❌ ماتبعتش. '+why}
  b.disabled=false}
 load();
 </script>
