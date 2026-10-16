@@ -1596,7 +1596,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-27';
+const APP_VER='2026-10-16-28';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7290,6 +7290,8 @@ body.mkpro.mk-nofx #mkBgFx .b{display:none}
 body.mk-bgd *{animation-play-state:paused!important}
 @keyframes mkDrift{0%{transform:translate(0,0) scale(1)}35%{transform:translate(9vmax,6vmax) scale(1.12)}70%{transform:translate(-6vmax,11vmax) scale(.92)}100%{transform:translate(5vmax,-5vmax) scale(1.06)}}
 @media (prefers-reduced-motion:reduce){#mkBgFx .b{animation:none}}
+/* موبايل (آيفون وأندرويد): من غير حركة ولا ظلال على الأيقونات واللوجو — كانت بتقيّل الشاشة وتخلي الكلام يرعش */
+@media (hover:none) and (pointer:coarse){.mkill,.mkill *,#mkMini i,#mkLogo *{animation:none!important;transition:none!important}.mkic svg,.mkill svg,body.mkpro .mobile-nav button .mkic,body.mkpro.mkdark .mobile-nav button .mkic{filter:none!important}}
 /* موبايل: من غير الدواير الكبيرة الملونة ورا الشاشة — بتقيّل آيفون وبتطلع شاشة سودا لما ترجع من الخلفية */
 @media (hover:none) and (pointer:coarse){body.mkpro #mkBgFx{display:none}}
 body.mkpro.mkdark{--fxa:.55}
@@ -7980,10 +7982,10 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
   if(document.getElementById('mkLogo'))return;
   var w=document.createElement('div');w.id='mkLogo';w.innerHTML=logoSVG()+'<div class="mkbrand" role="img" aria-label="ميكانيزم"><i></i></div>';br.appendChild(w);
   try{var lg=window.MK_LOGO||'',bi=w.querySelector('.mkbrand i');if(lg){bi.style.webkitMaskImage=bi.style.maskImage='url('+lg+')'}}catch(e){}
-  document.addEventListener('visibilitychange',function(){try{document.body.classList.toggle('mk-bgd',document.hidden)}catch(e){}try{document.hidden?svg.pauseAnimations():svg.unpauseAnimations()}catch(e){}});
+  document.addEventListener('visibilitychange',function(){try{document.body.classList.toggle('mk-bgd',document.hidden)}catch(e){}try{(document.hidden||still)?svg.pauseAnimations():svg.unpauseAnimations()}catch(e){}});
   var svg=w.querySelector('svg'),mq=window.matchMedia('(max-width:700px)'),fit=function(){svg.setAttribute('viewBox',mq.matches?'400 0 900 200':'0 0 1700 200')};
   fit();try{mq.addEventListener('change',fit)}catch(e){try{mq.addListener(fit)}catch(e2){}}
-  var still=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var still=window.matchMedia&&(window.matchMedia('(prefers-reduced-motion: reduce)').matches||window.matchMedia('(hover:none) and (pointer:coarse)').matches);
   if(still&&svg.pauseAnimations)svg.pauseAnimations();
   else if('IntersectionObserver' in window){new IntersectionObserver(function(es){es.forEach(function(x){try{x.isIntersecting?svg.unpauseAnimations():svg.pauseAnimations()}catch(e){}})}).observe(w)}
   hdr();
