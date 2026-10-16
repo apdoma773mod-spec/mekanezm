@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0B1650">
+<title>حسابك عند ميكانيزم</title>
+<style>
+:root{--ink:#14213d;--mut:#6b7280;--bg:#f4f5fa;--card:#fff;--line:#e5e7ef;--pri:#0B1650;--acc:#e8a317;--red:#c0392b;--grn:#1e8449}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{background:var(--pri);color:#fff;padding:20px 16px 26px}
+header h1{margin:0;font-size:22px}
+header p{margin:4px 0 0;opacity:.85;font-size:14px}
+main{max-width:640px;margin:-14px auto 0;padding:0 14px 40px}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid var(--line)}
+h2{margin:0 0 10px;font-size:18px}
+.bal{font-size:26px;font-weight:800}
+.row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.row:last-child{border:0}
+.mut{color:var(--mut);font-size:14px}
+textarea{width:100%;min-height:150px;border:2px solid var(--line);border-radius:14px;padding:14px;font:inherit;resize:vertical;background:#fff;color:var(--ink)}
+textarea:focus{outline:none;border-color:var(--pri)}
+button{font:inherit;border:0;border-radius:14px;padding:15px 18px;font-weight:700;width:100%;cursor:pointer}
+.pri{background:var(--pri);color:#fff}
+.sec{background:#eef0f8;color:var(--pri);margin-top:10px}
+button:disabled{opacity:.5}
+.inv{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.inv summary{padding:14px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;align-items:center;list-style:none}
+.inv summary::-webkit-details-marker{display:none}
+.inv .body{padding:0 14px 14px}
+.tag{display:inline-block;border-radius:99px;padding:2px 10px;font-size:13px;font-weight:700}
+.tag.r{background:#fdecea;color:var(--red)}.tag.g{background:#e6f4ea;color:var(--grn)}.tag.y{background:#fff4d6;color:#8a5a00}
+.miss{background:#fff8e6;border-radius:12px;padding:10px 12px;margin-top:10px;white-space:pre-wrap}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumbs div{background:#eef0f8;border-radius:10px;padding:6px 10px;font-size:13px}
+.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px;display:block}
+.msg{border-right:4px solid var(--acc);padding:8px 12px;margin-bottom:10px;background:#fffdf5;border-radius:8px;white-space:pre-wrap}
+.msg a{color:var(--pri)}
+.note{font-size:14px;color:var(--mut);margin-top:8px}
+.err{padding:40px 16px;text-align:center}
+</style>
+</head>
+<body>
+<header><h1 id="shop">ميكانيزم</h1><p id="who">...</p></header>
+<main id="app"><div class="card">جاري التحميل...</div></main>
+<script>
+const URL_='https://tkzfjeizvanfptnqvrmr.supabase.co',KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const T=new URLSearchParams(location.search).get('t')||'';
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money=n=>Number(n||0).toLocaleString('ar-EG',{maximumFractionDigits:2})+' ج';
+const H={apikey:KEY,Authorization:'Bearer '+KEY};
+let files=[];
+async function rpc(fn,body){const r=await fetch(URL_+'/rest/v1/rpc/'+fn,{method:'POST',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return r.json()}
+async function load(){
+ if(T.length<16){$('app').innerHTML='<div class="card err">الرابط ده مش مظبوط. اطلب من المحل يبعتلك الرابط تاني.</div>';return}
+ let d;try{d=await rpc('mk_portal_get',{p_token:T})}catch(e){$('app').innerHTML='<div class="card err">مش قادرين نفتح حسابك دلوقتي. جرّب كمان شوية.</div>';return}
+ if(!d){$('app').innerHTML='<div class="card err">الرابط ده انتهى أو مش مظبوط. اطلب من المحل رابط جديد.</div>';return}
+ draw(d)}
+function draw(d){
+ const s=d.snap||{},sh=s.shop||{};document.title='حسابك عند '+(sh.name||'ميكانيزم');
+ $('shop').textContent=sh.name||'ميكانيزم';$('who').textContent='أهلاً '+d.name+(s.at?' — آخر تحديث '+new Date(s.at).toLocaleDateString('ar-EG'):'');
+ const inv=s.inv||[];
+ let h=`<div class="card"><h2>طلبك</h2><textarea id="body" placeholder="اكتب هنا اللي محتاجه: أصناف، كميات، مقاسات..."></textarea>
+ <div class="thumbs" id="th"></div>
+ <input type="file" id="f" accept="image/*,video/*" multiple hidden>
+ <button class="sec" onclick="$('f').click()">📷 أرفق صورة أو فيديو للصنف</button>
+ <div class="note">لو مش لاقي الصنف في أي مكان، ابعت صورته أو فيديو عنه ونجيبهولك.</div>
+ <button class="pri" id="send" style="margin-top:12px" onclick="send()">إرسال الطلب</button><div class="note" id="st"></div></div>`;
+ h+=`<div class="card"><h2>حسابك</h2><div class="bal" style="color:${(s.bal&&s.bal.amt>0)?'var(--red)':'var(--grn)'}">${esc((s.bal&&s.bal.txt)||'خالص')}</div>
+ <div class="row"><span>عدد الفواتير</span><b>${inv.length}</b></div><div class="row"><span>إجمالي الفواتير</span><b>${money(inv.reduce((a,x)=>a+(x.tot||0),0))}</b></div><div class="row"><span>اللي اتدفع</span><b>${money(inv.reduce((a,x)=>a+(x.paid||0),0)+(s.pays||[]).reduce((a,x)=>a+(x.amount||0),0))}</b></div></div>`;
+ h+='<div class="card"><h2>فواتيرك</h2>'+(inv.length?inv.map(invH).join(''):'<div class="mut">مفيش فواتير لسه.</div>')+'</div>';
+ if((s.pays||[]).length)h+='<div class="card"><h2>الدفعات</h2>'+s.pays.map(p=>`<div class="row"><span>${esc(p.date)}${p.note?' — '+esc(p.note):''}</span><b>${money(p.amount)}</b></div>`).join('')+'</div>';
+ if((s.rets||[]).length)h+='<div class="card"><h2>المرتجعات</h2>'+s.rets.map(p=>`<div class="row"><span>${esc(p.date)} — ${esc(p.n)} × ${p.q}</span><b>${money(p.t)}</b></div>`).join('')+'</div>';
+ if((d.msgs||[]).length)h+='<div class="card"><h2>طلباتك اللي بعتها</h2>'+d.msgs.map(m=>`<div class="msg"><div class="mut">${new Date(m.at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'})}</div>${esc(m.body)}${(m.media||[]).length?'<div class="mut">📎 '+m.media.length+' مرفق</div>':''}</div>`).join('')+'</div>';
+ if(sh.phone)h+=`<div class="card"><h2>تواصل معانا</h2><a href="tel:${esc(sh.phone)}" style="text-decoration:none"><button class="sec" style="margin:0">📞 ${esc(sh.phone)}</button></a></div>`;
+ $('app').innerHTML=h;$('f').onchange=pick;showThumbs()}
+function invH(x){
+ const tag=x.rem>0?`<span class="tag r">متبقي ${money(x.rem)}</span>`:'<span class="tag g">مدفوعة</span>';
+ const items=(x.items||[]).map(i=>`<div class="row"><span>${esc(i.n)} × ${i.q}${i.u?' '+esc(i.u):''}</span><b>${money(i.t)}</b></div>`).join('');
+ const ex=[];
+ if(x.recv)ex.push(`<div class="row"><span>تاريخ الاستلام</span><b>${esc(x.recv)}</b></div>`);
+ let notes='';
+ if(x.miss)notes+=`<div class="miss"><b>⚠️ كان ناقص يوم الاستلام:</b>\n${esc(x.miss)}</div>`;
+ if(x.got)notes+=`<div class="miss" style="background:#e9f7ef"><b>✅ اتسلّم${x.gotDate?' يوم '+esc(x.gotDate):''}:</b>\n${esc(x.got)}</div>`;
+ return `<details class="inv"><summary><span><b>فاتورة ${esc(x.no)}</b><br><span class="mut">${esc(x.date)} — ${money(x.tot)}</span></span>${tag}</summary><div class="body">${items}
+ <div class="row"><span>الإجمالي</span><b>${money(x.tot)}</b></div><div class="row"><span>المدفوع</span><b>${money(x.paid)}</b></div>${ex.join('')}${notes}</div></details>`}
+function pick(e){for(const f of e.target.files){if(f.size>50*1024*1024){alert('الملف '+f.name+' أكبر من 50 ميجا');continue}if(files.length<8)files.push(f)}e.target.value='';showThumbs()}
+function showThumbs(){const t=$('th');if(!t)return;t.innerHTML='';files.forEach((f,i)=>{const d=document.createElement('div');if(f.type.startsWith('image/')){const im=document.createElement('img');im.src=URL.createObjectURL(f);d.appendChild(im)}else d.textContent='🎬 '+f.name.slice(0,18);d.onclick=()=>{files.splice(i,1);showThumbs()};t.appendChild(d)})}
+async function up(f,i){
+ const ext=(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5)||'bin',p=T+'/'+Date.now()+'-'+i+'.'+ext;
+ const r=await fetch(URL_+'/storage/v1/object/portal/'+p,{method:'POST',headers:{...H,'Content-Type':f.type||'application/octet-stream'},body:f});
+ if(!r.ok)throw new Error('رفع');return {u:URL_+'/storage/v1/object/public/portal/'+p,t:f.type.startsWith('video/')?'v':'i'}}
+async function send(){
+ const body=$('body').value.trim();if(!body&&!files.length){$('st').textContent='اكتب طلبك أو أرفق صورة الأول.';return}
+ const b=$('send');b.disabled=true;$('st').textContent='جاري الإرسال...';
+ try{const media=[];for(let i=0;i<files.length;i++){$('st').textContent=`برفع المرفق ${i+1} من ${files.length}...`;media.push(await up(files[i],i))}
+  const ok=await rpc('mk_portal_send',{p_token:T,p_body:body,p_media:media});
+  if(!ok)throw new Error('x');files=[];$('body').value='';showThumbs();$('st').textContent='✅ وصل طلبك. هنرد عليك في أقرب وقت.';setTimeout(load,1200)}
+ catch(e){$('st').textContent='ماتبعتش. اتأكد من النت وجرّب تاني.'}
+ b.disabled=false}
+load();
+</script>
+</body>
+</html>
