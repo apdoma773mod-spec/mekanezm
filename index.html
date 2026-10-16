@@ -1645,7 +1645,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-59';
+const APP_VER='2026-10-16-60';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8403,7 +8403,7 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[da
 /* ميكانيزم — 🏢 مفتاح الشركة (ميكانيزم / هيدرولك): بيظهر بس بعد تشغيل sql/48-company.sql */
 (function(){
 const COL={mk:'#1d3fb8',hy:'#d97706'};
-function bar(){if(!window.mkCoOn){let o=document.getElementById('mkCoBar');if(o)o.remove();return}
+function bar(){if(!window.mkCoOn||!window.mkShowCoBar){let o=document.getElementById('mkCoBar');if(o)o.remove();return}
  let host=document.getElementById('dashboard');if(!host||!host.parentNode)return;let el=document.getElementById('mkCoBar'),c=curCo();
  if(!el){el=document.createElement('div');el.id='mkCoBar';el.style.cssText='display:flex;gap:8px;padding:8px 12px;position:sticky;top:0;z-index:30;background:var(--bg,#f5f7f8);border-bottom:1px solid var(--border,#e4eaed)';host.parentNode.prepend(el)}
  let h=['mk','hy'].map(k=>`<button type="button" data-c="${k}" style="flex:1;padding:12px 6px;border-radius:12px;font-weight:800;font-size:15px;border:2px solid ${COL[k]};background:${k===c?COL[k]:'transparent'};color:${k===c?'#fff':COL[k]}">${k==='mk'?'🏬':'🔧'} ${CO_NAME[k]}</button>`).join('');
