@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-47';
+const APP_VER='2026-10-16-48';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3606,12 +3606,15 @@ async function callFn(img){let {data,error}=await sbx().functions.invoke('parse-
  if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
   if(st===404)m='دالة parse-invoice مش متنشرة';throw new Error(m)}
  if(data&&data.error)throw new Error(data.error);return data||{}}
+// محاولات سريعة في نفس اللحظة لو الخدمة زحمة (بدل ما الفاتورة تستنى دقايق في الطابور)
+async function callFnQ(img){for(let k=0;;k++){try{return await callFn(img)}catch(e){if(k>=2||!TRANSIENT.test(errTxt(e)))throw e;await new Promise(r=>setTimeout(r,k?8000:3000))}}}
 const fin=(id,st,res,err,mins)=>sbx().rpc('mk_scan_finish',{p_id:id,p_status:st,p_result:res,p_error:err||'',p_retry_min:mins||0});
 async function work(job){
  try{let pages=LOCAL.get(job.id);
   if(!pages){pages=[];for(const p of job.pages||[]){let {data,error}=await sbx().storage.from('invoice-scans').download(p);if(error)throw error;pages.push(await blobTo64(data))}LOCAL.set(job.id,pages)}
   let R={supplier:'',invoice_no:'',date:'',notes:'',items:[]};
-  for(const img of pages){let r=await callFn(img);R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[])}
+  let RS=await Promise.all(pages.map(callFnQ));  // كل الصفحات مع بعض (مش واحدة ورا التانية)
+  for(const r of RS){R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[])}
   if(!R.items.filter(x=>x&&String(x.text||'').trim()).length){await fin(job.id,'failed',null,'ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب',0);if(WAIT===job.id){WAIT=null;busy('');toast('❌ ماقدرتش ألاقي أصناف — صوّرها أوضح')}return}
   await fin(job.id,'done',R,'',0);LOCAL.delete(job.id);
   if(WAIT===job.id){WAIT=null;busy('');if(document.getElementById('txLines')&&TTYPE==='purchase')return openScan(job.id,R)}
