@@ -1639,7 +1639,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-50';
+const APP_VER='2026-10-16-51';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8652,7 +8652,7 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
 })();
 </script>
 <script>
-/* ميكانيزم — 🧾 تحويل رسالة العميل لفاتورة: قراءة الأصناف بالعامية + مطابقة ذكية مع المنتجات (المراجعة قبل الحفظ) */
+/* ميكانيزم — 🧾 تحويل رسالة العميل لفاتورة (شاشة كاملة): قراءة الأصناف بالعامية + مطابقة + بحث + مراجعة قبل الحفظ */
 (function(){
  function norm(s){
   return String(s||'').replace(/[ً-ٟـ]/g,'')
@@ -8660,9 +8660,9 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
    .replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d)}).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d)})
    .toLowerCase().replace(/[^؀-ۿa-z0-9\s×*\/.]/g,' ').replace(/\s+/g,' ').trim();
  }
- var NUM0={واحد:1,واحده:1,وحده:1,اتنين:2,اثنين:2,اثنان:2,تلاته:3,ثلاثه:3,اربعه:4,اربعة:4,خمسه:5,خمس:5,سته:6,ست:6,سبعه:7,سبع:7,تمنيه:8,تمانيه:8,ثمانيه:8,تسعه:9,تسع:9,عشره:10,عشر:10,عشرين:20,تلاتين:30,اربعين:40,خمسين:50,ميه:100,مية:100,الف:1000};
+ var NUM0={واحد:1,واحده:1,وحده:1,اتنين:2,اثنين:2,اثنان:2,تلاته:3,ثلاثه:3,اربعه:4,خمسه:5,خمس:5,سته:6,ست:6,سبعه:7,سبع:7,تمنيه:8,تمانيه:8,ثمانيه:8,تسعه:9,تسع:9,عشره:10,عشر:10,عشرين:20,تلاتين:30,اربعين:40,خمسين:50,ميه:100,مية:100,الف:1000};
  var NUM={}; Object.keys(NUM0).forEach(function(k){NUM[norm(k)]=NUM0[k]});
- var SYN0={مجر:['مجري','درج'],مجري:['مجري','درج'],درج:['درج','مجري'],سمت:['سوفت','سمت'],سوفت:['سوفت'],soft:['سوفت'],مفصلات:['مفصل'],مفصله:['مفصل'],مفصل:['مفصل'],كولين:['كولين'],كولينات:['كولين'],كوالين:['كولين'],كولين:['كولين'],اهرم:['اهرم','ذراع'],ذراع:['ذراع','اهرم'],سفلي:['سفلي'],سفلى:['سفلي'],علوي:['علوي'],علوى:['علوي'],مقبض:['مقبض'],ماسكه:['مقبض'],ابواب:['باب'],باب:['باب']};
+ var SYN0={مجر:['مجري','درج'],مجري:['مجري','درج'],درج:['درج','مجري'],سمت:['سوفت','سمت'],سوفت:['سوفت'],soft:['سوفت'],مفصلات:['مفصل'],مفصله:['مفصل'],مفصل:['مفصل'],كولين:['كولين'],كولينات:['كولين'],كوالين:['كولين'],اهرم:['اهرم','ذراع'],ذراع:['ذراع','اهرم'],سفلي:['سفلي'],سفلى:['سفلي'],علوي:['علوي'],علوى:['علوي'],مقبض:['مقبض'],ماسكه:['مقبض'],ابواب:['باب'],باب:['باب'],ضلف:['ضلفه'],ضلفه:['ضلفه']};
  var SYN={}; Object.keys(SYN0).forEach(function(k){SYN[norm(k)]=SYN0[k].map(norm)});
  var STOP=new Set(['عدد','بتاع','بتاعت','بتاعه','من','ال','و','محتاج','عايز','عاوز','ابعت','لو','سمحت','مقاس','نوع','فيه','في','ده','دي','كام','اطلب','ممكن']);
  function expand(words){var out=new Set();words.forEach(function(w){out.add(w);(SYN[w]||[]).forEach(function(x){out.add(x)})});return out}
@@ -8676,44 +8676,75 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
   var words=t.split(' ').filter(function(w){return w&&!STOP.has(w)&&!/^[×*x]$/.test(w)&&!NUM[w]});
   return {raw:String(raw).trim(),qty:qty||1,size:size,words:words};
  }
- function matches(line,products){
-  var q=[...new Set(line.words)];if(!q.length)return [];
-  var res=products.map(function(p){
-   var pn=norm(p.name),pt=expand(pn.split(' ')),hit=0;
-   q.forEach(function(w){var ok=false,qs=expand([w]);qs.forEach(function(v){pt.forEach(function(x){if(ok)return;if(x===v||(v.length>=3&&x.length>=3&&(x.indexOf(v)===0||v.indexOf(x)===0)))ok=true})});if(ok)hit++});
-   var s=hit/q.length;if(line.size&&pn.split(' ').indexOf(line.size)>=0)s+=0.15;
-   return {p:p,s:Math.min(1,s)};
-  });
-  return res.filter(function(x){return x.s>=0.5}).sort(function(a,b){return b.s-a.s}).slice(0,4);
+ // درجة التطابق: كل كلمة في الطلب (ومرادفاتها) لازم تتلاقي في اسم الصنف، والمقاس بيكسب نقط زيادة
+ function score(line,p){
+  var q=[...new Set(line.words)];if(!q.length)return 0;
+  var pn=norm(p.name),pw=pn.split(' '),pt=expand(pw),hit=0;
+  q.forEach(function(w){var ok=false;expand([w]).forEach(function(v){pt.forEach(function(x){if(ok)return;if(x===v||(v.length>=3&&x.length>=3&&(x.indexOf(v)===0||v.indexOf(x)===0)))ok=true})});if(ok)hit++});
+  var s=hit/q.length;if(line.size&&pw.indexOf(line.size)>=0)s+=0.15;
+  return Math.min(1,s);
  }
+ function rank(line,products){return products.map(function(p){return {p:p,s:score(line,p)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s})}
  window.mkOrderParse=function(text,products){
   return String(text||'').split(/\n|،|,|\+|؛|;/).map(parseLine).filter(Boolean).map(function(l){
-   var mm=matches(l,products||[]);return {line:l,cands:mm,best:mm.length?mm[0].p.id:''}});
+   var r=rank(l,products||[]);return {line:l,cands:r.slice(0,4),best:(r.length&&r[0].s>=0.5)?r[0].p.id:''}});
  };
- var ROWS=[];
+ var S={msg:null,cust:null,rows:[],prods:[]};
+ function prodById(id){return S.prods.find(function(p){return p.id===id})}
+ function esc2(x){return esc(String(x==null?'':x))}
+ function rowHTML(r,i){
+  var p=r.pid?prodById(r.pid):null;
+  var head=p?'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:16px">'+esc2(p.name)+'</b><small style="color:var(--muted)">المخزون: '+(+p.qty||0)+' '+esc2(p.unit||'')+'</small></div>'
+   :'<div style="color:var(--danger,#c0392b);font-weight:700">⚠️ صنف مش متحدد — اختار من الاقتراحات أو ابحث</div>';
+  var cands=(r.cands||[]).filter(function(c){return c.id!==(p&&p.id)}).slice(0,4);
+  var chips=cands.map(function(c){return '<button type="button" class="secondary" style="padding:10px;margin:4px 0;text-align:right" onclick="mkOPick('+i+',\''+c.id+'\')">'+esc2(c.name)+'</button>'}).join('');
+  return '<div class="card" style="margin-bottom:10px;'+(p?'':'border-right:4px solid var(--danger,#c0392b);')+'">'+
+   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">من الرسالة: '+esc2(r.raw)+'</div>'+head+
+   '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><div style="flex:none"><div style="font-size:12px;color:var(--muted)">الكمية</div><input type="number" min="0" step="0.01" value="'+r.qty+'" style="width:110px;padding:12px;font-size:18px" onchange="mkOQty('+i+',this.value)"></div>'+
+   '<div style="flex:1"><div style="font-size:12px;color:var(--muted)">السعر</div><div style="padding:12px;font-weight:700">'+(p?money(TTYPE_PRICE(p)):'—')+'</div></div></div>'+
+   (chips?'<div style="font-size:12px;color:var(--muted);margin-top:8px">اقتراحات:</div>'+chips:'')+
+   '<input placeholder="🔎 ابحث عن الصنف..." style="width:100%;margin-top:10px;padding:12px;font-size:16px" oninput="mkOSearch('+i+',this.value)">'+
+   '<div id="mkOS'+i+'"></div>'+
+   '<button type="button" class="secondary danger" style="width:100%;margin-top:8px" onclick="mkODel('+i+')">✕ شيل السطر ده</button></div>';
+ }
+ function TTYPE_PRICE(p){return p.price||0}
+ function paint(){
+  var box=document.getElementById('mkOrderBody');if(!box)return;
+  var n=S.rows.filter(function(r){return r.pid&&r.qty>0}).length;
+  box.innerHTML=(S.rows.length?S.rows.map(rowHTML).join(''):'<div class="card"><div class="empty">مفيش أصناف. ضيف صنف يدوي.</div></div>')+
+   '<button type="button" class="secondary" style="width:100%;margin-top:6px" onclick="mkOAdd()">➕ إضافة صنف</button>'+
+   '<button type="button" class="primary" style="width:100%;padding:16px;margin-top:12px" onclick="mkOrderCreate()">إنشاء فاتورة بيع ('+n+' صنف)</button>';
+ }
  window.mkOrderFromMsg=function(id){
   var m=(window.mkMsgList||[]).find(function(x){return x.id===id});if(!m){toast('الرسالة مش موجودة');return}
   var c=(db.contacts||[]).find(function(x){return x.ptok&&x.ptok===m.token});
-  var prods=prodsCo();ROWS=mkOrderParse(m.body,prods);
-  var all=prods.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ar')});
-  var opts=function(sel){return '<option value="">— اختار صنف —</option>'+all.map(function(p){return '<option value="'+p.id+'"'+(p.id===sel?' selected':'')+'>'+esc(p.name)+' ('+p.qty+' '+esc(p.unit||'')+')</option>'}).join('')};
-  var rows=ROWS.map(function(r,i){var conf=r.best?'':'border-right:4px solid var(--danger,#c0392b)';
-   return '<div class="card" style="margin-bottom:8px;'+conf+'"><div style="font-size:13px;color:var(--muted)">من الرسالة: '+esc(r.line.raw)+'</div>'+
-   (r.best?'':'<div style="color:var(--danger,#c0392b);font-weight:700;margin:4px 0">⚠️ مش متعرف عليه، اختار الصح</div>')+
-   '<div style="display:flex;gap:8px;margin-top:6px;align-items:center"><input type="number" min="0" step="0.01" value="'+r.line.qty+'" id="mkOq'+i+'" style="width:90px;padding:10px;font-size:16px"><select id="mkOp'+i+'" style="flex:1;padding:10px;font-size:15px">'+opts(r.best)+'</select></div></div>'}).join('');
-  openModal('<div class="modal-head"><h2>🧾 تحويل طلب لفاتورة'+(c?' — '+esc(c.name):'')+'</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="form">'+
-   (ROWS.length?'<div class="note" style="margin-bottom:10px">راجع الأصناف والكميات. أي صنف مش متعرف عليه اختاره يدوي. مفيش حاجة بتتسجل غير لما تضغط إنشاء الفاتورة.</div>'+rows:'<div class="card"><div class="empty">مالقيتش أصناف في الرسالة. اكتبها يدوي في الفاتورة.</div></div>')+
-   '<button class="primary" style="width:100%;padding:16px;margin-top:8px" onclick="mkOrderCreate(\''+id+'\')">إنشاء فاتورة بيع</button></div>');
+  S.msg=m;S.cust=c||null;S.prods=prodsCo();
+  var parsed=mkOrderParse(m.body,S.prods);
+  S.rows=parsed.map(function(x){return {raw:x.line.raw,qty:x.line.qty,pid:x.best,cands:x.cands.map(function(c){return c.p})}});
+  openModal('<div class="modal-head"><h2>🧾 تحويل طلب لفاتورة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>'+
+   '<div class="form"><div class="card" style="margin-bottom:10px"><b>'+esc2(c?c.name:(m.name||'عميل'))+'</b><div style="white-space:pre-wrap;margin-top:6px;color:var(--muted)">'+esc2(m.body||'')+'</div></div>'+
+   '<div id="mkOrderBody"></div></div>');
+  paint();
  };
- window.mkOrderCreate=async function(msgId){
-  var m=(window.mkMsgList||[]).find(function(x){return x.id===msgId});
-  var c=m?(db.contacts||[]).find(function(x){return x.ptok&&x.ptok===m.token}):null;
-  var items=[];ROWS.forEach(function(r,i){var pid=(document.getElementById('mkOp'+i)||{}).value,q=+((document.getElementById('mkOq'+i)||{}).value||0);if(pid&&q>0)items.push({pid:pid,q:q})});
-  if(!items.length){toast('اختار صنف واحد على الأقل');return}
+ window.mkOQty=function(i,v){if(S.rows[i]){S.rows[i].qty=+v||0;paint()}};
+ window.mkOPick=function(i,pid){if(S.rows[i]){S.rows[i].pid=pid;paint()}};
+ window.mkODel=function(i){S.rows.splice(i,1);paint()};
+ window.mkOAdd=function(){S.rows.push({raw:'',qty:1,pid:'',cands:[]});paint()};
+ window.mkOSearch=function(i,v){
+  var box=document.getElementById('mkOS'+i);if(!box)return;
+  var q=norm(v);if(!q){box.innerHTML='';return}
+  var line=parseLine(v)||{words:[q],size:''};
+  var r=rank(line,S.prods).slice(0,8);
+  box.innerHTML=r.length?r.map(function(x){return '<button type="button" class="secondary" style="width:100%;padding:10px;margin-top:4px;text-align:right" onclick="mkOPick('+i+',\''+x.p.id+'\')">'+esc2(x.p.name)+' <small style="color:var(--muted)">('+(+x.p.qty||0)+')</small></button>'}).join(''):'<div style="color:var(--muted);padding:6px">مالقيتش صنف بالاسم ده</div>';
+ };
+ window.mkOrderCreate=async function(){
+  var items=S.rows.filter(function(r){return r.pid&&r.qty>0});
+  if(!items.length){toast('ضيف صنف واحد على الأقل');return}
+  var m=S.msg,c=S.cust;
   openTransaction('sale');
   document.querySelectorAll('#txLines .txl').forEach(function(x){x.remove()});
   if(c){var pn=document.getElementById('txPerson');if(pn){pn.value=c.name;try{fillCust()}catch(e){}}}
-  items.forEach(function(it){var d=addLine(it.pid);var q=d.querySelector('.lq');if(q)q.value=it.q});
+  items.forEach(function(it){var d=addLine(it.pid);var q=d.querySelector('.lq');if(q)q.value=it.qty});
   try{updRem()}catch(e){}
   if(m){try{await window.mkSB.from('mk_portal_msgs').update({seen:true}).eq('id',m.id);if(window.mkMsgPull)mkMsgPull()}catch(e){}}
   toast('راجع الفاتورة واحفظها');
