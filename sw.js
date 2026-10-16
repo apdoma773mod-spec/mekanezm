@@ -2,7 +2,7 @@
    السيستم (index.html): من النت الأول، ولو مفيش نت أو النت بطيء بيفتح النسخة المحفوظة.
    المكتبات والخطوط: بتتحفظ أول مرة وبعد كده بتفتح من الجهاز.
    الموقع (shop.html) والسيرفر (Supabase) مش بيعدّوا على هنا خالص. */
-const CACHE = 'mk-system-v8';
+const CACHE = 'mk-system-v9';
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const APP = new URL('./', self.location).href;
 
@@ -43,7 +43,7 @@ self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
   const u = new URL(r.url);
-  if (isApp(u)) { if (/[?&]v=/.test(u.search)) return; e.respondWith(swr(r, APP)); return; }
+  if (isApp(u)) { if (/[?&]v=/.test(u.search)) return; e.respondWith(networkFirst(r, APP, 4000)); return; }
   if (u.origin === self.location.origin && /manifest\.webmanifest$/.test(u.pathname)) { e.respondWith(networkFirst(r, r.url.split('?')[0], 6000)); return; }
   if (CDN.test(r.url)) {
     e.respondWith(caches.match(r).then(m => m || fetch(r).then(res => {

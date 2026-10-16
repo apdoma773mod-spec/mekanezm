@@ -1618,7 +1618,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-30';
+const APP_VER='2026-10-16-31';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -8090,7 +8090,7 @@ body.mkpro.mkdark .empty{color:#cfd8e0}
   var th=document.getElementById('theme');if(!th||document.getElementById('mkProCard'))return;
   var c=document.createElement('div');c.className='card';c.id='mkProCard';c.style.marginBottom='14px';
   var o=bgGet();
-  c.innerHTML='<h3>✨ تصميم ميكانيزم برو</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">لوجو ميكانيزم المتحرك، كل شاشة ليها لون ثابت مايتكررش، رسومات مجسّمة للحاجات اللي بتتفتح كتير، وكل خانة في اليومية بلون.</p><label class="chk"><input type="checkbox" id="mkProT"'+(document.body.classList.contains('mkpro')?' checked':'')+'> شغّال</label>'+
+  c.innerHTML='<div style="font-size:12px;color:var(--muted);margin:0 0 8px">رقم النسخة: '+(typeof APP_VER!=='undefined'?APP_VER:'')+'</div><h3>✨ تصميم ميكانيزم برو</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">لوجو ميكانيزم المتحرك، كل شاشة ليها لون ثابت مايتكررش، رسومات مجسّمة للحاجات اللي بتتفتح كتير، وكل خانة في اليومية بلون.</p><label class="chk"><input type="checkbox" id="mkProT"'+(document.body.classList.contains('mkpro')?' checked':'')+'> شغّال</label>'+
    '<h3 style="margin:18px 0 8px">🎨 لون الأرضية</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">اختار لون من دول أو أي لون من المربع. لو اخترت لون غامق السيستم كله بيقلب غامق لوحده.</p>'+
    '<div id="mkBgP" style="display:flex;flex-wrap:wrap;gap:8px">'+BGP.map(function(p){return '<button type="button" data-c="'+p[0]+'" class="'+(p[0]===o.c?'on':'')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;border:2px solid var(--ln2);background:var(--card);color:var(--text);font-weight:700;cursor:pointer"><i style="width:22px;height:22px;border-radius:7px;background:'+p[0]+';border:1px solid rgba(0,0,0,.18);display:inline-block"></i>'+p[1]+'</button>'}).join('')+'</div>'+
    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px"><label style="display:flex;align-items:center;gap:8px;font-weight:700">لون براحتك <input type="color" id="mkBgC" value="'+o.c+'" style="width:54px;height:38px;padding:2px;border-radius:10px;cursor:pointer"></label><label class="chk"><input type="checkbox" id="mkBgFxT"'+(o.fx?' checked':'')+'> ألوان متداخلة بتتحرك فوق الأرضية</label></div>'+
