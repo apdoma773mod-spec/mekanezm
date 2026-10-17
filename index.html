@@ -383,9 +383,26 @@ let lastInv=null;
 const nDigits=t=>String(t||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c));
 function invNo(r){return r.no||('MK-'+String(db.sales.length-db.sales.indexOf(r)).padStart(4,'0'))}
 function waNum(ph){let d=nDigits(ph).replace(/\D/g,'');if(!d)return '';if(d.startsWith('00'))d=d.slice(2);else if(d.startsWith('0'))d='20'+d.slice(1);return d}
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 async function saveFile(name,data){
  try{if(typeof claude!=='undefined'){let d=await claude.use('downloads');if(d){await d.save({filename:name,data});return true}}}catch(e){if(e&&e.code==='declined')return false}
- let a=document.createElement('a'),u=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),60000);return true}
+ let bl=data instanceof Blob?data:new Blob([data]);
+ /* الآيفون: التنزيل بالرابط بيفتح معاينة سودة ("يجري التحميل…") بتعلّق. فهناك بس ورقة المشاركة (حفظ في الملفات)، ولو الضغطة خلصت صلاحيتها بنفتح شاشة فيها زرار المشاركة */
+ if(IS_IOS){
+  try{if(navigator.canShare)for(const t of ['application/json','text/plain','application/pdf','application/octet-stream']){const f=new File([bl],name,{type:/\.pdf$/i.test(name)?'application/pdf':/\.(csv|json|xml)$/i.test(name)?(/\.json$/i.test(name)?'application/json':'text/plain'):t});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:name});return true}catch(e){if(e&&e.name==='AbortError')return false;break}}}}catch(e){}
+  if(window.mkFileSheet){window.mkFileSheet(name,bl,'');return false}
+  return false}
+ let a=document.createElement('a'),u=URL.createObjectURL(bl);a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),60000);return true}
+window.mkFileSheet=function(name,blob,info){
+ /* الآيفون: زرار «تنزيل» بيفتح معاينة سودة ("يجري التحميل…") بتعلّق. فهناك الحفظ بالمشاركة بس (ورقة المشاركة ← حفظ في الملفات)، والتنزيل للكمبيوتر والأندرويد بس */
+ let ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),kb=Math.round(blob.size/1024),F=null;
+ try{if(navigator.canShare)for(const t of ['application/json','text/plain','application/octet-stream']){const f=new File([blob],name,{type:t});if(navigator.canShare({files:[f]})){F=f;break}}}catch(e){}
+ openModal(`<div class="modal-head"><h2>✔ الملف جاهز</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div style="line-height:2;font-size:15px"><b>${esc(name)}</b><br>الحجم: <b>${blob.size<1024?blob.size+' بايت':kb>1024?(kb/1024).toFixed(1)+' ميجا':kb+' كيلو'}</b>${info?'<br>'+info:''}${F?'<br><small style="color:var(--muted)">اضغط «حفظ في الملفات» وبعدها اختار «حفظ في الملفات» من القايمة اللي هتظهر.</small>':''}</div>
+ ${blob.size<50?'<div style="color:var(--danger);font-weight:800;margin:8px 0">⚠️ الملف فاضي تقريبًا — مش هيفيد. جرّب تاني بعد ما السيستم يخلّص تحميل.</div>':''}
+ <div class="modal-foot" style="flex-direction:column;gap:8px">${F?'<button type="button" class="primary" id="mkFsShare" style="width:100%;min-height:54px">📤 حفظ في الملفات / مشاركة</button>':''}${ios?'':`<button type="button" class="${F?'secondary':'primary'}" id="mkFsDl" style="width:100%;min-height:50px">⬇️ تنزيل الملف</button>`}${ios&&!F?'<div style="color:var(--danger);font-weight:700">⚠️ الجهاز ده مش بيدعم حفظ الملف من هنا — افتح السيستم من الكمبيوتر وحمّل النسخة.</div>':''}<button type="button" class="secondary" id="mkFsX" style="width:100%;min-height:46px">إغلاق</button></div>`);
+ let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[F],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش')}};
+ let dl=document.getElementById('mkFsDl');if(dl)dl.onclick=async()=>{try{await saveFile(name,blob);toast('اتبعت للتنزيل')}catch(e){toast('⚠️ التنزيل ماشتغلش')}};
+ document.getElementById('mkFsX').onclick=closeModal};
 function invoiceHTML(r){
  let G=r.no?db.sales.filter(x=>x.no===r.no):[r];if(!G.length)G=[r];let TT=G.reduce((s,x)=>s+x.total,0),paid=G.reduce((s,x)=>s+(x.paid!=null?x.paid:x.total),0),rem=G.reduce((s,x)=>s+(x.rem||0),0),T=db.theme,shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'),ph=esc(db.settings.phone||''),price=r.price!=null?r.price:(r.qty?r.total/r.qty:0),unit=(db.products.find(p=>p.name===r.product)||{}).unit||'',
  H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
@@ -1657,7 +1674,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-87';
+const APP_VER='2026-10-17-88';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2401,16 +2418,6 @@ window.closingHistory=async function(){try{let r=await window.mkSB.from('mk_clos
  openModal(`<div class="modal-head"><h2>سجل تقفيل اليومية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="table-wrap"><table class="table"><thead><tr><th>اليوم</th><th>المبيعات</th><th>المفروض</th><th>الموجود</th><th>الفرق</th><th>بواسطة</th></tr></thead><tbody>${L.map(c=>`<tr><td>${esc(String(c.day).slice(0,10))}</td><td>${money(c.data&&c.data.sales_total)}</td><td>${money(c.cash_expected)}</td><td>${c.cash_actual==null?'—':money(c.cash_actual)}</td><td style="color:${(+c.cash_diff||0)<0?'var(--danger)':'inherit'}">${c.cash_diff==null?'—':money(c.cash_diff)}</td><td>${esc(c.by_name)}</td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">لسه مفيش</div></td></tr>'}</tbody></table></div>`)}catch(e){toast('محتاج نت')}};
 
 /* 📤 تسليم ملف للمستخدم: مشاركة (آيفون) أو تنزيل أو فتح — بزرار جديد عشان آيفون يسمح */
-window.mkFileSheet=function(name,blob,info){
- /* الآيفون: زرار «تنزيل» بيفتح معاينة سودة ("يجري التحميل…") بتعلّق. فهناك الحفظ بالمشاركة بس (ورقة المشاركة ← حفظ في الملفات)، والتنزيل للكمبيوتر والأندرويد بس */
- let ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),kb=Math.round(blob.size/1024),F=null;
- try{if(navigator.canShare)for(const t of ['application/json','text/plain','application/octet-stream']){const f=new File([blob],name,{type:t});if(navigator.canShare({files:[f]})){F=f;break}}}catch(e){}
- openModal(`<div class="modal-head"><h2>✔ الملف جاهز</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div style="line-height:2;font-size:15px"><b>${esc(name)}</b><br>الحجم: <b>${blob.size<1024?blob.size+' بايت':kb>1024?(kb/1024).toFixed(1)+' ميجا':kb+' كيلو'}</b>${info?'<br>'+info:''}${F?'<br><small style="color:var(--muted)">اضغط «حفظ في الملفات» وبعدها اختار «حفظ في الملفات» من القايمة اللي هتظهر.</small>':''}</div>
- ${blob.size<50?'<div style="color:var(--danger);font-weight:800;margin:8px 0">⚠️ الملف فاضي تقريبًا — مش هيفيد. جرّب تاني بعد ما السيستم يخلّص تحميل.</div>':''}
- <div class="modal-foot" style="flex-direction:column;gap:8px">${F?'<button type="button" class="primary" id="mkFsShare" style="width:100%;min-height:54px">📤 حفظ في الملفات / مشاركة</button>':''}${ios?'':`<button type="button" class="${F?'secondary':'primary'}" id="mkFsDl" style="width:100%;min-height:50px">⬇️ تنزيل الملف</button>`}${ios&&!F?'<div style="color:var(--danger);font-weight:700">⚠️ الجهاز ده مش بيدعم حفظ الملف من هنا — افتح السيستم من الكمبيوتر وحمّل النسخة.</div>':''}<button type="button" class="secondary" id="mkFsX" style="width:100%;min-height:46px">إغلاق</button></div>`);
- let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[F],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش')}};
- let dl=document.getElementById('mkFsDl');if(dl)dl.onclick=async()=>{try{await saveFile(name,blob);toast('اتبعت للتنزيل')}catch(e){toast('⚠️ التنزيل ماشتغلش')}};
- document.getElementById('mkFsX').onclick=closeModal};
 const PTK='mk_prtype';
 window.mkPrintAsk=function(id){let d='';try{d=localStorage.getItem(PTK)||''}catch(e){}
  openModal(`<div class="modal-head"><h2>🖨️ نوع الطباعة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
