@@ -1674,7 +1674,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-88';
+const APP_VER='2026-10-17-89';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -10414,5 +10414,19 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
 })();
 </script>
 
+<script>
+/* mk: 🔄 رقم النسخة + تحديث إجباري في الإعدادات (2026-10-17) — عشان تتأكد إنك على آخر نسخة (الآيفون بيحتفظ بنسخة قديمة) */
+(function(){
+ function put(){var sec=document.getElementById('settings');if(!sec||document.getElementById('mkVerCard'))return;var g=sec.querySelector('.grid2')||sec;
+  var d=document.createElement('div');d.className='card';d.id='mkVerCard';
+  d.innerHTML='<h3 style="margin-top:0">🔄 النسخة</h3><p style="margin:0 0 10px;line-height:2">رقم النسخة عندك: <b dir="ltr" style="font-size:17px">'+(typeof APP_VER!=='undefined'?APP_VER:'?')+'</b></p><button type="button" class="primary" id="mkVerGo" style="width:100%;min-height:52px">🔄 حدّث السيستم دلوقتي</button><div id="mkVerMsg" style="font-size:13px;color:var(--muted);margin-top:8px"></div>';
+  g.insertBefore(d,g.firstChild);
+  d.querySelector('#mkVerGo').onclick=async function(){var m=d.querySelector('#mkVerMsg');this.disabled=true;m.textContent='⏳ بجيب آخر نسخة…';
+   try{if(window.cloudFlush)await cloudFlush()}catch(e){}
+   try{var rs=await navigator.serviceWorker.getRegistrations();for(var r of rs)await r.unregister()}catch(e){}
+   try{var ks=await caches.keys();for(var k of ks)await caches.delete(k)}catch(e){}
+   location.replace(location.pathname+'?v='+Date.now())}}
+ var t=0;(function w(){put();if(!document.getElementById('mkVerCard')&&++t<40)setTimeout(w,1500)})()})();
+</script>
 </body>
 </html>
