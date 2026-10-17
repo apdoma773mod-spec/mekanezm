@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-76';
+const APP_VER='2026-10-17-77';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -9673,6 +9673,79 @@ const _st=submitTransaction;submitTransaction=async function(ev,type){
  }catch(e){}}
  return _st.apply(this,arguments)};
 try{render()}catch(e){}
+})();
+</script>
+
+<script>
+/* =====================================================================
+   ميكانيزم — 🗂️ جلسات الجرد (على أكتر من يوم): بتتحفظ وتكمّل منها، والفرق المتوقع بيتحسب من رصيد وقت العد + حركة البيع/الشراء بعده، والمخزون ما يتعدلش غير عند «اعتماد»
+   ===================================================================== */
+(function(){
+const KEY='count_sessions',LS='mk_cnt_sessions';
+let S=[],CUR=null,F={q:'',st:'all'},loaded=false;
+const E=s=>typeof esc==='function'?esc(s):String(s==null?'':s);
+const num=v=>{v=String(v==null?'':v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));const n=parseFloat(v);return isNaN(n)?0:n};
+const r2=x=>Math.round(x*100)/100;
+const A=()=>window.mkT&&window.mkT.api;
+async function load(){try{const c=window.mkSB;if(c){const r=await c.from('mk_settings').select('value').eq('key',KEY).maybeSingle();if(r.data&&Array.isArray(r.data.value)){S=r.data.value;loaded=true;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}return}}}catch(e){}
+ try{S=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){S=[]}loaded=true}
+let svT=null;function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}clearTimeout(svT);svT=setTimeout(async()=>{try{const c=window.mkSB;if(c)await c.from('mk_settings').upsert([{key:KEY,value:S}],{onConflict:'key'})}catch(e){}},700)}
+const prod=id=>(db.products||[]).find(p=>p.id===id);
+const host=()=>{let o=document.getElementById('mkCnt');if(!o){o=document.createElement('div');o.id='mkCnt';o.style.cssText='position:fixed;inset:0;z-index:55;background:var(--bg,#f5f7f8);color:var(--text,#18343a);overflow:auto;direction:rtl;padding:12px 14px 80px';document.body.appendChild(o)}o.style.display='block';document.body.style.overflow='hidden';return o};
+const shut=()=>{const o=document.getElementById('mkCnt');if(o)o.style.display='none';document.body.style.overflow='';try{renderAll()}catch(e){}};
+const BT=(id,t,pri)=>`<button type="button" id="${id}" class="${pri?'primary':'secondary'}" style="padding:13px 16px;font-size:16px;font-weight:700;border-radius:12px">${t}</button>`;
+function stats(s){const ids=Object.keys(s.items);let c=0,sh=0,su=0,shv=0,suv=0;ids.forEach(id=>{const it=s.items[id];if(it.cnt!=null&&it.cnt!==''){c++;const d=r2(num(it.cnt)-num(it.qAt)),p=prod(id),cost=p?num(p.cost):0;if(d<0){sh+=-d;shv+=-d*cost}else if(d>0){su+=d;suv+=d*cost}}});return {total:ids.length,counted:c,sh,su,shv,suv}}
+function list(){const o=host();
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">🗂️ جلسات الجرد</h2>${BT('cnX','✕ قفل')}</div>
+ <div class="card" style="margin-top:12px"><b>جلسة جديدة</b><input id="cnN" placeholder="اسم الجلسة (مثال: جرد رف الأكر)" style="width:100%;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:10px;font-size:16px"><select id="cnC" style="width:100%;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:10px;font-size:16px"><option value="">كل المخزن</option>${[...new Set((db.products||[]).map(p=>p.cat||'').filter(Boolean))].sort().map(c=>`<option>${E(c)}</option>`).join('')}</select><div style="margin-top:10px">${BT('cnNew','ابدأ الجلسة',1)}</div></div>`+
+ (S.slice().reverse().map(s=>{const st=stats(s);return `<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b>${E(s.name)}</b><span class="badge ${s.status==='open'?'':'green'}">${s.status==='open'?'مفتوحة':'اتعتمدت'}</span></div><div style="font-size:13px;color:var(--muted)">${E(s.created.slice(0,10))}${s.cat?' — '+E(s.cat):' — كل المخزن'}</div><div style="margin:6px 0">اتعدّ <b>${st.counted}</b> من <b>${st.total}</b></div><div style="height:8px;background:#e5eef0;border-radius:99px;overflow:hidden"><div style="height:100%;width:${st.total?Math.round(st.counted/st.total*100):0}%;background:#087f8c"></div></div><div class="btnrow" style="margin-top:8px"><button type="button" class="primary" data-co="${s.id}">${s.status==='open'?'كمّل':'عرض'}</button><button type="button" class="secondary danger" data-cd="${s.id}">مسح</button></div></div>`}).join('')||'<div class="card" style="margin-top:10px"><div class="empty">مفيش جلسات لسه.</div></div>');
+ o.querySelector('#cnX').onclick=shut;
+ o.querySelector('#cnNew').onclick=()=>{const cat=o.querySelector('#cnC').value,name=o.querySelector('#cnN').value.trim()||('جرد '+new Date().toISOString().slice(0,10));
+  const items={};(db.products||[]).filter(p=>!cat||(p.cat||'')===cat).forEach(p=>{items[p.id]={start:num(p.qty),cnt:null,qAt:null}});
+  const s={id:'cs'+Date.now().toString(36),name,cat,created:new Date().toISOString(),status:'open',items};S.push(s);save();view(s.id)};
+ o.querySelectorAll('[data-co]').forEach(b=>b.onclick=()=>view(b.dataset.co));
+ o.querySelectorAll('[data-cd]').forEach(b=>b.onclick=async()=>{if(!(await ask('تمسح الجلسة دي؟ (المخزون مش هيتأثر)','مسح','لأ')))return;S=S.filter(x=>x.id!==b.dataset.cd);save();list()})}
+function view(id){CUR=S.find(x=>x.id===id);if(!CUR)return list();const s=CUR,o=host(),open=s.status==='open';
+ const st=stats(s);
+ const rows=Object.keys(s.items).map(pid=>({pid,p:prod(pid),it:s.items[pid]})).filter(x=>x.p).filter(x=>{
+   if(F.st==='pending'&&x.it.cnt!=null&&x.it.cnt!=='')return false;if(F.st==='done'&&(x.it.cnt==null||x.it.cnt===''))return false;
+   if(F.st==='diff'&&(x.it.cnt==null||x.it.cnt===''||r2(num(x.it.cnt)-num(x.it.qAt))===0))return false;
+   if(F.q){const q=(typeof VN==='function'?VN(F.q):F.q).split(' ').filter(Boolean),h=(typeof VN==='function'?VN:(a=>a))((x.p.name||'')+' '+(x.p.code||'')+' '+(x.p.barcode||''));if(!q.every(w=>h.includes(w)))return false}return true}).slice(0,120);
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0;font-size:19px">${E(s.name)}</h2>${BT('cnB','← الجلسات')}</div>
+ <div class="card" style="margin-top:10px;line-height:1.9">اتعدّ <b>${st.counted}</b> / ${st.total} — عجز <b style="color:#c0392b">${r2(st.sh)}</b> (${money(st.shv)}) — زيادة <b style="color:#159447">${r2(st.su)}</b> (${money(st.suv)})</div>
+ <div style="display:flex;gap:6px;margin-top:10px"><input id="cnQ" placeholder="🔍 اسم أو كود" value="${E(F.q)}" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:16px"><button type="button" id="cnSc" class="secondary" style="width:52px;font-size:22px;border-radius:12px">📷</button></div>
+ <div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px">${[['all','الكل'],['pending','لسه'],['done','اتعدّ'],['diff','فيه فرق']].map(([k,l])=>`<button type="button" data-cf="${k}" class="${F.st===k?'primary':'secondary'}" style="flex:none;padding:9px 14px;border-radius:99px">${l}</button>`).join('')}</div>
+ <div id="cnRows">${rows.map(x=>rowHTML(x,open)).join('')||'<div class="card" style="margin-top:10px"><div class="empty">مفيش أصناف.</div></div>'}</div>
+ <div class="btnrow" style="margin-top:12px;flex-wrap:wrap">${BT('cnP','🖨️ اطبع ورقة الجرد')}${open?BT('cnOk','✔ اعتماد الجرد',1):''}</div>`;
+ o.querySelector('#cnB').onclick=list;
+ o.querySelector('#cnQ').oninput=e=>{F.q=e.target.value;clearTimeout(view._t);view._t=setTimeout(()=>{view(id);const q=document.getElementById('cnQ');q.focus();q.setSelectionRange(q.value.length,q.value.length)},300)};
+ o.querySelectorAll('[data-cf]').forEach(b=>b.onclick=()=>{F.st=b.dataset.cf;view(id)});
+ o.querySelectorAll('input[data-cnt]').forEach(i=>i.oninput=()=>setCnt(i.dataset.cnt,i.value,i));
+ o.querySelector('#cnSc').onclick=()=>{if(!open)return;window.mkScan&&mkScan(c=>{const p=(db.products||[]).find(x=>String(x.barcode||'')===c||String(x.code||'')===c);if(!p||!s.items[p.id])return false;const it=s.items[p.id];setCnt(p.id,(it.cnt==null||it.cnt===''?0:num(it.cnt))+1);return p.name+' → '+it.cnt},{multi:true,title:'امسح للجرد — كل مسحة = قطعة'})};
+ o.querySelector('#cnP').onclick=()=>printSheet(s);
+ const ok=o.querySelector('#cnOk');if(ok)ok.onclick=()=>approve(s)}
+function rowHTML(x,open){const it=x.it,c=it.cnt!=null&&it.cnt!=='',cur=num(x.p.qty),qAt=c?num(it.qAt):cur,d=c?r2(num(it.cnt)-qAt):null,mv=c?r2(cur-qAt):0;
+ return `<div class="card" id="cr-${x.pid}" style="margin-top:8px;padding:10px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="flex:1">${E(x.p.name)}</b><small style="color:var(--muted)">${E(x.p.code||'')}</small></div>
+ <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><div style="flex:1;font-size:13px">بالسيستم: <b>${cur}</b>${mv?` <span style="color:#d97706">(اتحرك ${mv>0?'+':''}${mv} بعد العد)</span>`:''}</div><input data-cnt="${x.pid}" ${open?'':'disabled'} inputmode="decimal" placeholder="العدد" value="${c?E(it.cnt):''}" style="width:90px;padding:11px;font-size:18px;text-align:center;border:2px solid ${c?'#087f8c':'var(--border)'};border-radius:10px"><b data-df style="width:56px;text-align:center;color:${d==null?'inherit':d<0?'#c0392b':d>0?'#159447':'inherit'}">${d==null?'':(d>0?'+':'')+d}</b></div></div>`}
+function setCnt(pid,v,inp){if(!CUR||CUR.status!=='open')return;const it=CUR.items[pid];if(!it)return;const p=prod(pid);
+ if(v===''||v==null){it.cnt=null;it.qAt=null}else{if(it.cnt==null||it.cnt===''||it.qAt==null)it.qAt=num(p?p.qty:0);it.cnt=String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d))}
+ save();const row=document.getElementById('cr-'+pid);if(row){const df=row.querySelector('[data-df]'),c=it.cnt!=null&&it.cnt!=='',d=c?r2(num(it.cnt)-num(it.qAt)):null;df.textContent=d==null?'':(d>0?'+':'')+d;df.style.color=d==null?'':d<0?'#c0392b':d>0?'#159447':'inherit';if(!inp){const i=row.querySelector('input');if(i)i.value=c?it.cnt:''}}
+ const st=stats(CUR),card=document.querySelector('#mkCnt .card');if(card)card.innerHTML=`اتعدّ <b>${st.counted}</b> / ${st.total} — عجز <b style="color:#c0392b">${r2(st.sh)}</b> (${money(st.shv)}) — زيادة <b style="color:#159447">${r2(st.su)}</b> (${money(st.suv)})`}
+async function approve(s){const ch=[];Object.keys(s.items).forEach(pid=>{const it=s.items[pid],p=prod(pid);if(!p||it.cnt==null||it.cnt==='')return;const nq=Math.max(0,r2(num(it.cnt)+(num(p.qty)-num(it.qAt))));if(nq!==num(p.qty))ch.push({p,nq,from:num(p.qty),d:r2(num(it.cnt)-num(it.qAt))})});
+ const left=Object.keys(s.items).length-stats(s).counted;
+ const msg='هتعتمد الجرد "'+s.name+'":\n• '+ch.length+' صنف هيتعدّل رصيده\n• '+left+' صنف لسه ماتعدّش (مش هيتأثر)\n'+ch.slice(0,8).map(x=>'- '+x.p.name+': '+x.from+' ← '+x.nq).join('\n')+(ch.length>8?'\n...':'')+'\n\nالرصيد الجديد = العدد + الحركة اللي حصلت بعد العد. مينفعش يترجع. نكمّل؟';
+ if(!(await ask(msg,'اعتمد','لأ')))return;
+ const api=A();if(!api){toast('محتاج نت واتصال بالسيرفر عشان تعتمد');return}
+ const bt=document.getElementById('cnOk');if(bt)bt.disabled=true;let fail=[];
+ try{await api.syncNow();for(const x of ch){try{await api.rpc('mk_adjust_stock',{p_id:x.p.id,p_qty:x.nq,p_note:'جرد "'+s.name+'": العدد '+r2(x.d+0)+' فرق '+(x.d>0?'+':'')+x.d});await api.refreshProducts([x.p.id])}catch(e){fail.push(x.p.name)}}api.done&&api.done()}catch(e){toast('مقدرتش أكمّل: '+(e&&e.message||e));if(bt)bt.disabled=false;return}
+ if(fail.length){toast('⚠️ فشل '+fail.length+' صنف: '+fail.slice(0,3).join('، '));if(bt)bt.disabled=false;return}
+ s.status='closed';s.approved=new Date().toISOString();save();toast('✔ اتعتمد الجرد وتعدّل '+ch.length+' صنف');list()}
+function printSheet(s){const rows=Object.keys(s.items).map(pid=>({p:prod(pid),it:s.items[pid]})).filter(x=>x.p).sort((a,b)=>String(a.p.cat||'').localeCompare(String(b.p.cat||''))||String(a.p.name).localeCompare(String(b.p.name),'ar'));
+ const h='<!doctype html><html dir="rtl"><head>'+(typeof PRINT_HEAD==='string'?PRINT_HEAD:'<meta charset="utf-8">')+'<title>ورقة جرد</title><style>body{font-family:Cairo,Tahoma,sans-serif;padding:10px;color:#000}table{width:100%;border-collapse:collapse}td,th{border:1px solid #888;padding:6px;font-size:12pt;text-align:right}th{background:#eee}.n{width:90px}</style></head><body><h3 style="margin:0">ورقة جرد — '+E(s.name)+'</h3><div style="font-size:11pt;margin-bottom:6px">'+E(s.created.slice(0,10))+(s.cat?' — '+E(s.cat):'')+'</div><table><tr><th>#</th><th>الصنف</th><th>الكود</th><th class="n">بالسيستم</th><th class="n">العدد الفعلي</th></tr>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+E(x.p.name)+'</td><td>'+E(x.p.code||'')+'</td><td>'+(x.it.cnt!=null&&x.it.cnt!==''?num(x.it.qAt):num(x.p.qty))+'</td><td>'+(x.it.cnt!=null&&x.it.cnt!==''?E(x.it.cnt):'')+'</td></tr>').join('')+'</table></body></html>';
+ if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(h);else toast('الطباعة مش جاهزة')}
+window.mkCountSessions=async function(){if(!loaded)await load();else load();list()};
+/* زرار في شاشة الجرد */
+try{const bar=document.querySelector('#count .title-row .btnrow');if(bar&&!document.getElementById('cnSess'))bar.insertAdjacentHTML('afterbegin','<button class="secondary" id="cnSess" onclick="mkCountSessions()">🗂️ جلسات الجرد (على أكتر من يوم)</button>')}catch(e){}
 })();
 </script>
 
