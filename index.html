@@ -1601,7 +1601,7 @@ function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u
  if(!L.length){w.querySelector('.mkbox').insertAdjacentHTML('beforeend','<div class="werr">مفيش موظفين متسجلين لسه — المدير يضيفهم من الإعدادات.</div>');return}
  w.innerHTML=`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>
- <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off">
+ <div style="position:relative"><input id="wPin" type="text" inputmode="numeric" placeholder="الرقم السري" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="mkpin-nofill" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc;padding-left:56px"><button type="button" onclick="(function(b){var i=document.getElementById('wPin'),on=i.style.webkitTextSecurity!=='none';i.style.webkitTextSecurity=i.style.textSecurity=on?'none':'disc';b.textContent=on?'🙈':'👁';i.focus()})(this)" style="position:absolute;left:6px;top:6px;width:44px;height:40px;padding:0;background:none;border:0;font-size:20px;box-shadow:none;color:inherit;margin:0">👁</button></div>
  <button type="button" onclick="whoGo()">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="whoStart()">رجوع</button><div id="wErr" class="werr"></div></div>`;
  setTimeout(()=>{let p=document.getElementById('wPin');if(p){p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
 async function whoGo(){let u=users().find(x=>x.id===val('wUser')),p=val('wPin');if(!u||!p)return wErr.textContent='اكتب الرقم السري';
@@ -1657,7 +1657,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-86';
+const APP_VER='2026-10-17-87';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1717,7 +1717,7 @@ function errMsg(e){let m=String(e&&(e.message||e.error)||e||'');
  if(/^sold_after:/.test(m))return 'مينفعش تتلغي — الأصناف دي اتباع منها بعد الشراء: '+m.split(':').slice(1).join(':');
  if(/^sold_item_removed:/.test(m))return 'مينفعش تشيل «'+m.split(':').slice(1).join(':')+'» من فاتورة الشراء لأنه اتباع منه — غيّر الكمية بس';
  if(/^bad_qty:/.test(m))return 'اكتب الكمية لـ '+m.split(':').slice(1).join(':');
- if(/Invalid login credentials/i.test(m))return 'الرقم السري غلط';
+ if(/Invalid login credentials/i.test(m))return 'الرقم السري غلط — دوس 👁 واتأكد من الأرقام، أو «نسيت الرقم السري؟»';
  return ERRS[m]||m||'حصل خطأ'}
 async function rpc(fn,args){let {data,error}=await sb.rpc(fn,args||{});if(error)throw error;return data}
 async function fetchAll(t,order,cols){let out=[],from=0,N=1000;
@@ -1976,13 +1976,14 @@ function chooser(){let s=staff();
 window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.length)return toast(role==='emp'?'مفيش موظفين متسجلين — المدير يضيفهم من الإعدادات':'مفيش مدير متسجل على الجهاز ده — ادخل بالإيميل');
  showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
- <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off"><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
+ <div style="position:relative"><input id="wPin" type="text" inputmode="numeric" placeholder="الرقم السري" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="mkpin-nofill" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc;padding-left:56px"><button type="button" onclick="(function(b){var i=document.getElementById('wPin'),on=i.style.webkitTextSecurity!=='none';i.style.webkitTextSecurity=i.style.textSecurity=on?'none':'disc';b.textContent=on?'🙈':'👁';i.focus()})(this)" style="position:absolute;left:6px;top:6px;width:44px;height:40px;padding:0;background:none;border:0;font-size:20px;box-shadow:none;color:inherit;margin:0">👁</button></div><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
 function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
 window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();
 async function signIn(email,pass){let e=document.getElementById('wErr');if(!email||!pass){if(e)e.textContent='اكتب البيانات';return}
+ pass=String(pass).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));   // كيبورد الآيفون العربي بيكتب ٠١٢
  if(!sb){if(e)e.textContent='مفيش نت — لازم نت عشان تدخل أول مرة';return}
  if(e)e.textContent='جاري الدخول…';let b=document.getElementById('wGo');if(b)b.disabled=true;
  try{let r=await sb.auth.signInWithPassword({email,password:pass});if(r.error)throw r.error;await enter(r.data.user)}
