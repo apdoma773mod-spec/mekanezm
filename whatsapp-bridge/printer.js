@@ -20,16 +20,23 @@ const ps = (script) => new Promise((resolve, reject) => {
     { windowsHide: true, timeout: 30000 }, (err, out) => err ? reject(err) : resolve(String(out).trim()));
 });
 
-// تغيير الطابعة الافتراضية بطريقة CIM (اللي بتشتغل فعلاً) مع تأكيد بالقراءة
+// تغيير الطابعة الافتراضية بطريقة CIM مع تأكيد بالقراءة — في استدعاء PowerShell واحد بس
+// (كان قبل كده 2-7 استدعاءات لكل تبديل، وكل استدعاء بيفتح عملية PowerShell جديدة بتاخد وقت)
 async function setDefault(name) {
   const q = name.replace(/'/g, "''");
-  await ps("Invoke-CimMethod -InputObject (Get-CimInstance Win32_Printer -Filter \"Name='" + q + "'\") -MethodName SetDefaultPrinter | Out-Null");
-  for (let i = 0; i < 6; i++) {
-    const cur = await ps("(Get-CimInstance Win32_Printer | Where-Object { $_.Default }).Name");
-    if (cur === name) return;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error('مقدرتش أخلّي الطابعة الافتراضية: ' + name);
+  const out = await ps(
+    "$cur = (Get-CimInstance Win32_Printer | Where-Object { $_.Default }).Name;" +
+    "if ($cur -ne '" + q + "') {" +
+    "  Invoke-CimMethod -InputObject (Get-CimInstance Win32_Printer -Filter \"Name='" + q + "'\") -MethodName SetDefaultPrinter | Out-Null;" +
+    "  for ($i = 0; $i -lt 10; $i++) {" +
+    "    $cur2 = (Get-CimInstance Win32_Printer | Where-Object { $_.Default }).Name;" +
+    "    if ($cur2 -eq '" + q + "') { break };" +
+    "    Start-Sleep -Milliseconds 300" +
+    "  }" +
+    "};" +
+    "$cur"
+  );
+  return out;   // اسم الطابعة الافتراضية القديمة (قبل التبديل)
 }
 let chain = Promise.resolve();   // طابور: شغلانة واحدة في المرة
 function enqueue(fn) { const p = chain.then(fn, fn); chain = p.catch(() => {}); return p; }
@@ -45,9 +52,8 @@ async function printHtml(kind, html, log) {
   fs.writeFileSync(file, body, 'utf8');
 
   let prev = '';
-  try { prev = await ps("(Get-CimInstance Win32_Printer | Where-Object { $_.Default }).Name"); } catch (e) {}
+  try { prev = await setDefault(name); } catch (e) { log && log('تعذر تبديل الطابعة الافتراضية: ' + e.message); }
   try {
-    await setDefault(name);
     const prof = path.join(os.tmpdir(), 'mk-print-' + String(kind).replace(/[^a-z0-9]/gi, ''));
     // كروم بيطبع على «آخر طابعة مستخدمة» من ملف الإعدادات مش على الافتراضية: بنكتبها هنا قبل التشغيل
     try {
