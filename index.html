@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <script>
 /* 📊 قياس التقل على الموبايل: بيشتغل بس لو فتحت السيستم بـ ?diag=1 — بيعد مين بياكل وقت الموبايل */
-(function(){var on=/[?&]diag=1/.test(location.search);try{if(on)localStorage.setItem('mk_diag','1');if(/[?&]diag=0/.test(location.search))localStorage.removeItem('mk_diag');on=localStorage.getItem('mk_diag')==='1'}catch(e){}
+(function(){var on=/[?&]diag=1/.test(location.search);try{localStorage.removeItem('mk_diag')}catch(e){}
  if(!on)return;var S={},t0=Date.now(),lag=0,lagMax=0,slow=0,L2=0,M2=0,N2=0;
  function key(f){try{return String(f).replace(/\s+/g,' ').slice(0,55)}catch(e){return '?'}}
  var SL=[];function wrap(f,kind){if(typeof f!=='function')return f;var k=kind+': '+key(f);var w=function(){var a=performance.now();try{return f.apply(this,arguments)}finally{var d=performance.now()-a,m=S[k]||(S[k]={n:0,ms:0});m.n++;m.ms+=d;if(d>700){SL.push(Math.round(d)+'ms — '+k);if(SL.length>12)SL.shift()}}};try{w.prototype=f.prototype}catch(e){}return w}
@@ -178,7 +178,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 </section>
 
 <section id="cash" class="page">
- <div class="title-row"><div class="title"><h1>الخزنة والمصروفات</h1><p>تسجيل المصروفات والحركات النقدية</p></div><button class="primary" onclick="openExpense()"><svg class="i"><use href="#i-plus"/></svg> مصروف جديد</button></div>
+ <div class="title-row"><div class="title"><h1>الخزنة والمصروفات</h1><p>تسجيل المصروفات والحركات النقدية</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" onclick="window.mkWk&&mkWk.go('exp')">🧾 مصاريف المعرض</button><button class="primary" onclick="openExpense()"><svg class="i"><use href="#i-plus"/></svg> مصروف جديد</button></div></div>
  <div class="stats"><div class="stat"><small>الرصيد الحالي</small><strong id="cashBalance">0 ج.م</strong></div><div class="stat"><small>إجمالي المصروفات</small><strong id="expensesTotal">0 ج.م</strong></div><div class="stat"><small>مستحقات عند العملاء</small><strong id="cOwed">0 ج.م</strong></div></div>
  <div class="card" style="margin-top:14px"><div class="table-wrap"><table class="table"><thead><tr><th>التاريخ</th><th>البيان</th><th>الفئة</th><th>المبلغ</th></tr></thead><tbody id="expensesBody"></tbody></table></div></div>
 </section>
@@ -619,7 +619,7 @@ function renderDashboard(){
  let low=prodsCo().filter(p=>p.qty<=p.min);stockReport.innerHTML=low.length?`<p>أصناف تحتاج متابعة: <b>${low.length}</b></p><div class="table-wrap"><table class="table"><thead><tr><th>المنتج</th><th>المتاح</th><th>الحد</th></tr></thead><tbody>${low.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.qty}</td><td>${p.min}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">كل الأصناف فوق حد التنبيه.</div>';
 }
 function saveSettings(){db.settings.companyName=companyName.value;db.settings.phone=companyPhone.value;db.settings.address=companyAddress.value;save();toast('تم حفظ الإعدادات')}
-async function backup(){if(await saveFile('mekanizm-backup-'+isoToday()+'.json',new Blob([JSON.stringify(db,null,2)],{type:'application/json'})))toast('تم إنشاء النسخة الاحتياطية')}
+async function backup(){let bl=new Blob([JSON.stringify(db)],{type:'application/json'});if(typeof mkFileSheet==='function'){let n=['products','sales','purchases','contacts','expenses','returns','payments'].map(k=>(db[k]||[]).length?(({products:'أصناف',sales:'مبيعات',purchases:'مشتريات',contacts:'جهات',expenses:'مصروفات',returns:'مرتجعات',payments:'دفعات'})[k]+': '+db[k].length):'').filter(Boolean).join(' — ');mkFileSheet('mekanizm-backup-'+isoToday()+'.json',bl,n);return}if(await saveFile('mekanizm-backup-'+isoToday()+'.json',bl))toast('تم إنشاء النسخة الاحتياطية')}
 function restore(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.products||!x.sales)throw 0;x.returns=x.returns||[];x.payments=x.payments||[];(x.contacts||[]).forEach(c=>{c.id=c.id||crypto.randomUUID()});x.theme=Object.assign({},DEFT,x.theme||{});db=x;save();toast('تمت استعادة النسخة')}catch{toast('الملف غير صالح')}};r.readAsText(file)}
 async function clearOps(){
  if(!await ask('هيتم مسح كل فواتير البيع والشراء والمرتجعات والمصروفات والدفعات.\nالأصناف هتفضل زي ما هي وكمياتها هترجع زي ما كانت قبل أي عملية، ومستحقات العملاء هتتصفّر، وترقيم الفواتير يبدأ من الأول.\nيُفضّل تعمل نسخة احتياطية الأول.\nمتأكد؟','امسح العمليات'))return;
@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-69';
+const APP_VER='2026-10-17-70';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2390,6 +2390,21 @@ window.clDayPost=async function(day){try{let {data,error}=await window.mkSB.rpc(
 window.closingHistory=async function(){try{let r=await window.mkSB.from('mk_closings').select('*').order('at',{ascending:false}).limit(40);let L=r.data||[];
  openModal(`<div class="modal-head"><h2>سجل تقفيل اليومية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="table-wrap"><table class="table"><thead><tr><th>اليوم</th><th>المبيعات</th><th>المفروض</th><th>الموجود</th><th>الفرق</th><th>بواسطة</th></tr></thead><tbody>${L.map(c=>`<tr><td>${esc(String(c.day).slice(0,10))}</td><td>${money(c.data&&c.data.sales_total)}</td><td>${money(c.cash_expected)}</td><td>${c.cash_actual==null?'—':money(c.cash_actual)}</td><td style="color:${(+c.cash_diff||0)<0?'var(--danger)':'inherit'}">${c.cash_diff==null?'—':money(c.cash_diff)}</td><td>${esc(c.by_name)}</td></tr>`).join('')||'<tr><td colspan="6"><div class="empty">لسه مفيش</div></td></tr>'}</tbody></table></div>`)}catch(e){toast('محتاج نت')}};
 
+/* 📤 تسليم ملف للمستخدم: مشاركة (آيفون) أو تنزيل أو فتح — بزرار جديد عشان آيفون يسمح */
+window.mkFileSheet=function(name,blob,info){
+ let url=URL.createObjectURL(blob),kb=Math.round(blob.size/1024),can=false;try{can=!!(navigator.canShare&&navigator.canShare({files:[new File([blob],name,{type:blob.type||'application/json'})]}))}catch(e){}
+ openModal(`<div class="modal-head"><h2>✔ الملف جاهز</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div style="line-height:2;font-size:15px"><b>${esc(name)}</b><br>الحجم: <b>${blob.size<1024?blob.size+' بايت':kb>1024?(kb/1024).toFixed(1)+' ميجا':kb+' كيلو'}</b>${info?'<br>'+info:''}</div>
+ ${blob.size<50?'<div style="color:var(--danger);font-weight:800;margin:8px 0">⚠️ الملف فاضي تقريبًا — مش هيفيد. جرّب تاني بعد ما السيستم يخلّص تحميل.</div>':''}
+ <div class="modal-foot" style="flex-direction:column;gap:8px">${can?'<button type="button" class="primary" id="mkFsShare" style="width:100%;min-height:54px">📤 مشاركة / حفظ في الملفات</button>':''}<a id="mkFsDl" class="secondary" href="${url}" download="${esc(name)}" style="display:block;text-align:center;padding:16px;border-radius:12px;font-weight:800;text-decoration:none">⬇️ تنزيل الملف</a><button type="button" class="secondary" id="mkFsOpen" style="width:100%;min-height:50px">👁 فتح في نافذة جديدة</button></div>`);
+ let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[new File([blob],name,{type:blob.type||'application/json'})],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش — جرّب «تنزيل الملف»')}};
+ document.getElementById('mkFsOpen').onclick=()=>{window.open(url,'_blank')}};
+const PTK='mk_prtype';
+window.mkPrintAsk=function(id){let d='';try{d=localStorage.getItem(PTK)||''}catch(e){}
+ openModal(`<div class="modal-head"><h2>🖨️ نوع الطباعة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div style="display:flex;flex-direction:column;gap:10px"><button type="button" id="mkPrR" class="${d==='rcpt'?'primary':'secondary'}" style="min-height:64px;font-size:18px;font-weight:800">🧾 إيصال حراري (80 مم)</button><button type="button" id="mkPrA" class="${d==='a4'?'primary':'secondary'}" style="min-height:64px;font-size:18px;font-weight:800">📄 فاتورة A4</button></div>
+ <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px"><input type="checkbox" id="mkPrM" checked style="width:24px;height:24px"> افتكر اختياري على الجهاز ده</label>`);
+ const go=k=>{try{if(document.getElementById('mkPrM').checked)localStorage.setItem(PTK,k)}catch(e){}closeModal();setTimeout(()=>k==='a4'?window.printInvoiceA4(id):window.printReceipt(id),50)};
+ document.getElementById('mkPrR').onclick=()=>go('rcpt');document.getElementById('mkPrA').onclick=()=>go('a4')};
 /* ---------- 🧾 إيصال حراري 80 مم ---------- */
 window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;let G=invGroup('sale',r.no||r.id),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),T=sumBy(G,x=>x.total),P=sumBy(G,paidOf),R=sumBy(G,x=>x.rem||0);
  printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:80mm auto;margin:0}body{margin:0;width:80mm}*{font-family:Cairo,Tahoma,sans-serif;color:#000}.w{width:72mm;margin:0 auto;padding:3mm 0;font-size:11pt}.c{text-align:center}.b{font-weight:800}hr{border:0;border-top:1px dashed #000;margin:2mm 0}table{width:100%;border-collapse:collapse}td{padding:1mm 0;vertical-align:top}.l{text-align:left;white-space:nowrap}.sm{font-size:9pt}.big{font-size:14pt}</style></head><body><div class="w">
@@ -2400,7 +2415,7 @@ window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;
  <table>${SH?`<tr><td>إجمالي الأصناف</td><td class="l">${money(T-SH)}</td></tr><tr><td>النقل</td><td class="l">${money(SH)}</td></tr>`:''}<tr class="b big"><td>الإجمالي</td><td class="l">${money(T)}</td></tr><tr><td>المدفوع</td><td class="l">${money(P)}</td></tr>${R>0?`<tr class="b"><td>المتبقي</td><td class="l">${money(R)}</td></tr>`:''}</table><hr>
  <div class="c sm">${r.by?'سجّلها: '+esc(r.by)+'<br>':''}شكراً لتعاملكم معنا</div></div><script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`)};
 const _oim2=openInvoiceModal;
-openInvoiceModal=function(id){_oim2(id);let o=document.getElementById('invOut');if(o)o.insertAdjacentHTML('beforebegin',`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="printReceipt('${id}')">🧾 إيصال حراري (80 مم)</button></div>`)};
+openInvoiceModal=function(id){_oim2(id);let o=document.getElementById('invOut');if(o)o.insertAdjacentHTML('beforebegin',`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="mkPrintAsk('${id}')">🖨️ طباعة (إيصال أو A4)</button></div>`)};
 
 /* ---------- 💸 المصروفات: تاريخ لكل مصروف + اقتراح المصروفات اللي اتكتبت قبل كده ---------- */
 const arD=iso=>{let [y,m,d]=String(iso).split('-');return new Date(+y,+m-1,+d).toLocaleDateString('ar-EG')};
@@ -2465,7 +2480,7 @@ window.printInvoiceA4=function(id){let r=db.sales.find(x=>x.id===id);if(!r)retur
 window.printPurchase=function(id){let r=db.purchases.find(x=>x.id===id);if(!r)return;let G=invGroup('purchase',r.gid||r.id),adm=isAdmin(),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total);
  let rows=GI.map(x=>adm?[esc(x.product),x.qty,money(x.price),money(x.total)]:[esc(x.product),x.qty]);
  printA4('فاتورة شراء '+(r.pno||''),`<p>المورد: <b>${esc(r.person||'—')}</b> &nbsp;&nbsp; التاريخ: <b>${esc(r.date)}</b>${r.by?' &nbsp;&nbsp; سجّلها: '+esc(r.by):''}</p>`+tbl(adm?['الصنف','العدد','السعر','الإجمالي']:['الصنف','العدد'],rows)+(adm?`${SH?`<p>مصاريف النقل: ${money(SH)}</p>`:''}<p><b>الإجمالي: ${money(sumBy(G,x=>x.total))}</b> — المدفوع: ${money(sumBy(G,paidOf))} — المتبقي: ${money(sumBy(G,x=>x.rem||0))}</p>`:''))};
-const _oim3=openInvoiceModal;openInvoiceModal=function(id){_oim3(id);let b=document.querySelector('#modal [onclick^="printReceipt"]');if(b)b.insertAdjacentHTML('beforebegin',`<button class="secondary" style="flex:1" onclick="printInvoiceA4('${id}')">🖨️ طباعة A4</button>`)};
+const _oim3=openInvoiceModal;openInvoiceModal=function(id){_oim3(id);};
 const _opv3=openPurchaseView;openPurchaseView=function(id){_opv3(id);let m=document.querySelector('#modal');if(m)m.insertAdjacentHTML('beforeend',`<div class="btnrow" style="margin-top:10px"><button class="secondary" onclick="printPurchase('${id}')">🖨️ طباعة</button></div>`)};
 setTimeout(function(){let rt=document.querySelector('#reports .title-row');if(rt)rt.insertAdjacentHTML('beforeend','<button class="secondary" onclick="printReports()">🖨️ طباعة التقرير</button>');
  let pt=document.querySelector('#products .title-row .btnrow');if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary" onclick="printProducts()">🖨️ طباعة</button>');
@@ -6690,7 +6705,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var lay='';try{var r=pack(num(s.W),num(s.H),ps,num(s.gap));lay=r.sheets.map(function(sh,i){return sheetSvg(num(s.W),num(s.H),sh,i)}).join('')}catch(e){}
   return '<p style="margin:8px 0 2px"><b>الاستانلس</b></p><table><tr><td>اللوح</td><td>'+esc(s.W)+'×'+esc(s.H)+' سم</td><td>عدد الألواح</td><td>'+esc(s.sheets)+'</td></tr>'+
    '<tr><td>السمك</td><td>'+esc(s.thick||'-')+' مم</td><td>النوع / التشطيب</td><td>'+esc(s.grade||'')+' / '+esc(s.finish||'')+'</td></tr>'+rows+'</table>'+
-   '<p style="margin:8px 0 2px"><b>رسم القطع للصنايعي (مقاسات بالسنتي)</b></p><div>'+imgs+'</div><p style="margin:8px 0 2px"><b>تقطيع الألواح</b></p><div>'+lay+'</div>';
+   '<p style="margin:8px 0 2px"><b>رسم القطع للصنايعي (مقاسات بالسنتي)</b></p><div>'+imgs+'</div>'+(roll?'':'<p style="margin:8px 0 2px"><b>تقطيع الألواح</b></p><div>'+lay+'</div>');
  }
  /* قراءة رسالة واتساب: مقاسات (60×120) وعدد وشكل */
  function parseMsg(t){
@@ -8119,7 +8134,6 @@ window.mkUi={set:set,get:get};
   ['wkOff','الفضل','الفضلات والقص',function(){window.mkWk&&mkWk.go('off')},1],
   ['wkRods','حاسبة الأعواد','الدرف هتاخد كام عود',function(){window.mkWk&&mkWk.go('rods')},1],
   ['wkDisp','العرض','بضاعة العرض',function(){window.mkWk&&mkWk.go('disp')},1],
-  ['wkExp','مصاريف المعرض','المطبخ والدريسنج والأرفف والمخزن',function(){window.mkWk&&mkWk.go('exp')},1],
   ['products','الأصناف والمخزون','بحث ورصيد وأسعار',function(){showPage('products')}],
   ['contacts','العملاء والموردين','الحسابات والأرصدة',function(){showPage('contacts')}],
   ['debts','الديون والتذكير','مين عليه فلوس',function(){showPage('debts')},1],
@@ -9273,13 +9287,14 @@ const SB=()=>window.mkSB,adm=()=>!!(window.mkT_user&&window.mkT_user.role==='adm
 let L=null,busy=false;
 async function list(){try{let r=await SB().from('mk_backups').select('day,made_at').order('day',{ascending:false}).limit(31);if(r.error)throw r.error;L=r.data||[]}catch(e){L=[]}paint()}
 async function now(){if(busy)return;busy=true;paint();try{let r=await SB().rpc('mk_backup_now');if(r.error)throw r.error;toast('✔ اتعملت نسخة احتياطية')}catch(e){toast('⚠️ النسخة ماتعملتش: '+String(e.message||e).slice(0,100))}busy=false;await list()}
-async function dl(day){try{toast('جاري تجهيز النسخة...');let r=await SB().from('mk_backups').select('data').eq('day',day).maybeSingle();if(r.error||!r.data)throw r.error||new Error('مش موجودة');await saveFile('mekanizm-backup-'+day+'.json',new Blob([JSON.stringify(r.data.data)],{type:'application/json'}));toast('اتنزلت')}catch(e){toast('⚠️ '+String(e.message||e).slice(0,100))}}
+async function dl(day){try{toast('جاري تجهيز النسخة...');let r=await SB().from('mk_backups').select('data').eq('day',day).maybeSingle();if(r.error||!r.data)throw r.error||new Error('مش موجودة');let D=r.data.data||{};D.extra=D.extra||{};for(const t of ['mk_field_orders','mk_van_moves','mk_van_close','mk_partners','mk_partner_moves','mk_vehicles','mk_vehicle_log','mk_wanted','mk_scan_items']){try{let q=await SB().from(t).select('*').limit(50000);if(!q.error&&q.data)D.extra[t]=q.data}catch(e){}}let tb=Object.keys(D).filter(k=>Array.isArray(D[k])),cnt=tb.reduce((a,k)=>a+D[k].length,0);mkFileSheet('mekanizm-backup-'+day+'.json',new Blob([JSON.stringify(D)],{type:'application/json'}),tb.length+' جدول — '+cnt.toLocaleString('ar-EG')+' سجل + جداول إضافية: '+Object.keys(D.extra).length);0}catch(e){toast('⚠️ '+String(e.message||e).slice(0,100))}}
 function paint(){let host=$('settings');if(!host||!adm())return;let c=$('mkBkCard');if(!c){c=document.createElement('div');c.id='mkBkCard';c.className='card';c.style.marginTop='14px';host.appendChild(c)}
  let last=L&&L[0],age=last?Math.round((Date.now()-new Date(last.made_at))/864e5):null;
  c.innerHTML=`<h3 style="margin:0 0 8px">💾 النسخ الاحتياطية</h3><div style="line-height:1.9;color:var(--muted);font-size:14px">${L==null?'جاري التحميل...':last?`آخر نسخة: <b style="color:${age>2?'var(--danger)':'var(--green)'}">${esc(last.day)}</b> (${age<1?'النهاردة':'من '+age+' يوم'}). السيستم بيعمل نسخة تلقائي كل يوم أول ما تفتحه، وبيحتفظ بآخر ٣٠ يوم.`:'مفيش نسخ لسه.'}</div>
  <button type="button" id="mkBkNow" class="primary" style="width:100%;padding:15px;margin:10px 0" ${busy?'disabled':''}>${busy?'جاري...':'نسخة احتياطية دلوقتي'}</button>
  ${(L||[]).slice(0,10).map(x=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed var(--border)"><span>${esc(x.day)} <small style="color:var(--muted)">${new Date(x.made_at).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</small></span><button type="button" data-bk="${esc(x.day)}" class="secondary" style="padding:9px 14px;width:auto">⬇️ تنزيل</button></div>`).join('')}
- <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8">استرجاع نسخة بيتم بمساعدتنا عشان مايمسحش شغل جديد بالغلط.</div>`;
+ <label class="secondary" style="display:block;text-align:center;padding:14px;border-radius:12px;margin-top:10px;font-weight:800;cursor:pointer">📂 فحص ملف نسخة (قبل الاسترجاع)<input type="file" id="mkBkF" accept=".json,application/json" style="display:none"></label><div id="mkBkR" style="margin-top:8px;line-height:1.9;font-size:14px"></div><div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.8">الفحص بيعمل نسخة أمان الأول ويقولك إيه جوه الملف. الاسترجاع الفعلي بيتم معايا عشان مايمسحش شغل جديد بالغلط.</div>`;
+ let f=$('mkBkF');if(f)f.onchange=async()=>{let o=$('mkBkR'),file=f.files[0];if(!file)return;o.textContent='جاري الفحص...';try{let D=JSON.parse(await file.text()),tb=Object.keys(D).filter(k=>Array.isArray(D[k])),ex=D.extra?Object.keys(D.extra):[];if(!tb.length)throw new Error('الملف مش نسخة ميكانيزم');try{await SB().rpc('mk_backup_now')}catch(e){}o.innerHTML='✔ الملف سليم: '+tb.map(k=>k+' ('+D[k].length+')').join('، ')+(ex.length?'<br>+ جداول إضافية: '+ex.map(k=>k+' ('+D.extra[k].length+')').join('، '):'')+'<br>اتعملت نسخة أمان من الوضع الحالي قبل أي استرجاع.'}catch(e){o.innerHTML='<span style="color:var(--danger)">⚠️ '+esc(String(e.message||e))+'</span>'}};
  let b=$('mkBkNow');if(b)b.onclick=now;c.querySelectorAll('[data-bk]').forEach(x=>x.onclick=()=>dl(x.dataset.bk))}
 /* نسخة يومية تلقائية (مرة في اليوم من أول جهاز مدير يفتح) */
 async function auto(){if(!adm()||!SB()||!window.mkT)return;try{let k='mk_bk_day',t=isoToday();if(localStorage.getItem(k)===t)return;let r=await SB().from('mk_backups').select('day').order('day',{ascending:false}).limit(1);if(r.error)return;if(!r.data||!r.data[0]||r.data[0].day<t){let x=await SB().rpc('mk_backup_now');if(x.error)return}localStorage.setItem(k,t)}catch(e){}}
