@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-77';
+const APP_VER='2026-10-17-78';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3595,7 +3595,9 @@ if(!window.MK_T)return;
 const sbx=()=>window.mkSB;
 const TRANSIENT=/high demand|overload|unavailable|503|502|500|429|quota|rate.?limit|try again|temporar|timeout|timed out|fetch|network|load failed|internal|deadline|ECONN|abort/i;
 const BACK=[1,2,4,8,15,30,30,60,60,120,180,240];   // دقايق بين كل محاولة والتانية
-let SC=[],busyW=false,WAIT=null;
+let SC=[],busyW=false,WAIT=null,SCTAB='wait';const DUPS=new Set();
+window.mkScanTab=k=>{SCTAB=k;window.mkScanList()};
+window.mkScanGoInv=pn=>{let r=(db.purchases||[]).find(x=>x.pno===pn);if(r&&typeof openPurchaseView==='function')openPurchaseView(r.id);else{showPage('purchases');toast('الفاتورة '+pn+' في المشتريات')}};
 const LOCAL=new Map();
 const loadJS=src=>new Promise((res,rej)=>{if(document.querySelector('script[src="'+src+'"]'))return res();let s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('مكتبة مااتحملتش — اتأكد من النت'));document.head.appendChild(s)});
 const busyEl=()=>document.getElementById('ivBusy');
@@ -3661,26 +3663,36 @@ async function work(job){
 
 /* ---------- القايمة ---------- */
 async function refresh(){if(!sbx()||!window.mkT_user)return;
- try{let {data,error}=await sbx().from('mk_scans').select('*').order('created_at',{ascending:false}).limit(60);if(error)throw error;SC=(data||[]).filter(x=>x.status!=='used')}catch(e){SC=[]}
+ try{let {data,error}=await sbx().from('mk_scans').select('*').order('created_at',{ascending:false}).limit(60);if(error)throw error;SC=(data||[])}catch(e){SC=[]}
  mkScanList()}
 function rowHTML(s){let n=(s.result&&s.result.items||[]).length,who=(s.result&&s.result.supplier)||s.supplier;
- let st=s.status==='done'?`✅ اتقرت — ${n} بند`:s.status==='failed'?`❌ ماتقريتش: ${esc(s.error||'')}`:s.status==='working'?'⏳ بتتقري دلوقتي…':`⏳ مستنية${s.attempts?` — المحاولة ${s.attempts+1} ${inMin(s.next_at)?'بعد '+inMin(s.next_at)+' دقيقة':'دلوقتي'}`:''}${s.error?` <span style="color:#8a4b00">(${esc(String(s.error).slice(0,60))})</span>`:''}`;
+ let used=s.status==='used',pn=s.result&&s.result.pno,dupe=DUPS.has(s.id);
+ let st=used?(pn?`🧾 اتعملت فاتورة <b>${esc(pn)}</b>`:'🧾 اتحولت لفاتورة'):dupe?'♻️ مكررة — نفس المورد ونفس رقم الفاتورة':s.status==='done'?`✅ اتقرت — ${n} بند`:s.status==='failed'?`❌ ماتقريتش: ${esc(s.error||'')}`:s.status==='working'?'⏳ بتتقري دلوقتي…':`⏳ مستنية${s.attempts?` — المحاولة ${s.attempts+1} ${inMin(s.next_at)?'بعد '+inMin(s.next_at)+' دقيقة':'دلوقتي'}`:''}${s.error?` <span style="color:#8a4b00">(${esc(String(s.error).slice(0,60))})</span>`:''}`;
  return `<div class="scl ${s.status}"><div style="min-width:0;flex:1"><b>📄 فاتورة${who?' — '+esc(who):''}${(s.pages||[]).length>1?` (${s.pages.length} صفحات)`:''}</b><small>${st}<br>${ago(s.created_at)}${s.created_by?' • '+esc(s.created_by):''}</small></div>
-  <div class="btnrow">${s.status==='done'?`<button type="button" class="primary" onclick="mkScanOpen('${s.id}')">👀 راجعها</button>`:''}${s.status==='failed'||s.status==='pending'?`<button type="button" class="secondary" onclick="mkScanRetry('${s.id}')">🔄 حاول دلوقتي</button>`:''}<button type="button" class="secondary danger" onclick="mkScanDel('${s.id}')">🗑️</button></div></div>`}
-window.mkScanList=function(){let L=SC,done=L.filter(s=>s.status==='done').length,wait=L.filter(s=>s.status==='pending'||s.status==='working').length;
+  <div class="btnrow">${used&&pn?`<button type="button" class="primary" onclick="mkScanGoInv('${esc(pn)}')">🧾 افتح الفاتورة</button>`:''}${s.status==='done'?`<button type="button" class="primary" onclick="mkScanOpen('${s.id}')">👀 راجعها</button>`:''}${s.status==='failed'||s.status==='pending'?`<button type="button" class="secondary" onclick="mkScanRetry('${s.id}')">🔄 حاول دلوقتي</button>`:''}<button type="button" class="secondary danger" onclick="mkScanDel('${s.id}')">🗑️</button></div></div>`}
+window.mkScanList=function(){let L=SC.filter(s=>s.status!=='used'),done=L.filter(s=>s.status==='done').length,wait=L.filter(s=>s.status==='pending'||s.status==='working').length;
+ DUPS.clear();{let seen=new Map();SC.slice().reverse().forEach(s=>{let r=s.result||{},no=String(r.invoice_no||'').trim(),k=((r.supplier||s.supplier||'').trim())+'|'+no;if(!no)return;if(seen.has(k)&&s.status!=='failed')DUPS.add(s.id);else seen.set(k,s.id)})}
  let html=L.length?`<div style="margin-top:6px"><b>📥 فواتير للمراجعة</b>${L.map(rowHTML).join('')}</div>`:'';
  let q=document.getElementById('ivQ');if(q)q.innerHTML=html;
- let pg=document.getElementById('scPage');if(pg)pg.innerHTML=L.length?`<div class="card" style="margin-bottom:12px">${html}</div>`:'';
+ let nUsed=SC.filter(s=>s.status==='used').length,nErr=SC.filter(s=>s.status==='failed').length,LT=SCTAB==='used'?SC.filter(s=>s.status==='used'):SCTAB==='all'?SC:SC.filter(s=>s.status!=='used');
+ let tabs=`<div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto">${[['wait','لسه ('+L.length+(nErr?' • '+nErr+' خطأ':'')+')'],['used','اتحوّلت ('+nUsed+')'],['all','كلها ('+SC.length+')']].map(([k,l])=>`<button type="button" class="${SCTAB===k?'primary':'secondary'}" style="flex:none;padding:9px 14px;border-radius:99px" onclick="mkScanTab('${k}')">${l}</button>`).join('')}</div>`;
+ let pg=document.getElementById('scPage');if(pg)pg.innerHTML=SC.length?`<div class="card" style="margin-bottom:12px"><b>📥 قراءة الفواتير بالصورة</b>${tabs}${LT.length?LT.map(rowHTML).join(''):'<div class="empty">مفيش فواتير هنا.</div>'}</div>`:'';
  let b=document.getElementById('scBanner');if(b){b.style.display=done?'':'none';b.innerHTML=`📥 عندك <b>${done}</b> فاتورة شراء اتقرت ومستنية مراجعتك${wait?` • و${wait} بتتقري`:''} — اضغط للمراجعة`}};
 function openScan(id,res){if(!document.getElementById('txLines')||TTYPE!=='purchase')openTransaction('purchase');
  let s=SC.find(x=>x.id===id),sup=document.getElementById('txPerson');if(s&&sup&&!sup.value.trim()&&s.supplier)sup.value=s.supplier;
  window.ivShow(res||(s&&s.result)||{},id)}
 window.mkScanOpen=id=>openScan(id);
-window.mkScanUsed=async function(id){try{await fin(id,'used',null,'',0);let s=SC.find(x=>x.id===id);if(s&&(s.pages||[]).length)await sbx().storage.from('invoice-scans').remove(s.pages)}catch(e){}refresh()};
+window.mkScanUsed=async function(id){window.__scanJob=id;try{let s0=SC.find(x=>x.id===id);await fin(id,'used',Object.assign({},(s0&&s0.result)||{},{used_at:new Date().toISOString()}),'',0);let s=SC.find(x=>x.id===id);if(s&&(s.pages||[]).length)await sbx().storage.from('invoice-scans').remove(s.pages)}catch(e){}refresh()};
 window.mkScanRetry=async function(id){try{let {error}=await sbx().from('mk_scans').update({status:'pending',attempts:0,error:'',next_at:new Date().toISOString()}).eq('id',id);if(error)throw error;toast('⏳ بحاول تاني…');await refresh();tick()}catch(e){toast(errTxt(e))}};
 window.mkScanDel=async function(id){if(!await ask('حذف الفاتورة دي من الطابور؟','حذف','رجوع'))return;let s=SC.find(x=>x.id===id);
  try{await sbx().from('mk_scans').delete().eq('id',id);if(s&&(s.pages||[]).length)await sbx().storage.from('invoice-scans').remove(s.pages)}catch(e){toast(errTxt(e))}LOCAL.delete(id);refresh()};
 
+/* بعد حفظ فاتورة الشراء: اربط الصورة برقم الفاتورة + توست فيه لينك */
+{const _stS=submitTransaction;submitTransaction=async function(ev,type){const job=window.__scanJob,before=new Set((db.purchases||[]).map(r=>r.id));
+ const rr=await _stS.apply(this,arguments);
+ if(type==='purchase'&&job){try{const row=(db.purchases||[]).find(r=>!before.has(r.id));if(row&&row.pno){window.__scanJob=null;const s=SC.find(x=>x.id===job),res=Object.assign({},(s&&s.result)||{},{pno:row.pno});await sbx().from('mk_scans').update({result:res}).eq('id',job);if(s)s.result=res;window.mkScanList();
+   const t=document.createElement('div');t.style.cssText='position:fixed;left:12px;right:12px;bottom:16px;z-index:99999;background:#0b5b2b;color:#fff;border-radius:14px;padding:14px;font-size:16px;text-align:center';t.innerHTML='✔ اتعملت فاتورة '+esc(row.pno)+' — <u>افتحها</u>';t.onclick=()=>{t.remove();mkScanGoInv(row.pno)};document.body.appendChild(t);setTimeout(()=>t.remove(),9000)}}catch(e){}}
+ return rr}}
 /* ---------- أماكن الظهور ---------- */
 (function(){let pt=document.querySelector('#purchases .title-row');if(pt)pt.insertAdjacentHTML('afterend','<div id="scPage"></div>');
  let ban=document.getElementById('woBanner');if(ban)ban.insertAdjacentHTML('beforebegin','<button id="scBanner" onclick="showPage(\'purchases\')" style="display:none;width:100%;margin-bottom:14px;background:#eef6ff;color:#0b4a8b;border:1px solid #9cc3ef;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
