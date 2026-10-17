@@ -725,7 +725,7 @@ function openTransaction(type){let isSale=type==='sale';TTYPE=type;TXN=0;paidTou
  <div class="field full"><label>البيان</label><input id="txNote" placeholder="ملاحظات اختيارية"></div>
  </div><div class="modal-foot"><button class="primary">حفظ العملية</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`);addLine()}
 function addLine(pid){let n=++TXN,d=document.createElement('div');d.className='txl';d.style.cssText='border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:8px';
- d.innerHTML=`<select class="pline" id="txP${n}">${prodsCo().map(p=>`<option value="${p.id}">${esc(p.name)} — ${p.qty} ${p.unit}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:6px"><input class="lq" type="number" min="0.01" step="0.01" placeholder="الكمية" oninput="updRem()"><input class="lp" type="number" min="0" step="0.01" placeholder="السعر" oninput="updRem()"><button type="button" class="secondary danger" onclick="this.closest('.txl').remove();updRem()">✕</button></div>`;
+ d.innerHTML=`<select class="pline" id="txP${n}">${prodsCo().map(p=>`<option value="${p.id}">${esc(p.name)} — ${p.qty} ${p.unit}</option>`).join('')}</select><div style="display:flex;gap:6px;margin-top:6px"><input class="lq" type="number" min="0.001" step="any" placeholder="الكمية" oninput="updRem()"><input class="lp" type="number" min="0" step="0.01" placeholder="السعر" oninput="updRem()"><button type="button" class="secondary danger" onclick="this.closest('.txl').remove();updRem()">✕</button></div>`;
  document.getElementById('txLines').appendChild(d);let s=d.querySelector('select');
  s.addEventListener('change',()=>{let p=db.products.find(x=>x.id===s.value);if(p){d.querySelector('.lp').value=TTYPE==='sale'?p.price:p.cost;updRem()}});
  enhanceModal();if(pid){s.value=pid;s.dispatchEvent(new Event('change'))}return d}
@@ -774,7 +774,7 @@ function openTransaction(type){let isSale=type==='sale';TTYPE=type;paidTouched=f
 function addItem(pid,nm){let ex=pid==='new'?null:document.querySelector(`#txLines .txl[data-pid="${pid}"]`);if(ex){let q=ex.querySelector('.lq');q.value=(+q.value||0)+1;updRem();return}
  let p=pid==='new'?{name:nm,qty:0,unit:'قطعة',price:0,cost:0}:db.products.find(x=>x.id===pid);if(!p)return;let d=document.createElement('div'),sale=TTYPE==='sale';d.className='txl';d.dataset.pid=pid;d.dataset.name=nm||'';d.style.cssText='border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff';
  d.innerHTML=`<div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(p.name)}</b><button type="button" class="secondary danger" style="padding:2px 10px" onclick="this.closest('.txl').remove();updRem()">✕</button></div><small style="color:#7a8a8f">المتاح: ${p.qty} ${esc(p.unit)}</small>
- <div style="display:flex;gap:10px;align-items:flex-end;margin-top:8px;flex-wrap:wrap"><div><small>العدد</small><div style="display:flex;gap:4px"><button type="button" class="secondary" style="width:42px;height:44px;font-size:22px" onclick="stepQ(this,-1)">−</button><input class="lq" data-mic="1" type="number" min="0.01" step="0.01" value="1" style="width:64px;text-align:center" oninput="updRem()"><button type="button" class="secondary" style="width:42px;height:44px;font-size:22px" onclick="stepQ(this,1)">＋</button></div></div>
+ <div style="display:flex;gap:10px;align-items:flex-end;margin-top:8px;flex-wrap:wrap"><div><small>العدد</small><div style="display:flex;gap:4px"><button type="button" class="secondary" style="width:42px;height:44px;font-size:22px" onclick="stepQ(this,-1)">−</button><input class="lq" data-mic="1" type="number" min="0.001" step="any" value="1" style="width:64px;text-align:center" oninput="updRem()"><button type="button" class="secondary" style="width:42px;height:44px;font-size:22px" onclick="stepQ(this,1)">＋</button></div></div>
  <div style="flex:1;min-width:90px"><small>${sale?'سعر البيع':'سعر الشراء'}</small><input class="lp" data-mic="1" type="number" min="0" step="0.01" value="${sale?p.price:p.cost}" oninput="updRem()" style="width:100%"></div><div><small>الإجمالي</small><div class="lt" style="font-weight:700;padding:10px 0">0</div></div></div>`;
  document.getElementById('txLines').appendChild(d);updRem()}
 function stepQ(b,d){let q=b.parentNode.querySelector('.lq');q.value=Math.max(1,(+q.value||0)+d);updRem()}
@@ -1100,7 +1100,7 @@ function cashNow(){let rt=ty=>db.returns.filter(r=>r.type===ty);
  return sumBy(db.sales,paidOf)+sumBy(db.payments,x=>x.amount)-sumBy(rt('sale'),x=>x.total)-(sumBy(db.purchases,paidOf)-sumBy(rt('purchase'),x=>x.total))-sumBy(db.expenses,x=>x.amount)-sumBy(sp(),x=>x.amount)+sumBy((window.mkPM||[]).filter(x=>x.kind==='capital'),x=>x.amount)-sumBy((window.mkPM||[]).filter(x=>x.kind!=='capital'),x=>x.amount)}
 
 /* تحذير جوه الفورم: أول ضغطة حفظ تحذر والتانية تكمل */
-function warnOk(list){let f=document.querySelector('#modal form'),w=document.getElementById('txWarn');
+function warnOk(list){try{toast('⚠️ الرصيد هيبقى بالسالب: '+list.slice(0,3).join(' • '))}catch(e){}return true;let f=document.querySelector('#modal form'),w=document.getElementById('txWarn');
  if(!w&&f){w=document.createElement('div');w.id='txWarn';w.className='field full';f.querySelector('.form').appendChild(w)}
  if(f&&f.dataset.ok==='1')return true;if(f)f.dataset.ok='1';
  if(w){w.innerHTML=`<div style="background:#fff4e5;border:1px solid #f0b46a;color:#8a4b00;border-radius:12px;padding:12px;line-height:1.9">⚠️ <b>الكمية أكبر من المخزون:</b><br>${list.map(esc).join('<br>')}<br>لو هتكمل، المخزون هيتخصم ويبقى بالسالب. <b>اضغط حفظ تاني للتأكيد.</b></div>`;w.scrollIntoView({block:'nearest'})}
@@ -1196,8 +1196,10 @@ function renderInvLists(){
 /* فاتورة الـ PDF: الأصناف + سطر النقل */
 function srcBadge(r){try{let n=String(r.note||''),m=n.match(/أوردر ميداني\s+(\S+)/),hy=window.mkCoOn&&typeof coOf==='function'&&coOf(r)==='hy',mp=n.match(/المندوب:\s*([^—\n]+)/);if(!m&&!hy&&!mp)return '';
  return '<br>'+(hy?'<span class="badge" style="background:#ffedd5;color:#9a3412">هيدرولك</span> ':'')+(m?'<span class="badge" style="background:#e0f2fe;color:#075985">من أوردر ميداني '+esc(m[1])+'</span> ':'')+(mp?'<span class="badge" style="background:#f3e8ff;color:#6b21a8">مندوب: '+esc(mp[1].trim())+'</span>':'')}catch(e){return ''}}
+function mkIntLine(x,G){return !(+x.total)&&/خامات التجهيز/.test(String((G&&G[0]&&G[0].note)||''))}
+window.mkIntLine=mkIntLine;
 function invoiceHTML(r){
- let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),HY=isHyInv(G),T=HY?Object.assign({},db.theme,{logoInv:false,logo:'',watermark:false}):db.theme,shop=esc(HY?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')),addr=esc((HY&&coIdent('hy').addr)||(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'))+(HY&&coIdent('hy').tax?' — ض.ب: '+esc(coIdent('hy').tax):''),ph=esc(HY?(coIdent('hy').phone||''):(db.settings.phone||'')),
+ let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship&&!mkIntLine(x,G)),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),HY=isHyInv(G),T=HY?Object.assign({},db.theme,{logoInv:false,logo:'',watermark:false}):db.theme,shop=esc(HY?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')),addr=esc((HY&&coIdent('hy').addr)||(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'))+(HY&&coIdent('hy').tax?' — ض.ب: '+esc(coIdent('hy').tax):''),ph=esc(HY?(coIdent('hy').phone||''):(db.settings.phone||'')),
  H=HY?coIdent('hy').color:T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
  wm=T.watermark&&T.logo?`<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`:'';
@@ -1650,7 +1652,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-80';
+const APP_VER='2026-10-17-81';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2408,7 +2410,7 @@ window.mkPrintAsk=function(id){let d='';try{d=localStorage.getItem(PTK)||''}catc
  const go=k=>{try{if(document.getElementById('mkPrM').checked)localStorage.setItem(PTK,k)}catch(e){}closeModal();setTimeout(()=>k==='a4'?window.printInvoiceA4(id):window.printReceipt(id),50)};
  document.getElementById('mkPrR').onclick=()=>go('rcpt');document.getElementById('mkPrA').onclick=()=>go('a4')};
 /* ---------- 🧾 إيصال حراري 80 مم ---------- */
-window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;let G=invGroup('sale',r.no||r.id),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total),T=sumBy(G,x=>x.total),P=sumBy(G,paidOf),R=sumBy(G,x=>x.rem||0);
+window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;let G=invGroup('sale',r.no||r.id),GI=G.filter(x=>!x.ship&&!(window.mkIntLine&&mkIntLine(x,G))),SH=sumBy(G.filter(x=>x.ship),x=>x.total),T=sumBy(G,x=>x.total),P=sumBy(G,paidOf),R=sumBy(G,x=>x.rem||0);
  printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:80mm auto;margin:0}body{margin:0;width:80mm}*{font-family:Cairo,Tahoma,sans-serif;color:#000}.w{width:72mm;margin:0 auto;padding:3mm 0;font-size:11pt}.c{text-align:center}.b{font-weight:800}hr{border:0;border-top:1px dashed #000;margin:2mm 0}table{width:100%;border-collapse:collapse}td{padding:1mm 0;vertical-align:top}.l{text-align:left;white-space:nowrap}.sm{font-size:9pt}.big{font-size:14pt}</style></head><body><div class="w">
  ${!isHyInv(G)&&db.theme&&db.theme.logo?`<div class="c"><img src="${db.theme.logo}" style="max-width:40mm;max-height:18mm"></div>`:''}
  <div class="c b big">${esc(isHyInv(G)?coIdent('hy').name:(db.settings.companyName||'ميكانيزم'))}</div>${isHyInv(G)?(coIdent('hy').addr?`<div class="c sm">${esc(coIdent('hy').addr)}</div>`:''):(db.settings.address?`<div class="c sm">${esc(db.settings.address)}</div>`:'')}${(isHyInv(G)?coIdent('hy').phone:db.settings.phone)?`<div class="c sm" dir="ltr">${esc(isHyInv(G)?coIdent('hy').phone:db.settings.phone)}</div>`:''}<hr>
@@ -5379,19 +5381,20 @@ let K=null,ED=null,SALE=null;
 async function load(){try{const r=await SBc().from('mk_settings').select('value').eq('key','kits').maybeSingle();K=Array.isArray(r.data&&r.data.value)?r.data.value:[]}catch(e){K=[]}return K}
 async function persist(){const r=await SBc().from('mk_settings').upsert([{key:'kits',value:K,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error){tst('ماتحفظش: '+(r.error.message||''));return false}return true}
 /* ---- الحسابات ---- */
-const need=(s,n)=>s.mode==='fixed'?(+s.qty||0):(+s.qty||0)/(+s.per||1)*n;           // الكمية المطلوبة من وحدة المخزن
+const need=(s,n,m)=>s.mode==='fixed'?(+s.qty||0):s.mode==='len'?(m!=null&&m!==''?num(m):(+s.qty||0))/(+s.ulen||1):(+s.qty||0)/(+s.per||1)*n;           // الكمية المطلوبة من وحدة المخزن (بالطول: الأمتار ÷ طول وحدة المخزن)
 const stockOf=s=>(s.products||[]).reduce((a,id)=>a+Math.max(0,+(pid(id)||{}).qty||0),0);
-function maxN(k){let m=Infinity;k.slots.forEach(s=>{const st=stockOf(s);if(s.mode==='fixed'){if(st<(+s.qty||0))m=0}else{const c=(+s.qty||0)/(+s.per||1);if(c>0)m=Math.min(m,Math.floor(r3(st/c+1e-9)))}});return m===Infinity?'∞':m}
+function maxN(k){let m=Infinity;k.slots.forEach(s=>{const st=stockOf(s);if(s.mode==='len')return;if(s.mode==='fixed'){if(st<(+s.qty||0))m=0}else{const c=(+s.qty||0)/(+s.per||1);if(c>0)m=Math.min(m,Math.floor(r3(st/c+1e-9)))}});return m===Infinity?'∞':m}
 function priceOf(k,n){let t=0;k.slots.forEach(s=>{const p=pid((s.products||[])[0]);if(p)t+=need(s,n)*(+p.price||0)});return Math.round(t)}
+function costOf(k,n){let t=0;k.slots.forEach(s=>{const p=pid((s.products||[])[0]);if(p)t+=need(s,n)*(+p.cost||0)});return Math.round(t)}
 /* ---- الشاشة ---- */
 function ensure(){if($('kits'))return;const ref=$('products');if(!ref)return;const sec=document.createElement(ref.tagName.toLowerCase());sec.id='kits';sec.className='page';ref.parentNode.appendChild(sec);
  const nav=document.querySelector('aside .nav');if(nav&&!nav.querySelector('[data-page="kits"]'))nav.insertAdjacentHTML('beforeend',`<button data-page="kits" onclick="showPage('kits')"><span style="font-size:17px;width:20px;text-align:center">🧩</span> <span>الأطقم والتركيبات</span></button>`)}
 async function render(){const box=$('kits');if(!box)return;box.innerHTML='<div style="padding:30px;text-align:center;color:#8a979c">⏳</div>';await load();
  box.innerHTML=`<div class="title-row"><div class="title"><h1>🧩 الأطقم والتركيبات</h1><p>طقم الجرار والبالتة وغيرهم: بتشتري المكوّنات لوحدها وتبيعها مع بعض، والمخزن بيتخصم من كل مكوّن لوحده</p></div><div class="btnrow"><button class="primary" onclick="mkKT.edit()">➕ طقم جديد</button></div></div>
  ${K.map((k,i)=>{const mx=maxN(k);return `<div class="kt-card"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:17px;flex:1">${H(k.name)}</b><span class="kt-chip">${k.slots.length} مكوّن</span>${k.param?`<span class="kt-chip" style="background:#fff4e0;color:#a66a00">بيتغير بـ ${H(k.param)}</span>`:''}</div>
-  <div style="margin:6px 0;font-size:14px;line-height:1.9">${k.slots.map(s=>`• <b>${H(s.label)}</b>: ${s.mode==='fixed'?fq(s.qty)+' لكل طقم':fq(s.qty)+' لكل '+(+s.per>1?s.per+' ':'')+H(k.param||'وحدة')}${(s.products||[]).length>1?` <span class="kt-chip">اختيار من ${s.products.length} صنف</span>`:`<small style="color:var(--muted)"> — ${H(lab(pid((s.products||[])[0])))}</small>`}`).join('<br>')}</div>
-  <div style="font-size:14px">المتاح يكفي ${mx==='∞'?'—':'لحد <b>'+mx+'</b> '+H(k.param||'طقم')}</div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="primary" onclick="mkKT.sell(${i})">💰 بيع طقم</button><button class="secondary" onclick="mkKT.edit(${i})">✏️ تعديل</button><button class="secondary danger" onclick="mkKT.del(${i})">🗑️</button></div></div>`}).join('')||'<div class="empty">لسه مفيش أطقم — دوس «طقم جديد». مثال: طقم جرار دولاب = عود ألمنيوم + علبة لوازم (٢ دلفة).</div>'}`}
+  <div style="margin:6px 0;font-size:14px;line-height:1.9">${k.slots.map(s=>`• <b>${H(s.label)}</b>: ${s.mode==='fixed'?fq(s.qty)+' لكل طقم':s.mode==='len'?'بالطول (افتراضي '+fq(s.qty)+' م)':fq(s.qty)+' لكل '+(+s.per>1?s.per+' ':'')+H(k.param||'وحدة')}${s.opt?' <span class="kt-chip">اختياري</span>':''}${(s.products||[]).length>1?` <span class="kt-chip">اختيار من ${s.products.length} صنف</span>`:`<small style="color:var(--muted)"> — ${H(lab(pid((s.products||[])[0])))}</small>`}`).join('<br>')}</div>
+  <div style="font-size:14px">المتاح يكفي ${mx==='∞'?'—':'لحد <b>'+mx+'</b> '+H(k.param||'طقم')}</div>${(()=>{const n=+k.def||1,pr=priceOf(k,n),co=costOf(k,n);return pr?`<div style="font-size:14px;margin-top:4px">💰 لـ ${n} ${H(k.param||'')}: السعر <b>${M(pr)}</b> — التكلفة ${M(co)} — ربحك <b style="color:#159447">${M(pr-co)}</b></div>`:''})()}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="primary" onclick="mkKT.sell(${i})">💰 بيع طقم</button><button class="secondary" onclick="mkKT.edit(${i})">✏️ تعديل</button><button class="secondary" onclick="mkKT.dup(${i})">📋 نسخ</button><button class="secondary danger" onclick="mkKT.del(${i})">🗑️</button></div></div>`}).join('')||'<div class="empty">لسه مفيش أطقم — دوس «طقم جديد». مثال: طقم جرار دولاب = عود ألمنيوم + علبة لوازم (٢ دلفة).</div>'}`}
 /* ---- محرر الطقم ---- */
 function edit(i){ED=i!=null?JSON.parse(JSON.stringify(K[i])):{name:'',param:'دلفة',def:2,slots:[{label:'',mode:'fixed',qty:1,per:1,products:[]}]};KT_ED._i=i;drawEd()}
 function drawEd(){const k=ED;
@@ -5399,10 +5402,12 @@ function drawEd(){const k=ED;
  <div class="field"><label>اسم الطقم</label><input value="${H(k.name)}" placeholder="مثلاً: طقم جرار دولاب قطاع" oninput="KT_ED.name=this.value"></div>
  <div class="kt-row"><div class="field"><label>بيتباع بعدد إيه؟</label><input value="${H(k.param)}" placeholder="دلفة" oninput="KT_ED.param=this.value"></div><div class="field"><label>العدد الافتراضي</label><input inputmode="numeric" value="${H(k.def)}" oninput="KT_ED.def=mkKT.n(this.value)||1"></div></div>
  ${k.slots.map((s,j)=>`<div class="kt-slot"><div class="kt-row" style="margin-top:0"><div style="flex:2"><label>المكوّن</label><input value="${H(s.label)}" placeholder="مثلاً: عود الألمنيوم / علبة اللوازم / البالتة" oninput="KT_ED.slots[${j}].label=this.value"></div>${k.slots.length>1?`<button class="secondary danger" style="flex:0 0 auto" onclick="KT_ED.slots.splice(${j},1);mkKT.re()">✕</button>`:''}</div>
-  <div class="kt-row"><div><label>كميته</label><select onchange="KT_ED.slots[${j}].mode=this.value;mkKT.re()"><option value="fixed" ${s.mode==='fixed'?'selected':''}>ثابتة لكل طقم</option><option value="param" ${s.mode==='param'?'selected':''}>بتتغير بعدد الـ ${H(k.param||'وحدة')}</option></select></div>
-  <div><label>${s.mode==='fixed'?'كام وحدة مخزن لكل طقم':'بياخد (وحدة مخزن)'}</label><input inputmode="decimal" value="${H(s.qty)}" oninput="KT_ED.slots[${j}].qty=mkKT.n(this.value)"></div>
+  <div class="kt-row"><div><label>كميته</label><select onchange="KT_ED.slots[${j}].mode=this.value;mkKT.re()"><option value="fixed" ${s.mode==='fixed'?'selected':''}>ثابتة لكل طقم</option><option value="param" ${s.mode==='param'?'selected':''}>بتتغير بعدد الـ ${H(k.param||'وحدة')}</option><option value="len" ${s.mode==='len'?'selected':''}>بالطول (بتكتب الأمتار وقت البيع)</option></select></div>
+  <div><label>${s.mode==='fixed'?'كام وحدة مخزن لكل طقم':s.mode==='len'?'الطول الافتراضي (متر)':'بياخد (وحدة مخزن)'}</label><input inputmode="decimal" value="${H(s.qty)}" oninput="KT_ED.slots[${j}].qty=mkKT.n(this.value)"></div>
+  ${s.mode==='len'?`<div><label>طول وحدة المخزن (متر) — 1 لو الصنف متسجل بالمتر</label><input inputmode="decimal" value="${H(s.ulen||1)}" oninput="KT_ED.slots[${j}].ulen=mkKT.n(this.value)||1"></div>`:''}
   ${s.mode==='param'?`<div><label>لكل كام ${H(k.param||'وحدة')}</label><input inputmode="numeric" value="${H(s.per)}" oninput="KT_ED.slots[${j}].per=mkKT.n(this.value)||1"></div>`:''}</div>
   ${s.mode==='param'&&(+s.per||1)>1?`<small style="color:var(--muted)">يعني الصنف ده بيتباع بالوحدة وفيه ${s.per} ${H(k.param||'وحدة')} — لو بعت واحدة بيخصم ${fq((+s.qty||0)/(+s.per||1))} وحدة</small>`:''}
+  <label style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:14px"><input type="checkbox" ${s.opt?'checked':''} onchange="KT_ED.slots[${j}].opt=this.checked" style="width:20px;height:20px"> مكوّن اختياري (ممكن الزبون مياخدوش)</label>
   <div style="margin-top:6px"><label>الأصناف المسموحة (لو أكتر من واحد: بتختار وقت البيع)</label>${(s.products||[]).map((id,x)=>`<span class="kt-chip">${H(lab(pid(id)))} <a style="cursor:pointer;color:#b33" onclick="KT_ED.slots[${j}].products.splice(${x},1);mkKT.re()">✕</a></span>`).join('')}
   <input list="ktPL" placeholder="🔎 دوّر على صنف واضغطه" style="margin-top:4px" onchange="mkKT.addP(${j},this.value);this.value=''"></div></div>`).join('')}
  <datalist id="ktPL">${P().slice(0,3000).map(p=>`<option value="${H(lab(p))}">`).join('')}</datalist>
@@ -5411,30 +5416,34 @@ function addP(j,v){const s=KT_ED.slots[j];const p=P().find(x=>lab(x)===v)||P().f
 async function save(){const k=ED;if(!k.name.trim())return tst('اكتب اسم الطقم');if(k.slots.some(s=>!(s.products||[]).length||!(+s.qty>0)))return tst('كل مكوّن لازم يبقى فيه صنف وكمية');const i=k._i;delete k._i;k.id=k.id||Date.now().toString(36);if(i!=null)K[i]=k;else K.push(k);if(await persist()){closeModal();tst('✔ اتحفظ الطقم');render()}}
 async function del(i){if(!confirm('تمسح الطقم ده؟ (الأصناف والمخزن مش هيتأثروا)'))return;K.splice(i,1);if(await persist())render()}
 /* ---- بيع طقم ---- */
-function sell(i){const k=K[i];SALE={k,n:+k.def||1,person:'',phone:'',paid:'',total:'',rows:k.slots.map(s=>(s.products||[]).length>1?[{pid:s.products[0],q:null}]:[{pid:s.products[0],q:null}])};drawSale()}
-function plan(){const S=KT_SALE,out=[];S.k.slots.forEach((s,j)=>{const req=r3(need(s,S.n)),rows=S.rows[j];
+function sell(i){const k=K[i];SALE={k,n:+k.def||1,person:'',phone:'',paid:'',total:'',off:{},len:{},extra:[],rows:k.slots.map(s=>(s.products||[]).length>1?[{pid:s.products[0],q:null}]:[{pid:s.products[0],q:null}])};drawSale()}
+function plan(){const S=KT_SALE,out=[];S.k.slots.forEach((s,j)=>{if(S.off&&S.off[j])return;const req=r3(need(s,S.n,S.len&&S.len[j])),rows=S.rows[j];
  if((s.products||[]).length<2){out.push({slot:s,pid:s.products[0],q:req,req});return}
  const typed=r=>r.q!=null&&r.q!==''&&!isNaN(parseFloat(ND(r.q))),val=r=>parseFloat(ND(r.q))||0;
  const typedSum=rows.reduce((a,r)=>a+(typed(r)?val(r):0),0),rest=Math.max(0,req-typedSum),firstBlank=rows.findIndex(r=>!typed(r));
- rows.forEach((r,x)=>{const q=typed(r)?val(r):(x===firstBlank?rest:0);out.push({slot:s,pid:r.pid,q:r3(q),req,rowIx:x})})});return out}
+ rows.forEach((r,x)=>{const q=typed(r)?val(r):(x===firstBlank?rest:0);out.push({slot:s,pid:r.pid,q:r3(q),req,rowIx:x})})});
+ (S.extra||[]).forEach(e=>{const p=pid(e.pid);if(p&&num(e.q)>0)out.push({slot:null,pid:p.id,q:r3(num(e.q)),req:0,extra:1})});return out}
 function drawSale(){const S=SALE,k=S.k,pl=plan(),mx=maxN(k);
  const lines=pl.filter(x=>x.q>0).map(x=>({p:pid(x.pid),q:x.q})),sum=lines.reduce((a,x)=>a+x.q*(+(x.p||{}).price||0),0),tot=S.total!==''?num(S.total):Math.round(sum);
  const short=[];const byP={};lines.forEach(x=>{if(x.p)byP[x.p.id]=(byP[x.p.id]||0)+x.q});Object.entries(byP).forEach(([id,q])=>{const p=pid(id);if(p&&q>(+p.qty||0)+1e-9)short.push(`${p.name}: المطلوب ${fq(q)} والمتاح ${fq(+p.qty||0)}`)});
- const sums=k.slots.map((s,j)=>{if((s.products||[]).length<2)return 0;const req=r3(need(s,S.n)),got=pl.filter(x=>x.slot===s).reduce((a,x)=>a+x.q,0);return r3(got-req)});
+ const sums=k.slots.map((s,j)=>{if((s.products||[]).length<2||S.off[j])return 0;const req=r3(need(s,S.n,S.len[j])),got=pl.filter(x=>x.slot===s).reduce((a,x)=>a+x.q,0);return r3(got-req)});
  openModal(`${head('💰 بيع '+H(k.name))}<div class="form">
  <div class="kt-row"><div class="field"><label>عدد الـ ${H(k.param||'طقم')}</label><input inputmode="numeric" value="${H(S.n)}" style="font-size:20px;font-weight:800" oninput="KT_SALE.n=mkKT.n(this.value)||1;KT_SALE.rows=KT_SALE.rows.map(r=>r.map(y=>({pid:y.pid,q:null})));mkKT.reS()"></div><div class="field"><label>المتاح يكفي</label><input readonly value="${mx==='∞'?'—':mx}"></div></div>
- ${k.slots.map((s,j)=>{const req=r3(need(s,S.n)),rows=S.rows[j],multi=(s.products||[]).length>1;
-  return `<div class="kt-slot"><b>${H(s.label)}</b> <span class="kt-chip">المطلوب ${fq(req)}</span>
+ ${k.slots.map((s,j)=>{const req=r3(need(s,S.n,S.len[j])),rows=S.rows[j],multi=(s.products||[]).length>1,off=!!S.off[j];
+  return `<div class="kt-slot" style="${off?'opacity:.55':''}"><div style="display:flex;gap:8px;align-items:center"><label style="display:flex;gap:6px;align-items:center;flex:1"><input type="checkbox" ${off?'':'checked'} style="width:22px;height:22px" onchange="KT_SALE.off[${j}]=!this.checked;mkKT.reS()"><b>${H(s.label)}</b></label><span class="kt-chip">${off?'مش ضمن البيعة':'المطلوب '+fq(req)}</span></div>
+  ${s.mode==='len'&&!off?`<div class="kt-row"><div class="field"><label>الطول (متر)</label><input inputmode="decimal" value="${H(S.len[j]!=null?S.len[j]:s.qty)}" oninput="KT_SALE.len[${j}]=this.value;mkKT.reS(1)"></div></div>`:''}
+  ${off?'':`
   ${multi?rows.map((r,x)=>`<div class="kt-row"><div style="flex:2"><select onchange="KT_SALE.rows[${j}][${x}].pid=this.value;mkKT.reS()">${s.products.map(id=>{const p=pid(id);return `<option value="${id}" ${id===r.pid?'selected':''}>${H(p?p.name:'؟')} (متاح ${fq(+(p||{}).qty||0)})</option>`}).join('')}</select></div><div><input inputmode="decimal" placeholder="${x===0&&rows.length===1?fq(req):'الكمية'}" value="${r.q==null?'':H(r.q)}" oninput="KT_SALE.rows[${j}][${x}].q=this.value;mkKT.reS(1)"></div>${rows.length>1?`<button class="secondary danger" style="flex:0 0 auto" onclick="KT_SALE.rows[${j}].splice(${x},1);mkKT.reS()">✕</button>`:''}</div>`).join('')+`<button class="secondary" style="margin-top:6px" onclick="KT_SALE.rows[${j}].push({pid:'${s.products[0]}',q:''});mkKT.reS()">➕ نوع/مقاس تاني</button>${sums[j]!==0?`<div style="color:#b33;font-weight:700;margin-top:4px">الكميات ${sums[j]>0?'زيادة':'ناقصة'} ${fq(Math.abs(sums[j]))} عن المطلوب</div>`:''}`
-  :`<div style="font-size:14px;margin-top:4px">${H(lab(pid(s.products[0])))} — هيتخصم ${fq(req)} (متاح ${fq(+(pid(s.products[0])||{}).qty||0)})</div>`}</div>`}).join('')}
+  :`<div style="font-size:14px;margin-top:4px">${H(lab(pid(s.products[0])))} — هيتخصم ${fq(req)} (متاح ${fq(+(pid(s.products[0])||{}).qty||0)})</div>`}`}</div>`}).join('')}
+ <div class="kt-slot"><b>➕ أصناف زيادة مع الطقم</b>${(S.extra||[]).map((e,x)=>`<div class="kt-row"><div style="flex:2"><input list="ktPL2" value="${H(e.lab||'')}" placeholder="🔎 صنف" onchange="mkKT.exP(${x},this.value)"></div><div><input inputmode="decimal" value="${H(e.q)}" placeholder="العدد" oninput="KT_SALE.extra[${x}].q=this.value;mkKT.reS(1)"></div><button class="secondary danger" style="flex:0 0 auto" onclick="KT_SALE.extra.splice(${x},1);mkKT.reS()">✕</button></div>`).join('')}<button class="secondary" style="margin-top:6px" onclick="KT_SALE.extra.push({pid:'',q:'1',lab:''});mkKT.reS()">➕ صنف (عجل / مقبض / غيره)</button><datalist id="ktPL2">${P().slice(0,3000).map(p=>`<option value="${H(lab(p))}">`).join('')}</datalist></div>
  ${short.length?`<div style="background:#fdecec;color:#b33;border-radius:10px;padding:8px 10px;margin:8px 0;font-weight:700">⚠️ ناقص في المخزن:<br>${short.map(H).join('<br>')}</div>`:''}
  <div class="kt-row"><div class="field"><label>اسم العميل</label><input list="ktCL" value="${H(S.person)}" oninput="KT_SALE.person=this.value"><datalist id="ktCL">${((typeof db!=='undefined'&&db.contacts)||[]).filter(c=>c.type==='عميل').slice(0,800).map(c=>`<option value="${H(c.name)}">`).join('')}</datalist></div><div class="field"><label>موبايل</label><input inputmode="tel" value="${H(S.phone)}" oninput="KT_SALE.phone=this.value"></div></div>
  <div class="kt-row"><div class="field"><label>سعر الطقم النهائي (سيبه فاضي = مجموع الأسعار ${M(Math.round(sum))})</label><input inputmode="decimal" value="${H(S.total)}" oninput="KT_SALE.total=this.value;mkKT.reS(1)"></div><div class="field"><label>المدفوع (فاضي = كله)</label><input inputmode="decimal" value="${H(S.paid)}" oninput="KT_SALE.paid=this.value"></div></div>
- <div style="font-size:20px;font-weight:900;margin:6px 0">الإجمالي: ${M(tot)}</div>
+ <div style="font-size:20px;font-weight:900;margin:6px 0">الإجمالي: ${M(tot)}</div><div style="font-size:14px;margin-bottom:6px">التكلفة: ${M(Math.round(lines.reduce((a,x)=>a+x.q*(+(x.p||{}).cost||0),0)))} — ربحك: <b style="color:#159447">${M(Math.round(tot-lines.reduce((a,x)=>a+x.q*(+(x.p||{}).cost||0),0)))}</b></div>
  <button class="primary" id="ktGo" onclick="mkKT.go()">✔ سجّل البيع</button></div>`)}
 let _rt;function reS(soft){if(soft){clearTimeout(_rt);_rt=setTimeout(drawSale,500)}else drawSale()}
 async function go(){const S=SALE,k=S.k,pl=plan().filter(x=>x.q>0);if(!pl.length)return tst('مفيش كميات');
- for(const sl of S.k.slots){if((sl.products||[]).length<2)continue;const want=r3(need(sl,S.n)),got=r3(pl.filter(x=>x.slot===sl).reduce((a,x)=>a+x.q,0));if(Math.abs(got-want)>0.001)return tst('كميات «'+sl.label+'» مش مطابقة للمطلوب ('+fq(want)+')')}
+ for(const [jj,sl] of S.k.slots.entries()){if((sl.products||[]).length<2||(S.off&&S.off[jj]))continue;const want=r3(need(sl,S.n,S.len&&S.len[jj])),got=r3(pl.filter(x=>x.slot===sl).reduce((a,x)=>a+x.q,0));if(Math.abs(got-want)>0.001)return tst('كميات «'+sl.label+'» مش مطابقة للمطلوب ('+fq(want)+')')}
  const agg={};pl.forEach(x=>{agg[x.pid]=(agg[x.pid]||0)+x.q});const items=Object.entries(agg).map(([id,q])=>({id,q:r3(q),p:pid(id)}));
  const sum=items.reduce((a,x)=>a+x.q*(+(x.p||{}).price||0),0),tot=S.total!==''?num(S.total):Math.round(sum),f=sum>0?tot/sum:1;
  const lines=items.map(x=>({product_id:x.id,name:(x.p?x.p.name:'')+'',qty:x.q,price:Math.round((+(x.p||{}).price||0)*f*100)/100}));
@@ -5448,7 +5457,9 @@ async function go(){const S=SALE,k=S.k,pl=plan().filter(x=>x.q>0);if(!pl.length)
  }catch(e){if(btn){btn.disabled=false;btn.textContent='✔ سجّل البيع'}tst((api=>api&&api.errMsg?api.errMsg(e):(e.message||'حصلت مشكلة'))(window.mkT&&mkT.api))}}
 if(typeof showPage==='function'){const _sp=showPage;showPage=function(id){const r=_sp.apply(this,arguments);if(id==='kits')setTimeout(()=>{try{render()}catch(e){}},30);return r}}
 new MutationObserver(()=>{try{if(adm())ensure()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
-window.mkKT={n:num,edit,re:()=>drawEd(),addP,save,del,sell,reS,go};
+async function dup(i){const c=JSON.parse(JSON.stringify(K[i]));c.id=Date.now().toString(36);c.name=c.name+' (نسخة)';K.push(c);if(await persist()){tst('✔ اتنسخ — عدّل الاسم والمكونات');render()}}
+function exP(x,v){const p=P().find(z=>lab(z)===v)||P().find(z=>z.name===v);const e=SALE.extra[x];if(!e)return;if(p){e.pid=p.id;e.lab=lab(p)}else{e.pid='';e.lab=v;tst('اختار صنف من القايمة')}drawSale()}
+window.mkKT={n:num,edit,re:()=>drawEd(),addP,save,del,sell,reS,go,dup,exP};
 Object.defineProperty(window,'KT_ED',{get:()=>ED,configurable:true});Object.defineProperty(window,'KT_SALE',{get:()=>SALE,configurable:true});
 })();
 </script>
@@ -5866,13 +5877,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function add(){
   var s=document.querySelector('aside nav.nav:last-of-type');if(!s||document.getElementById('mkSideKw'))return !!document.getElementById('mkSideKw');
   s.appendChild(mk('mkSideWk',{ico:'🛠️',t:'أنظمة الشغل'},function(){window.mkWk.menu()}));
+  s.appendChild(mk('mkSideSt',{ico:'🔩',t:'حاسبة الاستانلس'},function(){window.mkWk.go('steel')}));
+  s.appendChild(mk('mkSideFf',{ico:'🔥',t:'عود الفرفورجيه'},function(){window.mkWk.go('forf')}));
   s.appendChild(mk('mkSideKw',{ico:'🔑',t:'كلمات الواتساب المفتاحية'},function(){window.mkKw.open()}));
   return true;
  }
  setInterval(function(){
   add();
   var adm=!!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'));
-  ['mkSideWk','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
+  ['mkSideWk','mkSideSt','mkSideFf','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
  },1500);
 })();
 </script>
@@ -6385,17 +6398,19 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   ['wkPr','wkLb'].forEach(function(id){var x=b.querySelector('#'+id);if(x&&offLeft(o).length)x.addEventListener('click',function(){setTimeout(async function(){if(await ask('الشغل ده طلع منه '+offLeft(o).length+' فضلة. تطبع ليبل ليهم كمان؟','اطبع','لأ'))printLeftLabels(o)},1500)})});
   b.querySelector('#wkInv').onclick=function(){
    close();
-   var L=[];
-   if(o.steel){var st=o.steel,ns=num(o.steel.sheets)||num(o.qty)||1,sp=st.sheetPrice!==''&&st.sheetPrice!=null?num(st.sheetPrice):null;
-    var nm=st.sheetProd||('لوح استانلس '+(st.grade||'')+' '+(st.thick||'')+'مم '+num(st.W)+'×'+num(st.H));
-    L.push({name:nm,qty:ns,price:sp});
-    var bn=(st.pieces||[]).reduce(function(a,p){return a+num(p.bends)*(num(p.q)||1)},0);
-    if(bn&&num(st.bendPrice))L.push({name:'ثني استانلس',qty:bn,price:num(st.bendPrice),skipStock:true})}
+   var L=[],note=ordNo(o)+' — '+o.type;
+   if(o.steel){var st=o.steel,pcs=(st.pieces||[]).filter(function(p){return num(p.a)>0&&num(p.b)>0}),tot=num(o.price)||num(st.sug)||0;
+    var dv=function(p){var nb=p.shape==='L'?1:(p.shape==='U'||p.shape==='Z')?2:(p.shape==='مخصص'?num(p.bends):0);return num(p.b)+nb*(num(p.flange)||3)};
+    var by={},aT=0;pcs.forEach(function(p){var k=p.shape||'مسطحة',ar=num(p.a)*dv(p)*(num(p.q)||1);aT+=ar;by[k]=by[k]||{q:0,ar:0};by[k].q+=(num(p.q)||1);by[k].ar+=ar});
+    Object.keys(by).forEach(function(k){var g=by[k],lt=aT?tot*g.ar/aT:0;L.push({name:'شغل استانلس '+(SHN[k]||k)+(st.grade?' '+st.grade:''),qty:g.q,price:Math.round(lt/g.q*100)/100,svc:true})});
+    if(st.sheetProd){L.push({name:st.sheetProd,qty:num(st.frac)||num(st.sheets)||1,price:0,internal:true})}
+    else toast('⚠️ مفيش لوح متحدد من المخزون — مش هيتخصم لوح');
+    note+=' — '+pcs.map(function(p){return (p.n?p.n+': ':'')+(SHN[p.shape]||p.shape)+' '+num(p.a)+'×'+num(p.b)+(p.shape&&p.shape!=='مسطحة'?' ثنية '+(num(p.flange)||3):'')+' ×'+(num(p.q)||1)}).join(' • ')}
+   else note+=' '+num(o.w)+'×'+num(o.h)+' ×'+(o.qty||1);
    if(!o.rodsDeducted)rodNeeds(o).forEach(function(nd){L.push({name:nd.name,qty:nd.need})});
-   else rodNeeds(o).forEach(function(nd){L.push({name:nd.name,qty:nd.need,skipStock:true,price:0})});
+   else note+=' — الأعواد اتخصمت قبل كده';
    (o.mats||[]).forEach(function(m){if(m.n&&num(m.q))L.push({name:m.n,qty:num(m.q),price:m.p!==''?num(m.p):null})});
-   prepToInvoice({customer:o.customer,phone:o.phone,paid:o.paid,total:num(o.price),fillName:'مصنعية تجهيز '+(o.type||'')+' '+num(o.w)+'×'+num(o.h)+' ×'+(o.qty||1),lines:L,
-    note:ordNo(o)+' — '+o.type+' '+num(o.w)+'×'+num(o.h)+' ×'+(o.qty||1)+' — السعر '+fmt(num(o.price))+' ج'})};
+   prepToInvoice({customer:o.customer,phone:o.phone,paid:o.paid,total:o.steel?0:num(o.price),fillName:'مصنعية تجهيز '+(o.type||'شغل'),lines:L,note:note})};
   b.querySelector('#wkWa').onclick=async function(){
    var c0=contacts().find(function(z){return z.name===o.crafter});
    var ph=(c0&&c0.phone)||prompt('رقم واتساب الصنايعي','')||'';if(!ph)return;
@@ -6406,66 +6421,102 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 
  /* تجهيز ← فاتورة بيع مباشرة: الخامات من المخزون تتحط كأصناف متخصمة، واللي مش موجود يتحط سطر يدوي بتنبيه (مش بيوقف الفاتورة) */
  function prepToInvoice(P){
-  var miss=[];
+  var miss=[],svc=[],hasInt=false;
   try{openTransaction('sale')}catch(e){return toast('مقدرتش أفتح الفاتورة')}
   setTimeout(function(){
    try{var g=function(i){return document.getElementById(i)};
     if(g('txPerson')&&P.customer){g('txPerson').value=P.customer;try{fillCust()}catch(e){}}if(g('txPhone')&&P.phone)g('txPhone').value=P.phone;
-    if(g('txNote'))g('txNote').value=P.note||'';
     var matTot=0;
+    function put(d,L,defPrice){var lq=d.querySelector('.lq'),lp=d.querySelector('.lp');if(lq)lq.value=L.qty;if(lp){if(L.price!=null&&L.price!=='')lp.value=L.price;else if(defPrice!=null&&lp.value==='')lp.value=defPrice}matTot+=num(L.qty)*num(lp?lp.value:0);if(lq)lq.dispatchEvent(new Event('input',{bubbles:true}))}
     (P.lines||[]).forEach(function(L){
-     var prod=L.skipStock?null:(db.products||[]).find(function(p){return String(p.name).trim()===String(L.name).trim()})||(L.pid&&(db.products||[]).find(function(p){return p.id===L.pid}));
-     if(prod){addItem(prod.id);var d=g('txLines').lastElementChild;
-      if(d){var lq=d.querySelector('.lq'),lp=d.querySelector('.lp');if(lq)lq.value=L.qty;if(lp&&L.price!=null&&L.price!=='')lp.value=L.price;matTot+=num(L.qty)*num(lp?lp.value:prod.price);
-       if(lq)lq.dispatchEvent(new Event('input',{bubbles:true}))}}
-     else{addItem('new',L.name);var d2=g('txLines').lastElementChild;
-      if(d2){var q2=d2.querySelector('.lq'),p2=d2.querySelector('.lp');if(q2)q2.value=L.qty;if(p2)p2.value=L.price!=null?L.price:0;matTot+=num(L.qty)*num(L.price);if(q2)q2.dispatchEvent(new Event('input',{bubbles:true}))}
-      if(!L.skipStock)miss.push(L.name)}});
-    if(P.total&&num(P.total)>matTot+0.01&&P.fillName){addItem('new',P.fillName);var d3=g('txLines').lastElementChild;if(d3){var q3=d3.querySelector('.lq'),p3=d3.querySelector('.lp');if(q3)q3.value=1;if(p3)p3.value=Math.round((num(P.total)-matTot)*100)/100;if(q3)q3.dispatchEvent(new Event('input',{bubbles:true}))}}
+     if(L.internal)hasInt=true;
+     var prod=L.svc?null:(db.products||[]).find(function(p){return String(p.name).trim()===String(L.name).trim()})||(L.pid&&(db.products||[]).find(function(p){return p.id===L.pid}));
+     if(L.svc){var ex=(db.products||[]).find(function(p){return String(p.name).trim()===String(L.name).trim()});svc.push(L.name);if(ex){addItem(ex.id)}else addItem('new',L.name);var dd=g('txLines').lastElementChild;if(dd)put(dd,L,0);return}
+     if(prod){addItem(prod.id);var d=g('txLines').lastElementChild;if(d)put(d,L,prod.price)}
+     else{addItem('new',L.name);var d2=g('txLines').lastElementChild;if(d2)put(d2,L,0);miss.push(L.name)}});
+    if(P.total&&num(P.total)>matTot+0.01&&P.fillName){var nm=P.fillName,ex2=(db.products||[]).find(function(p){return String(p.name).trim()===nm});svc.push(nm);if(ex2)addItem(ex2.id);else addItem('new',nm);var d3=g('txLines').lastElementChild;if(d3)put(d3,{qty:1,price:Math.round((num(P.total)-matTot)*100)/100})}
+    if(g('txNote'))g('txNote').value=(P.note||'')+(hasInt?' — ⚙️ خامات التجهيز متخصمة من المخزون':'');
     if(g('txPaid')&&num(P.paid))g('txPaid').value=num(P.paid);
-    toast(miss.length?'⚠️ مش موجود في المخزون (اتحط سطر يدوي): '+miss.join('، '):'✔ الأصناف اتحطت في الفاتورة ومتخصمة من المخزون');
+    var f=document.querySelector('#modal form');if(f&&svc.length)f.dataset.svc=JSON.stringify(svc);
+    if(f&&P.after){f._after=P.after}
+    toast(miss.length?'⚠️ مش موجود في المخزون (اتحط سطر يدوي): '+miss.join('، '):'✔ الفاتورة جاهزة — راجعها واحفظ');
     try{updRem()}catch(e){}}catch(e){toast('اتفتحت الفاتورة — راجع الأصناف')}},200);
  }
+ /* بعد حفظ فاتورة من التجهيز: أصناف الخدمة (مصنعية/شغل) ما تبقاش بالسالب في المخزون + أي خطوة بعد الحفظ */
+ (function(){var _stP=submitTransaction;submitTransaction=async function(ev,type){var f=ev&&ev.target,svc=f&&f.dataset&&f.dataset.svc,aft=f&&f._after,before=new Set((db.sales||[]).map(function(r){return r.id}));
+  var rr=await _stP.apply(this,arguments);
+  var ok=(db.sales||[]).some(function(r){return !before.has(r.id)});
+  if(ok&&type==='sale'){
+   if(svc){try{var names=JSON.parse(svc),api=window.mkT&&window.mkT.api,c=window.mkSB;if(api&&c){var q=await c.from('mk_products').select('id,qty,name').in('name',names);var ids=[];
+     for(var i=0;i<(q.data||[]).length;i++){var row=q.data[i];ids.push(row.id);if(+row.qty!==0)await api.rpc('mk_adjust_stock',{p_id:row.id,p_qty:0,p_note:'صنف خدمة/تجهيز — مش مخزون'})}
+     if(ids.length){await api.refreshProducts(ids);var ch=0;ids.forEach(function(id){var p=(db.products||[]).find(function(x){return x.id===id});if(p&&!p.cat){p.cat='خدمات وتجهيز';ch++}});if(ch){try{window.save&&window.save();await api.syncNow()}catch(e){}}api.done&&api.done()}}}catch(e){}}
+   if(aft){try{await aft()}catch(e){toast('⚠️ '+(e&&e.message||e))}}}
+  return rr}})();
  window.mkPrepToInvoice=prepToInvoice;
- /* ---------- 🔥 خط سير عود الفرفورجيه: اشتريناه ← عند الفرن ← رجع متشطّب ← دخل المخزن (منتج بتكلفته النهائية) ---------- */
+ /* ---------- 🔥 عود الفرفورجيه: بيع بالمتر (تكلفة وسعر وربح أي طول) + عجل/إكسسوار + «طقم جرار وهيسيب قضيبه» + خط سير الدفعات (اشتريناه ← الفرن ← رجع ← دخل المخزن بفاتورة شراء) ---------- */
  var FST=['🛒 اشتريناه','🔥 عند الفرن','✅ رجع متشطّب','📦 دخل المخزن'];
+ var FC={rod:'',m:'',L:6,pm:'',ex:[],kit:'',kitCredit:'',railP:'',railQ:1};
+ function fIsM(p){return !!p&&(/متر/.test(p.unit||'')||/بالمتر/.test(p.name||''))}
+ function fProd(nm){nm=String(nm||'').trim();return nm?(db.products||[]).find(function(p){return String(p.name).trim()===nm}):null}
  async function viewForf(){
-  var b=shell('🔥 عود الفرفورجيه (خط سير)');mark('forf');
-  var FO=await get('wk_forf',[]),FM=await get('wk_forf_m',{});
+  var b=shell('🔥 عود الفرفورجيه');mark('forf');
+  var FO=await get('wk_forf',[]);
   function sv(){return put('wk_forf',FO)}
-  function svm(){return put('wk_forf_m',FM)}
-  function syncStock(){try{if(typeof window.save==='function')window.save();var a=window.mkT&&window.mkT.api;if(a&&a.syncNow)return a.syncNow()}catch(e){}return Promise.resolve()}
+  var r2=function(x){return Math.round(x*100)/100};
+  function calcF(){var p=fProd(FC.rod),L=num(FC.L)||6,m=num(FC.m),isM=fIsM(p);
+   var cm=p?(isM?num(p.cost):num(p.cost)/L):0,pm0=p?(isM?num(p.price):num(p.price)/L):0,pm=FC.pm!==''?num(FC.pm):pm0;
+   var lines=[],cost=0,tot=0;
+   if(p&&m>0){var q=isM?m:Math.round(m/L*1000)/1000,up=isM?pm:pm*L;lines.push({name:p.name,qty:q,price:r2(up),lab:'عود فرفورجيه '+m+' م',t:r2(pm*m)});cost+=cm*m;tot+=pm*m}
+   FC.ex.forEach(function(x){var ep=fProd(x.n);if(!ep||!(num(x.q)>0))return;var pr=x.p!==''?num(x.p):num(ep.price);lines.push({name:ep.name,qty:num(x.q),price:pr,lab:ep.name+' × '+num(x.q),t:r2(pr*num(x.q))});cost+=num(ep.cost)*num(x.q);tot+=pr*num(x.q)});
+   var kp=fProd(FC.kit);if(kp){var kpr=Math.max(0,num(kp.price)-num(FC.kitCredit));lines.push({name:kp.name,qty:1,price:r2(kpr),lab:kp.name+(num(FC.kitCredit)?' (من غير قضيبه −'+fmt(num(FC.kitCredit))+')':''),t:r2(kpr)});cost+=num(kp.cost);tot+=kpr;
+    var rp=fProd(FC.railP);if(rp)cost-=num(rp.cost)*(num(FC.railQ)||1)}
+   return {p:p,L:L,m:m,isM:isM,cm:cm,pm:pm,pm0:pm0,lines:lines,cost:r2(cost),tot:r2(tot)}}
   function draw(){
-   var live=FO.filter(function(x){return x.stage<3}),done=FO.filter(function(x){return x.stage>=3});
-   b.innerHTML='<div class="wkc"><h3>➕ دفعة جديدة (حديد بيور من المورد)</h3><div class="wkg">'+fi('foS','اشتريناه من','السبتية')+fi('foN','عدد الأعواد','','inputmode="numeric"')+fi('foL','طول العود (متر)',6,'inputmode="decimal"')+fi('foC','سعر العود (ج)','','inputmode="decimal"')+fi('foO','الفرن (اختياري)','','')+'</div><button type="button" class="wkbtn p" id="foAdd" style="margin-top:10px">حفظ الدفعة</button></div>'+
+   var live=FO.filter(function(x){return x.stage<3}),done=FO.filter(function(x){return x.stage>=3}),C=calcF();
+   var rods=(db.products||[]).filter(function(p){return /فرفور|فورفور|فورج|فرفج/.test((p.name||'')+' '+(p.cat||''))});
+   var allDL='<datalist id="fcAll">'+(db.products||[]).slice(0,3000).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist>';
+   b.innerHTML='<div class="wkc"><h3>✂️ بيع عود فرفورجيه بالمتر</h3><div class="wkg">'+
+     '<div class="wkf" style="grid-column:1/-1"><label>العود من المخزون</label><input id="fcP" list="fcL" value="'+esc(FC.rod)+'" placeholder="🔎 عود فرفورجيه"><datalist id="fcL">'+rods.map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist></div>'+
+     fi('fcM','الطول اللي الزبون عايزه (متر)',FC.m,'inputmode="decimal" placeholder="4.5"')+(C.p&&C.isM?'':fi('fcT','طول العود الكامل (متر)',FC.L,'inputmode="decimal"'))+fi('fcPm','سعر بيع المتر (ج)',FC.pm!==''?FC.pm:(C.pm0?r2(C.pm0):''),'inputmode="decimal"')+'</div>'+
+     '<div class="sample" style="margin-top:8px;line-height:1.9">'+(C.p?'الرصيد: <b>'+fmt(r2(C.isM?num(C.p.qty):num(C.p.qty)*C.L))+'</b> م'+(C.isM?'':' ('+fmt(num(C.p.qty))+' عود)')+' — تكلفة المتر <b>'+fmt(r2(C.cm))+'</b> ج'+(C.m>0?'<br>القطعة '+C.m+' م: تكلفتها <b>'+fmt(r2(C.cm*C.m))+'</b> ج — سعرها <b>'+fmt(r2(C.pm*C.m))+'</b> ج — ربحك <b>'+fmt(r2((C.pm-C.cm)*C.m))+'</b> ج':''):(rods.length?'اختار العود':'⚠️ مفيش عود فرفورجيه في المخزون لسه — سجّل دفعة تحت ولما توصل «دخل المخزن» هيتسجل بالمتر'))+'</div>'+
+     '<details style="margin-top:10px"'+(FC.ex.length?' open':'')+'><summary style="cursor:pointer;font-weight:800">🛞 عجل / إكسسوار مع العود ('+FC.ex.length+')</summary>'+FC.ex.map(function(x,i){var ep=fProd(x.n);return '<div class="wkg" style="margin-top:6px;align-items:end"><div class="wkf" style="grid-column:1/-1"><label>الصنف</label><input data-fx="n" data-i="'+i+'" list="fcAll" value="'+esc(x.n)+'"></div><div class="wkf"><label>العدد</label><input data-fx="q" data-i="'+i+'" value="'+esc(x.q)+'" inputmode="decimal"></div><div class="wkf"><label>السعر</label><input data-fx="p" data-i="'+i+'" value="'+esc(x.p!==''?x.p:(ep?ep.price:''))+'" inputmode="decimal"></div><button type="button" class="wkbtn d" data-fxd="'+i+'">حذف</button></div>'}).join('')+'<button type="button" class="wkbtn" id="fcExA" style="margin-top:6px">➕ صنف (عجل / طقم عجل / غيره)</button></details>'+
+     '<details style="margin-top:10px"'+(FC.kit?' open':'')+'><summary style="cursor:pointer;font-weight:800">🧩 طقم جرار كامل — هيسيب قضيبه وياخد قضيب فرفورجيه</summary>'+
+      '<div class="wkg" style="margin-top:6px"><div class="wkf" style="grid-column:1/-1"><label>الطقم من المخزون</label><input id="fcK" list="fcAll" value="'+esc(FC.kit)+'"></div>'+fi('fcKc','قيمة القضيب اللي هيتساب (بتتخصم من سعر الطقم)',FC.kitCredit,'inputmode="decimal"')+
+      '<div class="wkf" style="grid-column:1/-1"><label>القضيب ده يرجع المخزن كصنف؟ (اختياري)</label><input id="fcR" list="fcAll" value="'+esc(FC.railP)+'" placeholder="مثلاً: قضيب جرار 2 م"></div>'+fi('fcRq','عدده',FC.railQ,'inputmode="decimal"')+'</div>'+
+      '<p style="font-size:12px;color:var(--muted);margin:6px 0 0">الحسبة: سعر الطقم − قيمة القضيب + تمن الفرفورجيه بالمتر. الطقم بيتخصم من المخزن، والقضيب يرجع المخزن لو اخترته.</p></details>'+
+     '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#e8f7ee;border:2px solid #7bcf9a">'+(C.lines.length?C.lines.map(function(l){return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(l.lab)+'</span><b>'+fmt(l.t)+'</b></div>'}).join('')+'<div style="border-top:1px dashed #7bcf9a;margin-top:6px;padding-top:6px;font-size:20px;font-weight:900;display:flex;justify-content:space-between"><span>الإجمالي</span><span>'+fmt(C.tot)+' ج</span></div><div style="font-size:13px">تكلفتك '+fmt(C.cost)+' ج — ربحك <b>'+fmt(r2(C.tot-C.cost))+'</b> ج</div>':'<span style="color:var(--muted)">اختار العود واكتب الطول</span>')+'</div>'+
+     '<button type="button" class="wkbtn p" id="fcGo" style="margin-top:10px;width:100%;min-height:52px;font-size:17px">🧾 افتح الفاتورة</button>'+allDL+'</div>'+
+    '<div class="wkc"><h3>➕ دفعة جديدة (حديد بيور من المورد)</h3><div class="wkg">'+fi('foS','اشتريناه من','السبتية')+fi('foN','عدد الأعواد','','inputmode="numeric"')+fi('foL','طول العود (متر)',6,'inputmode="decimal"')+fi('foC','سعر العود الحديد (ج)','','inputmode="decimal"')+fi('foO','الفرن (اختياري)','','')+'</div><button type="button" class="wkbtn p" id="foAdd" style="margin-top:10px">حفظ الدفعة</button></div>'+
     '<div class="wkc"><h3>🚚 في الطريق ('+live.length+')</h3>'+(live.map(card).join('')||'<span class="empty">مفيش دفعات شغالة</span>')+'</div>'+
-    '<div class="wkc"><h3>✂️ قص وبيع من عود (رصيد بالمتر)</h3><div class="wkg">'+fi('fcP','المنتج (عود 6م في المخزون)','','list="fcL"')+'<datalist id="fcL">'+(db.products||[]).filter(function(p){return /فرفور|فورفور|حديد|عود/.test(p.name||'')}).slice(0,200).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist>'+fi('fcM','الطول المطلوب (متر)','','inputmode="decimal"')+fi('fcT','طول العود (متر)',6,'inputmode="decimal"')+'</div>'+
-    '<div id="fcInfo" class="sample" style="margin-top:8px"></div><div class="wkrow" style="margin-top:8px"><button type="button" class="wkbtn p" id="fcGo">✂️ اخصم وافتح فاتورة</button></div></div>'+
-    (done.length?'<div class="wkc"><h3>📦 اتسجلت في المخزن ('+done.length+')</h3>'+done.map(card).join('')+'</div>':'');
-   function ud(){var nm=b.querySelector('#fcP').value.trim(),t=num(b.querySelector('#fcT').value)||6,m=num(b.querySelector('#fcM').value),p=(db.products||[]).find(function(x){return String(x.name).trim()===nm});
-    if(!p){b.querySelector('#fcInfo').innerHTML=nm?'⚠️ مش لاقي الصنف ده في المخزون':'اختار العود';return}
-    var isM=/متر/.test(p.unit||'')||/بالمتر/.test(p.name||''),cm=isM?num(p.cost):num(p.cost)/t,pm=isM?num(p.price):num(p.price)/t,bal=isM?num(p.qty):num(p.qty)*t;
-    b.querySelector('#fcInfo').innerHTML='الرصيد: <b>'+fmt(Math.round(bal*100)/100)+'</b> م'+(isM?'':' ('+fmt(num(p.qty))+' عود)')+'<br>تكلفة المتر: <b>'+fmt(Math.round(cm*100)/100)+'</b> ج — سعر بيع المتر: <b>'+fmt(Math.round(pm*100)/100)+'</b> ج'+(m>0?'<br>القطعة '+m+' م: تكلفتها <b>'+fmt(Math.round(cm*m*100)/100)+'</b> ج — سعرها <b>'+fmt(Math.round(pm*m*100)/100)+'</b> ج — ربحك <b>'+fmt(Math.round((pm-cm)*m*100)/100)+'</b> ج':'')}
-   b.querySelector('#fcP').oninput=ud;b.querySelector('#fcM').oninput=ud;b.querySelector('#fcT').oninput=ud;ud();
-   b.querySelector('#foAdd').onclick=async function(){var n=num(b.querySelector('#foN').value),c=num(b.querySelector('#foC').value);if(!(n>0))return toast('اكتب عدد الأعواد');
-    FO.unshift({id:uid(),date:today(),supplier:b.querySelector('#foS').value.trim(),n:n,len:num(b.querySelector('#foL').value)||6,steel:c,oven:'',ovenCost:0,stage:0,hist:[{s:FST[0],at:new Date().toISOString(),by:who()}]});
-    var ov=b.querySelector('#foO').value.trim();if(ov)FO[0].oven=ov;try{await sv();toast('✔ اتسجلت');draw()}catch(e){errAlert(e)}};
+    (done.length?'<div class="wkc"><h3>📦 اتسجلت في المخزن ('+done.length+')</h3>'+done.slice(0,20).map(card).join('')+'</div>':'');
+   var Q=function(i){return b.querySelector('#'+i)};
+   var re=function(){var a=document.activeElement&&document.activeElement.id,ds=document.activeElement&&document.activeElement.dataset,pos=document.activeElement&&document.activeElement.selectionStart;draw();var el=a?Q(a):(ds&&ds.fx?b.querySelector('[data-fx="'+ds.fx+'"][data-i="'+ds.i+'"]'):null);if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}};
+   var deb=function(fn){var t;return function(){var self=this;clearTimeout(t);t=setTimeout(function(){fn.call(self)},450)}};
+   Q('fcP').addEventListener('change',function(){FC.rod=this.value.trim();FC.pm='';re()});
+   Q('fcM').addEventListener('input',deb(function(){FC.m=Q('fcM').value;re()}));
+   if(Q('fcT'))Q('fcT').addEventListener('input',deb(function(){FC.L=Q('fcT').value;re()}));
+   Q('fcPm').addEventListener('input',deb(function(){FC.pm=Q('fcPm').value;re()}));
+   Q('fcK').addEventListener('change',function(){FC.kit=this.value.trim();re()});Q('fcKc').addEventListener('input',deb(function(){FC.kitCredit=Q('fcKc').value;re()}));
+   Q('fcR').addEventListener('change',function(){FC.railP=this.value.trim();re()});Q('fcRq').addEventListener('input',deb(function(){FC.railQ=Q('fcRq').value;re()}));
+   b.querySelectorAll('[data-fx]').forEach(function(x){x.addEventListener(x.dataset.fx==='n'?'change':'input',deb(function(){var it=FC.ex[+x.dataset.i];it[x.dataset.fx]=x.value.trim();if(x.dataset.fx==='n')it.p='';re()}))});
+   b.querySelectorAll('[data-fxd]').forEach(function(x){x.onclick=function(){FC.ex.splice(+x.dataset.fxd,1);draw()}});
+   Q('fcExA').onclick=function(){FC.ex.push({n:'',q:'1',p:''});draw();var L=b.querySelectorAll('[data-fx="n"]');if(L.length)L[L.length-1].focus()};
+   Q('fcGo').onclick=function(){var C2=calcF();if(!C2.lines.length)return toast(C2.p?'اكتب الطول المطلوب':'اختار العود من المخزون');
+    var rp=fProd(FC.railP),rq=num(FC.railQ)||1,kp=fProd(FC.kit);
+    var note=(C2.m>0?'عود فرفورجيه '+C2.m+' م':'')+(kp?' + '+kp.name+(num(FC.kitCredit)?' من غير قضيبه':''):'');
+    close();
+    prepToInvoice({customer:'',phone:'',note:note,lines:C2.lines.map(function(l){return {name:l.name,qty:l.qty,price:l.price}}),
+     after:rp&&kp?async function(){var api=window.mkT&&window.mkT.api;if(!api)return;await api.syncNow();await api.refreshProducts([rp.id]);var p2=fProd(rp.name)||rp;await api.rpc('mk_adjust_stock',{p_id:p2.id,p_qty:Math.round((num(p2.qty)+rq)*1000)/1000,p_note:'قضيب رجع المخزن من '+kp.name+' (اتباع بقضيب فرفورجيه)'});await api.refreshProducts([p2.id]);api.done&&api.done();toast('✔ القضيب رجع المخزن')}:null})};
+   Q('foAdd').onclick=async function(){var n=num(Q('foN').value),c=num(Q('foC').value);if(!(n>0))return toast('اكتب عدد الأعواد');
+    FO.unshift({id:uid(),date:today(),supplier:Q('foS').value.trim(),n:n,len:num(Q('foL').value)||6,steel:c,oven:Q('foO').value.trim(),ovenCost:0,stage:0,hist:[{s:FST[0],at:new Date().toISOString(),by:who()}]});
+    try{await sv();toast('✔ اتسجلت');draw()}catch(e){errAlert(e)}};
    b.querySelectorAll('[data-fa]').forEach(function(x){x.onclick=function(){adv(x.dataset.fa)}});
    b.querySelectorAll('[data-fd]').forEach(function(x){x.onclick=async function(){if(!(await ask('تمسح الدفعة دي من المتابعة؟ (المخزن مش هيتأثر)','مسح','لأ')))return;FO=FO.filter(function(z){return z.id!==x.dataset.fd});try{await sv();draw()}catch(e){errAlert(e)}}});
-   b.querySelector('#fcGo').onclick=async function(){
-    var nm=b.querySelector('#fcP').value.trim(),m=num(b.querySelector('#fcM').value),L=num(b.querySelector('#fcT').value)||6;
-    var prod=(db.products||[]).find(function(p){return String(p.name).trim()===nm});
-    if(!(m>0))return toast('اكتب الطول المطلوب بالمتر');
-    if(!prod)return toast('اختار العود من المخزون (لو لسه مش متسجل: من خط السير ← «دخل المخزن»)');
-    var isM=/متر/.test(prod.unit||'')||/بالمتر/.test(prod.name||''),qty=isM?m:Math.round(m/L*1000)/1000;
-    if(num(prod.qty)<qty&&!(await ask('⚠️ الرصيد في المخزون '+num(prod.qty)+(isM?' م':' عود')+' — أقل من المطلوب.\nهتكمّل والرصيد يبقى بالسالب؟','كمّل','لأ')))return;
-    close();
-    prepToInvoice({customer:'',phone:'',note:'قطع '+m+' م من '+nm,lines:[{name:nm,qty:qty,price:null}]})};
   }
   function card(x){var u=num(x.steel)+num(x.ovenCost);
    return '<div class="sample" style="margin-bottom:8px"><b>'+x.n+' عود × '+x.len+' م</b> — '+esc(x.supplier||'')+' <small>('+esc(x.date)+')</small><div style="margin:6px 0">'+FST.map(function(t,i){return '<span class="badge" style="margin:2px;'+(i<=x.stage?'background:#d7f3dd':'opacity:.5')+'">'+t+'</span>'}).join('')+'</div>'+
     '<div style="font-size:13px;color:var(--muted)">'+x.hist.map(function(h){return esc(h.s)+' '+esc(String(h.at).slice(0,10))}).join(' ← ')+'</div>'+
-    '<div style="margin-top:4px">حديد: '+fmt(num(x.steel))+' ج'+(x.stage>=2?' + فرن: '+fmt(num(x.ovenCost))+' ج = <b>'+fmt(u)+' ج للعود</b>':'')+(x.oven?' · الفرن: '+esc(x.oven):'')+'</div>'+
+    '<div style="margin-top:4px">حديد: '+fmt(num(x.steel))+' ج للعود'+(x.stage>=2?' + فرن: '+fmt(num(x.ovenCost))+' = <b>'+fmt(u)+' ج للعود</b> ('+fmt(Math.round(u/(num(x.len)||6)*100)/100)+' ج للمتر)':'')+(x.oven?' · الفرن: '+esc(x.oven):'')+(x.inv?' · فاتورة '+esc(x.inv):'')+'</div>'+
     '<div class="wkrow" style="margin-top:8px">'+(x.stage<3?'<button type="button" class="wkbtn p" data-fa="'+x.id+'">'+['← راح الفرن','← رجع متشطّب','← دخل المخزن'][x.stage]+'</button>':'')+'<button type="button" class="wkbtn d" data-fd="'+x.id+'">حذف</button></div></div>'}
   async function adv(id){
    var x=FO.find(function(z){return z.id===id});if(!x)return;
@@ -6473,11 +6524,19 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     if(x.stage===0){var ov=prompt('اسم الفرن (إلكتروستاتيك)',x.oven||'');if(ov===null)return;x.oven=ov.trim()}
     else if(x.stage===1){var c=prompt('تكلفة الفرن للعود الواحد (ج)',x.ovenCost||'');if(c===null)return;x.ovenCost=num(c)}
     else if(x.stage===2){
-     var nm=prompt('اسم المنتج في المخزن',(x.pname||('عود فرفورجيه '+x.len+' م')));if(!nm)return;nm=nm.trim();x.pname=nm;
-     var u=Math.round((num(x.steel)+num(x.ovenCost))*100)/100,prod=(db.products||[]).find(function(p){return String(p.name).trim()===nm});
-     if(prod){var q0=num(prod.qty);prod.cost=q0+x.n>0?Math.round(((q0*num(prod.cost)+x.n*u)/(q0+x.n))*100)/100:u;prod.qty=q0+x.n}
-     else{var np={id:crypto.randomUUID(),code:(typeof nextCode==='function'?nextCode():''),barcode:'',name:nm,cat:'فرفورجيه',unit:'عود',qty:x.n,cost:u,price:0,min:0};db.products.unshift(np)}
-     await syncStock();toast('✔ دخل المخزن: '+x.n+' عود بتكلفة '+fmt(u)+' ج'+(prod?'':' — حدد سعر البيع من المخزون'))}
+     var ex0=(db.products||[]).find(function(p){return /فرفور|فورفور|فورج/.test(p.name||'')&&fIsM(p)});
+     var nm=prompt('اسم المنتج في المخزن (بيتسجل بالمتر)',x.pname||(ex0?ex0.name:'عود فرفورجيه (بالمتر)'));if(!nm)return;nm=nm.trim();x.pname=nm;
+     var prod=fProd(nm),isM=prod?fIsM(prod):true,L=num(x.len)||6,u=num(x.steel)+num(x.ovenCost);
+     var pmIn=prompt('سعر بيع المتر للزبون (ج) — سيبه فاضي لو مش عايز تغيّره',prod&&num(prod.price)?(isM?num(prod.price):Math.round(num(prod.price)/L*100)/100):'');if(pmIn===null)return;
+     var paidAll=await ask('هيتعمل فاتورة شراء: '+x.n+' عود × '+L+' م = '+(isM?x.n*L+' متر':x.n+' عود')+'\nالتكلفة '+fmt(u)+' ج للعود (حديد + فرن)\nالإجمالي '+fmt(u*x.n)+' ج\n\nاتدفعت كلها؟','اتدفعت','آجل على المورد');
+     var api=window.mkT&&window.mkT.api;if(!api||!api.rpc)throw new Error('السيستم لسه بيحمّل — جرّب كمان شوية');
+     var qty=isM?Math.round(x.n*L*1000)/1000:x.n,pr=isM?Math.round(u/L*100)/100:u,tot=Math.round(qty*pr*100)/100;
+     var r=await api.rpc('mk_save_invoice',{p:Object.assign({},window.mkCoOn&&typeof curCo==='function'?{co:curCo()}:{},{kind:'purchase',date:new Date().toISOString().slice(0,10),person:x.supplier||'السبتية',paid:paidAll?tot:0,source:'',note:'فرفورجيه: '+x.n+' عود × '+L+' م — حديد '+fmt(num(x.steel))+' + فرن '+fmt(num(x.ovenCost))+' للعود'+(x.oven?' ('+x.oven+')':''),items:[{product_id:prod?prod.id:null,name:nm,qty:qty,price:pr}]})});
+     x.inv=(r&&r.no)||'';
+     try{await api.refreshInvoices([r.id])}catch(e){}
+     try{var c2=window.mkSB,qq=await c2.from('mk_products').select('id').eq('name',nm).limit(1);var pid=qq.data&&qq.data[0]&&qq.data[0].id;
+      if(pid){await api.refreshProducts([pid]);var p3=(db.products||[]).find(function(z){return z.id===pid});if(p3){var ch=false;if(!prod){p3.unit='متر';p3.cat=p3.cat||'فرفورجيه';ch=true}if(pmIn!==''&&num(pmIn)>0){p3.price=isM?num(pmIn):Math.round(num(pmIn)*L*100)/100;ch=true}if(ch){window.save&&window.save();await api.syncNow()}}}api.done&&api.done()}catch(e){}
+     toast('✔ دخل المخزن: '+(isM?qty+' متر':qty+' عود')+' — تكلفة المتر '+fmt(Math.round(u/L*100)/100)+' ج'+(x.inv?' — فاتورة '+x.inv:''))}
     x.stage++;x.hist.push({s:FST[x.stage],at:new Date().toISOString(),by:who()});await sv();draw()
    }catch(e){errAlert(e)}}
   draw();
@@ -6680,6 +6739,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 
  /* ---------- الاستانلس ---------- */
  var BEND={'مسطحة':0,'L':1,'U':2,'Z':2,'مخصص':0};
+ var SHN={'مسطحة':'شريحة مسطحة','L':'زاوية L','U':'حرف U','Z':'حرف Z','مخصص':'تشكيل خاص'};
  function pack(W,H,pieces,gap){
   var items=[];pieces.forEach(function(p,pi){for(var i=0;i<(p.q||1);i++)items.push({a:p.a,b:p.b,n:p.n,pi:pi})});
   items.sort(function(x,y){return Math.max(y.a,y.b)-Math.max(x.a,x.b)});
@@ -6878,10 +6938,13 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var b=shell(old?'🔩 تجهيز '+esc(ordNo(old)):'🔩 تجهيز قطعة استانلس',old?function(){viewOrder(id)}:viewOrders);mark('steel');
   function opt(arr,cur){return arr.map(function(x){return '<option'+(x===cur?' selected':'')+'>'+x+'</option>'}).join('')}
   b.innerHTML=(pre&&pre.body?'<div class="wkc" style="background:#fff8e1"><b>📩 رسالة الواتساب:</b><div style="white-space:pre-wrap;margin-top:4px">'+esc(pre.body)+'</div></div>':'')+
-   '<div class="wkc"><h3>اللوح والخامة</h3><div class="wkg">'+fi('sW','عرض اللوح (سم)',S.W,'inputmode="decimal"')+fi('sH','طول اللوح (سم)',S.H,'inputmode="decimal"')+fi('sG','فاصل القص (سم)',S.gap,'inputmode="decimal"')+
+   '<div class="wkc"><h3>1️⃣ اللوح من المخزون</h3><div class="wkf"><label>اختار اللوح (اللي اشتريته في المشتريات) — المقاس والسعر بيتملوا لوحدهم</label><input id="sSk" list="sSkL" value="'+esc(S.sheetProd||'')+'" placeholder="🔎 اكتب: لوح / استانلس / 120"><datalist id="sSkL">'+(db.products||[]).filter(function(p){return /ستانلس|استانلس|ستانليس|ستيل|لوح|صاج/.test((p.name||'')+' '+(p.cat||''))}).slice(0,300).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">رصيد '+esc(p.qty)+'</option>'}).join('')+'</datalist></div><div id="sSkI" style="font-size:13px;margin-top:6px;color:var(--muted)"></div>'+
+   '<div class="wkg" style="margin-top:8px">'+fi('sW','عرض اللوح (سم)',S.W,'inputmode="decimal"')+fi('sH','طول اللوح (سم)',S.H,'inputmode="decimal"')+fi('sG','فاصل القص (سم)',S.gap,'inputmode="decimal"')+
    fi('sTh','السمك (مم)',S.thick,'inputmode="decimal"')+'<div class="wkf"><label>النوع</label><select id="sGr">'+opt(['304','316','201','430'],S.grade)+'</select></div>'+
-   '<div class="wkf"><label>التشطيب</label><select id="sFi">'+opt(['لامع','مط','ساتان','هيرلاين','مرايا'],S.finish)+'</select></div>'+
-   fi('sSP','سعر اللوح (بتكتبه إنت)',S.sheetPrice,'inputmode="decimal"')+fi('sBP','سعر الثنية (بتكتبه إنت)',S.bendPrice,'inputmode="decimal"')+fi('sWa','نسبة الهالك %',S.waste,'inputmode="decimal"')+fi('sFe','🔧 أجرة الصنايعي (مصنعية)',S.fee||'','inputmode="decimal"')+fi('sSk','اللوح من المخزون (اختياري — بيتخصم في الفاتورة)',S.sheetProd||'','list="sSkL" placeholder="اسم لوح الاستانلس"')+'</div><datalist id="sSkL">'+(db.products||[]).filter(function(p){return /ستانلس|استانلس|ستانليس|لوح/.test(p.name||'')}).slice(0,200).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist></div>'+
+   '<div class="wkf"><label>التشطيب</label><select id="sFi">'+opt(['لامع','مط','ساتان','هيرلاين','مرايا'],S.finish)+'</select></div></div></div>'+
+   '<div class="wkc"><h3>2️⃣ الأسعار</h3><div class="wkg">'+fi('sSP','سعر شراء اللوح (تكلفتك)',S.sheetPrice,'inputmode="decimal"')+fi('sSS','سعر بيع اللوح للزبون',S.sellSheet||'','inputmode="decimal" placeholder="فاضي = سعر الشراء"')+
+   fi('sBP','سعر الثنية الواحدة على الزبون',S.bendPrice,'inputmode="decimal"')+fi('sCt','سعر قص القطعة على الزبون',S.cutPrice||'','inputmode="decimal"')+fi('sWa','نسبة الهالك %',S.waste,'inputmode="decimal"')+
+   fi('sFe','🔧 أجرة الصنايعي (عليك)',S.fee||'','inputmode="decimal"')+fi('sMg','ربح زيادة % (اختياري)',S.margin||'','inputmode="decimal"')+'</div></div>'+
    '<div class="wkc"><h3>القطع <small style="color:var(--muted)">(اضغط 👁️ لعرضها 3D)</small></h3><div id="sP"></div><button type="button" class="wkbtn" id="sPA">➕ قطعة</button></div>'+
    '<div class="wkc"><h3>المجسّم 3D <small style="color:var(--muted)">(اسحب بإصبعك أو الماوس عشان تلفّه)</small></h3><div class="draw" id="s3d"></div>'+
    '<div class="wkrow" style="margin-top:8px;justify-content:center"><button type="button" class="wkbtn" id="rL">⟲ يمين</button><button type="button" class="wkbtn" id="rR">⟳ شمال</button><button type="button" class="wkbtn" id="rU">⬆</button><button type="button" class="wkbtn" id="rD">⬇</button><button type="button" class="wkbtn" id="rZ">↺ إعادة</button></div></div>'+
@@ -6916,29 +6979,48 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   }
   var LAST={};
   function calc(){
-   S.W=num(q('sW').value);S.H=num(q('sH').value);S.gap=num(q('sG').value);S.thick=q('sTh').value;S.grade=q('sGr').value;S.finish=q('sFi').value;S.sheetPrice=q('sSP').value;S.bendPrice=q('sBP').value;S.waste=num(q('sWa').value);S.fee=q('sFe').value;S.sheetProd=q('sSk').value.trim();
+   S.W=num(q('sW').value);S.H=num(q('sH').value);S.gap=num(q('sG').value);S.thick=q('sTh').value;S.grade=q('sGr').value;S.finish=q('sFi').value;S.sheetPrice=q('sSP').value;S.bendPrice=q('sBP').value;S.waste=num(q('sWa').value);S.fee=q('sFe').value;S.sheetProd=q('sSk').value.trim();S.sellSheet=q('sSS').value;S.cutPrice=q('sCt').value;S.margin=q('sMg').value;
    var P=S.pieces.map(function(p){return {n:p.n,a:num(p.a),b:num(p.b),q:Math.max(1,num(p.q)||1),shape:p.shape,bends:num(p.bends),flange:num(p.flange)||3}}).filter(function(p){return p.a>0&&p.b>0});
    if(!S.W||!S.H||!P.length){q('sR').innerHTML='<span style="color:var(--muted)">اكتب مقاسات اللوح والقطع</span>';q('sL').innerHTML='';LAST={};return}
-   var r=pack(S.W,S.H,P,S.gap),n=r.sheets.length;
-   var area=P.reduce(function(a,p){return a+p.a*p.b*p.q},0),use=n?area/(n*S.W*S.H)*100:0;
-   var bends=P.reduce(function(a,p){return a+p.bends*p.q},0),bc=bends*num(S.bendPrice),mat=n*num(S.sheetPrice);
+   var DV=function(p){var nb=p.shape==='L'?1:(p.shape==='U'||p.shape==='Z')?2:(p.shape==='مخصص'?p.bends:0);return Math.round((p.b+nb*(p.flange||3))*10)/10};
+   var PK=P.map(function(p){return {a:p.a,b:DV(p),q:p.q,n:p.n}});
+   var r=pack(S.W,S.H,PK,S.gap),n=r.sheets.length;
+   var area=PK.reduce(function(a,p){return a+p.a*p.b*p.q},0),use=n?area/(n*S.W*S.H)*100:0;
+   var bends=P.reduce(function(a,p){return a+p.bends*p.q},0),bc=bends*num(S.bendPrice);
+   var frac=Math.round(area*(1+S.waste/100)/(S.W*S.H)*1000)/1000,cuts=P.reduce(function(a,p){return a+p.q},0),sellS=num(S.sellSheet)||num(S.sheetPrice),mat=frac*num(S.sheetPrice),matS=frac*sellS,cc=cuts*num(S.cutPrice);
+   var sug=Math.round((matS+bc+cc)*(1+num(S.margin)/100));
    var byArea=Math.ceil(area*(1+S.waste/100)/(S.W*S.H));
    var fee=num(S.fee),pr=num(q('sPc')&&q('sPc').value);
-   LAST={sheets:n,bends:bends,bendCost:bc,matCost:mat,fee:fee,total:bc+mat+fee,pieces:P};
-   q('sR').innerHTML='<div class="wkg"><div class="sample">عدد الألواح (تقطيع فعلي): <b>'+n+'</b></div><div class="sample">بالمساحة مع الهالك: <b>'+byArea+'</b></div><div class="sample">استفادة اللوح: <b>'+Math.round(use)+'%</b></div>'+
-    '<div class="sample">عدد الثنيات: <b>'+bends+'</b> = '+fmt(bc)+' ج</div></div>'+
-    '<div class="wkg" style="margin-top:8px"><div class="sample">🪨 الخامات (ألواح + ثني): <b>'+fmt(mat+bc)+'</b> ج</div><div class="sample">🔧 المصنعية: <b>'+fmt(fee)+'</b> ج</div><div class="sample">التكلفة الكلية: <b>'+fmt(mat+bc+fee)+'</b> ج</div>'+(pr?'<div class="sample">ربحك: <b>'+fmt(pr-(mat+bc+fee))+'</b> ج</div>':'')+'</div>'+
+   LAST={sheets:n,bends:bends,bendCost:bc,matCost:mat,fee:fee,total:Math.round((mat+fee)*100)/100,pieces:P,frac:frac,sug:sug,cuts:cuts};
+   var pr2=pr||sug,cost=mat+fee;
+   q('sR').innerHTML='<div style="font-size:13px;margin-bottom:6px">'+P.map(function(p){return '📐 '+(p.n?esc(p.n)+': ':'')+(SHN[p.shape]||p.shape)+' — الشريحة قبل الثني <b>'+p.a+' × '+DV(p)+'</b> سم ×'+p.q}).join('<br>')+'</div>'+
+    '<div class="wkg"><div class="sample">من المخزون: <b>'+frac+'</b> لوح ('+Math.round(frac*100)+'% من لوح)</div><div class="sample">ألواح تقطيع فعلي: <b>'+n+'</b> — استفادة '+Math.round(use)+'%</div><div class="sample">القطع: <b>'+cuts+'</b> — الثنيات: <b>'+bends+'</b></div></div>'+
+    '<div style="margin-top:8px;line-height:2;font-size:15px">🪨 الخامة على الزبون: <b>'+fmt(Math.round(matS))+'</b> ج <small>(تكلفتها '+fmt(Math.round(mat))+')</small><br>🔧 الثني: '+bends+' × '+fmt(num(S.bendPrice))+' = <b>'+fmt(bc)+'</b> ج<br>✂️ القص: '+cuts+' × '+fmt(num(S.cutPrice))+' = <b>'+fmt(cc)+'</b> ج'+(num(S.margin)?'<br>➕ ربح زيادة '+num(S.margin)+'%':'')+'</div>'+
+    '<div style="margin-top:8px;padding:12px;border-radius:12px;background:#e8f7ee;border:2px solid #7bcf9a"><div style="font-size:15px">💰 السعر المقترح للزبون</div><div style="font-size:26px;font-weight:900">'+fmt(sug)+' ج</div><div style="font-size:13px">القطعة ≈ '+fmt(cuts?Math.round(sug/cuts):0)+' ج — تكلفتك '+fmt(Math.round(cost))+' ج — ربحك <b>'+fmt(Math.round(pr2-cost))+'</b> ج'+(pr?' (بسعرك '+fmt(pr)+')':'')+'</div>'+
+    '<button type="button" class="wkbtn p" id="sUse" style="margin-top:8px">✔ استخدم السعر ده</button></div>'+
+    (S.sheetProd?'<p style="font-size:13px;margin:6px 0 0">📦 لما تعمل فاتورة هيتخصم <b>'+frac+'</b> من «'+esc(S.sheetProd)+'»</p>':'<p style="color:#b45309;font-size:13px;margin:6px 0 0">⚠️ اختار اللوح من المخزون فوق عشان يتخصم في الفاتورة</p>')+
     (r.bad.length?'<p style="color:#c0392b">⚠️ '+r.bad.length+' قطعة أكبر من اللوح ومش هتتقطع.</p>':'');
+   var us=q('sUse');if(us)us.onclick=function(){q('sPc').value=sug;calc()};
    q('sL').innerHTML=r.sheets.map(function(sh,i){return sheetSvg(S.W,S.H,sh,i)}).join('');
   }
-  b.querySelectorAll('#sW,#sH,#sG,#sTh,#sSP,#sBP,#sWa,#sFe,#sPc,#sSk').forEach(function(x){x.addEventListener('input',function(){calc();show3d()})});
+  b.querySelectorAll('#sW,#sH,#sG,#sTh,#sSP,#sBP,#sWa,#sFe,#sPc,#sSS,#sCt,#sMg').forEach(function(x){x.addEventListener('input',function(){calc();show3d()})});
   b.querySelectorAll('#sGr,#sFi').forEach(function(x){x.addEventListener('change',calc)});
+  function skFill(force){var nm=q('sSk').value.trim(),p=(db.products||[]).find(function(x){return String(x.name).trim()===nm}),inf=q('sSkI');
+   if(!p){inf.textContent=nm?'⚠️ مش لاقي اللوح ده في المخزون':'';calc();return}
+   var t=String(p.name).replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d)}),m=t.match(/(\d+(?:\.\d+)?)\s*(?:[×xX*\/]|في)\s*(\d+(?:\.\d+)?)/),th=t.match(/(\d+(?:\.\d+)?)\s*(?:مم|mm|ملي|م م)/i),gr=t.match(/\b(304|316|201|430)\b/);
+   if(m&&+m[1]>=30&&+m[2]>=30){q('sW').value=Math.min(+m[1],+m[2]);q('sH').value=Math.max(+m[1],+m[2])}
+   if(th)q('sTh').value=th[1];if(gr){q('sGr').value=gr[1]}
+   if(force||!q('sSP').value)q('sSP').value=num(p.cost)||'';if(force||!q('sSS').value)q('sSS').value=num(p.price)||'';
+   inf.innerHTML='✔ رصيد «'+esc(p.name)+'»: <b>'+esc(p.qty)+'</b> '+esc(p.unit||'')+' — تكلفة '+fmt(num(p.cost))+' — بيع '+fmt(num(p.price));calc();show3d()}
+  q('sSk').addEventListener('change',function(){skFill(true)});q('sSk').addEventListener('input',function(){var nm=this.value.trim();if((db.products||[]).some(function(x){return String(x.name).trim()===nm}))skFill(true)});
+  if(S.sheetProd)setTimeout(function(){skFill(false)},0);
   q('sPA').onclick=function(){S.pieces.push({n:'',a:'',b:'',q:1,shape:'مسطحة',bends:0,flange:3});SEL=S.pieces.length-1;drawP();show3d()};
   q('rL').onclick=function(){if(V)V.rot(-0.25,0)};q('rR').onclick=function(){if(V)V.rot(0.25,0)};q('rU').onclick=function(){if(V)V.rot(0,-0.2)};q('rD').onclick=function(){if(V)V.rot(0,0.2)};q('rZ').onclick=function(){if(V)V.reset()};
   drawP();calc();show3d();
   async function save(after){
    calc();var cu=q('sC').value.trim();if(!cu)return toast('اكتب اسم العميل');if(!LAST.sheets)return toast('اكتب القطع الأول');
-   var steel=Object.assign({},S,{sheets:LAST.sheets,pieces:LAST.pieces});
+   var steel=Object.assign({},S,{sheets:LAST.sheets,pieces:LAST.pieces,frac:LAST.frac,sug:LAST.sug});
+   if(!q('sPc').value&&LAST.sug)q('sPc').value=LAST.sug;
    var o=old||{id:uid(),no:CFG.next++,type:'استانلس',date:today(),kind:'other',w:'',h:'',qty:1,mats:[],fee:'',stage:0,hist:[{n:stages('استانلس')[0],at:new Date().toISOString(),by:who()}]};
    o.customer=cu;o.phone=q('sPh').value.trim();o.crafter=q('sCr').value.trim();o.price=q('sPc').value;o.paid=q('sPd').value;o.notes=q('sNo').value.trim();
    o.cost=String(LAST.total);o.steel=steel;o.w=S.W;o.h=S.H;o.qty=LAST.sheets;
@@ -8234,6 +8316,7 @@ window.mkUi={set:set,get:get};
   hy:['#0F766E','<path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6M9 11h.01M15 11h.01"/>'],
   logout:['#111827','<path d="M14 4h5v16h-5"/><path d="M10 8l-4 4 4 4M6 12h10"/>']
  };
+ I.mkSideSt=I.wkSteel;I.mkSideFf=I.wkForf;
  function ic(k){var d=I[k];return d?'<span class="mkic" style="--c:'+d[0]+'">'+P+d[1]+E+'</span>':''}
  window.mkIcon=ic;
  /* ── أدوات الرسم ── */
@@ -8270,6 +8353,7 @@ window.mkUi={set:set,get:get};
   wkExp:sh(rc(10,6,26,40,'w'))+'<path class="kt" d="M15 14h16M15 20h16M15 26h10"/><g transform="rotate(-12 44 44)"><rect class="sh" x="30.5" y="37" width="30" height="17" rx="2.5"/><rect class="w" x="28" y="34" width="30" height="17" rx="2.5"/><circle class="k" style="stroke-width:2" cx="43" cy="42.5" r="4.6"/><path class="kt" d="M32 38.5v8M54 38.5v8"/></g><path class="ml" d="M46 22l9-9M48 13h7v7"/>',
   purchases:'<g transform="rotate(-8 28 30)">'+rc(14,6,24,38,'ws')+'</g>'+sh(rc(8,6,26,40,'w'))+'<path class="kt" d="M13 14h16M13 20h16M13 26h10M13 32h14"/>'+iso(46,59,12,13)
  };
+ IL.mkSideSt=IL.wkSteel;IL.mkSideFf=IL.wkForf;
  function ill(k){var s=IL[k],d=I[k];return s&&d?'<span class="mkill" style="--c:'+d[0]+'"><svg viewBox="0 0 64 64" aria-hidden="true">'+s+'</svg></span>':ic(k)}
  window.mkIll=ill;
  function paint(){
@@ -8427,7 +8511,7 @@ window.mkUi={set:set,get:get};
  window.mkBgSet=function(c,fx,side){var o=bgGet();if(c)o.c=c;if(fx!=null)o.fx=fx?1:0;if(side!=null)o.side=side;try{localStorage.setItem('mk_bg',JSON.stringify(o))}catch(e){}bgApply();try{fixReset()}catch(e){}var cp=document.getElementById('mkBgC');if(cp)cp.value=o.c;document.querySelectorAll('#mkBgP button').forEach(function(b){b.classList.toggle('on',b.dataset.c===o.c)});document.querySelectorAll('#mkSdP button').forEach(function(b){b.classList.toggle('on',b.dataset.c===o.side)});var sc=document.getElementById('mkSdC');if(sc&&o.side)sc.value=o.side};
  /* المظهر والإدارة وتسجيل الخروج آخر حاجة في القايمة الجانبية */
  function navEnd(){var as=document.querySelector('aside');if(!as)return;
-  var dbb=as.querySelector('[data-page="daybook"]');if(dbb){var pv=dbb;['mkSideTf','mkSideWk'].forEach(function(id){var e=document.getElementById(id);if(e&&as.contains(e)){if(pv.nextElementSibling!==e)pv.after(e);pv=e}})}
+  var dbb=as.querySelector('[data-page="daybook"]');if(dbb){var pv=dbb;['mkSideTf','mkSideWk','mkSideSt','mkSideFf'].forEach(function(id){var e=document.getElementById(id);if(e&&as.contains(e)){if(pv.nextElementSibling!==e)pv.after(e);pv=e}})}
   var keep=[as.querySelector('[data-page="theme"]'),as.querySelector('[data-page="settings"]'),document.getElementById('outBtn')].filter(function(x){return x&&as.contains(x)});if(!keep.length)return;
   var nv=document.getElementById('mkNavEnd'),t=document.getElementById('mkNavEndT');
   if(!nv){as.insertAdjacentHTML('beforeend','<div class="nav-title" id="mkNavEndT">الإعدادات والخروج</div><nav class="nav" id="mkNavEnd"></nav>');nv=document.getElementById('mkNavEnd');t=document.getElementById('mkNavEndT')}
@@ -9445,7 +9529,7 @@ function draw(){let s=db.products.find(x=>x.id===SP.s),t=db.products.find(x=>x.i
  <div class="field"><label>الوحدة الكبيرة فيها كام وحدة صغيرة؟</label><input id="spRatio" type="number" step="any" inputmode="decimal" value="${ratio||''}" placeholder="مثال: 50"></div>
  <div class="field"><label>هتفك كام وحدة كبيرة؟</label><input id="spQty" type="number" step="any" inputmode="decimal" value="${qty||''}" placeholder="مثال: 2"></div>
  ${s&&t&&add>0?`<div class="card" style="background:var(--tint2);border:0;line-height:2">${esc(s.name)}: ${s.qty} ← <b>${Math.round((s.qty-qty)*100)/100}</b><br>${esc(t.name)}: ${t.qty} ← <b>${Math.round((+t.qty+add)*100)/100}</b><br>تكلفة الوحدة الصغيرة: <b>${money(unitCost)}</b>${(+t.cost||0)!==Math.round(newCost*100)/100?` (المتوسط الجديد ${money(newCost)})`:''}</div>`:''}
- <button class="primary" id="spGo" style="width:100%;padding:16px;margin-top:10px" ${s&&t&&add>0&&qty<=s.qty?'':'disabled'}>تنفيذ الفك</button>${s&&qty>s.qty?'<div style="color:var(--danger);margin-top:6px">الكمية أكبر من رصيد الصنف الكبير.</div>':''}`);
+ <button class="primary" id="spGo" style="width:100%;padding:16px;margin-top:10px" ${s&&t&&add>0?'':'disabled'}>تنفيذ الفك</button>${s&&qty>s.qty?'<div style="color:#b45309;margin-top:6px">⚠️ الكمية أكبر من رصيد الصنف الكبير — هيتنفذ والرصيد يبقى بالسالب.</div>':''}`);
  if($('spSQ'))$('spSQ').oninput=()=>pick('spS','s');if($('spTQ'))$('spTQ').oninput=()=>pick('spT','t');if($('spS0'))$('spS0').onclick=()=>{SP.s=null;draw()};if($('spT0'))$('spT0').onclick=()=>{SP.t=null;draw()};
  ['spRatio','spQty'].forEach(i=>{$(i).oninput=()=>{SP.ratio=num($('spRatio').value);SP.qty=num($('spQty').value);clearTimeout(draw._t);draw._t=setTimeout(()=>{let a=document.activeElement&&document.activeElement.id;draw();if(a&&$(a)){$(a).focus();$(a).setSelectionRange&&0}},350)}});
  if($('spGo'))$('spGo').onclick=async()=>{if(s.id===t.id)return toast('اختار صنفين مختلفين');if(!A())return toast('محتاج السيستم أونلاين');$('spGo').disabled=true;
