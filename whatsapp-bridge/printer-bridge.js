@@ -52,6 +52,6 @@ async function tick() {
   } catch (e) { if (!/fetch failed/i.test(e.message)) log('✘ صندوق الصادر:', e.message); }
   finally { busy = false; }
 }
-setInterval(tick, 4000);
+setInterval(tick, 1500);
 log('جسر الطباعة شغال — مستقل عن واتساب تمامًا');
 tick();
