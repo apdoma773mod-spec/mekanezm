@@ -1657,7 +1657,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-82';
+const APP_VER='2026-10-17-83';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -9982,7 +9982,7 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
   if(old)return;
   var sec=document.getElementById('settings');if(!sec)return;var g=sec.querySelector('.grid2')||sec;
   var d=document.createElement('div');d.className='card';d.id='mkTwCard';d.style.cssText='border:2px dashed #c0392b';
-  d.innerHTML='<h3 style="color:#c0392b;margin-top:0">🧹 تنظيف بيانات التجارب</h3><p style="color:var(--muted);line-height:1.9">بيمسح كل العمليات اللي اتعملت وقت التجارب (بيع، شراء، يومية، مرتجعات، مصروفات، دفعات، عروض أسعار، طلبات واتساب، أوردرات…) ويسيب <b>الأصناف</b> و<b>فواتير الشراء اللي سحبتها من الصور</b>.<br>الزرار ده بيشتغل <b>مرة واحدة بس</b> وبعدها بيختفي من كل الأجهزة.</p><button type="button" class="primary" id="mkTwGo" style="background:#c0392b;border-color:#c0392b;min-height:50px;width:100%">🧹 افتح شاشة التنظيف</button>';
+  d.innerHTML='<h3 style="color:#c0392b;margin-top:0">🧹 تنظيف بيانات التجارب</h3><p style="color:var(--muted);line-height:1.9">بيمسح كل العمليات اللي اتعملت وقت التجارب (بيع، شراء، يومية، مرتجعات، مصروفات، دفعات، عروض أسعار، طلبات واتساب، أوردرات…) ويسيب <b>الأصناف</b> و<b>العملاء والموردين</b> و<b>فواتير الشراء اللي سحبتها من الصور</b>.<br>الزرار ده بيشتغل <b>مرة واحدة بس</b> وبعدها بيختفي من كل الأجهزة.</p><button type="button" class="primary" id="mkTwGo" style="background:#c0392b;border-color:#c0392b;min-height:50px;width:100%">🧹 افتح شاشة التنظيف</button>';
   g.appendChild(d);d.querySelector('#mkTwGo').onclick=open;
  }
 
@@ -10061,7 +10061,6 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
    ['staff','👷 الحضور والسلف والقبض',n(R.att)+n(R.sm),true,true],
    ['portal','📨 رسايل بوابة العملاء',n(R.pmsg),true,true],
    ['svc','🔩 أصناف الخدمات اللي اتعملت في التجارب («خدمات وتجهيز»)',svc.length,true,true],
-   ['contacts','👥 العملاء والموردين (غير موردين الفواتير اللي هتفضل)',delC.length,true,true],
    ['web','🌐 طلبات الموقع (ممكن تكون من زباين حقيقيين)',n(R.web),false,true]
   ]}
  function draw(){var s=sheet();busy=false;var C=cats();OPT=OPT||{};C.forEach(function(c){if(!(c[0] in OPT))OPT[c[0]]=c[3]});
@@ -10069,7 +10068,7 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
   var rows=A.pur.slice().sort(function(a,b){return String(b.created_at).localeCompare(String(a.created_at))}).map(function(v){var t=tg[v.id],on=A.keep.has(v.id),ic=t.k==='photo'?'📷':t.k==='file'?'📄':'✍️';
    return '<label style="display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;margin:6px 0;border:1.5px solid '+(on?'#159447':'var(--border,#e4eaed)')+';background:'+(on?'#eaf7ef':'var(--card,#fff)')+'"><input type="checkbox" class="twK" data-id="'+v.id+'" '+(on?'checked':'')+' style="width:24px;height:24px;flex:none"><div style="flex:1;min-width:0"><b>'+E(v.no)+'</b> — '+E(v.person||'مورد')+'<div style="font-size:12px;color:var(--muted)">'+ic+' '+E(t.why)+' · '+E(v.date||'')+' · '+(A.byInv[v.id]||[]).length+' بند</div></div><b style="flex:none">'+M(v.total)+'</b></label>'}).join('')||'<div class="empty">مفيش فواتير شراء.</div>';
   s.innerHTML=head()+'<div style="flex:1;overflow:auto;padding:14px 14px 130px;-webkit-overflow-scrolling:touch"><div style="max-width:760px;margin:0 auto">'+
-   '<div class="card" style="border:2px solid #159447"><h3 style="margin-top:0;color:#159447">✅ اللي هيفضل زي ما هو</h3><div style="line-height:2">📦 الأصناف كلها: <b>'+R.products.length+'</b> صنف (غير أصناف الخدمات لو اخترت تمسحها)<br>📷 فواتير الشراء اللي هتفضل: <b id="twKn">'+A.keep.size+'</b> فاتورة (علّم عليها من تحت)<br>⚙️ الإعدادات، القواعد، الأطقم، الموظفين، المستخدمين، قوائم الأسعار — مابتتلمسش</div></div>'+
+   '<div class="card" style="border:2px solid #159447"><h3 style="margin-top:0;color:#159447">✅ اللي هيفضل زي ما هو</h3><div style="line-height:2">📦 الأصناف كلها: <b>'+R.products.length+'</b> صنف (غير أصناف الخدمات لو اخترت تمسحها)<br>👥 العملاء والموردين كلهم: <b>'+R.contacts.length+'</b> (حساباتهم بترجع زي ما كانت قبل التجارب)<br>📷 فواتير الشراء اللي هتفضل: <b id="twKn">'+A.keep.size+'</b> فاتورة (علّم عليها من تحت)<br>⚙️ الإعدادات، القواعد، الأطقم، الموظفين، المستخدمين، قوائم الأسعار — مابتتلمسش</div></div>'+
    '<div class="card"><h3 style="margin-top:0">📥 فواتير الشراء — علّم على اللي <u>تفضل</u></h3><p style="color:var(--muted);font-size:13px;margin:0 0 6px">📷 = لقيتها من الصور (متعلّم عليها لوحدها) · 📄 = مستوردة من ملف · ✍️ = اتسجلت يدوي. اللي مش متعلّم عليه هيتلغي ومخزونه يرجع.</p><div style="display:flex;gap:8px;margin:6px 0"><button type="button" class="secondary" id="twAllP" style="flex:1">📷 الصور بس</button><button type="button" class="secondary" id="twAllK" style="flex:1">خلّي الكل</button><button type="button" class="secondary" id="twNone" style="flex:1">امسح الكل</button></div>'+rows+'</div>'+
    '<div class="card" style="border:2px solid #c0392b"><h3 style="margin-top:0;color:#c0392b">🗑️ اللي هيتمسح</h3>'+C.map(function(c){return '<label style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border,#eee)"><input type="checkbox" class="twC" data-k="'+c[0]+'" '+(OPT[c[0]]?'checked':'')+' style="width:24px;height:24px;flex:none"><span style="flex:1">'+c[1]+'</span>'+(c[2]==null?'':'<b>'+c[2]+'</b>')+'</label>'}).join('')+'</div>'+
    '<div class="card"><h3 style="margin-top:0">📦 كميات المخزون بعد التنظيف</h3><label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0"><input type="radio" name="twQ" value="back" '+(OPT.q!=='keep'?'checked':'')+' style="width:22px;height:22px;flex:none"><span><b>رجّع الكميات زي ما كانت قبل التجارب</b> (الأفضل)<br><small style="color:var(--muted)">كل اللي اتباع في التجارب يرجع، وكل اللي اتشرى في فواتير هتتمسح يتشال. فواتير الصور بتفضل محسوبة.</small></span></label><label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0"><input type="radio" name="twQ" value="keep" '+(OPT.q==='keep'?'checked':'')+' style="width:22px;height:22px;flex:none"><span><b>سيب كل كمية زي ما هي دلوقتي</b><br><small style="color:var(--muted)">لو انت ظبطت الكميات بإيدك على الحقيقة وعايزها تفضل.</small></span></label></div>'+
@@ -10177,7 +10176,7 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
    if(O.svc){P(90,'🔩 أصناف الخدمات…');var sv=R.products.filter(function(p){return p.cat==='خدمات وتجهيز'&&!keptPid.has(p.id)}).map(function(p){return p.id});
     for(var c=0;c<sv.length;c+=100){var r2=await S().from('mk_products').delete().in('id',sv.slice(c,c+100));if(r2.error)ERR.push('أصناف الخدمات: '+errT(r2.error))}
     if(sv.length)L('✔ أصناف الخدمات: '+sv.length)}
-   if(O.contacts){P(94,'👥 العملاء والموردين…');var dc2=R.contacts.filter(function(x){return !keptCid.has(x.id)}).map(function(x){return x.id});
+   if(false&&O.contacts){P(94,'👥 العملاء والموردين…');var dc2=R.contacts.filter(function(x){return !keptCid.has(x.id)}).map(function(x){return x.id});
     for(var c2=0;c2<dc2.length;c2+=100){var r3=await S().from('mk_contacts').delete().in('id',dc2.slice(c2,c2+100));if(r3.error)ERR.push('العملاء: '+errT(r3.error))}
     if(dc2.length)L('✔ العملاء والموردين: '+dc2.length)}
 
