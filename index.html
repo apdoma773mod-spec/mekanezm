@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-79';
+const APP_VER='2026-10-17-80';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6442,8 +6442,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     '<div class="wkc"><h3>✂️ قص وبيع من عود (رصيد بالمتر)</h3><div class="wkg">'+fi('fcP','المنتج (عود 6م في المخزون)','','list="fcL"')+'<datalist id="fcL">'+(db.products||[]).filter(function(p){return /فرفور|فورفور|حديد|عود/.test(p.name||'')}).slice(0,200).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist>'+fi('fcM','الطول المطلوب (متر)','','inputmode="decimal"')+fi('fcT','طول العود (متر)',6,'inputmode="decimal"')+'</div>'+
     '<div id="fcInfo" class="sample" style="margin-top:8px"></div><div class="wkrow" style="margin-top:8px"><button type="button" class="wkbtn p" id="fcGo">✂️ اخصم وافتح فاتورة</button></div></div>'+
     (done.length?'<div class="wkc"><h3>📦 اتسجلت في المخزن ('+done.length+')</h3>'+done.map(card).join('')+'</div>':'');
-   function ud(){var nm=b.querySelector('#fcP').value.trim(),m=FM[nm],t=num(b.querySelector('#fcT').value)||6;b.querySelector('#fcInfo').innerHTML=nm?('الباقي من العود المفتوح: <b>'+fmt(m?m.rem:0)+'</b> م'):'اختار المنتج'}
-   b.querySelector('#fcP').oninput=ud;ud();
+   function ud(){var nm=b.querySelector('#fcP').value.trim(),t=num(b.querySelector('#fcT').value)||6,m=num(b.querySelector('#fcM').value),p=(db.products||[]).find(function(x){return String(x.name).trim()===nm});
+    if(!p){b.querySelector('#fcInfo').innerHTML=nm?'⚠️ مش لاقي الصنف ده في المخزون':'اختار العود';return}
+    var isM=/متر/.test(p.unit||'')||/بالمتر/.test(p.name||''),cm=isM?num(p.cost):num(p.cost)/t,pm=isM?num(p.price):num(p.price)/t,bal=isM?num(p.qty):num(p.qty)*t;
+    b.querySelector('#fcInfo').innerHTML='الرصيد: <b>'+fmt(Math.round(bal*100)/100)+'</b> م'+(isM?'':' ('+fmt(num(p.qty))+' عود)')+'<br>تكلفة المتر: <b>'+fmt(Math.round(cm*100)/100)+'</b> ج — سعر بيع المتر: <b>'+fmt(Math.round(pm*100)/100)+'</b> ج'+(m>0?'<br>القطعة '+m+' م: تكلفتها <b>'+fmt(Math.round(cm*m*100)/100)+'</b> ج — سعرها <b>'+fmt(Math.round(pm*m*100)/100)+'</b> ج — ربحك <b>'+fmt(Math.round((pm-cm)*m*100)/100)+'</b> ج':'')}
+   b.querySelector('#fcP').oninput=ud;b.querySelector('#fcM').oninput=ud;b.querySelector('#fcT').oninput=ud;ud();
    b.querySelector('#foAdd').onclick=async function(){var n=num(b.querySelector('#foN').value),c=num(b.querySelector('#foC').value);if(!(n>0))return toast('اكتب عدد الأعواد');
     FO.unshift({id:uid(),date:today(),supplier:b.querySelector('#foS').value.trim(),n:n,len:num(b.querySelector('#foL').value)||6,steel:c,oven:'',ovenCost:0,stage:0,hist:[{s:FST[0],at:new Date().toISOString(),by:who()}]});
     var ov=b.querySelector('#foO').value.trim();if(ov)FO[0].oven=ov;try{await sv();toast('✔ اتسجلت');draw()}catch(e){errAlert(e)}};
@@ -6451,14 +6454,13 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    b.querySelectorAll('[data-fd]').forEach(function(x){x.onclick=async function(){if(!(await ask('تمسح الدفعة دي من المتابعة؟ (المخزن مش هيتأثر)','مسح','لأ')))return;FO=FO.filter(function(z){return z.id!==x.dataset.fd});try{await sv();draw()}catch(e){errAlert(e)}}});
    b.querySelector('#fcGo').onclick=async function(){
     var nm=b.querySelector('#fcP').value.trim(),m=num(b.querySelector('#fcM').value),L=num(b.querySelector('#fcT').value)||6;
-    var prod=(db.products||[]).find(function(p){return String(p.name).trim()===nm});if(!prod)return toast('اختار منتج موجود في المخزون');if(!(m>0))return toast('اكتب الطول المطلوب');
-    var st=FM[nm]||{rem:0},need=Math.max(0,Math.ceil((m-st.rem)/L-1e-9));
-    if(need>num(prod.qty))return toast('الرصيد مش كفاية: محتاج '+need+' عود والموجود '+num(prod.qty));
-    var rem=Math.round((st.rem+need*L-m)*100)/100;
-    if(!(await ask('هتقص '+m+' م من «'+nm+'»'+(need?'\nهيتخصم '+need+' عود كامل':'\nمن الباقي المفتوح')+'\nالباقي بعد القص: '+rem+' م\nنكمّل؟','قص وفاتورة','لأ')))return;
-    try{if(need){prod.qty=num(prod.qty)-need;await syncStock()}FM[nm]={rem:rem};await svm();
-     close();var pr=Math.round(num(prod.price)/L*m*100)/100;
-     prepToInvoice({customer:'',phone:'',note:'قطع '+m+' م من '+nm,lines:[{name:nm+' — قطع '+m+' م',qty:1,price:pr,skipStock:true}]})}catch(e){errAlert(e)}};
+    var prod=(db.products||[]).find(function(p){return String(p.name).trim()===nm});
+    if(!(m>0))return toast('اكتب الطول المطلوب بالمتر');
+    if(!prod)return toast('اختار العود من المخزون (لو لسه مش متسجل: من خط السير ← «دخل المخزن»)');
+    var isM=/متر/.test(prod.unit||'')||/بالمتر/.test(prod.name||''),qty=isM?m:Math.round(m/L*1000)/1000;
+    if(num(prod.qty)<qty&&!(await ask('⚠️ الرصيد في المخزون '+num(prod.qty)+(isM?' م':' عود')+' — أقل من المطلوب.\nهتكمّل والرصيد يبقى بالسالب؟','كمّل','لأ')))return;
+    close();
+    prepToInvoice({customer:'',phone:'',note:'قطع '+m+' م من '+nm,lines:[{name:nm,qty:qty,price:null}]})};
   }
   function card(x){var u=num(x.steel)+num(x.ovenCost);
    return '<div class="sample" style="margin-bottom:8px"><b>'+x.n+' عود × '+x.len+' م</b> — '+esc(x.supplier||'')+' <small>('+esc(x.date)+')</small><div style="margin:6px 0">'+FST.map(function(t,i){return '<span class="badge" style="margin:2px;'+(i<=x.stage?'background:#d7f3dd':'opacity:.5')+'">'+t+'</span>'}).join('')+'</div>'+
