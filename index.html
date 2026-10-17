@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-70';
+const APP_VER='2026-10-17-71';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6394,7 +6394,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var hc={none:0,one:1,both:2,ext:0,frame:0}[o.handle||'one'];if(hc==null)hc=1;
   var T=rodType(o.rod),P=[],H=[],i,k;
   for(i=0;i<q;i++){for(k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
-  return {T:T,P:P,H:H,pp:P.length?plan(P,T.pLen,0.5):[],hp:H.length?plan(H,T.hLen,0.5):[],bad:P.some(function(x){return x>T.pLen})||H.some(function(x){return x>T.hLen}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
+  return {T:T,P:P,H:H,pp:P.length?plan(P,T.pLen,num(RC.kerf)||0):[],hp:H.length?plan(H,T.hLen,num(RC.kerf)||0):[],bad:P.some(function(x){return x>T.pLen})||H.some(function(x){return x>T.hLen}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
  }
  function rodsHtml(o){var r=rodCalc(o);if(!r)return '';
   var lf=r.pp.concat(r.hp).map(function(b){return Math.round(b.left)}).filter(function(x){return x>0});
@@ -6414,7 +6414,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(html);
  }
  /* 🧮 حاسبة الأعواد: النجار يقولك مقاسات الدرف، والسيستم يقولك هياخدوا كام عود */
- var RC={rows:[{w:'',h:'',q:1,kind:'hinge',handle:'one'}],rod:'blum'};
+ var RC={rows:[{w:'',h:'',q:1,kind:'hinge',handle:'one'}],rod:'blum',kerf:0.5};
  function viewRods(){
   var b=shell('🧮 حاسبة الأعواد');mark('rods');
   function draw(){
@@ -6422,9 +6422,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    RC.rows.forEach(function(x){var w=num(x.w),h=num(x.h),q=Math.max(1,num(x.q)||1);if(!(w>0&&h>0))return;var hc={none:0,one:1,both:2,ext:0,frame:0}[x.handle];if(hc==null)hc=1;
     for(var i=0;i<q;i++){for(var k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
     if(x.handle!=='frame'){work.n+=q;work.fee+=q*(x.kind==='slide'?r0.sF:r0.hF);work.price+=q*(x.kind==='slide'?r0.sP:r0.hP)}});
-   var pp=P.length?plan(P,R.pLen,0.5):[],hp=H.length?plan(H,R.hLen,0.5):[],bad=P.some(function(x){return x>R.pLen})||H.some(function(x){return x>R.hLen});
+   var KF=num(RC.kerf)||0,pp=P.length?plan(P,R.pLen,KF):[],hp=H.length?plan(H,R.hLen,KF):[],bad=P.some(function(x){return x>R.pLen})||H.some(function(x){return x>R.hLen});
    var lf=pp.concat(hp).map(function(x){return Math.round(x.left)}).filter(function(x){return x>0});
-   b.innerHTML='<div class="wkc"><h3>نوع العود</h3><div class="wkf"><select id="rcR">'+rodTypeDefs().map(function(t){return '<option value="'+t.k+'"'+(RC.rod===t.k?' selected':'')+'>'+esc(t.n)+'</option>'}).join('')+'</select></div></div>'+
+   b.innerHTML='<div class="wkc"><h3>نوع العود</h3><div class="wkf"><select id="rcR">'+rodTypeDefs().map(function(t){return '<option value="'+t.k+'"'+(RC.rod===t.k?' selected':'')+'>'+esc(t.n)+'</option>'}).join('')+'</select></div><div class="wkf" style="margin-top:8px"><label>سمك المنشار (سم) — اختياري، 0 لو مش عايز</label><input id="rcK" value="'+esc(RC.kerf)+'" inputmode="decimal"></div></div>'+
     '<div class="wkc"><h3>مقاسات الدرف</h3>'+RC.rows.map(function(x,i){return '<div class="wkg" style="margin-bottom:8px;align-items:end">'+
      '<div class="wkf"><label>العرض (سم)</label><input data-r="w" data-i="'+i+'" value="'+esc(x.w)+'" inputmode="decimal"></div><div class="wkf"><label>الارتفاع (سم)</label><input data-r="h" data-i="'+i+'" value="'+esc(x.h)+'" inputmode="decimal"></div>'+
      '<div class="wkf"><label>العدد</label><input data-r="q" data-i="'+i+'" value="'+esc(x.q)+'" inputmode="numeric"></div>'+
@@ -6432,9 +6432,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<div class="wkf"><label>المقبض</label><select data-r="handle" data-i="'+i+'">'+HANDLES.map(function(h){return '<option value="'+h[0]+'"'+(x.handle===h[0]?' selected':'')+'>'+h[1]+'</option>'}).join('')+'</select></div>'+
      '<button type="button" class="wkbtn d" data-x="'+i+'">حذف</button></div>'}).join('')+'<button type="button" class="wkbtn" id="rcA">➕ مقاس تاني</button></div>'+
     '<div class="wkc"><h3>🪵 الخامات (الأعواد)</h3>'+(P.length+H.length?'<div class="wkg"><div class="sample">عود من غير مقبض: <b style="font-size:22px">'+pp.length+'</b></div><div class="sample">عود بمقبض: <b style="font-size:22px">'+hp.length+'</b></div><div class="sample">القطع: '+P.length+' عادي + '+H.length+' بمقبض</div><div class="sample">الأمتار: '+fmt(Math.round(P.concat(H).reduce(function(a,c){return a+c},0))/100)+' م</div></div>'+
-     (lf.length?'<p style="margin:8px 0 0;font-size:13px">الفضلات (بتاعة الزبون): '+lf.join('، ')+' سم</p>':'')+(bad?'<p style="color:#c0392b">⚠️ في قطعة أطول من العود</p>':''):'<span class="empty">اكتب مقاسات الدرف</span>')+'</div>'+
+     (function(){var rowsB=function(arr,nm,len){return arr.map(function(x,i){return '<div style="font-size:13px;padding:4px 0;border-top:1px dashed var(--border)">'+nm+' '+(i+1)+' ('+len+' سم): '+x.cuts.join(' + ')+' ← فضل <b>'+Math.round(x.left)+'</b> سم</div>'}).join('')};
+     return '<div style="margin-top:8px"><b>هتاخد '+pp.length+' عود عادي + '+hp.length+' عود بمقبض</b>'+rowsB(pp,'عود',R.pLen)+rowsB(hp,'عود مقبض',R.hLen)+'</div>'})()+
+     (lf.length?'<p style="margin:8px 0 0;font-size:13px">الفضلات: '+lf.join('، ')+' سم</p><button type="button" class="wkbtn" id="rcOff">🧰 سجّل الفضل الصالح في شاشة الفضل</button>':'')+(bad?'<p style="color:#c0392b">⚠️ في قطعة أطول من العود</p>':''):'<span class="empty">اكتب مقاسات الدرف</span>')+'</div>'+
     '<div class="wkc"><h3>🔧 المصنعية (تقريبي من أسعار الإعدادات)</h3>'+(work.n?'<div class="wkg"><div class="sample">عدد الدرف: <b>'+work.n+'</b></div><div class="sample">للصنايعي: <b>'+fmt(work.fee)+'</b> ج</div><div class="sample">على الزبون: <b>'+fmt(work.price)+'</b> ج</div><div class="sample">ربحك: <b>'+fmt(work.price-work.fee)+'</b> ج</div></div>':'<span class="empty">—</span>')+'</div>';
    b.querySelector('#rcR').onchange=function(){RC.rod=this.value;draw()};
+   b.querySelector('#rcK').onchange=function(){RC.kerf=this.value===''?0:num(this.value);draw()};
+   var rcO=b.querySelector('#rcOff');if(rcO)rcO.onclick=async function(){try{var O=await get('wk_offcuts',[]),mn=num(CFG.minOff)||20,n=0;CFG.offNext=CFG.offNext||1;
+     [[pp,R.pLen,R.pProd||('عود '+R.n)],[hp,R.hLen,R.hProd||('عود مقبض '+R.n)]].forEach(function(g){g[0].forEach(function(x){if(x.left>=mn){O.push({id:uid(),code:offCode(CFG.offNext++),item:g[2],color:'',len:Math.floor(x.left),orig:g[1],place:'',status:'متاحة',date:today()});n++}})});
+     if(!n)return toast('مفيش فضل صالح (أقل من '+mn+' سم)');await put('wk_offcuts',O);await saveCfg();toast('✔ اتسجّل '+n+' فضلة في شاشة الفضل')}catch(e){errAlert(e)}};
    b.querySelectorAll('[data-r]').forEach(function(x){x.addEventListener(x.tagName==='SELECT'?'change':'change',function(){RC.rows[+x.dataset.i][x.dataset.r]=x.value;draw()})});
    b.querySelectorAll('[data-x]').forEach(function(x){x.onclick=function(){RC.rows.splice(+x.dataset.x,1);if(!RC.rows.length)RC.rows.push({w:'',h:'',q:1,kind:'hinge',handle:'one'});draw()}});
    b.querySelector('#rcA').onclick=function(){RC.rows.push({w:'',h:'',q:1,kind:'hinge',handle:'one'});draw();var L=b.querySelectorAll('[data-r="w"]');if(L.length)L[L.length-1].focus()};
@@ -6816,15 +6822,29 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  var OFS=['متاحة','محجوزة','اتباعت','خردة'];
  function offCode(n){return 'FD-'+String(n).padStart(4,'0')}
  function prodNames(){try{return (db.products||[]).map(function(p){return p.name})}catch(e){return []}}
+ /* تقطيع طولي (1D cutting stock): بيجرّب أكتر من أسلوب ويختار الأقل في عدد الأعواد، وبعدين الأكبر فضلة صالحة لإعادة الاستخدام.
+    الأساليب: FFD / BFD / ملء العود بأفضل مجموعة (subset-sum). كل قطعة بتاخد سمك المنشار (kerf) مرة. */
+ function planFFD(L,bar,kerf,best){var bars=[];L.forEach(function(x){var pick=null;
+   bars.forEach(function(z){var ok=z.left>=x+kerf-1e-9||(z.cuts.length===0&&z.left>=x-1e-9);if(!ok)return;if(!pick||(best&&z.left<pick.left))pick=pick&&!best?pick:z});
+   if(!pick){pick={left:bar,cuts:[]};bars.push(pick)}pick.cuts.push(x);pick.left=Math.round((pick.left-x-kerf)*100)/100});return bars}
+ function planFill(L,bar,kerf){var rest=L.slice(),bars=[];var U=0.5;
+  while(rest.length){var cap=Math.floor(bar/U),first=rest.shift(),b={left:bar,cuts:[first]};b.left=Math.round((b.left-first-kerf)*100)/100;
+   /* أحسن مجموعة من الباقي تملا الباقي من العود (DP على 0.5 سم) */
+   var room=b.left,W=Math.floor((room+kerf+1e-9)/U),n=rest.length,items=rest.map(function(x){return Math.max(1,Math.round((x+kerf)/U))});
+   if(room>0&&n&&n<=120){var dp=new Array(W+1).fill(-1);dp[0]=0;var from=new Array(W+1).fill(-1),pick=[];
+    for(var i=0;i<n;i++){if(items[i]>W)continue;for(var w=W;w>=items[i];w--){if(dp[w-items[i]]>=0&&dp[w]<0){dp[w]=i;from[w]=w-items[i]}}}
+    var bw=0;for(var w2=W;w2>=0;w2--){if(dp[w2]>=0){bw=w2;break}}
+    var used={},w3=bw;while(w3>0&&dp[w3]>=0){var ii=dp[w3];if(used[ii])break;used[ii]=1;w3=from[w3]}
+    var keep=[];rest.forEach(function(x,idx){if(used[idx]){b.cuts.push(x);b.left=Math.round((b.left-x-kerf)*100)/100}else keep.push(x)});rest=keep}
+   bars.push(b)}return bars}
+ function planScore(bars){var left=bars.map(function(b){return b.left}).sort(function(a,c){return c-a});return [bars.length,-(left[0]||0),bars.reduce(function(a,b){return a+b.left},0)]}
  function plan(lens,bar,kerf){
-  var L=lens.slice().sort(function(a,b){return b-a}),bars=[];
-  L.forEach(function(x){
-   var b=bars.find(function(z){return z.left>=x+kerf-1e-9||z.left>=x-1e-9&&z.cuts.length===0});
-   if(!b){b={left:bar,cuts:[]};bars.push(b)}
-   b.cuts.push(x);b.left=Math.round((b.left-x-kerf)*100)/100;
-  });
-  return bars;
+  kerf=kerf||0;var L=lens.slice().filter(function(x){return x>0}).sort(function(a,b){return b-a});if(!L.length)return [];
+  var C=[planFFD(L,bar,kerf,false),planFFD(L,bar,kerf,true)];try{C.push(planFill(L,bar,kerf))}catch(e){}
+  var bestP=null,bs=null;C.forEach(function(r){var sc=planScore(r);if(!bs||sc[0]<bs[0]||(sc[0]===bs[0]&&(sc[1]<bs[1]||(sc[1]===bs[1]&&sc[2]<bs[2])))){bs=sc;bestP=r}});
+  return bestP.map(function(b){b.cuts.sort(function(a,c){return c-a});return b});
  }
+ window.mkPlanCut=plan;
  async function viewOff(hl){
   var b=shell('🧰 الفضل (بواقي الأطوال)');mark('off');
   var O=await get('wk_offcuts',[]);
