@@ -382,6 +382,11 @@ function submitReturn(ev){ev.preventDefault();let type=rtType.value,p=db.product
 let lastInv=null;
 const nDigits=t=>String(t||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c));
 function invNo(r){return r.no||('MK-'+String(db.sales.length-db.sales.indexOf(r)).padStart(4,'0'))}
+/* mk: باركود الفاتورة (2026-10-17) — رقم الفاتورة كباركود Code128 عشان يتقري بالكاميرا أو جهاز الباركود */
+const BC_SRC='https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js';
+function invBc(no){return '<div class="mkbc" style="margin-top:8px;text-align:center;line-height:0"><svg class="bc" data-v="'+esc(no)+'" style="width:100%;max-width:240px;height:52px"></svg></div>'}
+function invBcDraw(root){if(!root||!root.querySelectorAll)return;root.querySelectorAll('svg.bc').forEach(function(s){try{JsBarcode(s,s.dataset.v,{format:'CODE128',displayValue:true,fontSize:13,margin:0,height:40,width:1.6})}catch(e){}})}
+function invBcScript(){return '<script src="'+BC_SRC+'"><\/script><script>window.__bcDraw=function(){var r=document.querySelectorAll("svg.bc");for(var i=0;i<r.length;i++){try{JsBarcode(r[i],r[i].dataset.v,{format:"CODE128",displayValue:true,fontSize:13,margin:0,height:40,width:1.6})}catch(e){}}};<\/script>'}
 function waNum(ph){let d=nDigits(ph).replace(/\D/g,'');if(!d)return '';if(d.startsWith('00'))d=d.slice(2);else if(d.startsWith('0'))d='20'+d.slice(1);return d}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 async function saveFile(name,data){
@@ -403,7 +408,7 @@ window.mkFileSheet=function(name,blob,info){
  let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[F],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش')}};
  let dl=document.getElementById('mkFsDl');if(dl)dl.onclick=async()=>{try{await saveFile(name,blob);toast('اتبعت للتنزيل')}catch(e){toast('⚠️ التنزيل ماشتغلش')}};
  document.getElementById('mkFsX').onclick=closeModal};
-function invoiceHTML(r){
+function invoiceHTML(r,bc){
  let G=r.no?db.sales.filter(x=>x.no===r.no):[r];if(!G.length)G=[r];let TT=G.reduce((s,x)=>s+x.total,0),paid=G.reduce((s,x)=>s+(x.paid!=null?x.paid:x.total),0),rem=G.reduce((s,x)=>s+(x.rem||0),0),T=db.theme,shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'),ph=esc(db.settings.phone||''),price=r.price!=null?r.price:(r.qty?r.total/r.qty:0),unit=(db.products.find(p=>p.name===r.product)||{}).unit||'',
  H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
@@ -423,7 +428,7 @@ function invoiceHTML(r){
  <div style="position:relative;padding:30px 44px">
   <div style="display:flex;justify-content:space-between;gap:20px">
    <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات العميل</div><div>الاسم: <b>${esc(r.person||'عميل نقدي')}</b></div>${r.phone?`<div>التليفون: <b dir="ltr">${esc(r.phone)}</b></div>`:''}${r.addr?`<div>العنوان: <b>${esc(r.addr)}</b></div>`:''}</div>
-   <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(invNo(r))}</b></div><div>التاريخ: <b>${esc(r.date)}</b></div></div>
+   <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(invNo(r))}</b></div><div>التاريخ: <b>${esc(r.date)}</b></div>${bc?invBc(invNo(r)):""}</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:16px">
    <thead><tr style="background:${H};color:${HT}"><th style="padding:12px;text-align:right;border-radius:0 10px 0 0">البيان</th><th style="padding:12px;text-align:center">الكمية</th><th style="padding:12px;text-align:center">سعر الوحدة</th><th style="padding:12px;text-align:center;border-radius:10px 0 0 0">الإجمالي</th></tr></thead>
@@ -1220,7 +1225,7 @@ function srcBadge(r){try{let n=String(r.note||''),m=n.match(/أوردر ميدا
  return '<br>'+(hy?'<span class="badge" style="background:#ffedd5;color:#9a3412">هيدرولك</span> ':'')+(m?'<span class="badge" style="background:#e0f2fe;color:#075985">من أوردر ميداني '+esc(m[1])+'</span> ':'')+(mp?'<span class="badge" style="background:#f3e8ff;color:#6b21a8">مندوب: '+esc(mp[1].trim())+'</span>':'')}catch(e){return ''}}
 function mkIntLine(x,G){return !(+x.total)&&/خامات التجهيز/.test(String((G&&G[0]&&G[0].note)||''))}
 window.mkIntLine=mkIntLine;
-function invoiceHTML(r){
+function invoiceHTML(r,bc){
  let G=invGroup('sale',r.no||r.id);if(!G.length)G=[r];let GI=G.filter(x=>!x.ship&&!mkIntLine(x,G)),SH=sumBy(G.filter(x=>x.ship),x=>x.total),TT=sumBy(G,x=>x.total),paid=sumBy(G,paidOf),rem=sumBy(G,x=>x.rem||0),HY=isHyInv(G),T=HY?Object.assign({},db.theme,{logoInv:false,logo:'',watermark:false}):db.theme,shop=esc(HY?coIdent('hy').name:(db.settings.companyName||'ميكانيزم')),addr=esc((HY&&coIdent('hy').addr)||(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'))+(HY&&coIdent('hy').tax?' — ض.ب: '+esc(coIdent('hy').tax):''),ph=esc(HY?(coIdent('hy').phone||''):(db.settings.phone||'')),
  H=HY?coIdent('hy').color:T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
  logo=T.logoInv&&T.logo?`<img src="${T.logo}" style="height:80px;max-width:160px;object-fit:contain;background:#fff;border-radius:12px;padding:6px;margin-left:20px">`:'',
@@ -1240,7 +1245,7 @@ function invoiceHTML(r){
  <div style="position:relative;padding:30px 44px">
   <div style="display:flex;justify-content:space-between;gap:20px">
    <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات العميل</div><div>الاسم: <b>${esc(r.person||'عميل نقدي')}</b></div>${r.phone?`<div>التليفون: <b dir="ltr">${esc(r.phone)}</b></div>`:''}${r.addr?`<div>العنوان: <b>${esc(r.addr)}</b></div>`:''}</div>
-   <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(invNo(r))}</b></div><div>التاريخ: <b>${esc(r.date)}</b></div></div>
+   <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(invNo(r))}</b></div><div>التاريخ: <b>${esc(r.date)}</b></div>${bc?invBc(invNo(r)):""}</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:16px">
    <thead><tr style="background:${H};color:${HT}"><th style="padding:12px;text-align:right;border-radius:0 10px 0 0">البيان</th><th style="padding:12px;text-align:center">الكمية</th><th style="padding:12px;text-align:center">سعر الوحدة</th><th style="padding:12px;text-align:center;border-radius:10px 0 0 0">الإجمالي</th></tr></thead>
@@ -1674,7 +1679,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-89';
+const APP_VER='2026-10-17-90';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2430,10 +2435,10 @@ window.printReceipt=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;
  printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:80mm auto;margin:0}body{margin:0;width:80mm}*{font-family:Cairo,Tahoma,sans-serif;color:#000}.w{width:72mm;margin:0 auto;padding:3mm 0;font-size:11pt}.c{text-align:center}.b{font-weight:800}hr{border:0;border-top:1px dashed #000;margin:2mm 0}table{width:100%;border-collapse:collapse}td{padding:1mm 0;vertical-align:top}.l{text-align:left;white-space:nowrap}.sm{font-size:9pt}.big{font-size:14pt}</style></head><body><div class="w">
  ${!isHyInv(G)&&db.theme&&db.theme.logo?`<div class="c"><img src="${db.theme.logo}" style="max-width:40mm;max-height:18mm"></div>`:''}
  <div class="c b big">${esc(isHyInv(G)?coIdent('hy').name:(db.settings.companyName||'ميكانيزم'))}</div>${isHyInv(G)?(coIdent('hy').addr?`<div class="c sm">${esc(coIdent('hy').addr)}</div>`:''):(db.settings.address?`<div class="c sm">${esc(db.settings.address)}</div>`:'')}${(isHyInv(G)?coIdent('hy').phone:db.settings.phone)?`<div class="c sm" dir="ltr">${esc(isHyInv(G)?coIdent('hy').phone:db.settings.phone)}</div>`:''}<hr>
- <div class="sm">فاتورة: <b>${esc(invNo(r))}</b><br>التاريخ: ${esc(r.date)}<br>العميل: ${esc(r.person||'عميل نقدي')}${r.phone?' — <span dir="ltr">'+esc(r.phone)+'</span>':''}</div><hr>
+ <div class="sm">فاتورة: <b>${esc(invNo(r))}</b><br>التاريخ: ${esc(r.date)}<br>العميل: ${esc(r.person||'عميل نقدي')}${r.phone?' — <span dir="ltr">'+esc(r.phone)+'</span>':''}</div><div class="c" style="line-height:0;margin:2mm 0"><svg class="bc" data-v="${esc(invNo(r))}" style="width:100%;height:14mm"></svg></div><hr>
  <table>${GI.map(x=>`<tr><td colspan="2"><b>${esc(x.product)}</b></td></tr><tr class="sm"><td>${x.qty} × ${money(x.price!=null?x.price:x.total/(x.qty||1))}</td><td class="l">${money(x.total)}</td></tr>`).join('')}</table><hr>
  <table>${SH?`<tr><td>إجمالي الأصناف</td><td class="l">${money(T-SH)}</td></tr><tr><td>النقل</td><td class="l">${money(SH)}</td></tr>`:''}<tr class="b big"><td>الإجمالي</td><td class="l">${money(T)}</td></tr><tr><td>المدفوع</td><td class="l">${money(P)}</td></tr>${R>0?`<tr class="b"><td>المتبقي</td><td class="l">${money(R)}</td></tr>`:''}</table><hr>
- <div class="c sm">${r.by?'سجّلها: '+esc(r.by)+'<br>':''}شكراً لتعاملكم معنا</div></div><script>window.onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>`)};
+ <div class="c sm">${r.by?'سجّلها: '+esc(r.by)+'<br>':''}شكراً لتعاملكم معنا</div></div>${invBcScript()}<script>window.onload=function(){window.__bcDraw&&__bcDraw();setTimeout(function(){print()},500)}<\/script></body></html>`)};
 const _oim2=openInvoiceModal;
 openInvoiceModal=function(id){_oim2(id);let o=document.getElementById('invOut');if(o)o.insertAdjacentHTML('beforebegin',`<div class="btnrow" style="margin-top:8px"><button class="secondary" style="flex:1" onclick="mkPrintAsk('${id}')">🖨️ طباعة (إيصال أو A4)</button></div>`)};
 
@@ -2496,7 +2501,7 @@ window.printCountResult=function(){let r=lastCount;if(!r)return;let rows=(r.rows
 
 /* فاتورة البيع A4 + فاتورة الشراء */
 window.printInvoiceA4=function(id){let r=db.sales.find(x=>x.id===id);if(!r)return;
- printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:A4;margin:0}body{margin:0}.pg{width:210mm;min-height:297mm;overflow:hidden}.pg>div{transform-origin:top right;transform:scale(${(210/794*3.7795).toFixed(4)})}</style></head><body><div class="pg">${invoiceHTML(r)}</div><script>window.onload=function(){setTimeout(function(){print()},700)}<\/script></body></html>`)};
+ printHTML(`<!doctype html><html dir="rtl"><head>${PRINT_HEAD}<title>${esc(invNo(r))}</title><style>@page{size:A4;margin:0}body{margin:0}.pg{width:210mm;min-height:297mm;overflow:hidden}.pg>div{transform-origin:top right;transform:scale(${(210/794*3.7795).toFixed(4)})}</style></head><body><div class="pg">${invoiceHTML(r,true)}</div>${invBcScript()}<script>window.onload=function(){window.__bcDraw&&__bcDraw();setTimeout(function(){print()},700)}<\/script></body></html>`)};
 window.printPurchase=function(id){let r=db.purchases.find(x=>x.id===id);if(!r)return;let G=invGroup('purchase',r.gid||r.id),adm=isAdmin(),GI=G.filter(x=>!x.ship),SH=sumBy(G.filter(x=>x.ship),x=>x.total);
  let rows=GI.map(x=>adm?[esc(x.product),x.qty,money(x.price),money(x.total)]:[esc(x.product),x.qty]);
  printA4('فاتورة شراء '+(r.pno||''),`<p>المورد: <b>${esc(r.person||'—')}</b> &nbsp;&nbsp; التاريخ: <b>${esc(r.date)}</b>${r.by?' &nbsp;&nbsp; سجّلها: '+esc(r.by):''}</p>`+tbl(adm?['الصنف','العدد','السعر','الإجمالي']:['الصنف','العدد'],rows)+(adm?`${SH?`<p>مصاريف النقل: ${money(SH)}</p>`:''}<p><b>الإجمالي: ${money(sumBy(G,x=>x.total))}</b> — المدفوع: ${money(sumBy(G,paidOf))} — المتبقي: ${money(sumBy(G,x=>x.rem||0))}</p>`:''))};
@@ -3787,6 +3792,9 @@ function waBadge(){let n=WA.list.filter(o=>o.status==='new').length,c=document.g
  if(c){c.textContent=n;c.style.display=n?'':'none'}
  if(b){b.style.display=n?'':'none';b.innerHTML=`📩 عندك <b>${n}</b> طلب جديد من الواتساب — اضغط للعرض`}}
 function renderWa(){let b=document.getElementById('waBody');if(!b)return;
+ /* mk: ماتعيدش رسم الكارت لو مفيش طلب اتغيّر — عشان اختياراتك في شاشة الطلب ماتضيعش كل ٣٠ ثانية (2026-10-17) */
+ var _sg=JSON.stringify([WA.tab,WA.err||'',(WA.list||[]).filter(function(o){return WA.tab==='new'?o.status==='new':WA.tab==='done'?o.status==='done':o.status==='cancelled'}).map(function(o){return [o.id,o.status,o.body,o.invoice_no||'',o.customer_name||'',o.phone||'']})]);
+ if(_sg===WA._sg&&b.querySelector('[data-wa]'))return;WA._sg=_sg;
  document.querySelectorAll('#waTabs button').forEach(x=>x.className=x.dataset.t===WA.tab?'primary':'secondary');
  if(WA.err){b.innerHTML=`<div class="card"><p style="color:var(--danger);margin-top:0">${esc(WA.err)}</p><p style="color:var(--muted);font-size:13px;margin:0">لو الرسالة فيها permission أو relation، يبقى أمر «طلبات-واتساب.sql» لسه ماتشغلش في Supabase.</p></div>`;return}
  let L=WA.list.filter(o=>WA.tab==='new'?o.status==='new':WA.tab==='done'?o.status==='done':o.status==='cancelled');
@@ -10412,6 +10420,23 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
  new MutationObserver(function(){clearTimeout(t);t=setTimeout(run,450)}).observe(document.body,{childList:true,subtree:true});
  window.mkWz={state:Z,run:run};
 })();
+</script>
+
+<script>
+/* mk: زرار «فاتورة بالباركود» في صفحة المبيعات — تمسح باركود الفاتورة وتفتحهالك على طول (2026-10-17) */
+(function(){
+ var bar=document.querySelector('#sales .title-row>div:last-child');
+ if(bar&&!document.getElementById('mkInvScanBtn'))bar.insertAdjacentHTML('afterbegin','<button id="mkInvScanBtn" class="secondary" onclick="mkInvScan()">📷 فاتورة بالباركود</button>');
+})();
+window.mkInvScan=function(){
+ scan(function(t){
+  var k=String(t||'').trim().toUpperCase();
+  var s=db.sales.find(function(x){return String(invNo(x)).toUpperCase()===k});
+  if(!s)return false;
+  setTimeout(function(){openInvoiceModal(s.id)},250);
+  return 'فاتورة '+invNo(s)+(s.person?' — '+s.person:'');
+ },{title:'امسح باركود الفاتورة'});
+};
 </script>
 
 <script>
