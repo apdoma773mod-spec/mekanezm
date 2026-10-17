@@ -10523,5 +10523,19 @@ if(typeof openContactFile==='function'){const _ocf=openContactFile;window.openCo
  if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
 })();
 </script>
+<script>
+/* الاسمين الثابتين: اسم المورد ظاهر تحت اسم ميكانيزم في قائمة الأصناف (وكمان في البحث داخل الفاتورة) —
+   على الفاتورة نفسها بيفضل يظهر اسم ميكانيزم بس (ده السلوك الحالي، معمول في addItem) */
+(function(){
+const esc3=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function aliasesOf(pid){const AL=(typeof window.mkAliasAL==='function'&&window.mkAliasAL())||{},out=[];
+ for(const sK in AL)for(const k in AL[sK]){if(k[0]==='#')continue;if(AL[sK][k]===pid)out.push(k)}
+ return [...new Set(out)]}
+window.mkAliasNamesOf=aliasesOf;
+if(typeof renderProducts==='function'){const _rp=renderProducts;window.renderProducts=function(){_rp.apply(this,arguments);
+ try{document.querySelectorAll('#productsBody tr.prow').forEach(tr=>{const m=(tr.getAttribute('onclick')||'').match(/openProduct\('([^']+)'\)/);if(!m)return;const al=aliasesOf(m[1]);
+  if(!al.length)return;const b=tr.querySelector('b');if(b)b.insertAdjacentHTML('afterend',`<br><small style="color:var(--muted)">🏷️ ${esc3(al.slice(0,2).join(' • '))}</small>`)})}catch(e){}}}
+})();
+</script>
 </body>
 </html>
