@@ -385,7 +385,7 @@ function invNo(r){return r.no||('MK-'+String(db.sales.length-db.sales.indexOf(r)
 function waNum(ph){let d=nDigits(ph).replace(/\D/g,'');if(!d)return '';if(d.startsWith('00'))d=d.slice(2);else if(d.startsWith('0'))d='20'+d.slice(1);return d}
 async function saveFile(name,data){
  try{if(typeof claude!=='undefined'){let d=await claude.use('downloads');if(d){await d.save({filename:name,data});return true}}}catch(e){if(e&&e.code==='declined')return false}
- let a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.download=name;document.body.appendChild(a);a.click();a.remove();return true}
+ let a=document.createElement('a'),u=URL.createObjectURL(data instanceof Blob?data:new Blob([data]));a.href=u;a.download=name;a.target='_self';a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},4000);return true}
 function invoiceHTML(r){
  let G=r.no?db.sales.filter(x=>x.no===r.no):[r];if(!G.length)G=[r];let TT=G.reduce((s,x)=>s+x.total,0),paid=G.reduce((s,x)=>s+(x.paid!=null?x.paid:x.total),0),rem=G.reduce((s,x)=>s+(x.rem||0),0),T=db.theme,shop=esc(db.settings.companyName||'ميكانيزم'),addr=esc(db.settings.address??'الجيزة - أرض اللواء - شارع ١٠'),ph=esc(db.settings.phone||''),price=r.price!=null?r.price:(r.qty?r.total/r.qty:0),unit=(db.products.find(p=>p.name===r.product)||{}).unit||'',
  H=T.invHeader,A=T.invAccent,HT=textOn(H),tint=mix(H,.08),fam=fontStack(T.invFont==='same'?T.font:T.invFont),
@@ -619,7 +619,7 @@ function renderDashboard(){
  let low=prodsCo().filter(p=>p.qty<=p.min);stockReport.innerHTML=low.length?`<p>أصناف تحتاج متابعة: <b>${low.length}</b></p><div class="table-wrap"><table class="table"><thead><tr><th>المنتج</th><th>المتاح</th><th>الحد</th></tr></thead><tbody>${low.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.qty}</td><td>${p.min}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">كل الأصناف فوق حد التنبيه.</div>';
 }
 function saveSettings(){db.settings.companyName=companyName.value;db.settings.phone=companyPhone.value;db.settings.address=companyAddress.value;save();toast('تم حفظ الإعدادات')}
-async function backup(){let bl=new Blob([JSON.stringify(db)],{type:'application/json'});if(typeof mkFileSheet==='function'){let n=['products','sales','purchases','contacts','expenses','returns','payments'].map(k=>(db[k]||[]).length?(({products:'أصناف',sales:'مبيعات',purchases:'مشتريات',contacts:'جهات',expenses:'مصروفات',returns:'مرتجعات',payments:'دفعات'})[k]+': '+db[k].length):'').filter(Boolean).join(' — ');mkFileSheet('mekanizm-backup-'+isoToday()+'.json',bl,n);return}if(await saveFile('mekanizm-backup-'+isoToday()+'.json',bl))toast('تم إنشاء النسخة الاحتياطية')}
+async function backup(){let bl=new Blob([JSON.stringify(db,(k,v)=>(k==='logo'||k==='logoImg'||k==='watermark')&&typeof v==='string'&&v.length>1500?undefined:v)],{type:'application/json;charset=utf-8'});if(typeof mkFileSheet==='function'){let n=['products','sales','purchases','contacts','expenses','returns','payments'].map(k=>(db[k]||[]).length?(({products:'أصناف',sales:'مبيعات',purchases:'مشتريات',contacts:'جهات',expenses:'مصروفات',returns:'مرتجعات',payments:'دفعات'})[k]+': '+db[k].length):'').filter(Boolean).join(' — ');mkFileSheet('mekanizm-backup-'+isoToday()+'.json',bl,n);return}if(await saveFile('mekanizm-backup-'+isoToday()+'.json',bl))toast('تم إنشاء النسخة الاحتياطية')}
 function restore(e){let file=e.target.files[0];if(!file)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.products||!x.sales)throw 0;x.returns=x.returns||[];x.payments=x.payments||[];(x.contacts||[]).forEach(c=>{c.id=c.id||crypto.randomUUID()});x.theme=Object.assign({},DEFT,x.theme||{});db=x;save();toast('تمت استعادة النسخة')}catch{toast('الملف غير صالح')}};r.readAsText(file)}
 async function clearOps(){
  if(!await ask('هيتم مسح كل فواتير البيع والشراء والمرتجعات والمصروفات والدفعات.\nالأصناف هتفضل زي ما هي وكمياتها هترجع زي ما كانت قبل أي عملية، ومستحقات العملاء هتتصفّر، وترقيم الفواتير يبدأ من الأول.\nيُفضّل تعمل نسخة احتياطية الأول.\nمتأكد؟','امسح العمليات'))return;
@@ -1657,7 +1657,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-84';
+const APP_VER='2026-10-17-85';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2401,12 +2401,14 @@ window.closingHistory=async function(){try{let r=await window.mkSB.from('mk_clos
 
 /* 📤 تسليم ملف للمستخدم: مشاركة (آيفون) أو تنزيل أو فتح — بزرار جديد عشان آيفون يسمح */
 window.mkFileSheet=function(name,blob,info){
- let url=URL.createObjectURL(blob),kb=Math.round(blob.size/1024),can=false;try{can=!!(navigator.canShare&&navigator.canShare({files:[new File([blob],name,{type:blob.type||'application/json'})]}))}catch(e){}
- openModal(`<div class="modal-head"><h2>✔ الملف جاهز</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div style="line-height:2;font-size:15px"><b>${esc(name)}</b><br>الحجم: <b>${blob.size<1024?blob.size+' بايت':kb>1024?(kb/1024).toFixed(1)+' ميجا':kb+' كيلو'}</b>${info?'<br>'+info:''}</div>
+ /* ماتفتحش الملف في تبويب/نافذة أبدًا (على الآيفون بتفضل شاشة سودة ومفيش خروج) — مشاركة/حفظ في الملفات أو تنزيل من غير ما الصفحة تتحرك */
+ let kb=Math.round(blob.size/1024),can=false,mk=()=>new File([blob],name,{type:'application/octet-stream'});try{can=!!(navigator.canShare&&navigator.canShare({files:[mk()]}))}catch(e){}
+ openModal(`<div class="modal-head"><h2>✔ الملف جاهز</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div style="line-height:2;font-size:15px"><b>${esc(name)}</b><br>الحجم: <b>${blob.size<1024?blob.size+' بايت':kb>1024?(kb/1024).toFixed(1)+' ميجا':kb+' كيلو'}</b>${info?'<br>'+info:''}<br><small style="color:var(--muted)">اضغط «حفظ في الملفات» واختار مكان — الملف مابيتفتحش على الشاشة.</small></div>
  ${blob.size<50?'<div style="color:var(--danger);font-weight:800;margin:8px 0">⚠️ الملف فاضي تقريبًا — مش هيفيد. جرّب تاني بعد ما السيستم يخلّص تحميل.</div>':''}
- <div class="modal-foot" style="flex-direction:column;gap:8px">${can?'<button type="button" class="primary" id="mkFsShare" style="width:100%;min-height:54px">📤 مشاركة / حفظ في الملفات</button>':''}<a id="mkFsDl" class="secondary" href="${url}" download="${esc(name)}" style="display:block;text-align:center;padding:16px;border-radius:12px;font-weight:800;text-decoration:none">⬇️ تنزيل الملف</a><button type="button" class="secondary" id="mkFsOpen" style="width:100%;min-height:50px">👁 فتح في نافذة جديدة</button></div>`);
- let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[new File([blob],name,{type:blob.type||'application/json'})],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش — جرّب «تنزيل الملف»')}};
- document.getElementById('mkFsOpen').onclick=()=>{window.open(url,'_blank')}};
+ <div class="modal-foot" style="flex-direction:column;gap:8px">${can?'<button type="button" class="primary" id="mkFsShare" style="width:100%;min-height:54px">📤 حفظ في الملفات / مشاركة</button>':''}<button type="button" class="${can?'secondary':'primary'}" id="mkFsDl" style="width:100%;min-height:50px">⬇️ تنزيل الملف</button><button type="button" class="secondary" id="mkFsX" style="width:100%;min-height:46px">إغلاق</button></div>`);
+ let sh=document.getElementById('mkFsShare');if(sh)sh.onclick=async()=>{try{await navigator.share({files:[mk()],title:name})}catch(e){if(e&&e.name!=='AbortError')toast('⚠️ المشاركة ماشتغلتش — جرّب «تنزيل الملف»')}};
+ document.getElementById('mkFsDl').onclick=async()=>{try{await saveFile(name,blob);toast('اتبعت للتنزيل')}catch(e){toast('⚠️ التنزيل ماشتغلش')}};
+ document.getElementById('mkFsX').onclick=closeModal};
 const PTK='mk_prtype';
 window.mkPrintAsk=function(id){let d='';try{d=localStorage.getItem(PTK)||''}catch(e){}
  openModal(`<div class="modal-head"><h2>🖨️ نوع الطباعة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -10086,7 +10088,12 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
   q('#twNone').onclick=function(){A.keep=new Set();draw()};
   var ty=q('#twType'),go=q('#twRun');
   ty.oninput=function(){var ok=nrm(ty.value)==='امسح';go.disabled=!ok;go.style.opacity=ok?'1':'.5'};
-  go.onclick=function(){sync();run()};
+  go.onclick=async function(){sync();
+   /* نسخة على الجهاز: بتتعمل جوه الضغطة نفسها (شرط الآيفون)، من غير ما نفتح أي ملف على الشاشة */
+   try{var snap={made:new Date().toISOString(),keep:Array.from(A.keep),data:A.R},bl=new Blob([JSON.stringify(snap)],{type:'application/octet-stream'}),nm='mekanizm-before-clean-'+new Date().toISOString().slice(0,10)+'.json',f=new File([bl],nm,{type:'application/octet-stream'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:nm})}catch(e){if(e&&e.name==='AbortError'&&!confirm('ماحفظتش نسخة على الجهاز. فيه نسخة على السيرفر هتتعمل برضو. تكمّل المسح؟'))return}}
+    else if(typeof saveFile==='function')await saveFile(nm,bl)}catch(e){}
+   run()};
  }
 
  /* ---------- التنفيذ ---------- */
@@ -10099,10 +10106,6 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
   try{
    /* 1) نسخة احتياطية */
    P(2,'💾 بعمل نسخة احتياطية…');
-   var snap={made:t0,by:(window.mkT_user&&window.mkT_user.name)||'',keep:[].concat(Array.from(A.keep)),data:{}};
-   Object.keys(R).forEach(function(k){snap.data[k]=R[k]});
-   try{var bl=new Blob([JSON.stringify(snap)],{type:'application/json'}),nm='mekanizm-before-clean-'+t0.slice(0,10)+'.json';
-    if(typeof mkFileSheet==='function')mkFileSheet(nm,bl,'نسخة كاملة قبل تنظيف التجارب');else if(typeof saveFile==='function')await saveFile(nm,bl);L('✔ النسخة الاحتياطية اتجهزت على الجهاز ('+nm+')')}catch(e){L('⚠️ ماقدرتش أنزّل النسخة على الجهاز: '+errT(e))}
    try{await rpc('mk_backup_now');L('✔ نسخة على السيرفر (نسخة النهارده)')}catch(e){L('⚠️ نسخة السيرفر: '+errT(e))}
    var before={};R.products.forEach(function(p){before[p.id]=+p.qty||0});
 
