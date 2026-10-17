@@ -969,6 +969,11 @@ window.__recat={classify};
 (function(){
 const SB_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',SB_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
 const sb=supabase.createClient(SB_URL,SB_KEY);window.mkSB=sb;
+/* mk: بعد «تنظيف التجارب» السجلات اللي التطبيق مايقدرش يمسحها من غير SQL بتستخبى: أي سجل قبل وقت التنظيف مابيظهرش (2026-10-17) */
+(function(){var COL={mk_stock_moves:'at',mk_counts:'at',mk_closings:'at',mk_log:'at',mk_daybook:'created_at',mk_van_moves:'created_at',mk_van_close:'created_at'};
+ try{window.mkTrialCut=window.mkTrialCut||localStorage.getItem('mk_trial_cut')||null}catch(e){}
+ var f0=sb.from.bind(sb);sb.from=function(t){var b=f0(t);if(!COL[t])return b;var s0=b.select.bind(b);
+  b.select=function(){var r=s0.apply(null,arguments),c=window.mkTrialCut;return c?r.gte(COL[t],c):r};return b}})();
 const $=id=>document.getElementById(id);
 let uid=null,cloudVer=null,synced=false,pushing=false,pending=false,retryT=null,lastCloud=null;
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
@@ -1652,7 +1657,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-81';
+const APP_VER='2026-10-17-82';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3716,7 +3721,10 @@ const NUMW={واحد:1,واحده:1,اتنين:2,اثنين:2,تنين:2,تلا�
 const toks=s=>VN(s||'').split(' ').filter(Boolean);
 const bigrams=s=>{let a=new Set();for(let i=0;i<s.length-1;i++)a.add(s.slice(i,i+2));return a};
 const dice=(a,b)=>{if(a.length<2||b.length<2)return 0;let A=bigrams(a),B=bigrams(b),n=0;A.forEach(x=>{if(B.has(x))n++});return 2*n/(A.size+B.size)};
-function tokSim(a,b){if(a===b)return 1;if(a.length>=3&&b.length>=3&&(a.startsWith(b)||b.startsWith(a)))return .85;let d=dice(a,b);return d>=.6?d*.75:0}
+const PLUR={كوالين:'كالون',كوالون:'كالون',مفاصل:'مفصله',مفصلات:'مفصله',اكر:'اكره',مقابض:'مقبض',مجاري:'مجري',مجارى:'مجري',شماعات:'شماعه',براويز:'برواز',عجل:'عجله',عجلات:'عجله',مسامير:'مسمار',ادراج:'درج',رفوف:'رف',ارفف:'رف',قطاعات:'قطاع',زوايا:'زاويه',لمبات:'لمبه',سوست:'سوسته',اقفال:'قفل',ترابيس:'ترباس',خوابير:'خابور',مفكات:'مفك',مناشير:'منشار',بنط:'بنطه',سلندرات:'سلندر',كوالين_:'كالون',جوانات:'جوان',مقابص:'مقبض',شنط:'شنطه',علب:'علبه',كبالن:'كبلن'};
+const sing=w=>PLUR[w]||(w.length>=5&&w.endsWith('ات')?w.slice(0,-2):w.length>=6&&w.endsWith('ين')?w.slice(0,-2):w);
+function tokSim(a,b){if(a===b)return 1;const a2=sing(a),b2=sing(b);if(a2!==a||b2!==b){if(a2===b2)return .95;let r=tokSim0(a2,b2);if(r)return r}return tokSim0(a,b)}
+function tokSim0(a,b){if(a===b)return 1;if(a.length>=3&&b.length>=3&&(a.startsWith(b)||b.startsWith(a)))return .85;let d=dice(a,b);return d>=.6?d*.75:0}
 function score(lt,p){let pt=toks((p.name||'')+' '+(p.code||'')),code=VN(String(p.code||''));
  if(!lt.length||!pt.length)return 0;
  if(code&&lt.includes(code))return 1.5;
@@ -3732,6 +3740,7 @@ function parseLines(body){
 function candidates(words){return (db.products||[]).map(p=>({p,s:score(words,p)})).filter(x=>x.s>=.3).sort((a,b)=>b.s-a.s).slice(0,6)}
 
 /* تحليل رسالة «طلب» ذكي: اسم / تليفون / عنوان / منتجات / كلام عادي (ملاحظات) */
+const PLACE=/(?:شارع|^ ?ش |عمار[ةه]|ميدان|الدور|برج| حي |مدين[ةه]|محافظ[ةه]|منطق[ةه]|قري[ةه]|مركز|بجوار|جنب|قدام|امام|ورا |وراء|ناصي[ةه]|محط[ةه]|مترو|كوبري|بلوك|غرب|شرق|شمال|جنوب|القاهر[ةه]|الجيز[ةه]|الاسكندري[ةه]|اسكندري[ةه]|الاسماعيلي[ةه]|الاسماعلي[ةه]|السويس|بورسعيد|دمياط|المنصور[ةه]|طنطا|الزقازيق|بنها|شبرا|فيصل|الهرم|اكتوبر|زايد|المعادي|حلوان|مدينه نصر|التجمع|العبور|بولاق|امباب[ةه]|المهندسين|الدقي|العجوز[ةه]|سوهاج|اسيوط|المنيا|قنا|الاقصر|اسوان|الفيوم|بني سويف|الشرقي[ةه]|المنوفي[ةه]|الغربي[ةه]|البحير[ةه]|كفر|الشروق|بدر|العاشر|السلام|المطري[ةه]|عين شمس|المرج|حدائق|الزيتون|المقطم|المنيل|السيد[ةه] زينب|الوراق|كرداس[ةه]|ابو رواش|ارض اللوا|ناهيا|البراجيل|صفط)/;
 const CHAT=/^(سلام|السلام|وعليكم|صباح|مساء|اهلا|أهلا|ازيك|إزيك|عامل|شكرا|شكراً|تسلم|مرسي|ميرسي|الله يخليك|جزاك|تمام|ماشي|اوكي|okay|ok|لو سمحت|من فضلك|يا باشا|يا هندسة|يا مهندس|حضرتك|ربنا|بارك)/i;
 function waParse(body){
  let out={name:'',phone:'',addr:'',notes:[],lines:[]},txt=String(body||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
@@ -3746,7 +3755,9 @@ function waParse(body){
   if(CHAT.test(body2)&&body2.split(' ').length<=6){out.notes.push(ln);return}
   let pl=parseLines(body2),good=0;pl.forEach(l=>{let c=candidates(l.words);l.c=c;if(c[0]&&c[0].s>=.45)good++});
   if(!good&&body2.split(' ').length>=6&&!/\d/.test(body2)){out.notes.push(ln);return}
-  if(!good&&/(?:شارع|ش |عمارة|عماره|ميدان|الدور|برج|حي|مدينة|محافظة)/.test(body2)){out.addr=(out.addr?out.addr+' - ':'')+body2;return}
+  if(!good&&PLACE.test(' '+VN(body2)+' ')){out.addr=(out.addr?out.addr+' - ':'')+body2;return}
+  /* اسم العميل من غير كلمة «اسم»: أول سطر بعد «طلب»، كلمتين لـ ٤ ومن غير أرقام، ومش شبه أي صنف */
+  if(!good&&!out.name&&!out.lines.length&&!/\d/.test(body2)){let w=VN(body2).split(' ').filter(Boolean);if(w.length>=1&&w.length<=4&&!w.some(x=>STOP.has(x))){out.name=body2.replace(/\s+/g,' ').trim();return}}
   pl.forEach(l=>out.lines.push(l))});
  return out}
 window.waParse=waParse;
@@ -4414,7 +4425,7 @@ async function saveAL(add){await loadAL();let changed=false;Object.entries(add).
  try{const c=window.mkSB;if(c)await c.from('mk_settings').upsert([{key:KEY,value:AL}],{onConflict:'key'})}catch(e){console.warn('wa aliases',e)}finally{saving=false}}
 
 /* ---------- اسم العميل ---------- */
-const NAME_RE=/(?:^|[\s\n،,.])(?:باسم|بإسم|بأسم|الاسم|الإسم|اسم العميل|اسمي|العميل)\s*[:：\-–]?\s*([^\n،,.0-9٠-٩:]{2,40})/;
+const NAME_RE=/(?:^|[\s\n،,.])(?:باسم|بإسم|بأسم|الاسم|الإسم|اسم العميل|اسمي|العميل)(?=[\s:：\-–])\s*[:：\-–]?\s*([^\n،,.0-9٠-٩:]{2,40})/;
 const stripName=raw=>String(raw||'').replace(NAME_RE,' ');
 function nameInMsg(body){const m=String(body||'').match(NAME_RE);if(!m)return '';let n=m[1].replace(/\s+/g,' ').trim();
  n=n.split(' ').filter(w=>!/^(طلب|عايز|عاوز|محتاج)$/.test(w)).slice(0,4).join(' ');return n.length>=2?n:''}
@@ -4441,7 +4452,7 @@ function phoneInMsg(body){const all=ND(body).match(new RegExp(PH_SRC,'g'))||[];
  for(const x of all){const t=x.replace(/\D/g,'').slice(-10);if(t.length===10&&!isMgr(t))return '0'+t}return ''}
 function contactByName(n){const v=VN(n);if(!v)return null;const C=(db.contacts||[]).filter(c=>c.type==='عميل');
  return C.find(c=>VN(c.name)===v)||C.find(c=>{const x=VN(c.name);return x.startsWith(v+' ')||v.startsWith(x+' ')})||null}
-function whoFor(o){const mg=isMgr(o.phone),b=mg?noPhone(o.body):o.body,m=nameInMsg(b)||nameLine(b);
+function whoFor(o){const mg=isMgr(o.phone),b=mg?noPhone(o.body):o.body,m=nameInMsg(b)||(window.waParse&&waParse(b).name)||nameLine(b);
  if(mg){const ph=phoneInMsg(o.body),byPh=ph&&contactByPhone(ph),byNm=m&&contactByName(m);
   const name=m||(byPh&&byPh.name)||'',phone=ph||(byNm&&byNm.phone)||'';
   return {name,phone,src:'mgr',mgr:mg,known:!!(byPh||byNm)}}
@@ -7360,7 +7371,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 <script>
 /* mk: طلبات واتساب فيها «استانلس» تروح لشاشة تجهيز القطعة (3D + ورقة الصنايعي) بدل شاشة الأصناف العادية */
 (function(){
- var KW=['استانلس','ستانلس','استنلس','استلس','ستنلس','استانليس','ستانليس','استيل','ستيل','ستين','ستينلس'];
+ var KW=['استانلس','ستانلس','استنلس','استلس','ستنلس','استانليس','ستانليس','استيل','ستيل','ستينلس'];  /* «ستين» اتشالت: معناها ٦٠ */
  var EXTRA=[],loaded=false;
  function norm(s){return String(s||'').replace(/[ً-ٰٟـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().replace(/\s+/g,' ').trim()}
  function lev(a,b){if(a===b)return 0;var m=a.length,n=b.length;if(!m)return n;if(!n)return m;var p=[],i,j;for(i=0;i<=n;i++)p[i]=i;for(i=1;i<=m;i++){var c=[i];for(j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
@@ -7368,7 +7379,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(loaded)return;loaded=true;
   try{var c=window.mkSB;if(!c)return;var r=await c.from('mk_settings').select('value').eq('key','wa_rules').maybeSingle();
    var rs=(r.data&&r.data.value&&r.data.value.rules)||[];
-   rs.forEach(function(x){if(x.type==='استانلس'&&x.on!==false)(x.phrases||[]).forEach(function(p){EXTRA.push(norm(p))})});
+   /* كلمات الطلب العامة (طلب/اوردر) مش علامة استانلس حتى لو القاعدة نوعها استانلس بالغلط.
+      وأي قاعدة فيها كلمة استانلس (حتى لو نوعها اتكتب غلط) عباراتها بتتحسب */
+   var GEN=['طلب','طلبيه','طلبية','اوردر','أوردر','order'].map(norm),kwn=KW.map(norm);
+   rs.forEach(function(x){if(x.on===false)return;var ph=(x.phrases||[]).map(norm),st=x.type==='استانلس'||ph.some(function(p){return kwn.some(function(k){return p.indexOf(k)>-1})});
+    if(st)ph.forEach(function(p){if(p&&GEN.indexOf(p)<0)EXTRA.push(p)})});
   }catch(e){}
  }
  /* بيرجّع الكلمة اللي خلّت الطلب استانلس (أو '' لو مش استانلس).
@@ -7387,8 +7402,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var other=ws.filter(function(w){return hw.indexOf(w)<0&&P[w]});
   return other.length?'':hit;
  }
+ var NS=new Set();try{NS=new Set(JSON.parse(localStorage.getItem('mk_wa_notsteel')||'[]'))}catch(e){}
  function decorate(card){
   if(card.dataset.mkSt)return;
+  if(NS.has(card.dataset.wa)){card.dataset.mkSt='1';return}
   var bodyEl=card.querySelector('div[style*="pre-wrap"]'),tw=card.querySelector('.table-wrap');
   if(!bodyEl||!tw)return;               /* مش طلب جديد */
   card.dataset.mkSt='1';
@@ -7401,7 +7418,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   ban.innerHTML='<b style="font-size:16px">🔩 طلب استانلس</b><span style="flex:1;min-width:160px;font-size:13px;color:#475b61">اتصنّف كده بسبب كلمة «'+esc(why)+'». لو غلط اضغط «مش استانلس».</span>';
   var go=document.createElement('button');go.type='button';go.className='primary';go.textContent='🛠️ جهّز القطعة';
   go.onclick=function(){if(window.mkWk&&window.mkWk.stainlessFrom)window.mkWk.stainlessFrom(ctx);else toast('الشاشة لسه بتتحمّل، جرّب تاني')};
-  var no=document.createElement('button');no.type='button';no.className='secondary';no.textContent='مش استانلس';no.onclick=function(){ban.remove();tw.style.display='';var i2=[].find.call(card.querySelectorAll('.btnrow button.primary'),function(b){return /فاتورة/.test(b.textContent)});if(i2)i2.style.display='';var m2=card.querySelector('.btnrow .secondary');if(m2&&m2.textContent==='عرض الأصناف العادية')m2.remove()};
+  var no=document.createElement('button');no.type='button';no.className='secondary';no.textContent='مش استانلس';no.onclick=function(){NS.add(ctx.id);try{localStorage.setItem('mk_wa_notsteel',JSON.stringify(Array.from(NS).slice(-300)))}catch(e){}ban.remove();tw.style.display='';var i2=[].find.call(card.querySelectorAll('.btnrow button.primary'),function(b){return /فاتورة/.test(b.textContent)});if(i2)i2.style.display='';var m2=card.querySelector('.btnrow .secondary');if(m2&&m2.textContent==='عرض الأصناف العادية')m2.remove()};
   ban.appendChild(go);ban.appendChild(no);
   tw.parentNode.insertBefore(ban,tw);
   tw.style.display='none';
@@ -9930,5 +9947,284 @@ try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.
 })();
 </script>
 
+<script>
+/* mk: 🧹 تنظيف بيانات التجارب (2026-10-17) — زرار مرة واحدة للمدير.
+   بيمسح كل العمليات اللي اتعملت وقت التجارب، ويسيب: الأصناف + فواتير الشراء اللي اتسحبت من الصور (وموردينها).
+   - الفواتير بتتلغي بـ mk_void_invoice (نفس دالة الإلغاء في السيستم) فالمخزون وحسابات العملاء/الموردين بيرجعوا صح.
+   - اليومية اللي لسه ماتقفلتش بتتمسح بـ mk_daybook_delete (بترجّع المخزون).
+   - المرتجعات والهدايا بيترجّع أثرها على المخزون وبعدين تتمسح. الدفعات بيترجّع أثرها على الحساب وتتمسح.
+   - السجلات اللي التطبيق مايقدرش يمسحها من غير SQL (حركات المخزون، الجرد، التقفيلات، سجل النشاط، يومية مقفولة، حركات العربية)
+     بتستخبى من كل الشاشات: أي سجل قبل وقت التنظيف مابيظهرش (mkTrialCut).
+   - بعد ما يخلص بنجاح: بيتحفظ trial_wipe في mk_settings والزرار بيختفي من كل الأجهزة. */
+(function(){
+ if(window.mkTrialWipe)return;
+ var S=function(){return window.mkSB};
+ var E=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+ var M=function(n){return (Math.round((+n||0)*100)/100).toLocaleString('en-US')};
+ var admin=function(){return !!(window.mkT_user&&window.mkT_user.role==='admin')};
+ var FLAG=null,busy=false;
+ var nrm=function(s){return String(s||'').replace(/[ً-ٰـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()};
+
+ async function all(t,sel,ord){var out=[],from=0;for(var i=0;i<60;i++){var q=S().from(t).select(sel||'*');if(ord)q=q.order(ord);var r=await q.range(from,from+999);if(r.error)throw r.error;out=out.concat(r.data||[]);if(!r.data||r.data.length<1000)break;from+=1000}return out}
+ async function opt(t,sel,ord){try{return await all(t,sel,ord)}catch(e){return null}}
+ async function rpc(fn,a){var r=await S().rpc(fn,a||{});if(r.error)throw r.error;return r.data}
+ async function getSet(k){var r=await S().from('mk_settings').select('value').eq('key',k).maybeSingle();if(r.error)throw r.error;return r.data?r.data.value:null}
+ async function putSet(k,v){var r=await S().from('mk_settings').upsert([{key:k,value:v,updated_at:new Date().toISOString()}],{onConflict:'key'});if(r.error)throw r.error}
+ function errT(e){return (e&&(e.message||e.details||e.hint))||String(e)}
+
+ /* ---------- الفلاج: لو اتعمل تنظيف قبل كده ---------- */
+ async function loadFlag(){try{if(!S())return;var v=await getSet('trial_wipe');FLAG=v&&v.at?v:null;if(FLAG){window.mkTrialCut=FLAG.at;try{localStorage.setItem('mk_trial_cut',FLAG.at)}catch(e){}}}catch(e){}}
+
+ /* ---------- الكارت في الإعدادات ---------- */
+ function card(){
+  var old=document.getElementById('mkTwCard');
+  if(FLAG||!admin()){if(old)old.remove();return}
+  if(old)return;
+  var sec=document.getElementById('settings');if(!sec)return;var g=sec.querySelector('.grid2')||sec;
+  var d=document.createElement('div');d.className='card';d.id='mkTwCard';d.style.cssText='border:2px dashed #c0392b';
+  d.innerHTML='<h3 style="color:#c0392b;margin-top:0">🧹 تنظيف بيانات التجارب</h3><p style="color:var(--muted);line-height:1.9">بيمسح كل العمليات اللي اتعملت وقت التجارب (بيع، شراء، يومية، مرتجعات، مصروفات، دفعات، عروض أسعار، طلبات واتساب، أوردرات…) ويسيب <b>الأصناف</b> و<b>فواتير الشراء اللي سحبتها من الصور</b>.<br>الزرار ده بيشتغل <b>مرة واحدة بس</b> وبعدها بيختفي من كل الأجهزة.</p><button type="button" class="primary" id="mkTwGo" style="background:#c0392b;border-color:#c0392b;min-height:50px;width:100%">🧹 افتح شاشة التنظيف</button>';
+  g.appendChild(d);d.querySelector('#mkTwGo').onclick=open;
+ }
+
+ /* ---------- التحليل: إيه اللي هيتمسح وإيه اللي هيفضل ---------- */
+ var A=null;
+ async function analyze(){
+  var R={};
+  var J={inv:all('mk_invoices','*','created_at'),items:all('mk_invoice_items','id,invoice_id,product_id,product_name,qty,price,total'),
+   scans:opt('mk_scans','id,created_at,updated_at,status,supplier,result','created_at'),products:all('mk_products','id,name,qty,cat,code'),
+   contacts:all('mk_contacts','*'),payments:opt('mk_payments','*'),returns:opt('mk_returns','*'),expenses:opt('mk_expenses','*'),
+   quotes:opt('mk_quotes','*'),voided:opt('mk_voided','id,kind,label,at'),gifts:opt('mk_gifts','*'),ships:opt('mk_shipments','*'),
+   daybook:opt('mk_daybook','*'),wa:opt('wa_orders','id,status,created_at'),waph:opt('wa_photos','id,created_at'),
+   fo:opt('mk_field_orders','*'),pm:opt('mk_partner_moves','*'),vl:opt('mk_vehicle_log','*'),att:opt('mk_attendance','*'),sm:opt('mk_staff_moves','*'),
+   pmsg:opt('mk_portal_msgs','id,created_at'),van:opt('mk_van_stock','*'),web:opt('web_orders','id,status,created_at')};
+  await Promise.all(Object.keys(J).map(async function(k){R[k]=await J[k]}));
+  var byInv={};R.items.forEach(function(i){(byInv[i.invoice_id]=byInv[i.invoice_id]||[]).push(i)});
+  var pur=R.inv.filter(function(v){return v.kind==='purchase'}),sales=R.inv.filter(function(v){return v.kind==='sale'});
+  /* فواتير الشراء اللي جت من الصور */
+  var sc=(R.scans||[]).filter(function(s){return s.result&&(s.status==='used'||s.result.used_at||s.result.pno)});
+  var tag={};
+  pur.forEach(function(v){
+   var its=byInv[v.id]||[],names=its.map(function(i){return nrm(i.product_name)}),t0=Date.parse(v.created_at)||0,best=null;
+   sc.forEach(function(s){
+    var r=s.result||{};if(r.pno&&String(r.pno)===String(v.no)){best={s:s,why:'مربوطة بالصورة'};return}
+    if(best&&best.why==='مربوطة بالصورة')return;
+    var a=Date.parse(s.created_at)||0,b=Date.parse(r.used_at||s.updated_at||s.created_at)||a;
+    if(t0<a-36e5||t0>b+36*36e5)return;
+    var si=(r.items||[]).map(function(x){return nrm(x.name)}).filter(Boolean),hit=0;
+    si.forEach(function(n){var w=n.split(' ').filter(function(x){return x.length>2});if(names.some(function(m){return m===n||(w.length&&w.filter(function(x){return m.indexOf(x)>-1}).length>=Math.ceil(w.length*0.6))}))hit++});
+    var st=(r.items||[]).reduce(function(z,x){return z+(+x.total||(+x.qty||0)*(+x.price||0))},0);
+    var sup=nrm(r.supplier||s.supplier),pp=nrm(v.person);
+    var okSup=sup&&pp&&(sup===pp||sup.indexOf(pp)>-1||pp.indexOf(sup)>-1);
+    var okTot=st>0&&Math.abs(st-(+v.total||0))<=Math.max(2,st*0.03);
+    var okIt=si.length&&hit/si.length>=0.5;
+    if(okIt||(okTot&&okSup)||(okTot&&t0>=a))best={s:s,why:okIt?'نفس أصناف الصورة':okTot?'نفس إجمالي الصورة':'نفس المورد'};
+   });
+   var file=/مستورد من ملف/.test(v.note||'')||v.source==='import';
+   tag[v.id]=best?{k:'photo',why:best.why}:file?{k:'file',why:'مستورد من ملف'}:{k:'hand',why:'متسجلة يدوي'};
+  });
+  A={R:R,byInv:byInv,pur:pur,sales:sales,tag:tag,keep:new Set(pur.filter(function(v){return tag[v.id].k==='photo'}).map(function(v){return v.id}))};
+  return A;
+ }
+
+ /* ---------- الشاشة ---------- */
+ function sheet(){var s=document.getElementById('mkTw');if(s)s.remove();s=document.createElement('div');s.id='mkTw';
+  s.style.cssText='position:fixed;inset:0;z-index:99990;background:var(--bg,#f5f7f8);color:var(--text,#17252a);display:flex;flex-direction:column;font-family:inherit';document.body.appendChild(s);return s}
+ async function open(){
+  if(!admin())return toast('للمدير بس');if(!navigator.onLine)return toast('محتاج نت');
+  var s=sheet();s.innerHTML=head()+'<div style="flex:1;overflow:auto;padding:16px"><div class="card" style="text-align:center;padding:30px">⏳ بحسب كل اللي اتسجل في السيستم…</div></div>';
+  bindHead(s);
+  try{await analyze()}catch(e){s.innerHTML=head()+'<div style="padding:16px"><div class="card" style="color:#c0392b">ماقدرتش أقرا البيانات: '+E(errT(e))+'</div></div>';bindHead(s);return}
+  draw();
+ }
+ function head(){return '<div style="flex:none;display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border,#e4eaed);background:var(--card,#fff)"><button type="button" id="mkTwX" style="flex:none;padding:12px 16px;border-radius:12px;background:var(--card,#fff);border:1.5px solid var(--border,#ddd);font-weight:800;color:inherit">→ رجوع</button><h2 style="margin:0;font-size:19px;flex:1">🧹 تنظيف بيانات التجارب</h2></div>'}
+ function bindHead(s){var x=s.querySelector('#mkTwX');if(x)x.onclick=function(){if(busy)return toast('استنى لحد ما التنظيف يخلص');s.remove()}}
+ var OPT=null;
+ function cats(){var R=A.R,n=function(a){return a?a.length:0},keepN=A.keep.size;
+  var delPur=A.pur.length-keepN;
+  var svc=R.products.filter(function(p){return p.cat==='خدمات وتجهيز'});
+  var keepC=new Set(A.pur.filter(function(v){return A.keep.has(v.id)}).map(function(v){return v.contact_id}).filter(Boolean));
+  var delC=R.contacts.filter(function(c){return !keepC.has(c.id)});
+  var van=(R.van||[]).filter(function(v){return Math.abs(+v.qty||0)>0.0001});
+  return [
+   ['sales','🧾 فواتير البيع',A.sales.length,true,true],
+   ['pur','📥 فواتير الشراء (غير اللي هتفضل تحت)',delPur,true,true],
+   ['daybook','📒 بنود اليومية',n(R.daybook),true,true],
+   ['returns','↩️ المرتجعات',n(R.returns),true,true],
+   ['payments','💵 التحصيلات والدفعات',n(R.payments),true,true],
+   ['expenses','💸 المصروفات',n(R.expenses),true,true],
+   ['quotes','📝 عروض الأسعار',n(R.quotes),true,true],
+   ['ships','🚚 الشحنات والتوصيل',n(R.ships),true,true],
+   ['gifts','🎁 الهدايا والعينات',n(R.gifts),true,true],
+   ['wa','💬 طلبات وصور الواتساب',n(R.wa)+n(R.waph),true,true],
+   ['work','🛠️ أوردرات الشغل والفرفورجيه والبواقي وجلسات الجرد والحجوزات',null,true,true],
+   ['hy','🏗️ هيدرولك: الأوردرات الميدانية + حركات الشركاء + مصاريف العربية + بضاعة العربية',n(R.fo)+n(R.pm)+n(R.vl)+van.length,true,true],
+   ['staff','👷 الحضور والسلف والقبض',n(R.att)+n(R.sm),true,true],
+   ['portal','📨 رسايل بوابة العملاء',n(R.pmsg),true,true],
+   ['svc','🔩 أصناف الخدمات اللي اتعملت في التجارب («خدمات وتجهيز»)',svc.length,true,true],
+   ['contacts','👥 العملاء والموردين (غير موردين الفواتير اللي هتفضل)',delC.length,true,true],
+   ['web','🌐 طلبات الموقع (ممكن تكون من زباين حقيقيين)',n(R.web),false,true]
+  ]}
+ function draw(){var s=sheet();busy=false;var C=cats();OPT=OPT||{};C.forEach(function(c){if(!(c[0] in OPT))OPT[c[0]]=c[3]});
+  var R=A.R,tg=A.tag;
+  var rows=A.pur.slice().sort(function(a,b){return String(b.created_at).localeCompare(String(a.created_at))}).map(function(v){var t=tg[v.id],on=A.keep.has(v.id),ic=t.k==='photo'?'📷':t.k==='file'?'📄':'✍️';
+   return '<label style="display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;margin:6px 0;border:1.5px solid '+(on?'#159447':'var(--border,#e4eaed)')+';background:'+(on?'#eaf7ef':'var(--card,#fff)')+'"><input type="checkbox" class="twK" data-id="'+v.id+'" '+(on?'checked':'')+' style="width:24px;height:24px;flex:none"><div style="flex:1;min-width:0"><b>'+E(v.no)+'</b> — '+E(v.person||'مورد')+'<div style="font-size:12px;color:var(--muted)">'+ic+' '+E(t.why)+' · '+E(v.date||'')+' · '+(A.byInv[v.id]||[]).length+' بند</div></div><b style="flex:none">'+M(v.total)+'</b></label>'}).join('')||'<div class="empty">مفيش فواتير شراء.</div>';
+  s.innerHTML=head()+'<div style="flex:1;overflow:auto;padding:14px 14px 130px;-webkit-overflow-scrolling:touch"><div style="max-width:760px;margin:0 auto">'+
+   '<div class="card" style="border:2px solid #159447"><h3 style="margin-top:0;color:#159447">✅ اللي هيفضل زي ما هو</h3><div style="line-height:2">📦 الأصناف كلها: <b>'+R.products.length+'</b> صنف (غير أصناف الخدمات لو اخترت تمسحها)<br>📷 فواتير الشراء اللي هتفضل: <b id="twKn">'+A.keep.size+'</b> فاتورة (علّم عليها من تحت)<br>⚙️ الإعدادات، القواعد، الأطقم، الموظفين، المستخدمين، قوائم الأسعار — مابتتلمسش</div></div>'+
+   '<div class="card"><h3 style="margin-top:0">📥 فواتير الشراء — علّم على اللي <u>تفضل</u></h3><p style="color:var(--muted);font-size:13px;margin:0 0 6px">📷 = لقيتها من الصور (متعلّم عليها لوحدها) · 📄 = مستوردة من ملف · ✍️ = اتسجلت يدوي. اللي مش متعلّم عليه هيتلغي ومخزونه يرجع.</p><div style="display:flex;gap:8px;margin:6px 0"><button type="button" class="secondary" id="twAllP" style="flex:1">📷 الصور بس</button><button type="button" class="secondary" id="twAllK" style="flex:1">خلّي الكل</button><button type="button" class="secondary" id="twNone" style="flex:1">امسح الكل</button></div>'+rows+'</div>'+
+   '<div class="card" style="border:2px solid #c0392b"><h3 style="margin-top:0;color:#c0392b">🗑️ اللي هيتمسح</h3>'+C.map(function(c){return '<label style="display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border,#eee)"><input type="checkbox" class="twC" data-k="'+c[0]+'" '+(OPT[c[0]]?'checked':'')+' style="width:24px;height:24px;flex:none"><span style="flex:1">'+c[1]+'</span>'+(c[2]==null?'':'<b>'+c[2]+'</b>')+'</label>'}).join('')+'</div>'+
+   '<div class="card"><h3 style="margin-top:0">📦 كميات المخزون بعد التنظيف</h3><label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0"><input type="radio" name="twQ" value="back" '+(OPT.q!=='keep'?'checked':'')+' style="width:22px;height:22px;flex:none"><span><b>رجّع الكميات زي ما كانت قبل التجارب</b> (الأفضل)<br><small style="color:var(--muted)">كل اللي اتباع في التجارب يرجع، وكل اللي اتشرى في فواتير هتتمسح يتشال. فواتير الصور بتفضل محسوبة.</small></span></label><label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0"><input type="radio" name="twQ" value="keep" '+(OPT.q==='keep'?'checked':'')+' style="width:22px;height:22px;flex:none"><span><b>سيب كل كمية زي ما هي دلوقتي</b><br><small style="color:var(--muted)">لو انت ظبطت الكميات بإيدك على الحقيقة وعايزها تفضل.</small></span></label></div>'+
+   '<div class="card" style="background:#fff8e1"><b>قبل ما تبدأ:</b><ol style="line-height:2;margin:6px 0 0;padding-inline-start:20px"><li>هنزّلك نسخة احتياطية بكل حاجة على الجهاز، ونسخة كمان على السيرفر.</li><li>خلّي باقي الأجهزة والموظفين مايسجّلوش حاجة لحد ما يخلص (دقيقة أو اتنين).</li><li>متقفلش الصفحة وهو شغال.</li></ol></div>'+
+   '<div class="card"><label style="display:block;font-weight:800;margin-bottom:6px">للتأكيد اكتب كلمة: <span style="color:#c0392b">امسح</span></label><input id="twType" autocomplete="off" style="width:100%;min-height:52px;font-size:18px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border,#cfd8dc);background:var(--card,#fff);color:inherit"></div>'+
+   '</div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg,#f5f7f8);border-top:1px solid var(--border,#e4eaed)"><button type="button" class="primary" id="twRun" disabled style="width:100%;min-height:56px;font-size:18px;font-weight:800;background:#c0392b;border-color:#c0392b;opacity:.5">🧹 نزّل النسخة وامسح دلوقتي</button></div>';
+  bindHead(s);
+  var q=function(x){return s.querySelector(x)};
+  var sync=function(){A.keep=new Set([].map.call(s.querySelectorAll('.twK:checked'),function(b){return b.dataset.id}));var k=q('#twKn');if(k)k.textContent=A.keep.size;
+   s.querySelectorAll('.twC').forEach(function(b){OPT[b.dataset.k]=b.checked});var r=s.querySelector('input[name="twQ"]:checked');OPT.q=r?r.value:'back'};
+  s.querySelectorAll('.twK').forEach(function(b){b.onchange=function(){sync();draw()}});
+  s.querySelectorAll('.twC,input[name="twQ"]').forEach(function(b){b.onchange=sync});
+  q('#twAllP').onclick=function(){A.keep=new Set(A.pur.filter(function(v){return A.tag[v.id].k==='photo'}).map(function(v){return v.id}));draw()};
+  q('#twAllK').onclick=function(){A.keep=new Set(A.pur.map(function(v){return v.id}));draw()};
+  q('#twNone').onclick=function(){A.keep=new Set();draw()};
+  var ty=q('#twType'),go=q('#twRun');
+  ty.oninput=function(){var ok=nrm(ty.value)==='امسح';go.disabled=!ok;go.style.opacity=ok?'1':'.5'};
+  go.onclick=function(){sync();run()};
+ }
+
+ /* ---------- التنفيذ ---------- */
+ function logUI(){var s=sheet();s.innerHTML=head()+'<div style="flex:1;overflow:auto;padding:14px"><div style="max-width:760px;margin:0 auto"><div class="card"><div style="height:14px;border-radius:99px;background:var(--border,#e4eaed);overflow:hidden"><div id="twBar" style="height:100%;width:0;background:#c0392b;transition:width .3s"></div></div><div id="twNow" style="margin-top:10px;font-weight:800">⏳ بدأنا…</div><div style="font-size:13px;color:var(--muted)">متقفلش الصفحة لحد ما يخلص.</div></div><div class="card" id="twLog" style="font-size:14px;line-height:1.9;white-space:pre-line"></div></div></div>';bindHead(s);return s}
+ async function run(){
+  if(busy)return;busy=true;var s=logUI(),ERR=[],DONE={},t0=new Date().toISOString();
+  var L=function(t){var d=s.querySelector('#twLog');if(d)d.textContent+=t+'\n'};
+  var P=function(p,t){var b=s.querySelector('#twBar');if(b)b.style.width=Math.round(p)+'%';var n=s.querySelector('#twNow');if(n)n.textContent=t};
+  var R=A.R,O=OPT;
+  try{
+   /* 1) نسخة احتياطية */
+   P(2,'💾 بعمل نسخة احتياطية…');
+   var snap={made:t0,by:(window.mkT_user&&window.mkT_user.name)||'',keep:[].concat(Array.from(A.keep)),data:{}};
+   Object.keys(R).forEach(function(k){snap.data[k]=R[k]});
+   try{var bl=new Blob([JSON.stringify(snap)],{type:'application/json'}),nm='mekanizm-before-clean-'+t0.slice(0,10)+'.json';
+    if(typeof mkFileSheet==='function')mkFileSheet(nm,bl,'نسخة كاملة قبل تنظيف التجارب');else if(typeof saveFile==='function')await saveFile(nm,bl);L('✔ النسخة الاحتياطية اتجهزت على الجهاز ('+nm+')')}catch(e){L('⚠️ ماقدرتش أنزّل النسخة على الجهاز: '+errT(e))}
+   try{await rpc('mk_backup_now');L('✔ نسخة على السيرفر (نسخة النهارده)')}catch(e){L('⚠️ نسخة السيرفر: '+errT(e))}
+   var before={};R.products.forEach(function(p){before[p.id]=+p.qty||0});
+
+   /* 2) اليومية اللي لسه ماتقفلتش */
+   if(O.daybook&&R.daybook){var open=R.daybook.filter(function(d){return !d.posted_at}),n=0;
+    for(var i=0;i<open.length;i++){P(4+4*i/Math.max(1,open.length),'📒 اليومية '+(i+1)+'/'+open.length);try{await rpc('mk_daybook_delete',{p_id:open[i].id});n++}catch(e){ERR.push('يومية: '+errT(e))}}
+    L('✔ اليومية: اتمسح '+n+' بند'+(R.daybook.length-open.length?' (و'+(R.daybook.length-open.length)+' بند متقفل في فواتير — هيتلغي مع الفواتير ويستخبى)':''));}
+
+   /* 3) فواتير البيع ثم الشراء (الأحدث الأول) */
+   var vs=[];if(O.sales)vs=vs.concat(A.sales.slice().sort(function(a,b){return String(b.created_at).localeCompare(String(a.created_at))}));
+   if(O.pur)vs=vs.concat(A.pur.filter(function(v){return !A.keep.has(v.id)}).sort(function(a,b){return String(b.created_at).localeCompare(String(a.created_at))}));
+   var ok=0,bad=0;
+   for(var j=0;j<vs.length;j++){var v=vs[j];P(8+52*j/Math.max(1,vs.length),'🧾 بلغي الفواتير '+(j+1)+'/'+vs.length+' — '+v.no);
+    try{await rpc('mk_void_invoice',{p_id:v.id});ok++}catch(e){bad++;ERR.push('فاتورة '+v.no+': '+errT(e))}}
+   if(vs.length)L('✔ الفواتير: اتلغى '+ok+(bad?' — ⚠️ '+bad+' ماتلغتش':''));DONE.inv=!bad;
+
+   /* 4) المرتجعات والهدايا: نرجّع أثرهم على المخزون */
+   var dq={};var add=function(pid,d){if(pid&&d)dq[pid]=(dq[pid]||0)+d};
+   if(O.returns&&R.returns&&R.returns.length){R.returns.forEach(function(r){add(r.product_id,r.type==='sale'?-(+r.qty||0):(+r.qty||0))});
+    var x=await S().from('mk_returns').delete().not('id','is',null).select('id');if(x.error)ERR.push('مرتجعات: '+errT(x.error));else L('✔ المرتجعات: '+(x.data||[]).length)}
+   if(O.gifts&&R.gifts&&R.gifts.length){R.gifts.forEach(function(g){add(g.product_id,+g.qty||0)});
+    var x2=await S().from('mk_gifts').delete().not('id','is',null).select('id');if(x2.error){ERR.push('هدايا: '+errT(x2.error));R.gifts.forEach(function(g){add(g.product_id,-(+g.qty||0))})}else L('✔ الهدايا: '+(x2.data||[]).length)}
+   if(O.returns&&R.returns&&R.returns.length&&ERR.some(function(e){return /^مرتجعات/.test(e)}))R.returns.forEach(function(r){add(r.product_id,r.type==='sale'?(+r.qty||0):-(+r.qty||0))});
+   P(62,'📦 بظبط المخزون…');
+   var prods=await all('mk_products','id,name,qty,cat');var pq={};prods.forEach(function(p){pq[p.id]=+p.qty||0});
+   var upd=[];
+   if(O.q==='keep'){prods.forEach(function(p){if(p.id in before&&Math.abs(pq[p.id]-before[p.id])>0.0001)upd.push([p.id,before[p.id]])})}
+   else Object.keys(dq).forEach(function(id){if(id in pq&&Math.abs(dq[id])>0.0001)upd.push([id,Math.round((pq[id]+dq[id])*1000)/1000])});
+   for(var u=0;u<upd.length;u++){var y=await S().from('mk_products').update({qty:upd[u][1],updated_at:new Date().toISOString()}).eq('id',upd[u][0]);if(y.error)ERR.push('كمية صنف: '+errT(y.error))}
+   if(upd.length)L('✔ المخزون: اتظبط '+upd.length+' صنف');
+
+   /* 5) الدفعات: نرجّع أثرها على الحساب وبعدين نمسحها (بما فيها اللي اتعملت من إلغاء الفواتير) */
+   if(O.payments){P(66,'💵 بمسح الدفعات…');var pays=await opt('mk_payments','*')||[];var dc={};
+    pays.forEach(function(p){if(p.contact_id)dc[p.contact_id]=(dc[p.contact_id]||0)+(+p.amount||0)});
+    var z=await S().from('mk_payments').delete().not('id','is',null).select('id');
+    if(z.error)ERR.push('دفعات: '+errT(z.error));
+    else{var cs=await all('mk_contacts','id,balance');var cb={};cs.forEach(function(c){cb[c.id]=+c.balance||0});
+     for(var cid in dc){if(!(cid in cb))continue;var w=await S().from('mk_contacts').update({balance:Math.round((cb[cid]+dc[cid])*100)/100}).eq('id',cid);if(w.error)ERR.push('حساب: '+errT(w.error))}
+     L('✔ الدفعات: '+(z.data||[]).length)}}
+
+   /* 6) جداول بتتمسح مباشرة */
+   var T=[['expenses','mk_expenses','المصروفات'],['quotes','mk_quotes','عروض الأسعار'],['ships','mk_shipments','الشحنات'],['wa','wa_photos','صور الواتساب'],
+    ['hy','mk_vehicle_log','مصاريف العربية'],['hy','mk_partner_moves','حركات الشركاء'],['hy','mk_field_orders','الأوردرات الميدانية'],
+    ['staff','mk_attendance','الحضور'],['staff','mk_staff_moves','السلف والقبض'],['portal','mk_portal_msgs','رسايل البوابة']];
+   for(var k=0;k<T.length;k++){if(!O[T[k][0]])continue;P(70+12*k/T.length,'🗑️ '+T[k][2]+'…');
+    try{var r1=await S().from(T[k][1]).delete().not('id','is',null).select('id');if(r1.error)throw r1.error;L('✔ '+T[k][2]+': '+(r1.data||[]).length)}catch(e){ERR.push(T[k][2]+': '+errT(e))}}
+   if(O.wa){try{var w1=await S().from('wa_orders').update({status:'cancelled'}).neq('status','cancelled').select('id');if(w1.error)throw w1.error;var n2=await rpc('mk_purge_cancelled',{p_kind:'wa'});L('✔ طلبات الواتساب: '+(n2||0))}catch(e){ERR.push('طلبات الواتساب: '+errT(e))}}
+   if(O.web){try{var w2=await S().from('web_orders').update({status:'cancelled'}).neq('status','cancelled').select('id');if(w2.error)throw w2.error;var n3=await rpc('mk_purge_cancelled',{p_kind:'web'});L('✔ طلبات الموقع: '+(n3||0))}catch(e){ERR.push('طلبات الموقع: '+errT(e))}}
+   /* بضاعة العربية: ترجع للمخزن (الكمية الكلية للصنف مابتتغيرش — العربية جزء منها) */
+   if(O.hy&&R.van&&R.van.length){var vn=0;for(var a=0;a<R.van.length;a++){var vv=R.van[a],qq=+vv.qty||0;if(Math.abs(qq)<0.0001)continue;
+     try{await rpc('mk_van_move',{p:qq>0?{kind:'unload',product_id:vv.product_id,qty:qq,funder:vv.funder||'',only_funder:true,name:vv.name||'',note:'تنظيف التجارب',force:true}:{kind:'adjust',product_id:vv.product_id,qty:-qq,funder:vv.funder||'',name:vv.name||'',note:'تنظيف التجارب'}});vn++}catch(e){ERR.push('العربية: '+errT(e))}}
+    if(vn)L('✔ بضاعة العربية رجعت المخزن: '+vn+' صنف')}
+
+   /* 7) بيانات الشغل المحفوظة في الإعدادات */
+   if(O.work){P(84,'🛠️ بمسح أوردرات الشغل…');
+    var KS=['wk_orders','wk_leaf','wk_forf','wk_offcuts','count_sessions','reservations'];if(O.hy)KS.push('hy_contracts');
+    for(var b=0;b<KS.length;b++){try{var cur=await getSet(KS[b]);if(cur==null)continue;await putSet(KS[b],Array.isArray(cur)?[]:{})}catch(e){ERR.push(KS[b]+': '+errT(e))}}
+    try{var fo=await getSet('follow');if(fo&&fo.done){fo.done={};await putSet('follow',fo)}}catch(e){}
+    try{var pt=await getSet('points');if(pt&&pt.used){pt.used={};await putSet('points',pt)}}catch(e){}
+    L('✔ أوردرات الشغل والفرفورجيه والبواقي وجلسات الجرد والحجوزات')}
+
+   /* 8) ترقيم الفواتير يبدأ من الأول (الشراء بيكمّل بعد آخر فاتورة فاضلة) */
+   try{var cnt=(await getSet('counters'))||{},num=function(no){var m=/(\d+)\s*$/.exec(String(no||''));return m?+m[1]:0};
+    if(O.sales)cnt.inv=0;if(O.quotes)cnt.quote=0;
+    if(O.pur){var mx=0;A.pur.forEach(function(v){if(A.keep.has(v.id))mx=Math.max(mx,num(v.no))});cnt.pur=mx}
+    await putSet('counters',cnt);L('✔ الترقيم: البيع يبدأ من MK-0001')}catch(e){ERR.push('الترقيم: '+errT(e))}
+
+   /* 9) أصناف الخدمات + العملاء/الموردين */
+   var keptInv=A.pur.filter(function(v){return A.keep.has(v.id)}),keptPid=new Set(),keptCid=new Set();
+   keptInv.forEach(function(v){if(v.contact_id)keptCid.add(v.contact_id);(A.byInv[v.id]||[]).forEach(function(i){if(i.product_id)keptPid.add(i.product_id)})});
+   if(O.svc){P(90,'🔩 أصناف الخدمات…');var sv=R.products.filter(function(p){return p.cat==='خدمات وتجهيز'&&!keptPid.has(p.id)}).map(function(p){return p.id});
+    for(var c=0;c<sv.length;c+=100){var r2=await S().from('mk_products').delete().in('id',sv.slice(c,c+100));if(r2.error)ERR.push('أصناف الخدمات: '+errT(r2.error))}
+    if(sv.length)L('✔ أصناف الخدمات: '+sv.length)}
+   if(O.contacts){P(94,'👥 العملاء والموردين…');var dc2=R.contacts.filter(function(x){return !keptCid.has(x.id)}).map(function(x){return x.id});
+    for(var c2=0;c2<dc2.length;c2+=100){var r3=await S().from('mk_contacts').delete().in('id',dc2.slice(c2,c2+100));if(r3.error)ERR.push('العملاء: '+errT(r3.error))}
+    if(dc2.length)L('✔ العملاء والموردين: '+dc2.length)}
+
+   /* 10) السجل اللي اتعمل من الإلغاء */
+   try{var r4=await S().from('mk_voided').delete().not('id','is',null).select('id');if(r4.error)throw r4.error;L('✔ سجل الملغي: '+(r4.data||[]).length)}catch(e){ERR.push('سجل الملغي: '+errT(e))}
+
+   /* 11) الفلاج: الزرار يختفي + السجلات القديمة تستخبى */
+   var cut=new Date().toISOString();
+   if(DONE.inv!==false){await putSet('trial_wipe',{at:cut,by:(window.mkT_user&&window.mkT_user.name)||'',kept:keptInv.map(function(v){return v.no}),errors:ERR.length});
+    FLAG={at:cut};window.mkTrialCut=cut;try{localStorage.setItem('mk_trial_cut',cut)}catch(e){}}
+   try{Object.keys(localStorage).forEach(function(k){if(/^mk_t_db_|^mk_cnt_sessions|^mk_fq_draft|^mk_recover/.test(k))localStorage.removeItem(k)})}catch(e){}
+   P(100,ERR.length?'✔ خلص — مع '+ERR.length+' ملاحظة':'✔ خلص التنظيف');
+  }catch(e){ERR.push('وقف: '+errT(e));P(100,'⚠️ وقف في النص')}
+  busy=false;try{card()}catch(e){}
+  var d=s.querySelector('#twLog');
+  var box=document.createElement('div');box.className='card';box.style.cssText='border:2px solid '+(ERR.length?'#d97706':'#159447');
+  box.innerHTML=(ERR.length?'<b style="color:#d97706">⚠️ حاجات ماتمسحتش:</b><div style="white-space:pre-line;font-size:13px;margin:6px 0">'+E(ERR.slice(0,30).join('\n'))+'</div>':'')+
+   (FLAG?'<div style="line-height:1.9">✅ السيستم بقى نضيف. الزرار ده اتشال من كل الأجهزة.<br><small style="color:var(--muted)">سجلات زي حركات المخزون والجرد والتقفيلات وسجل النشاط بقت مستخبية (أي حاجة قبل دلوقتي).</small></div>':'<div>الزرار لسه موجود عشان تكمّل اللي فاضل. افتحه تاني.</div>')+
+   '<button type="button" class="primary" id="twDone" style="width:100%;min-height:52px;margin-top:10px">🔄 حمّل السيستم من جديد</button>';
+  d.parentNode.insertBefore(box,d);
+  box.querySelector('#twDone').onclick=function(){location.reload()};
+ }
+
+ window.mkTrialWipe={open:open,analyze:analyze,_A:function(){return A}};
+ var tries=0;
+ async function boot(){if(!S()||!window.mkT_user){if(++tries<40)return setTimeout(boot,1500);return}await loadFlag();card();
+  new MutationObserver(function(){if(!document.getElementById('mkTwCard'))card()}).observe(document.getElementById('settings')||document.body,{childList:true})}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+
+<script>
+/* mk: طلبات الواتساب — اختياراتك في الكارت ماتضيعش لما القايمة تتحدّث لوحدها (كل ٢٠ ثانية / طلب جديد) (2026-10-17) */
+(function(){
+ var UI={};window.mkWaUI=UI;
+ function rowOf(e){return e&&e.closest&&e.closest('#waBody [data-wa] tr[data-i]')}
+ function cap(e){var tr=rowOf(e.target);if(!tr)return;var card=tr.closest('[data-wa]'),u=UI[card.dataset.wa]=UI[card.dataset.wa]||{};
+  var s=tr.querySelector('.wap'),q=tr.querySelector('.waq'),n=tr.querySelector('.wan');
+  u[tr.dataset.i]={pid:s?s.value:'',q:q?q.value:'',txt:n?n.value:''};tr.dataset.rs=JSON.stringify(u[tr.dataset.i])}
+ document.addEventListener('change',cap,true);document.addEventListener('input',cap,true);
+ function restore(){document.querySelectorAll('#waBody [data-wa]').forEach(function(card){var u=UI[card.dataset.wa];if(!u)return;
+  card.querySelectorAll('tr[data-i]').forEach(function(tr){var r=u[tr.dataset.i],k=JSON.stringify(r||null);if(!r||tr.dataset.rs===k)return;
+   var s=tr.querySelector('.wap'),q=tr.querySelector('.waq'),n=tr.querySelector('.wan');
+   if(s&&r.pid!=null){if(r.pid&&![].some.call(s.options,function(o){return o.value===r.pid})){var p=(db.products||[]).find(function(x){return x.id===r.pid});if(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.name;s.appendChild(o)}}s.value=r.pid}
+   if(q&&r.q!=='')q.value=r.q;if(n&&r.txt!=null)n.value=r.txt;tr.dataset.rs=k})})}
+ var t=null;new MutationObserver(function(){clearTimeout(t);t=setTimeout(restore,350)}).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
