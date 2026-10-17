@@ -10,7 +10,6 @@ const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const SECRET = JSON.parse(fs.readFileSync(__dirname + '\\config.json', 'utf8')).secret;
 const QUEUE = __dirname + '\\queue.jsonl';
 const waFilter = require('./wa-filter');
-const printer = require('./printer');
 
 const log = (...a) => {
   const line = `[${new Date().toLocaleString('en-GB')}] ${a.join(' ')}`;
@@ -105,28 +104,32 @@ async function hideAlerts(sent) {
     log(`🔔 تنبيه اتبعت واتمسح من واتساب المحل${n ? ' (+' + n + ' قديم)' : ''}`);
   } catch (e) { log('مسح التنبيهات القديمة:', e.message); }
 }
-// صندوق الصادر على السيرفر: السيستم (من أي جهاز) بيحط رسالة، والجسر بيبعتها من رقم المحل
-let cloudBusy = false;
-async function cloudOut() {
-  if (!ready || cloudBusy) return; cloudBusy = true;
-  try {
-    const rows = await rpc('wa_out_claim', { p_secret: SECRET }) || [];
-    for (const o of rows) {
-      try {
-        if (printer.isPrintJob(o)) { await printer.handle(o, log); await rpc('wa_out_done', { p_secret: SECRET, p_id: o.id, p_ok: true, p_err: '' }); continue; }
-        const say = await sayTo(o.to_phone);
-        for (const u of (o.imgs || []).slice(0, 6)) { try { await say(await MessageMedia.fromUrl(u, { unsafeMime: true })); } catch (e) { log('صورة ماتبعتتش:', e.message); } }
-        const sent = o.body ? await say(o.body) : null;
-        // 🔔 التنبيهات سرية: بتوصل لصاحب المحل وتتمسح من واتساب المحل نفسه (حذف عندي بس) عشان الموظفين ميشوفوهاش
-        if (o.by_name === '🔔 تنبيه تلقائي') await hideAlerts(sent);
-        await rpc('wa_out_done', { p_secret: SECRET, p_id: o.id, p_ok: true, p_err: '' });
-        log(`📤 اتبعت من السيستم لـ ${o.to_phone} (${(o.imgs || []).length} صور)`);
-      } catch (e) { log('✘ رسالة من السيستم ماتبعتتش:', e.message); try { await rpc('wa_out_done', { p_secret: SECRET, p_id: o.id, p_ok: false, p_err: e.message }); } catch (_) {} }
+// صندوق الصادر (الرسايل والطباعة من السيرفر) بقى مسؤولية جسر مستقل: printer-bridge.js
+// هو ده اللي بيسحب الأوامر ويطبع، وبيبعت رسايل واتساب عن طريق السيرفر المحلي الصغير ده بس
+// (الجسر ده معندهوش Puppeteer ولا صندوق صادر خاص بيه، فمفيش تضارب على نفس الطابور)
+const http = require('http');
+http.createServer((req, res) => {
+  if (req.method !== 'POST' || req.url !== '/send') { res.writeHead(404); return res.end(); }
+  if (req.headers['x-secret'] !== SECRET) { res.writeHead(403); return res.end(); }
+  let body = '';
+  req.on('data', (c) => (body += c));
+  req.on('end', async () => {
+    let o; try { o = JSON.parse(body); } catch (e) { res.writeHead(400); return res.end(); }
+    try {
+      if (!ready) { res.end(JSON.stringify({ ok: false, err: 'not_ready' })); return; }
+      const say = await sayTo(o.to_phone);
+      for (const u of (o.imgs || []).slice(0, 6)) { try { await say(await MessageMedia.fromUrl(u, { unsafeMime: true })); } catch (e) { log('صورة ماتبعتتش:', e.message); } }
+      const sent = o.body ? await say(o.body) : null;
+      // 🔔 التنبيهات سرية: بتوصل لصاحب المحل وتتمسح من واتساب المحل نفسه (حذف عندي بس) عشان الموظفين ميشوفوهاش
+      if (o.by_name === '🔔 تنبيه تلقائي') await hideAlerts(sent);
+      log(`📤 اتبعت من السيستم لـ ${o.to_phone} (${(o.imgs || []).length} صور)`);
+      res.end(JSON.stringify({ ok: true }));
+    } catch (e) {
+      log('✘ رسالة من السيستم ماتبعتتش:', e.message);
+      res.end(JSON.stringify({ ok: false, err: e.message }));
     }
-  } catch (e) { if (!/fetch failed/i.test(e.message)) log('✘ صندوق الصادر (السيرفر):', e.message); }
-  finally { cloudBusy = false; }   // يترجع false دايماً حتى لو حصل تعليق/خطأ
-}
-setInterval(cloudOut, 6000);
+  });
+}).listen(8787, '127.0.0.1', () => log('سيرفر إرسال محلي لجسر الطباعة شغال (8787)'));
 async function outbox() {
   try { fs.writeFileSync(__dirname + '\\outbox.alive', String(Date.now())); } catch (e) {}
   if (!ready || sending || !fs.existsSync(OUTBOX)) return;
