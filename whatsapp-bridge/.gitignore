@@ -1,0 +1,13 @@
+config.json
+session/
+node_modules/
+.wwebjs_cache/
+queue*.jsonl
+qr*.png
+*.log
+*-console.txt
+printjobs/
+outbox/
+outbox.alive
+wa-rules-cache.json
+*.bak-*
