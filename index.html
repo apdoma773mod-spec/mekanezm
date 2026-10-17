@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-78';
+const APP_VER='2026-10-17-79';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -9758,6 +9758,89 @@ function printSheet(s){const rows=Object.keys(s.items).map(pid=>({p:prod(pid),it
 window.mkCountSessions=async function(){if(!loaded)await load();else load();list()};
 /* زرار في شاشة الجرد */
 try{const bar=document.querySelector('#count .title-row .btnrow');if(bar&&!document.getElementById('cnSess'))bar.insertAdjacentHTML('afterbegin','<button class="secondary" id="cnSess" onclick="mkCountSessions()">🗂️ جلسات الجرد (على أكتر من يوم)</button>')}catch(e){}
+})();
+</script>
+
+<script>
+/* =====================================================================
+   ميكانيزم — 📥 استيراد فواتير شراء من أبلكيشن قديم (Excel / CSV / JSON): ربط الأعمدة ← مراجعة بدرجة ثقة ← منع تكرار ← حفظ. وصور الفواتير بتروح لقراءة الصور (OCR).
+   ===================================================================== */
+(function(){
+const E=s=>typeof esc==='function'?esc(s):String(s==null?'':s);
+const AR=s=>String(s==null?'':s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+const nv=v=>{if(typeof v==='number')return v;const n=parseFloat(AR(v).replace(/[,٬\s]/g,'').replace(/٫/g,'.'));return isNaN(n)?0:n};
+const r2=x=>Math.round(x*100)/100;
+const norm=s=>typeof VN==='function'?VN(String(s==null?'':s)):String(s||'').toLowerCase().trim();
+const FIELDS=[['sup','المورد',['مورد','المورد','اسم المورد','supplier','vendor','العميل','الشركه','الشركة']],['date','التاريخ',['تاريخ','التاريخ','date','يوم']],['no','رقم الفاتورة',['رقم الفاتوره','رقم الفاتورة','رقم','فاتوره','فاتورة','invoice','invoice_no','no','number','inv']],['prod','الصنف',['الصنف','صنف','المنتج','اسم الصنف','البيان','بيان','item','product','name','description']],['qty','الكمية',['الكميه','الكمية','كميه','كمية','عدد','العدد','qty','quantity']],['price','السعر',['السعر','سعر','سعر الوحدة','سعر الوحده','سعر الشراء','price','unit_price','cost']],['total','إجمالي السطر (اختياري)',['الاجمالي','إجمالي','الإجمالي','المجموع','total','amount']],['paid','المدفوع (اختياري)',['مدفوع','المدفوع','paid','دفع']]];
+let ST={hdr:[],rows:[],map:{},inv:[],mode:'all',credit:false};
+const host=()=>{let o=document.getElementById('mkPvImp');if(!o){o=document.createElement('div');o.id='mkPvImp';o.style.cssText='position:fixed;inset:0;z-index:56;background:var(--bg,#f5f7f8);color:var(--text,#18343a);overflow:auto;direction:rtl;padding:12px 14px 90px';document.body.appendChild(o)}o.style.display='block';document.body.style.overflow='hidden';return o};
+const shut=()=>{const o=document.getElementById('mkPvImp');if(o)o.style.display='none';document.body.style.overflow='';try{renderAll()}catch(e){}};
+const BT=(id,t,pri)=>`<button type="button" id="${id}" class="${pri?'primary':'secondary'}" style="padding:13px 16px;font-size:16px;font-weight:700;border-radius:12px;width:100%;margin-top:8px">${t}</button>`;
+function start(){const o=host();
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">📥 استيراد فواتير شراء</h2><button type="button" class="secondary" id="piX">✕</button></div>
+ <div class="card" style="margin-top:12px;line-height:1.9">اختار الطريقة:<br><b>1) ملف</b> من الأبلكيشن القديم: Excel أو CSV أو JSON.<br><b>2) صور</b> فواتير ورقية: بتتقري بالذكاء الاصطناعي وتلاقيها في «قراءة الفواتير بالصورة».</div>
+ ${BT('piF','📄 اختار ملف (Excel / CSV / JSON)',1)}${BT('piI','🖼️ ارفع صور فواتير (قراءة OCR)')}`;
+ o.querySelector('#piX').onclick=shut;
+ o.querySelector('#piF').onclick=()=>pick('.xlsx,.xls,.xlsm,.csv,.json,.txt',readFile,false);
+ o.querySelector('#piI').onclick=()=>pick('image/*,.pdf',async fs=>{if(!window.mkScanAdd)return toast('حدّث الصفحة');shut();showPage('purchases');for(const f of fs)await mkScanAdd(f)},true)}
+function pick(acc,cb,multi){const i=document.createElement('input');i.type='file';i.accept=acc;i.multiple=!!multi;i.style.display='none';document.body.appendChild(i);i.onchange=()=>{const fs=[...i.files];i.remove();if(fs.length)cb(multi?fs:fs[0])};i.click()}
+function flatJSON(j){if(Array.isArray(j)&&j.length&&j.every(x=>x&&typeof x==='object')){
+  if(j.some(x=>Array.isArray(x.items||x.lines||x.details))){const out=[];j.forEach(inv=>{(inv.items||inv.lines||inv.details||[]).forEach(it=>out.push(Object.assign({},inv,it,{items:undefined,lines:undefined,details:undefined})))});return out}return j}
+ if(j&&typeof j==='object'){const k=Object.keys(j).find(k=>Array.isArray(j[k]));if(k)return flatJSON(j[k])}return[]}
+async function readFile(f){try{let hdr=[],rows=[];
+ if(/\.json$/i.test(f.name)||/\.txt$/i.test(f.name)){const arr=flatJSON(JSON.parse(await f.text()));if(!arr.length)throw new Error('الملف مفيهوش فواتير');hdr=[...new Set(arr.flatMap(x=>Object.keys(x).filter(k=>x[k]!==undefined)))];rows=arr.map(x=>hdr.map(k=>x[k]==null?'':x[k]))}
+ else{if(typeof XLSX==='undefined')throw new Error('مكتبة الإكسل ما اتحملتش — اتأكد من النت');const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});let best=null;
+  wb.SheetNames.forEach(n=>{const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''}).filter(r=>r.some(c=>c!==''));if(a.length>1&&(!best||a.length>best.length))best=a});
+  if(!best)throw new Error('الملف فاضي');let hi=0;for(let r=0;r<Math.min(best.length,15);r++){if(best[r].filter(c=>typeof c==='string'&&c.trim()).length>=3){hi=r;break}}
+  hdr=best[hi].map((c,i)=>String(c||'عمود '+(i+1)).trim());rows=best.slice(hi+1)}
+ ST={hdr,rows,map:{},inv:[],mode:'all',credit:false};
+ FIELDS.forEach(([k,,syn])=>{const sn=syn.map(norm);const i=hdr.findIndex(h=>sn.includes(norm(h)));if(i>=0)ST.map[k]=i;else{const j=hdr.findIndex(h=>sn.some(s=>s.length>2&&norm(h).includes(s)));if(j>=0&&!Object.values(ST.map).includes(j))ST.map[k]=j}});
+ mapping()}catch(e){toast('❌ '+(e&&e.message||e))}}
+function mapping(){const o=host(),H=ST.hdr;
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">ربط الأعمدة</h2><button type="button" class="secondary" id="piB">← رجوع</button></div>
+ <div class="card" style="margin-top:10px;font-size:13px;color:var(--muted)">السيستم خمّن الأعمدة. صحّح لو غلط. لازم تحدد: الصنف والكمية والسعر (والمورد لو موجود).</div>
+ ${FIELDS.map(([k,l])=>`<div class="card" style="margin-top:8px;padding:10px"><label style="font-weight:700">${l}</label><select data-m="${k}" style="width:100%;padding:11px;margin-top:4px;border:1px solid var(--border);border-radius:10px;font-size:16px"><option value="">— مفيش —</option>${H.map((h,i)=>`<option value="${i}"${ST.map[k]===i?' selected':''}>${E(h)}</option>`).join('')}</select><small style="color:var(--muted)">مثال: ${E(String((ST.rows[0]||[])[ST.map[k]]??''))}</small></div>`).join('')}
+ <div class="card" style="margin-top:8px"><label style="font-weight:700">المدفوع لو مفيش عمود مدفوع</label><select id="piC" style="width:100%;padding:11px;margin-top:4px;border:1px solid var(--border);border-radius:10px;font-size:16px"><option value="0">اعتبرها مدفوعة بالكامل</option><option value="1">اعتبرها آجل (على المورد)</option></select></div>
+ ${BT('piN','التالي: مراجعة الفواتير ←',1)}`;
+ o.querySelector('#piB').onclick=start;
+ o.querySelectorAll('[data-m]').forEach(s=>s.onchange=()=>{const v=s.value;if(v==='')delete ST.map[s.dataset.m];else ST.map[s.dataset.m]=+v;mapping()});
+ o.querySelector('#piC').value=ST.credit?'1':'0';o.querySelector('#piC').onchange=e=>{ST.credit=e.target.value==='1'};
+ o.querySelector('#piN').onclick=()=>{if(ST.map.prod==null||ST.map.qty==null||ST.map.price==null)return toast('حدد أعمدة الصنف والكمية والسعر');build();review()}}
+function pdate(v){if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+ if(typeof v==='number'&&v>20000&&v<80000){const d=new Date(Math.round((v-25569)*864e5));return d.toISOString().slice(0,10)}
+ const s=AR(v).trim();let m=s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+ m=s.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);if(m){let y=m[3].length==2?'20'+m[3]:m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0')}return ''}
+function match(name){const n=norm(name);if(!n)return {p:null,s:0};const P=db.products||[];let best=null,bs=0;const nt=n.split(' ').filter(Boolean);
+ for(const p of P){const pn=norm(p.name);if(pn===n)return {p,s:1};const pt=pn.split(' ').filter(Boolean);if(!pt.length)continue;let sh=0;nt.forEach(t=>{if(pt.some(q=>q===t||(t.length>2&&q.length>2&&(q.startsWith(t)||t.startsWith(q)))))sh++});const sc=sh/Math.max(nt.length,pt.length)*0.9+(pn.includes(n)||n.includes(pn)?0.1:0);if(sc>bs){bs=sc;best=p}}
+ return bs>=0.5?{p:best,s:Math.min(0.99,bs)}:{p:null,s:0}}
+function build(){const M=ST.map,g=(r,k)=>M[k]==null?'':r[M[k]],map=new Map();
+ ST.rows.forEach(r=>{const name=String(g(r,'prod')||'').trim(),q=nv(g(r,'qty'));if(!name||!(q>0))return;let pr=nv(g(r,'price')),tot=nv(g(r,'total'));if(!pr&&tot)pr=tot/q;
+  const sup=String(g(r,'sup')||'').trim(),date=pdate(g(r,'date'))||new Date().toISOString().slice(0,10),no=String(g(r,'no')||'').trim(),key=sup+'|'+no+'|'+(no?'':date);
+  if(!map.has(key))map.set(key,{sup,date,no,items:[],paid:null,on:true});const I=map.get(key);if(M.paid!=null&&g(r,'paid')!=='')I.paid=(I.paid||0)+nv(g(r,'paid'));
+  const m=match(name);I.items.push({name,qty:q,price:r2(pr),pid:m.p?m.p.id:null,pname:m.p?m.p.name:'',s:m.s,on:true})});
+ const exist=(db.purchases||[]);
+ ST.inv=[...map.values()].map(I=>{I.total=r2(I.items.reduce((s,x)=>s+x.qty*x.price,0));I.conf=I.items.length?Math.round(I.items.reduce((s,x)=>s+(x.pid?x.s:0.3),0)/I.items.length*100):0;
+  I.dup=exist.some(r=>String(r.person||'').trim()===I.sup&&(I.no?String(r.note||'').includes(I.no):false)||(String(r.person||'').trim()===I.sup&&String(r.date)===I.date&&Math.abs(((r.gid?exist.filter(z=>z.gid===r.gid):[r]).reduce((s,z)=>s+z.total,0))-I.total)<0.01));
+  I.on=!I.dup&&I.conf>=50;return I})}
+function review(){const o=host(),L=ST.inv,on=L.filter(i=>i.on);
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">مراجعة قبل الحفظ</h2><button type="button" class="secondary" id="piB">← رجوع</button></div>
+ <div class="card" style="margin-top:10px;line-height:1.9"><b>${L.length}</b> فاتورة — هتتحفظ <b>${on.length}</b> — إجمالي <b>${money(on.reduce((s,i)=>s+i.total,0))}</b><br><small style="color:var(--muted)">🟢 ثقة عالية (≥80%) • 🟡 متوسطة • 🔴 ضعيفة • ♻️ مكررة (مش هتتحفظ غير لو علّمتها)</small></div>
+ ${L.map((I,n)=>`<div class="card" style="margin-top:10px;${I.dup?'opacity:.75;':''}"><label style="display:flex;gap:10px;align-items:center"><input type="checkbox" data-iv="${n}" ${I.on?'checked':''} style="width:24px;height:24px"><div style="flex:1"><b>${E(I.sup||'بدون مورد')}</b>${I.no?` — ${E(I.no)}`:''}<div style="font-size:13px;color:var(--muted)">${E(I.date)} — ${I.items.length} صنف — ${money(I.total)}</div></div><span>${I.dup?'♻️':I.conf>=80?'🟢':I.conf>=50?'🟡':'🔴'} ${I.conf}%</span></label>
+ <details style="margin-top:6px"><summary style="cursor:pointer">الأصناف</summary>${I.items.map((x,j)=>`<div style="border-top:1px dashed var(--border);padding:6px 0;font-size:14px"><input type="checkbox" data-it="${n}:${j}" ${x.on?'checked':''}> ${E(x.name)} × ${x.qty} @ ${money(x.price)}<div style="font-size:12px;color:${x.pid?'#159447':'#c0392b'}">${x.pid?'← '+E(x.pname)+' ('+Math.round(x.s*100)+'%)':'صنف جديد — هيتسجل في المخزن'}</div></div>`).join('')}</details></div>`).join('')||'<div class="card"><div class="empty">ما لقيتش فواتير — راجع ربط الأعمدة.</div></div>'}
+ ${on.length?BT('piS','✔ احفظ '+on.length+' فاتورة شراء',1):''}`;
+ o.querySelector('#piB').onclick=mapping;
+ o.querySelectorAll('[data-iv]').forEach(c=>c.onchange=()=>{L[+c.dataset.iv].on=c.checked;review()});
+ o.querySelectorAll('[data-it]').forEach(c=>c.onchange=()=>{const [a,b]=c.dataset.it.split(':');L[+a].items[+b].on=c.checked});
+ const sv=o.querySelector('#piS');if(sv)sv.onclick=save}
+async function save(){const sel=ST.inv.filter(i=>i.on);if(!sel.length)return;if(!confirm('هيتسجل '+sel.length+' فاتورة شراء على السيرفر وتتحدث المخزن. متأكد؟'))return;
+ const rpcf=window.mkT&&window.mkT.api&&window.mkT.api.rpc||(window.mkSB&&((fn,a)=>window.mkSB.rpc(fn,a).then(r=>{if(r.error)throw r.error;return r.data})));if(!rpcf)return toast('محتاج اتصال بالسيرفر');
+ const b=document.getElementById('piS');if(b){b.disabled=true;b.textContent='⏳ بيحفظ...'}let n=0,errs=[];
+ for(const I of sel){const items=I.items.filter(x=>x.on).map(x=>({product_id:x.pid||null,name:x.pid?x.pname:x.name,qty:x.qty,price:x.price}));if(!items.length)continue;const tot=r2(items.reduce((s,x)=>s+x.qty*x.price,0)),paid=I.paid!=null?Math.min(tot,I.paid):(ST.credit?0:tot);
+  try{await rpcf('mk_save_invoice',{p:Object.assign({},window.mkCoOn&&typeof curCo==='function'?{co:curCo()}:{},{kind:'purchase',date:I.date,person:I.sup||'مورد',note:(I.no?'فاتورة المورد: '+I.no+' — ':'')+'مستورد من ملف',paid,source:'import',items})});n++}catch(e){errs.push((I.sup||'—')+' '+(I.no||'')+': '+((e&&e.message)||e))}}
+ try{if(typeof loadAll==='function')await loadAll()}catch(e){}
+ toast('✔ اتسجلت '+n+' فاتورة');if(errs.length)alert('فواتير ماتسجلتش:\n'+errs.join('\n'));shut();showPage('purchases')}
+window.mkPurchImport=start;
+try{const bar=document.querySelector('#purchases .title-row');if(bar&&!document.getElementById('piBtn'))bar.insertAdjacentHTML('beforeend','<button class="secondary" id="piBtn" onclick="mkPurchImport()" style="margin-right:8px">📥 استيراد فواتير</button>')}catch(e){}
 })();
 </script>
 
