@@ -781,17 +781,23 @@ function voiceToggle(){const SR=_SR();if(!SR){vstat('المتصفح ده مش ب
 function openTransaction(type){let isSale=type==='sale';TTYPE=type;paidTouched=false;
  openModal(`<div class="modal-head"><h2>${isSale?'تسجيل فاتورة بيع':'تسجيل فاتورة شراء'}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <form onsubmit="submitTransaction(event,'${type}')"><div class="form">
- <div class="field full"><label>ابحث عن الصنف واختاره</label><input id="txSearch" placeholder="اكتب اسم الصنف..." autocomplete="off"><div id="txBox" style="display:none;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff"></div></div>
+ <div class="field full"><label>ابحث عن الصنف واختاره</label><input id="txSearch" placeholder="اكتب اسم الصنف أو كوده أو الباركود..." autocomplete="off" type="search" name="mk-noauto-item"><div id="txBox" style="display:none;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff"></div></div>
  <div class="field full"><div id="txLines"></div></div>
  <div class="field full" style="font-size:18px">إجمالي الفاتورة: <b id="txTotal">0</b></div>
  <div class="field"><label>${isSale?'العميل':'المورد'}</label><input id="txPerson" placeholder="الاسم" ${isSale?'list="custList" onchange="fillCust()"':''}>${isSale?`<datalist id="custList">${db.contacts.filter(c=>c.type==='عميل').map(c=>`<option value="${esc(c.name)}">`).join('')}</datalist>`:''}</div>
  ${isSale?'<div class="field"><label>تليفون العميل</label><input id="txPhone" type="tel" placeholder="01xxxxxxxxx"></div><div class="field full"><label>عنوان العميل (اختياري)</label><input id="txAddr"></div><div class="field"><label>المدفوع الآن</label><input id="txPaid" type="number" min="0" step="0.01" oninput="paidTouched=true;updRem()"></div><div class="field"><label>المتبقي على العميل</label><input id="txRem" readonly value="0"></div>':''}
  <div class="field full"><label>البيان</label><input id="txNote" placeholder="ملاحظات اختيارية"></div>
  </div><div class="modal-foot"><button class="primary">حفظ العملية</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`);
- const NM=prodsCo().map(p=>({p,n:VN(p.name)})),SY={'3d':'ثري دي','2d':'تو دي','سمت':'ساميت','سامت':'ساميت'};
- txSearch.oninput=()=>{let q=VN(txSearch.value).split(' ').filter(Boolean).flatMap(w=>(SY[w]||w).split(' '));if(!q.length){txBox.style.display='none';return}
-  let r=NM.filter(o=>q.every(w=>o.n.includes(w))).sort((a,b)=>(b.n.startsWith(q[0])?1:0)-(a.n.startsWith(q[0])?1:0)).slice(0,10);
-  txBox.innerHTML=r.length?r.map(o=>`<div data-id="${o.p.id}" style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer">${esc(o.p.name)} <small style="color:#7a8a8f">(${o.p.qty} ${esc(o.p.unit)})</small></div>`).join(''):'<div style="padding:12px;color:#888">مفيش صنف بالاسم ده</div>';txBox.innerHTML+=`<div data-new="1" style="padding:12px;color:var(--blue);font-weight:700;cursor:pointer">＋ إضافة «${esc(txSearch.value.trim())}» كصنف غير مسجل</div>`;txBox.style.display='block'};
+ const ALX=(typeof window.mkAliasAL==='function'&&window.mkAliasAL())||{},ALBY={};
+ for(const sK in ALX)for(const k in ALX[sK]){if(k[0]==='#')continue;const pid=ALX[sK][k];(ALBY[pid]=ALBY[pid]||[]).push(k)}
+ // البحث بيلاقي الصنف باسم ميكانيزم أو كوده أو الباركود أو أي اسم مورد اتحفظ له قبل كده
+ const NM=prodsCo().map(p=>{const al=ALBY[p.id]||[];return {p,sup:al[0]||'',n:VN([p.name,p.code,p.barcode,al.join(' ')].filter(Boolean).join(' '))}}),SY={'3d':'ثري دي','2d':'تو دي','سمت':'ساميت','سامت':'ساميت'};
+ let txT=null;
+ txSearch.oninput=()=>{clearTimeout(txT);txT=setTimeout(()=>{
+  let qn=VN(txSearch.value),q=qn.split(' ').filter(Boolean).flatMap(w=>(SY[w]||w).split(' '));
+  if(qn.replace(/\s+/g,'').length<2){txBox.style.display='none';return}
+  let r=NM.filter(o=>q.every(w=>o.n.includes(w))).sort((a,b)=>(b.n.startsWith(q[0])?1:0)-(a.n.startsWith(q[0])?1:0)).slice(0,15);
+  txBox.innerHTML=r.length?r.map(o=>`<div data-id="${o.p.id}" style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer">${esc(o.p.name)} <small style="color:#7a8a8f">(${o.p.qty} ${esc(o.p.unit)})</small>${o.sup?`<br><small style="color:#aab8c2">${esc(o.sup)}</small>`:''}</div>`).join(''):'<div style="padding:12px;color:#888">مفيش صنف بالاسم ده</div>';txBox.innerHTML+=`<div data-new="1" style="padding:12px;color:var(--blue);font-weight:700;cursor:pointer">＋ إضافة «${esc(txSearch.value.trim())}» كصنف غير مسجل</div>`;txBox.style.display='block'},120)};
  txBox.onclick=e=>{if(e.target.closest('[data-new]'))addItem('new',txSearch.value.trim());else{let d=e.target.closest('[data-id]');if(!d)return;addItem(d.dataset.id)}txSearch.value='';txBox.style.display='none';txSearch.focus()};updRem()}
 function addItem(pid,nm){let ex=pid==='new'?null:document.querySelector(`#txLines .txl[data-pid="${pid}"]`);if(ex){let q=ex.querySelector('.lq');q.value=(+q.value||0)+1;updRem();return}
  let p=pid==='new'?{name:nm,qty:0,unit:'قطعة',price:0,cost:0}:db.products.find(x=>x.id===pid);if(!p)return;let d=document.createElement('div'),sale=TTYPE==='sale';d.className='txl';d.dataset.pid=pid;d.dataset.name=nm||'';d.style.cssText='border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff';
@@ -1679,7 +1685,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-94';
+const APP_VER='2026-10-18-01';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3488,6 +3494,7 @@ setTimeout(()=>{try{renderCharts();roBanner()}catch(e){}},1500);
 const sbx=()=>window.mkSB;
 const LKEY='mk_inv_alias';
 let AL={},ALok=false,IV=null;
+window.mkAliasAL=()=>AL;   // عشان البحث القوي في الفاتورة يلاقي الصنف بأي اسم مورد محفوظ له
 const normSup=s=>VN(s||'').replace(/\s+/g,' ').trim()||'*';
 const normTxt=s=>VN(s||'').replace(/\s+/g,' ').trim();
 
@@ -3664,7 +3671,12 @@ window.mkScanAdd=async function(file){
 async function tick(prefer){if(busyW||!sbx()||!window.mkT_user||!navigator.onLine)return;busyW=true;
  try{for(let n=0;n<3;n++){let {data:job,error}=await sbx().rpc('mk_scan_claim');if(error||!job)break;await work(job)}}
  catch(e){}finally{busyW=false;await refresh()}}
-async function callFn(img){let {data,error}=await sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
+async function callFn(img){
+ // مهلة (٥٥ ثانية): لو الخدمة علّقت من غير رد، نرمي خطأ "timeout" بدل ما الفاتورة تفضل "لسه بتتقري" للأبد وتقفل الطابور عن أي صورة جديدة
+ let timer,invoke=sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
+ let timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('timeout: الخدمة متأخرة في الرد')),55000)});
+ let data,error;
+ try{({data,error}=await Promise.race([invoke,timeout]))}finally{clearTimeout(timer)}
  if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
   if(st===404)m='دالة parse-invoice مش متنشرة';throw new Error(m)}
  if(data&&data.error)throw new Error(data.error);return data||{}}
@@ -10454,6 +10466,62 @@ window.mkInvScan=function(){
    try{var ks=await caches.keys();for(var k of ks)await caches.delete(k)}catch(e){}
    location.replace(location.pathname+'?v='+Date.now())}}
  var t=0;(function w(){put();if(!document.getElementById('mkVerCard')&&++t<40)setTimeout(w,1500)})()})();
+</script>
+<script>
+/* =====================================================================
+   ميكانيزم — 🧪 العينات: اختيارية، تتشغّل وتتقفل من زرار في شاشة العينات نفسها (admin)
+   عينة بتخرج من غير بيع: خرجت/رجعت/اتحولت لبيع/اتخصمت كخسارة. ما تتخصمش من المتاح للبيع
+   لحد ما تتحول لبيع أو خسارة، وتظهر في تقرير «العينات الخارجة ومع مين».
+   ===================================================================== */
+(function(){
+const $=id=>document.getElementById(id);
+const sbx=()=>window.mkSB;
+const isAdm=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
+const esc2=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let SM=[],ON=false;
+function on(){return ON||isAdm()}
+async function loadFlag(){try{let{data}=await sbx().from('mk_settings').select('value').eq('key','samples_on').maybeSingle();ON=!!(data&&data.value)}catch(e){ON=false}renderNav()}
+async function setFlag(v){ON=v;try{await sbx().from('mk_settings').upsert([{key:'samples_on',value:v}],{onConflict:'key'})}catch(e){}renderNav();render()}
+async function load(){try{let{data,error}=await sbx().from('mk_samples').select('*').order('created_at',{ascending:false}).limit(300);if(error)throw error;SM=data||[]}catch(e){SM=[]}render()}
+function ensure(){if($('samples'))return;let ref=$('products');if(!ref)return;let sec=document.createElement(ref.tagName.toLowerCase());sec.id='samples';sec.className='page';ref.parentNode.appendChild(sec);}
+function renderNav(){ensure();let nav=document.querySelector('aside .nav');if(!nav)return;let b=nav.querySelector('[data-page="samples"]');
+ if(!on()){if(b)b.remove();return}
+ if(!b)nav.insertAdjacentHTML('beforeend','<button data-page="samples" onclick="showPage(\'samples\')"><span style="font-size:17px;width:20px;text-align:center;display:inline-block">🧪</span> العينات</button>')}
+window.mkSmpOpen=function(){if(!on())return;openModal(`<div class="modal-head"><h2>🧪 عينة جديدة</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <form onsubmit="mkSmpSave(event)"><div class="form">
+ <div class="field full"><label>الصنف</label><input id="smP" list="smPL" placeholder="اسم الصنف" required>
+ <datalist id="smPL">${(db.products||[]).map(p=>`<option value="${esc2(p.name)}">`).join('')}</datalist></div>
+ <div class="field"><label>الكمية</label><input id="smQ" type="number" min="0.001" step="any" value="1"></div>
+ <div class="field"><label>العميل</label><input id="smC" placeholder="اسم العميل"></div>
+ <div class="field"><label>التاريخ</label><input id="smD" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+ <div class="field"><label>سلّمها</label><input id="smBy" value="${esc2(typeof userName==='function'?userName():'')}"></div>
+ </div><div class="modal-foot"><button class="primary">حفظ العينة</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`)};
+window.mkSmpSave=async function(ev){ev.preventDefault();let p=(db.products||[]).find(x=>x.name===$('smP').value.trim());
+ let row={product_id:p?p.id:null,product_name:p?p.name:$('smP').value.trim(),qty:+$('smQ').value||1,customer:$('smC').value.trim(),date:$('smD').value,given_by:$('smBy').value.trim(),status:'out'};
+ try{let{error}=await sbx().from('mk_samples').insert(row);if(error)throw error;closeModal();toast('✔ اتسجّلت العينة');load()}catch(e){toast('❌ '+(e.message||e))}};
+window.mkSmpSet=async function(id,st){try{let{error}=await sbx().from('mk_samples').update({status:st,resolved_at:new Date().toISOString()}).eq('id',id);if(error)throw error;
+ if(st==='sold'){let s=SM.find(x=>x.id===id);if(s)try{await (window.mkT&&mkT.api?mkT.api:{rpc:()=>{}}).rpc('mk_save_invoice',{p:{kind:'sale',date:new Date().toISOString(),person:s.customer||'عميل عينة',note:'تحويل عينة لبيع',items:[{product_id:s.product_id,product:s.product_name,qty:s.qty,price:0}]}})}catch(e){}}
+ toast('✔ تم');load()}catch(e){toast('❌ '+(e.message||e))}};
+window.mkSmpToggle=function(){setFlag(!ON)};
+function rowHtml(s){let badge={out:'🧪 خارجة',returned:'↩️ رجعت',sold:'✅ اتباعت',lost:'⚠️ خسارة'}[s.status]||s.status;
+ return `<div class="card" style="margin-top:8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>${esc2(s.product_name)}</b> × ${s.qty}<br><small style="color:var(--muted)">${esc2(s.customer||'بدون اسم')} — ${esc2(s.date||'')} — ${badge}${s.given_by?' — سلّمها '+esc2(s.given_by):''}</small></div>
+  ${s.status==='out'?`<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="secondary" onclick="mkSmpSet('${s.id}','returned')">رجعت</button><button type="button" class="secondary" onclick="mkSmpSet('${s.id}','sold')">بيعت</button><button type="button" class="secondary danger" onclick="mkSmpSet('${s.id}','lost')">خسارة</button></div>`:''}</div></div>`}
+function render(){let box=$('samples');if(!box)return;
+ if(!on()){box.innerHTML='<div class="empty">العينات مقفولة دلوقتي.</div>';return}
+ let out=SM.filter(x=>x.status==='out'),rest=SM.filter(x=>x.status!=='out');
+ box.innerHTML=`<div class="title-row"><div class="title"><h1>🧪 العينات</h1><p>عينة خرجت من غير بيع — تتبعها لحد ما ترجع أو تتباع</p></div>
+  <div style="display:flex;gap:8px">${isAdm()?`<button type="button" class="secondary" onclick="mkSmpToggle()">${ON?'إقفال الميزة':'تشغيل الميزة'}</button>`:''}<button type="button" class="primary" onclick="mkSmpOpen()">＋ عينة جديدة</button></div></div>
+  <b>العينات الخارجة ومع مين (${out.length})</b>${out.map(rowHtml).join('')||'<div class="empty">مفيش عينات خارجة دلوقتي</div>'}
+  <div style="margin-top:18px"><b>السجل</b>${rest.map(rowHtml).join('')||'<div class="empty">لسه مفيش سجل</div>'}</div>`}
+window.mkSmpCountFor=nm=>SM.filter(s=>s.status==='out'&&(s.customer||'').trim()===String(nm||'').trim()).length;
+if(typeof openContactFile==='function'){const _ocf=openContactFile;window.openContactFile=function(id){_ocf(id);try{if(!on())return;let c=(db.contacts||[]).find(x=>x.id===id);if(!c||c.type!=='عميل')return;
+ let n=window.mkSmpCountFor(c.name);if(!n)return;let host=document.querySelector('#modal .modal-body')||document.querySelector('#modal .form')||document.getElementById('modal');
+ if(host&&!host.querySelector('.mkSmpBadge'))host.insertAdjacentHTML('afterbegin',`<div class="mkSmpBadge" style="background:#fff7e0;border:1px solid #f0d58a;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:14px">🧪 عنده ${n} عينة خارجة دلوقتي</div>`)}catch(e){}}}
+(function wait(n){if(window.mkT_user&&sbx()){loadFlag().then(()=>{if(on())load()});
+  try{sbx().channel('mk-samples').on('postgres_changes',{event:'*',schema:'public',table:'mk_samples'},()=>{if(on())load()}).subscribe()}catch(e){}
+  return}
+ if(n<120)setTimeout(()=>wait(n+1),1000)})(0);
+})();
 </script>
 </body>
 </html>
