@@ -1650,7 +1650,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-17-75';
+const APP_VER='2026-10-17-76';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -9610,5 +9610,71 @@ let sp=window.showPage;if(typeof sp==='function')window.showPage=function(id){sp
  };
 })();
 </script>
+<script>
+/* =====================================================================
+   ميكانيزم — 🧾 فواتير الشراء الغنية: بحث + فلاتر + كروت + فتح/تعديل/نسخ/طباعة + دفعة + مرتجع + إجمالي الفترة + تغيّر التكلفة + منع التكرار
+   ===================================================================== */
+(function(){
+const PV={q:'',sup:'',from:'',to:'',pay:'all',open:null};
+const E=s=>typeof esc==='function'?esc(s):String(s==null?'':s);
+const sumB=(a,f)=>a.reduce((s,x)=>s+(+f(x)||0),0);
+function groups(){const arr=(db.purchases||[]).filter(r=>typeof inCo!=='function'||inCo(r));const m=new Map();arr.forEach(r=>{const k=r.gid||r.id;if(!m.has(k))m.set(k,[]);m.get(k).push(r)});return [...m.values()]}
+function snoOf(G){const n=String((G[0]&&G[0].note)||'');const m=n.match(/فاتورة المورد:\s*([^\s—\n]+)/);return m?m[1]:''}
+function filt(){const q=(typeof VN==='function'?VN(PV.q):PV.q).split(' ').filter(Boolean);
+ return groups().filter(G=>{const r=G[0],T=sumB(G,x=>x.total),rem=sumB(G,x=>x.rem||0);
+  if(PV.sup&&r.person!==PV.sup)return false;if(PV.from&&String(r.date)<PV.from)return false;if(PV.to&&String(r.date)>PV.to)return false;
+  if(PV.pay==='paid'&&rem>0.009)return false;if(PV.pay==='credit'&&!(rem>0.009))return false;
+  if(q.length){const hay=(typeof VN==='function'?VN:(x=>x))([r.pno,r.person,r.date,snoOf(G),G.map(x=>x.product).join(' ')].join(' '));if(!q.every(w=>hay.includes(w)))return false}
+  return true}).sort((a,b)=>String(b[0].date).localeCompare(String(a[0].date))||String(b[0].pno||'').localeCompare(String(a[0].pno||'')))}
+function prevPrice(r){const L=(db.purchases||[]).filter(x=>x.product===r.product&&x.id!==r.id&&String(x.date)<=String(r.date)&&(x.gid||x.id)!==(r.gid||r.id));if(!L.length)return null;L.sort((a,b)=>String(b.date).localeCompare(String(a.date)));const x=L[0];return x.price!=null?+x.price:(x.qty?x.total/x.qty:null)}
+function render(){const sec=document.getElementById('purchases');if(!sec)return;
+ let box=document.getElementById('pvx');
+ if(!box){const old=sec.querySelector('.card');if(old)old.style.display='none';box=document.createElement('div');box.id='pvx';sec.appendChild(box)}
+ const emp=typeof isEmp==='function'&&isEmp(),L=filt(),sups=[...new Set(groups().map(G=>G[0].person).filter(Boolean))].sort();
+ const T=sumB(L,G=>sumB(G,x=>x.total)),R=sumB(L,G=>sumB(G,x=>x.rem||0));
+ const IN='padding:11px;border:1px solid var(--border,#d9e1e4);border-radius:10px;font-size:15px;background:var(--card,#fff);color:inherit';
+ const keep=document.activeElement&&document.activeElement.id==='pvQ';
+ box.innerHTML=`<div class="card"><input id="pvQ" placeholder="🔍 ابحث: مورد، رقم، صنف، تاريخ..." value="${E(PV.q)}" style="width:100%;${IN};margin-bottom:8px">
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><select id="pvS" style="${IN}"><option value="">كل الموردين</option>${sups.map(s=>`<option${s===PV.sup?' selected':''}>${E(s)}</option>`).join('')}</select><select id="pvP" style="${IN}"><option value="all"${PV.pay==='all'?' selected':''}>مدفوع وآجل</option><option value="paid"${PV.pay==='paid'?' selected':''}>مدفوعة بس</option><option value="credit"${PV.pay==='credit'?' selected':''}>آجل / عليها متبقي</option></select>
+ <label style="font-size:12px;color:var(--muted)">من<input id="pvF" type="date" value="${E(PV.from)}" style="width:100%;${IN}"></label><label style="font-size:12px;color:var(--muted)">إلى<input id="pvT" type="date" value="${E(PV.to)}" style="width:100%;${IN}"></label></div>
+ <div style="margin-top:10px;padding:10px;border-radius:10px;background:var(--tint2,#eef6f7);line-height:1.9"><b>${L.length}</b> فاتورة${emp?'':` — إجمالي الفترة <b>${money(T)}</b>${R>0?` — متبقي للموردين <b style="color:#c0392b">${money(R)}</b>`:''}`}</div></div>`+
+ (L.slice(0,80).map(G=>{const r=G[0],gid=r.gid||r.id,t=sumB(G,x=>x.total),rem=sumB(G,x=>x.rem||0),sn=snoOf(G),open=PV.open===gid;
+  const items=G.filter(x=>!x.ship);
+  return `<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>${E(r.pno||'—')}</b>${sn?` <small>(مورد: ${E(sn)})</small>`:''}<div style="font-size:13px;color:var(--muted)">${E(r.date)} — ${E(r.person||'—')}</div></div><div style="text-align:left">${emp?'':`<b style="font-size:17px">${money(t)}</b>`}<div>${rem>0.009?`<span class="badge red">متبقي ${money(rem)}</span>`:'<span class="badge green">مدفوعة</span>'}</div></div></div>
+  <div style="font-size:13px;margin:6px 0">${items.slice(0,3).map(x=>E(x.product)+' ×'+x.qty).join(' ، ')}${items.length>3?` <span class="badge">+${items.length-3}</span>`:''}</div>
+  ${open&&!emp?`<div style="margin:6px 0;padding:8px;background:var(--tint2,#f3f8f9);border-radius:10px;font-size:13px;line-height:1.9"><b>تغيّر التكلفة</b>${items.map(x=>{const pr=x.price!=null?+x.price:(x.qty?x.total/x.qty:0),pp=prevPrice(x),p=(db.products||[]).find(y=>y.name===x.product||y.id===x.pid),d=pp?((pr-pp)/pp*100):null;return `<div>${E(x.product)}: ${pp!=null?money(pp)+' ← ':''}<b>${money(pr)}</b>${d!=null?` <span style="color:${d>0?'#c0392b':'#159447'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}%</span>`:' <small>(أول شراء)</small>'}${p?` — التكلفة الحالية في المخزن ${money(p.cost)}`:''}</div>`}).join('')}<button type="button" class="secondary" data-pvu="${E(gid)}" style="margin-top:6px">🔄 حدّث سعر الشراء في المخزن بالأسعار دي</button></div>`:''}
+  <div class="btnrow" style="flex-wrap:wrap"><button type="button" class="primary" data-pvo="${r.id}">فتح</button><button type="button" class="secondary" data-pve="${E(gid)}">✏️ تعديل</button><button type="button" class="secondary" data-pvc="${E(gid)}">📋 نسخ</button><button type="button" class="secondary" data-pvp="${E(gid)}">🖨️</button>${emp?'':`<button type="button" class="secondary" data-pvd="${E(gid)}">💵 دفعة</button><button type="button" class="secondary" data-pvr="${E(gid)}">↩️ مرتجع</button><button type="button" class="secondary" data-pvx="${E(gid)}">${open?'▲':'▼'} تكلفة</button>`}</div></div>`}).join('')||'<div class="card" style="margin-top:10px"><div class="empty">مفيش فواتير بالفلاتر دي.</div></div>')+(L.length>80?`<div class="card" style="margin-top:10px;text-align:center">بيعرض أول 80 فاتورة — ضيّق البحث</div>`:'');
+ const $=id=>box.querySelector('#'+id);
+ $('pvQ').oninput=e=>{PV.q=e.target.value;clearTimeout(render._t);render._t=setTimeout(render,250)};
+ $('pvS').onchange=e=>{PV.sup=e.target.value;render()};$('pvP').onchange=e=>{PV.pay=e.target.value;render()};$('pvF').onchange=e=>{PV.from=e.target.value;render()};$('pvT').onchange=e=>{PV.to=e.target.value;render()};
+ if(keep){const q=$('pvQ');q.focus();q.setSelectionRange(q.value.length,q.value.length)}
+ const G=k=>(db.purchases||[]).filter(r=>(r.gid||r.id)===k);
+ box.querySelectorAll('[data-pvo]').forEach(b=>b.onclick=()=>openPurchaseView(b.dataset.pvo));
+ box.querySelectorAll('[data-pve]').forEach(b=>b.onclick=()=>{try{openInvEdit('purchase',b.dataset.pve)}catch(e){toast('التعديل مش متاح للفاتورة دي')}});
+ box.querySelectorAll('[data-pvx]').forEach(b=>b.onclick=()=>{PV.open=PV.open===b.dataset.pvx?null:b.dataset.pvx;render()});
+ box.querySelectorAll('[data-pvc]').forEach(b=>b.onclick=()=>{const g=G(b.dataset.pvc).filter(x=>!x.ship);if(!g.length)return;openTransaction('purchase',{person:g[0].person});setTimeout(()=>{g.forEach(x=>{const p=(db.products||[]).find(y=>y.id===x.pid||y.name===x.product);if(!p)return;addItem(p.id);const d=document.querySelector(`#txLines .txl[data-pid="${p.id}"]`);if(d){d.querySelector('.lq').value=x.qty;const lp=d.querySelector('.lp');if(lp)lp.value=x.price!=null?x.price:(x.qty?x.total/x.qty:0)}});try{updRem()}catch(e){}toast('اتنسخت — عدّل التاريخ والأسعار واحفظ')},150)});
+ box.querySelectorAll('[data-pvp]').forEach(b=>b.onclick=()=>{const g=G(b.dataset.pvp),r=g[0];if(!r)return;const t=sumB(g,x=>x.total);const h='<!doctype html><html dir="rtl"><head>'+(typeof PRINT_HEAD==='string'?PRINT_HEAD:'<meta charset="utf-8">')+'<title>فاتورة شراء</title><style>body{font-family:Cairo,Tahoma,sans-serif;padding:14px;color:#000}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #ccc;padding:8px;text-align:right;font-size:14pt}h2{margin:0 0 6px}</style></head><body><h2>فاتورة شراء '+E(r.pno||'')+'</h2><div style="font-size:13pt">المورد: <b>'+E(r.person||'—')+'</b> — '+E(r.date)+'</div><table><tr><th>الصنف</th><th>العدد</th><th>السعر</th><th>الإجمالي</th></tr>'+g.map(x=>'<tr><td>'+E(x.product)+'</td><td>'+x.qty+'</td><td>'+money(x.price!=null?x.price:(x.qty?x.total/x.qty:0))+'</td><td>'+money(x.total)+'</td></tr>').join('')+'</table><h3>الإجمالي: '+money(t)+'</h3></body></html>';if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(h);else toast('الطباعة مش جاهزة')});
+ box.querySelectorAll('[data-pvd]').forEach(b=>b.onclick=()=>{const r=G(b.dataset.pvd)[0];const c=(db.contacts||[]).find(x=>x.name===r.person);if(c&&typeof openSupPay==='function')openSupPay(c.id);else toast('المورد ده مش مسجل في جهات الاتصال')});
+ box.querySelectorAll('[data-pvr]').forEach(b=>b.onclick=()=>openReturn('purchase'));
+ box.querySelectorAll('[data-pvu]').forEach(b=>b.onclick=async()=>{const g=G(b.dataset.pvu).filter(x=>!x.ship);if(!(await ask('تحدّث سعر الشراء (التكلفة) في المخزن بأسعار الفاتورة دي لـ '+g.length+' صنف؟','حدّث','لأ')))return;let n=0;g.forEach(x=>{const p=(db.products||[]).find(y=>y.id===x.pid||y.name===x.product);const pr=x.price!=null?+x.price:(x.qty?x.total/x.qty:0);if(p&&pr>0){p.cost=pr;n++}});try{save()}catch(e){}toast('✔ اتحدّث '+n+' صنف');render()});
+}
+const _ril=renderInvLists;renderInvLists=function(){_ril.apply(this,arguments);try{render()}catch(e){console.error(e)}};
+/* منع التكرار + رقم فاتورة المورد */
+const _ot=openTransaction;openTransaction=function(type,preset){_ot.apply(this,arguments);
+ if(type!=='purchase')return;try{const n=document.getElementById('txNote');if(n&&!document.getElementById('txSno')){n.closest('.field').insertAdjacentHTML('beforebegin','<div class="field"><label>رقم فاتورة المورد (اختياري — يمنع التكرار)</label><input id="txSno" placeholder="رقم الفاتورة عند المورد"></div>')}}catch(e){}};
+const _st=submitTransaction;submitTransaction=async function(ev,type){
+ if(type==='purchase'){try{
+  const person=(document.getElementById('txPerson')||{}).value||'',sno=((document.getElementById('txSno')||{}).value||'').trim();
+  let tot=0;document.querySelectorAll('#txLines .txl').forEach(d=>{tot+=(+d.querySelector('.lq').value||0)*(+d.querySelector('.lp').value||0)});
+  const edit=document.getElementById('modal')&&document.querySelector('#modal form')&&document.querySelector('#modal form').dataset.edit;
+  if(person&&tot>0&&!edit){const td=new Date().toISOString().slice(0,10),dup=groups().find(G=>String(G[0].person||'').trim()===person.trim()&&Math.abs(sumB(G,x=>x.total)-tot)<0.01&&(sno?snoOf(G)===sno:String(G[0].date)===td));
+   if(dup){if(!(await ask('⚠️ فيه فاتورة شراء بنفس المورد '+(sno?'ونفس رقم الفاتورة ':'ونفس الإجمالي النهارده ')+'('+(dup[0].pno||'')+' — '+money(tot)+'). تحفظ تاني برضه؟','احفظ برضه','لأ')))return}}
+  if(sno){const n=document.getElementById('txNote');if(n&&!/فاتورة المورد:/.test(n.value))n.value=('فاتورة المورد: '+sno+(n.value?' — '+n.value:''))}
+ }catch(e){}}
+ return _st.apply(this,arguments)};
+try{render()}catch(e){}
+})();
+</script>
+
 </body>
 </html>
