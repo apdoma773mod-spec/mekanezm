@@ -1689,7 +1689,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-12';
+const APP_VER='2026-10-18-13';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7027,16 +7027,31 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    (num(m.lip)>0?'<tr><td>الشفة</td><td>'+esc(m.lip)+' سم كل جانب</td><td>التقسيم</td><td>'+(num(m.div)>0?num(m.div)+' فاصل':'من غيره')+'</td></tr>':'<tr><td>التقسيم</td><td colspan="3">'+(num(m.div)>0?num(m.div)+' فاصل':'من غيره')+'</td></tr>')+'</table>'+
    '<p style="margin:8px 0 2px"><b>رسم للصنايعي (مقاسات بالسنتي)</b></p><div>'+bambooSvg(m)+'</div>';
  }
- /* تحويل عنصر HTML (رسمة البامبو) لصورة JPEG وريع لينك عام، عشان نبعته على واتساب الصنايعي مباشرة */
- async function elToImgUrl(el){
-  if(typeof html2canvas==='undefined')throw new Error('مكتبة الصور لسه مش محمّلة، جرّب تاني بعد شوية');
-  var cv=await html2canvas(el,{scale:2,backgroundColor:'#fff',useCORS:true,logging:false});
-  var blob=await new Promise(function(res){cv.toBlob(res,'image/jpeg',.92)});
-  if(!blob)throw new Error('مقدرتش أحوّل الرسمة لصورة');
-  var path='bamboo/'+uid()+'.jpg';
-  var r=await SBc().storage.from('site-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
-  if(r.error)throw r.error;
-  return (typeof SBURL!=='undefined'?SBURL:'')+'/storage/v1/object/public/site-images/'+path;
+ /* تحويل كل svg جوه عنصر (رسمة البامبو) لصورة JPEG ورفعها وريع لينكات عامة — برسم الـ svg نفسه (مش html2canvas، كان بيعلّق على الباترن/الأسهم) */
+ function svgToBlob(svgEl,scale){
+  return new Promise(function(resolve,reject){
+   var vb=svgEl.viewBox&&svgEl.viewBox.baseVal,w=(vb&&vb.width)||svgEl.clientWidth||600,h=(vb&&vb.height)||svgEl.clientHeight||400;
+   var xml=new XMLSerializer().serializeToString(svgEl),svg64=btoa(unescape(encodeURIComponent(xml))),img=new Image();
+   img.onload=function(){
+    try{
+     var c=document.createElement('canvas');c.width=Math.round(w*(scale||2));c.height=Math.round(h*(scale||2));
+     var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+     c.toBlob(function(b){b?resolve(b):reject(new Error('مقدرتش أحوّل الرسمة لصورة'))},'image/jpeg',.92);
+    }catch(e){reject(e)}};
+   img.onerror=function(){reject(new Error('مقدرتش أحوّل الرسمة لصورة'))};
+   img.src='data:image/svg+xml;base64,'+svg64;
+  });
+ }
+ async function elToImgUrls(el){
+  var svgs=el.querySelectorAll('svg'),urls=[];
+  for(var i=0;i<svgs.length;i++){
+   var blob=await svgToBlob(svgs[i]);
+   var path='bamboo/'+uid()+'-'+i+'.jpg';
+   var r=await SBc().storage.from('site-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
+   if(r.error)throw r.error;
+   urls.push((typeof SBURL!=='undefined'?SBURL:'')+'/storage/v1/object/public/site-images/'+path);
+  }
+  return urls;
  }
  /* شاشة بسيطة لأوردر بامبو: البامبو بيتعمل بره عند صنايعي وعبده بيستلمه، فمفيش تجهيز قطع ولا تقطيع لوح — رسمة واحدة بالمقاسات (برّه برّه) بس، تتبعت له على واتساب على طول */
  function viewBamboo(id,pre){
@@ -7081,8 +7096,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(!(await ask('أبعت الرسمة دي لرقم '+ph+'؟\n\n'+msg,'ابعت','لأ')))return;
    var btn=q('bWa'),old2=btn.textContent;btn.disabled=true;btn.textContent='⏳ بتتبعت الصورة...';
    try{
-    var url=await elToImgUrl(q('bD'));
-    var r=await SBc().from('wa_out').insert({to_phone:ph,body:msg,imgs:[url],by_name:who()});
+    var urls=await elToImgUrls(q('bD'));
+    var r=await SBc().from('wa_out').insert({to_phone:ph,body:msg,imgs:urls,by_name:who()});
     if(r.error)throw r.error;
     toast('✔ الرسمة في الطريق للصنايعي');
    }catch(e){errAlert(e)}
