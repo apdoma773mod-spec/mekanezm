@@ -1689,7 +1689,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-13';
+const APP_VER='2026-10-18-14';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6483,7 +6483,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    prepToInvoice({customer:o.customer,phone:o.phone,paid:o.paid,total:o.steel?0:num(o.price),fillName:'مصنعية تجهيز '+(o.type||'شغل'),lines:L,note:note})};
   b.querySelector('#wkWa').onclick=async function(){
    var c0=contacts().find(function(z){return z.name===o.crafter});
-   var ph=(c0&&c0.phone)||prompt('رقم واتساب الصنايعي','')||'';if(!ph)return;
+   var ph0=(c0&&c0.phone)||prompt('رقم واتساب الصنايعي','')||'';if(!ph0)return;
+   var ph=(typeof waNum==='function')?waNum(ph0):ph0.replace(/\D/g,'');
+   if(ph.length<11)return toast('الرقم مش صح: '+ph0+' — اكتبه بالصفر الأول (01xxxxxxxxx)');
    var msg='أوردر '+ordNo(o)+' ('+o.type+')\nالعميل: '+(o.customer||'-')+'\nالمقاس: '+num(o.w)+' × '+num(o.h)+' سم\nالكمية: '+(o.qty||1)+(o.kind==='hinge'?'\nالمفصلات: '+hingePositions(o).join(' / ')+' سم من فوق':'')+(o.notes?'\nملاحظات: '+o.notes:'');
    if(!(await ask('أبعت الرسالة دي من رقم المحل؟\n\n'+msg,'ابعت','لأ')))return;
    try{var r=await SBc().from('wa_out').insert({to_phone:ph,body:msg,imgs:[],by_name:who()});if(r.error)throw r.error;toast('✔ الرسالة في الطريق')}catch(e){errAlert(e)}};
@@ -7090,16 +7092,18 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   q('bWa').onclick=async function(){
    read();
    if(!(num(m.a)>0&&num(m.b)>0))return toast('اكتب المقاس الأول');
-   var ph=q('bCrPh').value.trim()||(contacts().find(function(z){return z.name===q('bCr').value.trim()})||{}).phone||prompt('رقم واتساب الصنايعي','')||'';
-   if(!ph)return;
+   var ph0=q('bCrPh').value.trim()||(contacts().find(function(z){return z.name===q('bCr').value.trim()})||{}).phone||prompt('رقم واتساب الصنايعي','')||'';
+   if(!ph0)return;
+   var ph=(typeof waNum==='function')?waNum(ph0):ph0.replace(/\D/g,'');
+   if(ph.length<11)return toast('الرقم مش صح: '+ph0+' — اكتبه بالصفر الأول (01xxxxxxxxx)');
    var msg='رسمة بامبو'+(m.kind2?' ('+m.kind2+')':'')+(m.n?' — '+m.n:'')+'\nالمقاس (برّه برّه): '+num(m.a)+'×'+num(m.b)+(num(m.c)>0?'×'+num(m.c):'')+' سم'+(num(m.lip)>0?'\nالشفة البارزة: '+num(m.lip)+' سم كل جانب':'')+(num(m.div)>0?'\nالتقسيم: '+num(m.div)+' فاصل':'')+(num(m.q)>1?'\nالعدد: '+num(m.q):'')+(q('bNo').value.trim()?'\nملاحظات: '+q('bNo').value.trim():'');
-   if(!(await ask('أبعت الرسمة دي لرقم '+ph+'؟\n\n'+msg,'ابعت','لأ')))return;
+   if(!(await ask('أبعت الرسمة دي لرقم '+ph0+'؟\n\n'+msg,'ابعت','لأ')))return;
    var btn=q('bWa'),old2=btn.textContent;btn.disabled=true;btn.textContent='⏳ بتتبعت الصورة...';
    try{
     var urls=await elToImgUrls(q('bD'));
     var r=await SBc().from('wa_out').insert({to_phone:ph,body:msg,imgs:urls,by_name:who()});
     if(r.error)throw r.error;
-    toast('✔ الرسمة في الطريق للصنايعي');
+    toast('✔ الرسمة في الطريق للصنايعي — لو ماوصلتش خلال شوية تأكد إن جهاز الواتساب في المحل شغال ومتصل');
    }catch(e){errAlert(e)}
    finally{btn.disabled=false;btn.textContent=old2}
   };
