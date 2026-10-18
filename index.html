@@ -1685,7 +1685,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-04';
+const APP_VER='2026-10-18-06';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6001,7 +6001,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(o.alt_amount)w.push('⚠️ قراءتين مختلفتين: '+esc(o.amount)+' و '+esc(o.alt_amount));
   if(o.reference){var ref=String(o.reference).trim();if(ref.length>=4&&pays().some(function(p){return String(p.note||'').indexOf('مرجع '+ref)>-1}))w.push('🔁 <b>رقم العملية ده اتسجّل قبل كده</b> — ممكن نفس التحويل اتبعت مرتين')}
   if(o.date){var dd=(Date.now()-new Date(o.date).getTime())/864e5;if(dd>7)w.push('📅 تاريخ التحويل قديم ('+esc(o.date)+')')}
-  var acc=(TFC.accounts||[]).concat(OWNERS).map(l10).filter(function(z){return z.length===10});
+  var acc=(TFC.accounts||[]).map(function(a){return typeof a==='object'?a.phone:a}).concat(OWNERS).map(l10).filter(function(z){return z.length===10});
   var ra=l10(o.receiver_account);
   if(acc.length&&ra.length===10&&acc.indexOf(ra)<0)w.push('🕵️ المستلم في الصورة ('+esc(o.receiver_account)+') مش من حساباتك المسجلة');
   if(o.quality&&o.quality!=='good')w.push('📷 جودة الصورة: '+({blurry:'مهزوزة',photo_of_screen:'متصورة من شاشة',cropped:'مقصوصة',dark:'غامقة'}[o.quality]||esc(o.quality))+' — اتقرت بعناية');
@@ -6035,12 +6035,24 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     try{var o=await ocr(ROWS[i]);if(el)el.innerHTML=chip(o)}catch(e){fail++;if(el)el.innerHTML='<small style="color:#c0392b">✘ '+esc(e.message||e)+'</small>'}done++;all.textContent='🔍 '+done+' / '+N.length;return one()}
    await Promise.all([one(),one()]);all.textContent=fail?('✔ خلصت ('+fail+' ماتقرتش)'):'✔ اتقرت كلها';
   };
-  var ac=M.querySelector('#tfAcc');if(ac)ac.onclick=function(){
-   var v=prompt('اكتب أرقام الموبايل/الحسابات اللي بتستلم عليها التحويلات (انستاباي/محافظ) — بينهم مسافة.\nالسيستم هينبّهك لو تحويل رايح لحساب تاني (سكرين مزوّر).',(TFC.accounts||[]).join(' '));
-   if(v==null)return;TFC.accounts=v.split(/[,،\s\/]+/).map(function(z){return z.replace(/\D/g,'')}).filter(function(z){return z.length>=10});
-   SBc().from('mk_settings').upsert([{key:'tf_cfg',value:TFC}],{onConflict:'key'}).then(function(r){toast(r.error?('مقدرتش أحفظ: '+r.error.message):'✔ اتحفظت حساباتك')});
-  };
+  var ac=M.querySelector('#tfAcc');if(ac)ac.onclick=function(){accScreen()};
  }
+ function accScreen(){
+  var rows=(TFC.accounts||[]).map(function(a,i){return {i:i,name:typeof a==='object'?(a.name||''):'',phone:typeof a==='object'?(a.phone||''):a}});
+  openModal('<div class="modal-head"><h2>⚙️ حساباتي اللي بستلم عليها</h2></div>'+
+   '<p style="margin:0 0 8px;color:var(--muted);font-size:13px">أرقام/حسابات انستاباي أو المحافظ اللي بتستلم عليها التحويلات. السيستم هينبّهك لو تحويل راح لحساب مش منهم.</p>'+
+   '<div id="accList">'+rows.map(function(r){return '<div class="card" style="padding:8px;margin-bottom:6px;display:flex;gap:8px;align-items:center"><div style="flex:1"><b>'+esc(r.name||'(من غير اسم)')+'</b><br><small style="color:var(--muted)">'+esc(r.phone)+'</small></div><button type="button" class="secondary danger" onclick="mkTfAcc.rm('+r.i+')">حذف</button></div>'}).join('')+(rows.length?'':'<div class="empty">مفيش حسابات متسجّلة لسه</div>')+'</div>'+
+   '<div class="form" style="margin-top:10px"><div class="field"><label>اسم الحساب (اختياري)</label><input id="accN" placeholder="مثلاً: انستاباي المحل"></div><div class="field"><label>الرقم</label><input id="accP" type="tel" placeholder="01xxxxxxxxx"></div></div>'+
+   '<div class="modal-foot"><button type="button" class="primary" onclick="mkTfAcc.add()">＋ إضافة حساب</button><button type="button" class="secondary" onclick="closeModal()">تم</button></div>');
+ }
+ window.mkTfAcc={
+  add:function(){var n=(document.getElementById('accN')||{}).value||'',p=(document.getElementById('accP')||{}).value||'';p=p.replace(/\D/g,'');
+   if(p.length<10)return toast('اكتب رقم صح');
+   TFC.accounts=(TFC.accounts||[]).concat([{name:n.trim(),phone:p}]);
+   SBc().from('mk_settings').upsert([{key:'tf_cfg',value:TFC}],{onConflict:'key'}).then(function(r){if(r.error)return toast('مقدرتش أحفظ: '+r.error.message);toast('✔ اتضاف الحساب');accScreen()})},
+  rm:function(i){TFC.accounts=(TFC.accounts||[]).filter(function(a,j){return j!==i});
+   SBc().from('mk_settings').upsert([{key:'tf_cfg',value:TFC}],{onConflict:'key'}).then(function(r){if(r.error)return toast('مقدرتش أحفظ: '+r.error.message);toast('✔ اتحذف');accScreen()})}
+ };
  function open1(pid){
   var x=ROWS[pid];if(!x)return;
   var id=identify(x.phone),cs=contacts().slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name),'ar')});
