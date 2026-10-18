@@ -1685,7 +1685,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-06';
+const APP_VER='2026-10-18-07';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6062,13 +6062,20 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div id="tfRead" class="card" style="padding:10px;margin:8px 0;font-size:14px">⏳ السيستم بيقرا الصورة…</div>'+
    '<div class="form">'+
    '<div class="field full"><label>دوّر بالاسم</label><input id="tfQ" placeholder="اكتب جزء من الاسم"></div>'+
-   '<div class="field full"><label>الحساب اللي هيتسجّل عليه <small id="tfBy" style="color:var(--muted)"></small></label><select id="tfC"><option value="">— اختار —</option>'+cs.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+' — '+esc(c.type)+'</option>'}).join('')+'</select></div>'+
+   '<div class="field full"><label>الحساب اللي هيتسجّل عليه <small id="tfBy" style="color:var(--muted)"></small></label><select id="tfC"><option value="">— اختار —</option>'+cs.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+' — '+esc(c.type)+'</option>'}).join('')+'</select>'+
+   '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="secondary" id="tfNewC">➕ عميل جديد</button><button type="button" class="secondary" id="tfNewS">➕ مورد جديد</button></div></div>'+
    '<div class="field full"><label>المبلغ</label><input id="tfA" inputmode="decimal" placeholder="0" style="font-size:20px;font-weight:700"></div></div>'+
    '<div id="tfInfo" class="sample" style="margin-top:8px">اختار الحساب واكتب المبلغ</div>'+
    '<div class="modal-foot"><button type="button" class="primary" id="tfOk">تأكيد وتسجيل</button><button type="button" class="secondary" id="tfRe">🔄 اقرا تاني</button><button type="button" class="secondary" id="tfIgn">مش تحويل (تجاهل)</button><button type="button" class="secondary" id="tfBk">رجوع</button></div>');
   var m=document.getElementById('modal'),sel=m.querySelector('#tfC'),amt=m.querySelector('#tfA'),O=null,touched=false;
   if(id.kind==='contact')sel.value=id.c.id;
   m.querySelector('#tfImg').onclick=function(){var w=window.open('');if(w){w.document.write('<title>تحويل</title><body style="margin:0;background:#111"><img src="'+x.img+'" style="width:100%">')}};
+  function addNew(type){var n=prompt('اسم ال'+(type==='عميل'?'عميل':'مورد')+' الجديد:');if(!n||!n.trim())return;
+   var c={id:crypto.randomUUID(),name:n.trim(),type:type,phone:x.phone||'',balance:0,note:'اتضاف من تحويل واتساب'};
+   try{if(typeof db!=='undefined'&&db.contacts){db.contacts.unshift(c);if(typeof save==='function')save()}}catch(e){}
+   var o=document.createElement('option');o.value=c.id;o.textContent=c.name+' — '+c.type;sel.insertBefore(o,sel.children[1]||null);sel.value=c.id;info();toast('✔ اتضاف '+c.name)}
+  var nc=m.querySelector('#tfNewC');if(nc)nc.onclick=function(){addNew('عميل')};
+  var ns=m.querySelector('#tfNewS');if(ns)ns.onclick=function(){addNew('مورد')};
   amt.oninput=function(){touched=true;info()};
   function info(){
    var c=contacts().find(function(z){return z.id===sel.value}),a=num(amt.value),el=m.querySelector('#tfInfo');
