@@ -1685,7 +1685,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-03';
+const APP_VER='2026-10-18-04';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -10574,6 +10574,29 @@ async function checkTransfer(id,fallbackOpen){
 if(window.mkVS&&typeof window.mkVS.waOpen==='function'){
  window.__mkVSOrigWaOpen=window.mkVS.waOpen;
  window.mkVS.waOpen=function(id){return checkTransfer(id,window.__mkVSOrigWaOpen)};
+}
+})();
+</script>
+<script>
+/* شاشة صور الواتساب (مطابقة منتج): ضفنا خانة بحث يدوي فوق أزرار "مش موجود" — تدوّر على صنفك
+   بإيدك وتبعتله الكارت على طول، بدل ما تستنى اقتراح الذكاء الاصطناعي بس */
+(function(){
+const H=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function injectSearch(id){
+ const box=document.getElementById('vsBox');if(!box)return;const vs=box.querySelector('.vs');if(!vs||vs.querySelector('#waSrch'))return;
+ const bar=vs.querySelector('.vsb');if(!bar)return;
+ const wrap=document.createElement('div');
+ wrap.innerHTML=`<div class="field full" style="margin-top:8px"><label>أو دوّر بإيدك على الصنف</label><input id="waSrch" placeholder="اكتب اسم الصنف أو كوده..." autocomplete="off"></div><div id="waSrchR"></div>`;
+ bar.parentNode.insertBefore(wrap,bar);
+ const inp=wrap.querySelector('#waSrch'),res=wrap.querySelector('#waSrchR');
+ inp.oninput=()=>{const q=VN(inp.value).split(' ').filter(Boolean);
+  if(!q.length||VN(inp.value).replace(/\s+/g,'').length<2){res.innerHTML='';return}
+  const r=(prodsCo?prodsCo():db.products).filter(p=>{const h=VN([p.name,p.code,p.barcode].filter(Boolean).join(' '));return q.every(w=>h.includes(w))}).slice(0,8);
+  res.innerHTML=r.length?r.map(p=>`<div class="vsm"><div class="t"><b>${H(p.name)}</b><small>كود ${H(p.code)} · ${p.qty<=0?'<span style="color:#c0392b">نفد</span>':'متاح '+(+p.qty||0)}</small></div><button type="button" class="primary" style="flex:none" onclick="mkVS.waSend('${id}','${p.id}')">📤 ابعتله</button></div>`).join(''):'<div class="vsseen" style="background:#fff7e6">مفيش صنف بالاسم ده</div>'};
+}
+if(typeof window.__mkVSOrigWaOpen==='function'){
+ const _o2=window.__mkVSOrigWaOpen;
+ window.__mkVSOrigWaOpen=async function(id){await _o2(id);try{injectSearch(id)}catch(e){}};
 }
 })();
 </script>
