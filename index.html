@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-20';
+const APP_VER='2026-10-22-21';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6238,6 +6238,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function today(){return new Date().toISOString().slice(0,10)}
  function isAdm(){return !!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'))}
  function who(){return (window.mkT_user&&window.mkT_user.name)||''}
+ function sysLab(t){return t==='جرار'?'جرار (عود الخوصة)':t==='دلفة'?'دلفة (مفصلي / جرار / شاسيه)':t}
  function stages(t){return (CFG.stages&&CFG.stages[t]&&CFG.stages[t].length)?CFG.stages[t]:(STG[t]||STG['أخرى'])}
  async function get(k,def){try{var r=await SBc().from('mk_settings').select('value').eq('key',k).maybeSingle();return (r.data&&r.data.value)||def}catch(e){return def}}
  async function put(k,v){var r=await SBc().from('mk_settings').upsert([{key:k,value:v}],{onConflict:'key'});if(r.error)throw r.error}
@@ -6480,14 +6481,16 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    return true});
   var all={};ORD.forEach(function(o){var s=stages(o.type)[curStage(o)];all[s]=(all[s]||0)+1});
   var tot=ORD.reduce(function(a,o){return a+profit(o)},0);
-  b.innerHTML='<div class="wkc"><div class="wkrow"><input id="wkQ" placeholder="دوّر بالاسم أو رقم الأوردر، أو امسح الباركود واضغط Enter" value="'+esc(F.q)+'" style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:10px">'+
+  var sus=ORD.filter(function(o){return o.type==='جرار'&&o.kind==='slide'&&!o.sysOk});
+  var susH=sus.length?'<div class="wkc" style="border:2px solid #f0b46a"><b>⚠️ '+sus.length+' أوردر على نظام «جرار (عود الخوصة)» وشكلهم دلف جرار — راجعهم</b><p style="font-size:13px;color:var(--muted);margin:4px 0 8px">مفيش حاجة هتتغير غير لما تختار.</p>'+sus.map(function(o){return '<div class="sample" style="margin-bottom:6px"><b>'+esc(ordNo(o))+' — '+esc(o.customer||'بدون اسم')+'</b> <small>('+esc(num(o.w))+'×'+esc(num(o.h))+' — المرحلة: '+esc(stages(o.type)[curStage(o)])+')</small><div class="wkrow" style="margin-top:6px"><button type="button" class="wkbtn p" data-sx="'+esc(o.id)+'">حوّله لنظام الدلفة</button><button type="button" class="wkbtn" data-sk="'+esc(o.id)+'">ده عود خوصة — سيبه</button></div></div>'}).join('')+'</div>':'';
+  b.innerHTML=susH+'<div class="wkc"><div class="wkrow"><input id="wkQ" placeholder="دوّر بالاسم أو رقم الأوردر، أو امسح الباركود واضغط Enter" value="'+esc(F.q)+'" style="flex:1;min-width:200px;padding:10px;border:1px solid var(--border);border-radius:10px">'+
    '<select id="wkTy" style="padding:10px;border-radius:10px;border:1px solid var(--border)"><option value="">كل الأنواع</option>'+TYPES.map(function(t){return '<option'+(F.type===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select>'+
    '<button type="button" class="wkbtn p" id="wkNew">➕ أوردر جديد</button></div>'+
    '<div class="wkrow" style="margin-top:10px">'+Object.keys(all).map(function(s){return '<button type="button" class="wkbtn'+(F.stage===s?' p':'')+'" data-s="'+esc(s)+'">'+esc(s)+' ('+all[s]+')</button>'}).join('')+(F.stage!==''?'<button type="button" class="wkbtn d" id="wkClr">إلغاء الفلتر</button>':'')+'</div>'+
    '<p style="margin:10px 0 0;color:var(--muted);font-size:13px">عدد الأوردرات: <b>'+ORD.length+'</b> — إجمالي الربح المتوقع: <b>'+fmt(tot)+'</b> ج</p></div>'+
    (list.length?list.map(function(o){var st=stages(o.type)[curStage(o)];
     return '<div class="wkc" style="cursor:pointer" data-id="'+esc(o.id)+'"><div class="wkrow" style="justify-content:space-between"><b>'+esc(ordNo(o))+' — '+esc(o.customer||'بدون اسم')+'</b><span class="badge">'+esc(st)+'</span></div>'+
-     '<div style="font-size:13px;color:var(--muted);margin-top:4px">'+esc(o.type)+' · '+esc(num(o.w))+'×'+esc(num(o.h))+' ×'+esc(o.qty||1)+(o.crafter?' · '+esc(o.crafter):'')+' · '+esc(o.date)+' · السعر '+fmt(num(o.price))+' ج</div>'+miniTl(o)+'</div>'}).join(''):'<div class="wkc"><div class="empty">مفيش أوردرات. اضغط «أوردر جديد».</div></div>');
+     '<div style="font-size:13px;color:var(--muted);margin-top:4px">'+esc(sysLab(o.type))+' · '+esc(num(o.w))+'×'+esc(num(o.h))+' ×'+esc(o.qty||1)+(o.crafter?' · '+esc(o.crafter):'')+' · '+esc(o.date)+' · السعر '+fmt(num(o.price))+' ج</div>'+miniTl(o)+'</div>'}).join(''):'<div class="wkc"><div class="empty">مفيش أوردرات. اضغط «أوردر جديد».</div></div>');
   b.querySelector('#wkQ').oninput=function(){F.q=this.value};
   b.querySelector('#wkQ').onkeydown=function(e){if(e.key==='Enter'){var q=this.value.trim().toUpperCase();var o=ORD.find(function(x){return ordNo(x)===q});if(o){viewOrder(o.id);return}viewOrders()}};
   b.querySelector('#wkTy').onchange=function(){F.type=this.value;viewOrders()};
@@ -6495,13 +6498,17 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelectorAll('[data-s]').forEach(function(x){x.onclick=function(){F.stage=x.dataset.s;viewOrders()}});
   var c=b.querySelector('#wkClr');if(c)c.onclick=function(){F.stage='';viewOrders()};
   b.querySelectorAll('[data-id]').forEach(function(x){x.onclick=function(){viewOrder(x.dataset.id)}});
+  b.querySelectorAll('[data-sk]').forEach(function(x){x.onclick=async function(){var o=ORD.find(function(z){return z.id===x.dataset.sk});if(!o)return;o.sysOk=true;try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}});
+  b.querySelectorAll('[data-sx]').forEach(function(x){x.onclick=async function(){var o=ORD.find(function(z){return z.id===x.dataset.sx});if(!o)return;
+   if(!(await ask('تحوّل '+ordNo(o)+' لنظام الدلفة؟\nالمراحل هتبدأ من «'+stages('دلفة')[0]+'» (تاريخ المراحل القديمة بيفضل محفوظ).','حوّله','لأ')))return;
+   o.type='دلفة';o.stage=0;o.sysOk=true;(o.hist=o.hist||[]).push({n:stages('دلفة')[0],at:new Date().toISOString(),by:who(),note:'اتنقل من نظام الجرار'});try{await saveOrd();toast('✔ اتنقل لنظام الدلفة');viewOrders()}catch(e){errAlert(e)}}});
  }
  function viewOrder(id){
   var o=ORD.find(function(x){return x.id===id});if(!o)return viewOrders();
   var b=shell(esc(ordNo(o))+' — '+esc(o.customer||''),viewOrders);mark('ord');
   var st=stages(o.type),c=curStage(o),pct=Math.round(c/(st.length-1)*100);
   var hist={};(o.hist||[]).forEach(function(h){hist[h.n]=h});
-  b.innerHTML='<div class="wkc"><div class="wkrow" style="justify-content:space-between"><b>'+esc(o.type)+' · '+esc(num(o.w))+'×'+esc(num(o.h))+' ×'+esc(o.qty||1)+'</b><span class="badge">'+esc(st[c])+'</span></div>'+
+  b.innerHTML='<div class="wkc"><div style="font-size:14px;margin-bottom:4px">النظام: <span class="badge">'+esc(sysLab(o.type))+'</span></div><div class="wkrow" style="justify-content:space-between"><b>'+esc(num(o.w))+'×'+esc(num(o.h))+' ×'+esc(o.qty||1)+'</b><span class="badge">'+esc(st[c])+'</span></div>'+
    '<div class="bar" style="margin:10px 0"><i style="width:'+pct+'%"></i></div>'+
    '<div class="tl">'+st.map(function(s,i){var h=hist[s];return '<div class="st '+(i<c?'done':i===c?'cur':'')+'"><span class="dot">'+(i<c?'✓':i+1)+'</span><b>'+esc(s)+'</b>'+(h?'<div style="font-size:12px;color:var(--muted)">'+esc(String(h.at).slice(0,16).replace('T',' '))+(h.by?' — '+esc(h.by):'')+'</div>':'')+'</div>'}).join('')+'</div>'+
    '<div class="wkrow" style="margin-top:6px">'+(c<st.length-1?'<button type="button" class="wkbtn p" id="wkAdv">⏭️ الخطوة الجاية: '+esc(st[c+1])+'</button>':'<span class="badge green">الأوردر خلص</span>')+(c>0?'<button type="button" class="wkbtn" id="wkPrev">↩︎ رجّع خطوة</button>':'')+'</div></div>'+
@@ -6849,7 +6856,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var b=shell(old?'تعديل '+esc(ordNo(old)):'➕ أوردر جديد',old?function(){viewOrder(id)}:viewOrders);mark(old?'ord':'new');
   var sups=contacts().filter(function(c){return c.type==='مورد'}),custs=contacts().filter(function(c){return c.type==='عميل'});
   b.innerHTML='<div class="wkc"><h3>بيانات الأوردر</h3><div class="wkg">'+
-   '<div class="wkf" style="display:none"><label>النوع</label><select id="fT">'+TYPES.map(function(t){return '<option'+(t===o.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>'+
+   '<div class="wkf"><label>النظام (مراحل التصنيع)</label><select id="fT">'+TYPES.map(function(t){return '<option value="'+t+'"'+(t===o.type?' selected':'')+'>'+sysLab(t)+'</option>'}).join('')+'</select></div>'+
    '<div class="wkf"><label>النوع</label><select id="fK"><option value="hinge"'+(o.kind==='hinge'?' selected':'')+'>مفصلي</option><option value="slide"'+(o.kind==='slide'?' selected':'')+'>جرار</option><option value="frame"'+(o.kind==='frame'?' selected':'')+'>شاسيه ثابت (مراية أو غيره)</option><option value="other"'+(o.kind==='other'?' selected':'')+'>أخرى</option></select></div>'+
    fi('fD','التاريخ',o.date,'','date')+
    '<div class="wkf"><label>العميل</label><input id="fC" list="wkCust" value="'+esc(o.customer)+'"><datalist id="wkCust">'+custs.map(function(c){return '<option value="'+esc(c.name)+'">'}).join('')+'</datalist></div>'+
@@ -6886,7 +6893,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    b.querySelectorAll('[data-md]').forEach(function(x){x.onclick=function(){o.mats.splice(+x.dataset.md,1);if(!o.mats.length)o.mats.push({n:'',q:'',p:''});drawMats();res()}})}
   function read(){
    o.type=q('fT').value;o.date=q('fD').value;o.customer=q('fC').value.trim();o.phone=q('fP').value.trim();o.crafter=q('fCr').value.trim();
-   o.kind=q('fK').value;q('fT').value={hinge:'دلفة',slide:'جرار',frame:'دلفة',other:q('fT').value==='جرار'||q('fT').value==='دلفة'?'أخرى':q('fT').value}[o.kind]||'دلفة';o.type=q('fT').value;if(o.kind==='frame')q('fHd').value='frame';else if(q('fHd').value==='frame')q('fHd').value='one';o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
+   o.kind=q('fK').value;var T0=q('fT').value;if(o.kind==='other'){if(T0==='دلفة'||T0==='جرار')T0='أخرى'}else if(T0!=='جرار'&&T0!=='دلفة')T0='دلفة';q('fT').value=T0;o.type=T0;if(o.kind==='frame')q('fHd').value='frame';else if(q('fHd').value==='frame')q('fHd').value='one';o.w=num(q('fW').value);o.h=num(q('fH').value);o.qty=num(q('fQ').value)||1;o.hinges=num(q('fN').value)||3;o.side=q('fS').value;o.hingePos=q('fHP').value.trim();
    o.color=q('fCo').value.trim();o.profile=q('fPr').value.trim();o.handle=q('fHd').value;o.rod=q('fRod').value;o.corner=q('fCn').value;o.cornerProd=q('fCp').value.trim();q('fCpW').style.display=o.corner==='no'?'none':'';o.wOff=q('fWo').value.trim();o.wWing=q('fWg').value.trim();o.wLen=q('fWl').value.trim();o.fee=q('fFe').value;o.priceEach=q('fPe').value;o.price=String(Math.round(num(o.priceEach)*(num(o.qty)||1)*100)/100);o.cost='';o.paid=q('fPd').value;o.notes=q('fNo').value.trim();return o}
   function res(){read();var sl=o.kind==='slide',hg=o.kind==='hinge',fr=o.kind==='frame';['fN','fS','fHP'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=hg?'':'none'});['fWo','fWg','fWl'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=sl?'':'none'});['fHd'].forEach(function(i){var f=q(i).closest('.wkf');if(f)f.style.display=fr||o.kind==='other'?'none':''});['fT','fHd'].forEach(function(i){if(q(i)._lab)q(i)._lab()});q('fDr').innerHTML=(o.w&&o.h&&o.kind!=='other')?svg(o,true):'<span style="color:var(--muted)">اكتب العرض والارتفاع وهيظهر الرسم</span>';var rh=rodsHtml(o);q('fRods').innerHTML=rh;
    var qn=num(o.qty)||1,fT=num(o.fee)*qn,pT=num(o.price),mt=(o.mats||[]).reduce(function(x,m){return x+num(m.q)*num(m.p)},0);
@@ -7610,7 +7617,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var b=shell('⚙️ إعدادات أنظمة الشغل');mark('cfg');
   b.innerHTML='<div class="wkc"><h3>مقاس ورق الطباعة الافتراضي</h3><div class="wkf"><select id="cP">'+Object.keys(PAPERS).map(function(k){return '<option value="'+k+'"'+(k===CFG.paper?' selected':'')+'>'+PAPERS[k]+'</option>'}).join('')+'</select></div>'+
    '<p style="color:var(--muted);font-size:13px">لو الطباعة بتطلع مقصوصة أو مزاحة لناحية، جرّب رول 80 مم أو 58 مم حسب طابعتك.</p></div>'+
-   '<div class="wkc"><h3>مراحل خط السير (سطر لكل مرحلة)</h3><div class="wkg">'+TYPES.map(function(t){return '<div class="wkf"><label>'+t+'</label><textarea data-t="'+t+'" rows="7">'+esc(stages(t).join('\n'))+'</textarea></div>'}).join('')+'</div></div>'+
+   '<div class="wkc"><h3>مراحل خط السير (سطر لكل مرحلة) — كل نظام لوحده</h3><div class="wkg">'+TYPES.map(function(t){return '<div class="wkf"><label>'+esc(sysLab(t))+' — '+ORD.filter(function(o){return o.type===t&&curStage(o)<stages(t).length-1}).length+' أوردر شغال</label><textarea data-t="'+t+'" rows="7">'+esc(stages(t).join('\n'))+'</textarea></div>'}).join('')+'</div></div>'+
    '<div class="wkc"><h3>💰 أسعار المصنعية للدرفة</h3><div class="wkg">'+(function(r){return fi('cHF','الصنايعي — درفة مفصلي',r.hF,'inputmode="decimal"')+fi('cSF','الصنايعي — درفة جرار',r.sF,'inputmode="decimal"')+fi('cHP','على الزبون — درفة مفصلي',r.hP,'inputmode="decimal"')+fi('cSP','على الزبون — درفة جرار',r.sP,'inputmode="decimal"')})(rates())+'</div></div>'+
    '<div class="wkc"><h3>🪵 فئات الأعواد</h3><p style="margin:0 0 10px;color:var(--muted);font-size:13px">سطر لكل فئة، بالترتيب ده وبينهم شرطة مايلة /: اسم الفئة / طول العود العادي بالسم / اسم منتج العود العادي في المخزون (بالظبط) / طول عود المقبض بالسم / اسم منتج عود المقبض في المخزون (بالظبط). لو العود العادي والمقبض بنفس الاسم والطول، اكتبهم نفس الحاجة في الخانتين.</p>'+
    '<textarea id="cRod" rows="8" style="width:100%;min-height:170px;font-size:16px;line-height:1.9">'+esc(rodTypeDefs().map(function(t){return [t.n,t.pLen,t.pProd,t.hLen,t.hProd].join(' / ')}).join('\n'))+'</textarea></div>'+
@@ -7618,6 +7625,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#cS').onclick=async function(){
    CFG.rates={hF:num(b.querySelector('#cHF').value),sF:num(b.querySelector('#cSF').value),hP:num(b.querySelector('#cHP').value),sP:num(b.querySelector('#cSP').value)};
    CFG.paper=b.querySelector('#cP').value;CFG.stages=CFG.stages||{};
+   var busy=[];b.querySelectorAll('[data-t]').forEach(function(x){var t=x.dataset.t,l=x.value.split('\n').map(function(s){return s.trim()}).filter(Boolean),ol=stages(t);if(l.length<2)return;var by={};
+    ORD.forEach(function(o){if(o.type!==t)return;var c=curStage(o);if(c>=ol.length-1)return;if(ol[c]!==l[c])by[ol[c]]=(by[ol[c]]||0)+1});Object.keys(by).forEach(function(n){busy.push('«'+n+'» ('+sysLab(t)+') فيها '+by[n]+' أوردر شغال')})});
+   if(busy.length){alert('مينفعش تمسح أو تغيّر مكان مرحلة فيها أوردرات شغالة:\n'+busy.join('\n')+'\n\nخلّص الأوردرات دي أو حرّكها الأول، وبعدين عدّل.');return}
    b.querySelectorAll('[data-t]').forEach(function(x){var l=x.value.split('\n').map(function(s){return s.trim()}).filter(Boolean);if(l.length>=2)CFG.stages[x.dataset.t]=l});
    var rodLines=b.querySelector('#cRod').value.split('\n').map(function(s){return s.trim()}).filter(Boolean);
    var rodRows=rodLines.map(function(ln,i){var f=ln.split('/').map(function(s){return s.trim()});if(f.length<5||!f[0])return null;
