@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-22';
+const APP_VER='2026-10-22-23';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6010,13 +6010,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   s.appendChild(mk('mkSideFf',{ico:'🔥',t:'عود الفرفورجيه'},function(){window.mkWk.go('forf')}));
   s.appendChild(mk('mkSideDisp',{ico:'🏬',t:'بضاعة العرض'},function(){window.mkWk.go('disp')}));
   s.appendChild(mk('mkSideOff',{ico:'🧰',t:'الفضل'},function(){window.mkWk.go('off')}));
+  s.appendChild(mk('mkSideSoc',{ico:'💬',t:'رسايل الصفحات'},function(){window.mkSoc.open()}));
   s.appendChild(mk('mkSideKw',{ico:'🔑',t:'كلمات الواتساب المفتاحية'},function(){window.mkKw.open()}));
   return true;
  }
  setInterval(function(){
   add();
   var adm=!!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'));
-  ['mkSideWk','mkSideSt','mkSideBm','mkSideFf','mkSideDisp','mkSideOff','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
+  ['mkSideWk','mkSideSt','mkSideBm','mkSideFf','mkSideDisp','mkSideOff','mkSideSoc','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
  },1500);
 })();
 </script>
@@ -11096,6 +11097,54 @@ const _op=window.openPurchaseView;window.openPurchaseView=function(id){_op.apply
 /* اليومية: ورقة تجهيز ببيعات اليوم */
 window.mkPrepDay=function(){let D=window.mkDbDay&&mkDbDay();if(!D||!D.rows.length)return toast('مفيش بيعات في اليومية لليوم ده');
  sheet({no:'يومية '+D.day,date:D.day,src:'يومية المحل',lines:D.rows.filter(x=>(x.kind||'sale')!=='return').map(x=>{let d=dimOf(x.name);return {name:x.name,qty:+x.qty,unit:((db.products||[]).find(p=>p.id===x.product_id)||{}).unit||'',dims:d+(x.note?(d?' — ':'')+x.note:'')}})})};
+})();
+</script>
+
+<script>
+/* ===== 💬 رسايل الصفحات (#15): صندوق وارد واحد لفيسبوك وإنستجرام وتيك توك.
+   الرسايل بتيجي من الـ Edge Function «social-webhook» (جدول mk_social_msgs)، ونفس كلمات الواتساب المفتاحية بتشتغل،
+   والرد لكل نوع كلمة في mk_settings: social_cfg. اللي مالوش كلمة أو رد بيستناك ترد بنفسك. ===== */
+(function(){
+const SB=()=>window.mkSB,FN='https://tkzfjeizvanfptnqvrmr.supabase.co/functions/v1/social-webhook';
+const PL={facebook:['فيسبوك','#1877f2'],instagram:['إنستجرام','#c13584'],tiktok:['تيك توك','#111']};
+const ST={new:'محتاج ردك',auto:'اترد تلقائي',replied:'اترد عليها',ignored:'اتجاهلت',sent:'اتبعت',failed:'ماتبعتتش',pending:'مستني المفاتيح'};
+let TAB='in',F='need',M=[],CUR=null,CFG=null;
+const badge=p=>`<span class="badge" style="background:${(PL[p]||['',''])[1]};color:#fff">${(PL[p]||[p])[0]}</span>`;
+const tm=v=>{try{return new Date(v).toLocaleString('ar-EG',{day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
+async function load(){let r=await SB().from('mk_social_msgs').select('*').order('created_at',{ascending:false}).limit(1000);if(r.error)throw r.error;M=r.data||[];return M}
+async function cfg(){if(CFG)return CFG;let r=await SB().from('mk_settings').select('key,value').in('key',['social_cfg','wa_rules']);let o={};(r.data||[]).forEach(x=>o[x.key]=x.value);CFG={c:Object.assign({autoOn:true,replies:{},platforms:{}},o.social_cfg||{}),rules:(o.wa_rules&&o.wa_rules.rules)||[]};return CFG}
+function threads(){let T=new Map();M.forEach(m=>{let k=m.platform+'|'+m.thread_id;if(!T.has(k))T.set(k,{k,platform:m.platform,thread_id:m.thread_id,name:'',last:m,rows:[]});let t=T.get(k);t.rows.push(m);if(!t.name&&m.direction==='in'&&m.sender_name)t.name=m.sender_name});
+ return [...T.values()].map(t=>{let lin=t.rows.find(x=>x.direction==='in');t.need=!!(lin&&lin.status==='new');return t})}
+const tabs=()=>`<div class="toolbar" id="socT">${[['in','📥 الوارد'],['rep','💬 الردود التلقائية'],['link','🔗 الربط']].map(x=>`<button type="button" class="${TAB===x[0]?'primary':'secondary'}" onclick="mkSoc.tab('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
+function head(t){return `<div class="modal-head"><h2>${t}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>`+tabs()}
+async function open(){TAB='in';CUR=null;openModal(head('💬 رسايل الصفحات')+'<div id="socB" style="padding:20px;text-align:center">⏳</div>');draw()}
+async function draw(){let b=document.getElementById('socB');if(!b)return;
+ try{if(TAB==='in'){await load();if(CUR)return thread(b);let L=threads().filter(t=>F==='all'||t.need);
+   b.innerHTML=`<div class="toolbar"><button type="button" class="${F==='need'?'primary':'secondary'}" onclick="mkSoc.f('need')">محتاج ردك (${threads().filter(t=>t.need).length})</button><button type="button" class="${F==='all'?'primary':'secondary'}" onclick="mkSoc.f('all')">كل المحادثات (${threads().length})</button><button type="button" class="secondary" onclick="mkSoc.re()">🔄</button></div>`+
+    (L.map(t=>`<div onclick="mkSoc.th('${t.k.replace(/'/g,"\\'")}')" style="cursor:pointer;padding:12px 6px;border-bottom:1px solid var(--border);text-align:right"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${badge(t.platform)}<b>${esc(t.name||'زبون')}</b>${t.need?'<span class="badge red">محتاج ردك</span>':''}${t.rows[0].rule_type?`<span class="badge">${esc(t.rows[0].rule_type)}</span>`:''}<small style="margin-right:auto;color:var(--muted)">${tm(t.last.created_at)}</small></div><div style="font-size:14px;color:var(--muted);margin-top:4px">${t.last.direction==='out'?'↩️ ':''}${esc(String(t.last.body||'').slice(0,90))}</div></div>`).join('')||`<div class="empty">${M.length?'مفيش رسايل محتاجة ردك 👌':'لسه مفيش رسايل — اربط الصفحات من «🔗 الربط»'}</div>`)}
+  else if(TAB==='rep'){let C=await cfg(),types=[...new Set(C.rules.map(r=>String(r.type||r.name||'')).filter(Boolean))];
+   b.innerHTML=`<p style="font-size:13px;color:var(--muted);margin:0 0 8px">نفس كلمات الواتساب المفتاحية (من «🔑 كلمات الواتساب»). لكل نوع اكتب الرد اللي يتبعت لوحده. لو الرد فاضي أو مقفول، الرسالة بتستناك ترد بنفسك.</p>
+   <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:8px"><input type="checkbox" id="socAuto" ${C.c.autoOn!==false?'checked':''} style="width:22px;height:22px"> الرد التلقائي شغال</label>
+   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">${Object.keys(PL).map(p=>`<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pl="${p}" ${C.c.platforms[p]===false?'':'checked'} style="width:20px;height:20px"> ${PL[p][0]}</label>`).join('')}</div>
+   ${types.map(t=>{let r=C.c.replies[t]||{};return `<div class="card" style="margin-bottom:8px;padding:10px"><label style="display:flex;gap:8px;align-items:center;font-weight:800"><input type="checkbox" data-on="${esc(t)}" ${r.on===false?'':'checked'} style="width:20px;height:20px"> كلمة «${esc(t)}»</label><small style="color:var(--muted)">${esc((C.rules.find(x=>(x.type||x.name)===t)||{phrases:[]}).phrases.slice(0,6).join('، '))}</small><textarea data-rep="${esc(t)}" rows="3" style="width:100%;margin-top:6px" placeholder="الرد اللي يتبعت (فاضي = مفيش رد تلقائي)">${esc(r.text||'')}</textarea></div>`}).join('')||'<div class="empty">مفيش كلمات مفتاحية — ضيفها من «🔑 كلمات الواتساب المفتاحية»</div>'}
+   <button type="button" class="primary" id="socSave" style="width:100%;min-height:48px">💾 حفظ الردود</button>`;
+   document.getElementById('socSave').onclick=async function(){let c=Object.assign({},C.c,{autoOn:document.getElementById('socAuto').checked,replies:{},platforms:{}});
+    b.querySelectorAll('[data-pl]').forEach(x=>c.platforms[x.dataset.pl]=x.checked);b.querySelectorAll('[data-rep]').forEach(x=>{let t=x.dataset.rep,on=b.querySelector('[data-on="'+CSS.escape(t)+'"]');c.replies[t]={text:x.value.trim(),on:on?on.checked:true}});
+    this.disabled=true;this.textContent='جاري الحفظ...';let r=await SB().from('mk_settings').upsert([{key:'social_cfg',value:c}],{onConflict:'key'});if(r.error){this.disabled=false;this.textContent='💾 حفظ الردود';return toast('ماتحفظش: '+(r.error.message||''))}CFG.c=c;toast('✔ الردود اتحفظت');this.disabled=false;this.textContent='💾 حفظ الردود'}}
+  else{let s={};try{let r=await SB().functions.invoke('social-webhook',{body:{action:'status'}});s=r.data||{}}catch(e){}
+   b.innerHTML=`<div class="card" style="line-height:2.1">${[['meta','فيسبوك (ماسنجر)'],['instagram','إنستجرام'],['tiktok','تيك توك']].map(x=>`<div>${s[x[0]]?'✅':'⏳'} <b>${x[1]}</b> — ${s[x[0]]?'متربط':'مستني المفاتيح'}</div>`).join('')}</div>
+   <div class="card" style="margin-top:8px;font-size:14px;line-height:1.9"><b>رابط الـ Webhook (هتحطه في Meta):</b><div dir="ltr" style="word-break:break-all;background:var(--tint2);padding:8px;border-radius:8px;user-select:all">${FN}</div><b>رابط تيك توك:</b><div dir="ltr" style="word-break:break-all;background:var(--tint2);padding:8px;border-radius:8px;user-select:all">${FN}?src=tiktok</div>
+   <p style="margin:8px 0 0">الخطوات بالتفصيل في ملف «SOCIAL-SETUP.md» في المشروع. المفاتيح بتتحط في Supabase ← Edge Functions ← Secrets، مش في السيستم.</p></div>`}
+ }catch(e){b.innerHTML='<div class="empty">'+(/mk_social_msgs/.test(String(e&&e.message))?'جدول الرسايل لسه مااتعملش':'حصلت مشكلة: '+esc(String(e&&e.message||e)))+'</div>'}}
+function thread(b){let [p,id]=CUR.split('|'),R=M.filter(m=>m.platform===p&&m.thread_id===id).slice().reverse(),name=(R.find(x=>x.direction==='in'&&x.sender_name)||{}).sender_name||'زبون';
+ b.innerHTML=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button type="button" class="secondary" onclick="mkSoc.back()">→ رجوع</button>${badge(p)}<b>${esc(name)}</b></div>
+ <div style="max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;padding:4px">${R.map(m=>`<div style="max-width:85%;align-self:${m.direction==='in'?'flex-start':'flex-end'};background:${m.direction==='in'?'var(--tint2)':'#e8f7ee'};border-radius:12px;padding:8px 10px"><div style="white-space:pre-wrap">${esc(m.body)}</div><small style="color:var(--muted)">${tm(m.created_at)}${m.direction==='out'?' — '+esc(m.by_name||'')+' — '+(ST[m.status]||m.status)+(m.meta&&m.meta.err?' ('+esc(m.meta.err)+')':''):m.rule_type?' — كلمة «'+esc(m.rule_type)+'»':''}</small></div>`).join('')}</div>
+ <textarea id="socTx" rows="3" style="width:100%;margin-top:8px" placeholder="اكتب ردك هنا"></textarea>
+ <div style="display:flex;gap:8px;margin-top:6px"><button type="button" class="primary" id="socSend" style="flex:1;min-height:48px">📤 إرسال</button><button type="button" class="secondary" id="socIgn">🙈 تجاهل</button></div>`;
+ document.getElementById('socSend').onclick=async function(){let t=document.getElementById('socTx').value.trim();if(!t)return toast('اكتب الرد');this.disabled=true;this.textContent='جاري الإرسال...';
+  try{let r=await SB().functions.invoke('social-webhook',{body:{action:'send',platform:p,thread_id:id,text:t}});if(r.error)throw r.error;toast('✔ اتبعت')}catch(e){toast('⚠️ ماتبعتش — اتسجل في المحادثة: '+String(e&&e.message||e).slice(0,80))}draw()};
+ document.getElementById('socIgn').onclick=async function(){this.disabled=true;let r=await SB().from('mk_social_msgs').update({status:'ignored'}).eq('platform',p).eq('thread_id',id).eq('direction','in').eq('status','new');if(r.error)toast('ماتحفظش');CUR=null;draw()}}
+window.mkSoc={open,tab:t=>{TAB=t;CUR=null;let h=document.getElementById('socT');if(h)h.outerHTML=tabs();document.getElementById('socB').innerHTML='⏳';draw()},f:v=>{F=v;draw()},re:()=>draw(),th:k=>{CUR=k;draw()},back:()=>{CUR=null;draw()}};
 })();
 </script>
 
