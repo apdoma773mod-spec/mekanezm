@@ -1264,6 +1264,9 @@ function invoiceHTML(r,bc){
 
 /* تعديل الفاتورة */
 let ED=null;
+/* تعديل البيعة من نقدي لآجل والعكس: مفتاح يتقفل لحد ما sql/58-sale-pay-mode.sql يتشغّل في Supabase */
+const MK_PAY_MODE_ON=false;
+function edPayChange(){let s=document.getElementById('txEdPay');if(!s||!ED)return null;return s.value===ED.pay0?null:s.value}
 function openInvEdit(kind,key){
  let G=invGroup(kind,key);if(!G.length)return toast('الفاتورة مش موجودة');
  let isSale=kind==='sale',r=G[0],sold=isSale?[]:soldAfter(G);ED=null;
@@ -1277,9 +1280,10 @@ function openInvEdit(kind,key){
  if(isSale)txAddr.value=r.addr||'';
  txShip.value=sumBy(G.filter(x=>x.ship),x=>x.total)||'';
  let pf=txPaid.closest('.field'),rf=txRem.closest('.field');
- pf.insertAdjacentHTML('beforebegin',`<div class="field full" id="edInfo"></div><div class="field"><label>${isSale?'دفعة إضافية من العميل دلوقتي':'دفعة إضافية للمورد دلوقتي'} (اختياري)</label><input id="txExtra" inputmode="decimal" placeholder="0" oninput="updRem()"></div>`);
+ pf.insertAdjacentHTML('beforebegin',`${isSale&&MK_PAY_MODE_ON?`<div class="field full"><label>طريقة الدفع</label><select id="txEdPay" onchange="edInfo()"><option value="cash">نقدي</option><option value="credit">آجل (على العميل)</option></select></div>`:''}<div class="field full" id="edInfo"></div><div class="field"><label>${isSale?'دفعة إضافية من العميل دلوقتي':'دفعة إضافية للمورد دلوقتي'} (اختياري)</label><input id="txExtra" inputmode="decimal" placeholder="0" oninput="updRem()"></div>`);
  pf.remove();rf.remove();
- ED={kind,key,paid:sumBy(G,paidOf)};
+ ED={kind,key,paid:sumBy(G,paidOf),pay0:sumBy(G,paidOf)>0.001?'cash':'credit'};
+ let edPaySel=document.getElementById('txEdPay');if(edPaySel)edPaySel.value=ED.pay0;
  G.filter(x=>!x.ship).forEach(x=>{let p=findP(x),ex=p&&document.querySelector(`#txLines .txl[data-pid="${p.id}"]`);
   if(ex){let q=ex.querySelector('.lq');q.value=r2((+q.value||0)+(+x.qty||0));return}
   addItem(p?p.id:'new',p?undefined:x.product);
@@ -1289,7 +1293,7 @@ function openInvEdit(kind,key){
  updRem()}
 function edInfo(){let e=document.getElementById('edInfo');if(!e||!ED)return;
  let T=shipVal();document.querySelectorAll('#txLines .txl').forEach(d=>{T+=(+d.querySelector('.lq').value||0)*(+d.querySelector('.lp').value||0)});
- let isC=ED.kind==='sale',all=ED.paid+(+val('txExtra')||0),keep=Math.min(all,T),E=r2(all-keep),rem=r2(T-keep);
+ let isC=ED.kind==='sale',pm=edPayChange(),all=pm==='credit'?0:pm==='cash'?T:ED.paid+(+val('txExtra')||0),keep=Math.min(all,T),E=r2(all-keep),rem=r2(T-keep);
  e.innerHTML=`<div style="background:var(--tint2);border-radius:12px;padding:12px;line-height:2">الإجمالي الجديد: <b>${money(T)}</b> — المدفوع قبل كده: <b>${money(ED.paid)}</b><br>${rem>0?`${isC?'المتبقي على العميل':'المتبقي للمورد'} بعد التعديل: <b style="color:var(--danger)">${money(rem)}</b>`:E>0?`<b style="color:var(--green)">${isC?'رصيد للعميل عندك':'رصيد ليك عند المورد'}: ${money(E)}</b> (يتخصم من فاتورة جاية)`:'<b style="color:var(--green)">الفاتورة مدفوعة بالكامل</b>'}</div>`}
 function submitInvEdit(ev,kind,key){ev.preventDefault();
  let isSale=kind==='sale',arr=isSale?db.sales:db.purchases,G=invGroup(kind,key);if(!G.length){closeModal();return toast('الفاتورة مش موجودة')}
@@ -1689,7 +1693,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-18-14';
+const APP_VER='2026-10-22-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1923,6 +1927,10 @@ submitInvEdit=async function(ev,kind,key){ev.preventDefault();let f=ev.target,is
  if(isSale){let back=new Map();G.forEach(r=>{let p=findP(r);if(p)back.set(p.id,(back.get(p.id)||0)+(+r.qty||0))});let s=shortList(L,back);if(s.length&&!warnOk(s))return}
  let id=G[0].gid,oldP=G.map(r=>r.pid),oldC=(findContact(G[0].person,ctypeOf(kind))||{}).id;
  let p={...(window.mkCoOn?{co:coOf(G[0])}:{}),id,kind,person:txPerson.value.trim(),phone:val('txPhone'),addr:val('txAddr'),note:txNote.value,ship:shipVal(),extra:+val('txExtra')||0,items:linesPayload(L)};
+ let pm=isSale?edPayChange():null;
+ if(pm==='credit'&&!p.person)return toast('اكتب اسم العميل عشان الفاتورة تتسجل آجل');
+ if(pm==='credit'&&p.extra>0)return toast('الفاتورة آجل مينفعش معاها دفعة إضافية. امسح الدفعة الإضافية الأول');
+ if(pm)p.pay_mode=pm;
  busy(f,'جاري الحفظ…');
  try{let r=await rpc('mk_save_invoice',{p});let rows=await afterInvoice(r.id,oldP,[oldC]);ED=null;toast('تم تعديل الفاتورة');
   if(rows[0])isSale?openInvoiceModal(rows[0].id):openPurchaseView(rows[0].id)}
