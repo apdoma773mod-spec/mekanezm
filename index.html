@@ -1265,7 +1265,7 @@ function invoiceHTML(r,bc){
 /* تعديل الفاتورة */
 let ED=null;
 /* تعديل البيعة من نقدي لآجل والعكس: مفتاح يتقفل لحد ما sql/58-sale-pay-mode.sql يتشغّل في Supabase */
-const MK_PAY_MODE_ON=false;
+const MK_PAY_MODE_ON=true;
 function edPayChange(){let s=document.getElementById('txEdPay');if(!s||!ED)return null;return s.value===ED.pay0?null:s.value}
 function openInvEdit(kind,key){
  let G=invGroup(kind,key);if(!G.length)return toast('الفاتورة مش موجودة');
@@ -1693,7 +1693,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-4';
+const APP_VER='2026-10-22-5';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
