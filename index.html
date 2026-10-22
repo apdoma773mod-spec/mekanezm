@@ -1720,7 +1720,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-14';
+const APP_VER='2026-10-22-15';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -5996,13 +5996,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   s.appendChild(mk('mkSideSt',{ico:'🔩',t:'حاسبة الاستانلس'},function(){window.mkWk.go('steel')}));
   s.appendChild(mk('mkSideBm',{ico:'🎍',t:'بامبو'},function(){window.mkWk.go('bamboo')}));
   s.appendChild(mk('mkSideFf',{ico:'🔥',t:'عود الفرفورجيه'},function(){window.mkWk.go('forf')}));
+  s.appendChild(mk('mkSideDisp',{ico:'🏬',t:'بضاعة العرض'},function(){window.mkWk.go('disp')}));
+  s.appendChild(mk('mkSideOff',{ico:'🧰',t:'الفضل'},function(){window.mkWk.go('off')}));
   s.appendChild(mk('mkSideKw',{ico:'🔑',t:'كلمات الواتساب المفتاحية'},function(){window.mkKw.open()}));
   return true;
  }
  setInterval(function(){
   add();
   var adm=!!(window.mkT_user?window.mkT_user.role==='admin':!document.body.classList.contains('emp'));
-  ['mkSideWk','mkSideSt','mkSideBm','mkSideFf','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
+  ['mkSideWk','mkSideSt','mkSideBm','mkSideFf','mkSideDisp','mkSideOff','mkSideKw'].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display=adm?'':'none'});
  },1500);
 })();
 </script>
@@ -6277,7 +6279,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<div class="wkt" id="wkTabs"></div><div class="wkb" id="wkBody"></div>';
   var b=a.querySelector('#wkBack');if(backFn){b.onclick=backFn}else{b.style.display='none'}
   a.querySelector('#wkX').onclick=close;
-  var tabs=[['ord','📋 الأوردرات',viewOrders],['new','➕ أوردر دلفة',function(){viewForm(null,'دلفة')}],['steel','🔩 استانلس',function(){viewSteel(null)}],['bamboo','🎍 بامبو',function(){viewBamboo(null)}],['off','🧰 الفضل',viewOff],['rods','🧮 حاسبة الأعواد',viewRods],['forf','🔥 فرفورجيه',viewForf],['disp','🏬 العرض',viewDisp],['exp','🧾 مصاريف المعرض',viewExps],['cfg','⚙️ إعدادات',viewCfg]];
+  var tabs=[['ord','📋 الأوردرات',viewOrders],['new','➕ أوردر دلفة',function(){viewForm(null,'دلفة')}],['steel','🔩 استانلس',function(){viewSteel(null)}],['bamboo','🎍 بامبو',function(){viewBamboo(null)}],['rods','🧮 حاسبة الأعواد',viewRods],['forf','🔥 فرفورجيه',viewForf],['exp','🧾 مصاريف المعرض',viewExps],['cfg','⚙️ إعدادات',viewCfg]];
   var T=a.querySelector('#wkTabs');
   tabs.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.k=t[0];b.onclick=t[2];T.appendChild(b)});
   a.scrollTop=0;return a.querySelector('#wkBody');
@@ -7514,17 +7516,59 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  }
 
  /* ---------- العرض والمصاريف ---------- */
+ /* ---------- 🏬 بضاعة العرض: الصنف من المخزون بس، والإضافة بتخصم من المخزون والشيل بيرجّعه ---------- */
  async function viewDisp(){
   var b=shell('🏬 بضاعة العرض');mark('disp');
-  var D=await get(K.disp,[]),tot=D.reduce(function(a,d){return a+num(d.value)*num(d.qty)},0);
-  b.innerHTML='<div class="wkc"><p style="margin:0">قيمة العرض: <b>'+fmt(tot)+'</b> ج. بيع صنف من العرض بيخصم من العرض، وسجّل البيع في فاتورة عشان يتخصم من المخزون.</p></div>'+
-   '<div class="wkc"><div class="table-wrap"><table><thead><tr><th>الصنف</th><th>العدد</th><th>المكان</th><th>القيمة</th><th>الحالة</th><th></th></tr></thead><tbody>'+
-   (D.map(function(d,i){return '<tr><td>'+esc(d.name)+'</td><td>'+esc(d.qty)+'</td><td>'+esc(d.loc)+'</td><td>'+fmt(num(d.value)*num(d.qty))+'</td><td><span class="badge">'+esc(d.status)+'</span></td><td style="white-space:nowrap"><button type="button" class="wkbtn" data-s="'+i+'">بيع من العرض</button> <button type="button" class="wkbtn d" data-d="'+i+'">حذف</button></td></tr>'}).join('')||'<tr><td colspan="6" class="empty">مفيش</td></tr>')+'</tbody></table></div></div>'+
-   '<div class="wkc"><h3>إضافة صنف للعرض</h3><div class="wkg">'+fi('dN','الصنف','')+fi('dQ','العدد','1','inputmode="numeric"')+fi('dL','المكان','')+fi('dV','سعر الوحدة','','inputmode="decimal"')+'</div><button type="button" class="wkbtn p" id="dA" style="margin-top:10px">إضافة</button></div>';
-  b.querySelector('#dA').onclick=async function(){var n=b.querySelector('#dN').value.trim();if(!n)return toast('اكتب الصنف');
-   D.push({id:uid(),name:n,qty:num(b.querySelector('#dQ').value)||1,loc:b.querySelector('#dL').value.trim(),value:num(b.querySelector('#dV').value),status:'معروض'});try{await put(K.disp,D);viewDisp()}catch(e){errAlert(e)}};
-  b.querySelectorAll('[data-d]').forEach(function(x){x.onclick=async function(){if(await ask('تمسح الصنف من العرض؟','مسح','لأ')){D.splice(+x.dataset.d,1);try{await put(K.disp,D);viewDisp()}catch(e){errAlert(e)}}}});
-  b.querySelectorAll('[data-s]').forEach(function(x){x.onclick=async function(){var i=+x.dataset.s,n=num(prompt('تبيع كام قطعة من '+D[i].name+'؟','1'));if(!n||n<=0)return;D[i].qty=Math.max(0,num(D[i].qty)-n);if(D[i].qty===0)D[i].status='اتباع';try{await put(K.disp,D);toast('اتخصم من العرض. سجّل البيع في فاتورة');viewDisp()}catch(e){errAlert(e)}}});
+  var D=await get(K.disp,[]),ED=null;
+  var P=function(id){return (db.products||[]).find(function(p){return p.id===id})};
+  var r3=function(x){return Math.round(x*1000)/1000};
+  async function stockMove(pid,delta,note){var A=window.mkT&&window.mkT.api;if(!A||!A.rpc)throw new Error('السيستم لسه بيحمّل — جرّب كمان شوية');
+   await A.syncNow();await A.refreshProducts([pid]);var p=P(pid);if(!p)throw new Error('الصنف مش موجود في المخزون');
+   await A.rpc('mk_adjust_stock',{p_id:pid,p_qty:r3(num(p.qty)+delta),p_note:note});await A.refreshProducts([pid]);A.done&&A.done()}
+  function blank(){return {i:-1,pid:'',qty:'1',loc:'',price:''}}
+  function plist(q){q=String(q||'').trim().toLowerCase();var L=(db.products||[]).filter(function(p){return !q||[p.name,p.code,p.barcode].some(function(v){return String(v||'').toLowerCase().indexOf(q)>=0})});
+   return L.slice(0,60).map(function(p){return '<button type="button" class="dpI" data-pid="'+p.id+'" style="display:block;width:100%;text-align:right;padding:10px;border:0;border-bottom:1px solid var(--border);background:none;font-size:15px"><b>'+esc(p.name)+'</b><br><small style="color:var(--muted)">'+(p.code?'كود '+esc(p.code)+' — ':'')+'المتاح '+fmt(num(p.qty))+'</small></button>'}).join('')||'<div style="padding:10px;color:var(--muted)">مفيش صنف بالاسم ده في المخزون</div>'}
+  function draw(){
+   var tot=D.reduce(function(a,d){return a+num(d.value)*num(d.qty)},0),old=D.filter(function(d){return !d.pid}),E=ED||blank(),ep=E.pid?P(E.pid):null,ed=E.i>=0?D[E.i]:null;
+   b.innerHTML='<div class="wkc"><p style="margin:0">قيمة العرض: <b>'+fmt(tot)+'</b> ج — '+D.filter(function(d){return num(d.qty)>0}).length+' صنف معروض.<br><small style="color:var(--muted)">الصنف اللي بيتحط في العرض بيتخصم من المخزون، ولما يتشال أو كميته تقل بيرجع المخزون.</small></p></div>'+
+    (old.length?'<div class="wkc" style="border:2px solid #f0b46a"><b>⚠️ '+old.length+' صنف قديم في العرض مش مربوط بالمخزون</b><br><small>اربط كل واحد بالصنف الصح (الربط مابيغيّرش المخزون).</small></div>':'')+
+    '<div class="wkc"><h3>'+(E.i>=0?'✏️ تعديل '+esc(ed&&ed.name||''):'➕ إضافة صنف للعرض')+'</h3><div class="wkg">'+
+     '<div class="wkf" style="grid-column:1/-1;position:relative"><label>الصنف من المخزون</label><input id="dP" type="search" autocomplete="off" value="'+esc(ep?ep.name:'')+'" placeholder="🔎 اضغط واختار — بالاسم أو الكود أو الباركود"><div id="dPL" style="display:none;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--card,#fff);margin-top:4px"></div>'+
+     (ep?'<small style="color:var(--muted)">المتاح في المخزون: <b>'+fmt(num(ep.qty))+'</b> '+esc(ep.unit||'')+'</small>':'')+'</div>'+
+     fi('dQ','الكمية',E.qty,'inputmode="decimal"')+fi('dL','مكانه في العرض',E.loc,'placeholder="مثلاً: المطبخ اللي على اليمين"')+fi('dV','سعر العرض للقطعة (ج)',E.price,'inputmode="decimal"')+'</div>'+
+     (ed&&!ed.fromStock?'<p style="font-size:13px;color:#a66a00">الصنف ده قديم — التعديل مش هيخصم أو يرجّع حاجة من المخزون.</p>':'')+
+     '<div class="wkrow" style="margin-top:10px"><button type="button" class="wkbtn p" id="dS" style="min-height:50px;flex:1">💾 '+(E.i>=0?'حفظ التعديل':'حفظ في العرض')+'</button>'+(E.i>=0?'<button type="button" class="wkbtn" id="dC">إلغاء</button>':'')+'</div></div>'+
+    '<div class="wkc"><h3>المعروض ('+D.length+')</h3>'+(D.map(function(d,i){var p=d.pid?P(d.pid):null;return '<div class="sample" style="margin-bottom:8px;line-height:1.9"><b>'+esc(d.name)+'</b>'+(d.code?' <small>كود '+esc(d.code)+'</small>':'')+(d.pid?'':' <span class="badge" style="background:#fff4e0;color:#a66a00">مش مربوط</span>')+
+     '<br>الكمية: <b>'+fmt(num(d.qty))+'</b>'+(d.loc?' — المكان: '+esc(d.loc):'')+' — سعر العرض: '+fmt(num(d.value))+' ج'+(num(d.qty)?' (الإجمالي '+fmt(num(d.value)*num(d.qty))+')':'')+' <span class="badge">'+esc(d.status||'معروض')+'</span>'+
+     '<div class="wkrow" style="margin-top:6px;flex-wrap:wrap">'+(d.pid?'<button type="button" class="wkbtn" data-e="'+i+'">✏️ تعديل</button>'+(num(d.qty)>0?'<button type="button" class="wkbtn" data-s="'+i+'">💰 بيع من العرض</button>':''):'<button type="button" class="wkbtn p" data-e="'+i+'">🔗 اربطه بصنف من المخزون</button>')+'<button type="button" class="wkbtn d" data-d="'+i+'">🗑️ شيل من العرض</button></div></div>'}).join('')||'<span class="empty">لسه مفيش حاجة في العرض</span>')+'</div>';
+   var Q=function(i){return b.querySelector('#'+i)},inp=Q('dP'),lst=Q('dPL');
+   var keep=function(){ED=ED||blank();ED.qty=Q('dQ').value;ED.loc=Q('dL').value;ED.price=Q('dV').value};
+   inp.addEventListener('focus',function(){lst.innerHTML=plist(inp.value===(ep&&ep.name)?'':inp.value);lst.style.display=''});
+   inp.addEventListener('input',function(){lst.innerHTML=plist(inp.value);lst.style.display=''});
+   lst.addEventListener('click',function(e){var x=e.target.closest('.dpI');if(!x)return;keep();ED.pid=x.dataset.pid;var p=P(ED.pid);if(p&&ED.price==='')ED.price=num(p.price)?String(num(p.price)):'';draw()});
+   if(Q('dC'))Q('dC').onclick=function(){ED=null;draw()};
+   Q('dS').onclick=async function(){keep();var E2=ED,p=E2.pid?P(E2.pid):null,q=num(E2.qty),btn=this;
+    if(!p)return toast('اختار الصنف من القايمة (مينفعش تكتب صنف جديد هنا)');if(!(q>=0)||(E2.i<0&&!(q>0)))return toast('اكتب الكمية');
+    var old=E2.i>=0?D[E2.i]:null,fs=old?!!old.fromStock:true,need=0,back=null;
+    if(fs){if(old&&old.pid&&old.pid!==p.id){back={pid:old.pid,q:num(old.qty)};need=q}else need=q-(old?num(old.qty):0)}
+    if(need>0&&num(p.qty)<need&&!(await ask('المخزون فيه '+fmt(num(p.qty))+' بس من «'+p.name+'» والمطلوب '+fmt(need)+'.\nتكمل والرصيد يبقى بالسالب؟','كمّل','لأ')))return;
+    btn.disabled=true;btn.textContent='جاري الحفظ...';
+    try{if(back&&back.q)await stockMove(back.pid,back.q,'رجع من بضاعة العرض');
+     if(need)await stockMove(p.id,-need,need>0?'نقل لبضاعة العرض'+(E2.loc?' ('+E2.loc+')':''):'رجع من بضاعة العرض');
+     var it={id:old?old.id:uid(),pid:p.id,name:p.name,code:p.code||'',qty:q,loc:E2.loc.trim(),value:num(E2.price),status:q>0?'معروض':'اتشال',fromStock:fs,at:old&&old.at||new Date().toISOString()};
+     if(old)D[E2.i]=Object.assign({},old,it);else D.push(it);await put(K.disp,D);ED=null;toast('✔ اتحفظ'+(need>0?' — اتخصم '+fmt(need)+' من المخزون':need<0?' — رجع '+fmt(-need)+' للمخزون':''));draw()}
+    catch(e){btn.disabled=false;btn.textContent='💾 حفظ';errAlert(e)}};
+   b.querySelectorAll('[data-e]').forEach(function(x){x.onclick=function(){var d=D[+x.dataset.e];ED={i:+x.dataset.e,pid:d.pid||'',qty:String(num(d.qty)),loc:d.loc||'',price:String(num(d.value)||'')};draw();b.scrollTop=0;var a=document.getElementById('wkApp');if(a)a.scrollTop=0}});
+   b.querySelectorAll('[data-d]').forEach(function(x){x.onclick=async function(){var i=+x.dataset.d,d=D[i],rt=d.fromStock&&d.pid&&num(d.qty)>0;
+    if(!(await ask('تشيل «'+d.name+'» من العرض؟'+(rt?'\n'+fmt(num(d.qty))+' هترجع المخزون.':''),'شيل','لأ')))return;
+    x.disabled=true;x.textContent='جاري الحفظ...';try{if(rt)await stockMove(d.pid,num(d.qty),'رجع من بضاعة العرض');D.splice(i,1);await put(K.disp,D);if(ED&&ED.i===i)ED=null;toast('✔ اتشال'+(rt?' والكمية رجعت المخزون':''));draw()}catch(e){x.disabled=false;errAlert(e)}}});
+   b.querySelectorAll('[data-s]').forEach(function(x){x.onclick=function(){var i=+x.dataset.s,d=D[i],n=num(prompt('تبيع كام من «'+d.name+'»؟ (المعروض '+fmt(num(d.qty))+')','1'));if(!(n>0))return;if(n>num(d.qty))return toast('المعروض '+fmt(num(d.qty))+' بس');
+    var id=d.id,fs=d.fromStock,pid=d.pid;close();
+    /* الفاتورة بتخصم من المخزون، والقطعة كانت اتخصمت لما اتحطت في العرض — فبنرجّع نفس الكمية للمخزون بعد الحفظ وننقص العرض */
+    prepToInvoice({customer:'',phone:'',note:'من بضاعة العرض',lines:[{name:d.name,pid:pid,qty:n,price:num(d.value)||null}],
+     after:async function(){if(fs)await stockMove(pid,n,'بيع من بضاعة العرض (كان متخصم لما اتحط في العرض)');var D2=await get(K.disp,[]),z=D2.find(function(y){return y.id===id});if(z){z.qty=r3(num(z.qty)-n);if(z.qty<=0){z.qty=0;z.status='اتباع'}await put(K.disp,D2)}toast('✔ العرض اتحدّث')}})}});
+  }
+  draw();
  }
  async function viewExps(){
   var b=shell('🧾 مصاريف المعرض');mark('exp');
@@ -8699,10 +8743,8 @@ window.mkUi={set:set,get:get};
   ['wkOrd','الأوردرات','خط سير كل أوردر',function(){window.mkWk&&mkWk.go('ord')},1],
   ['wkLeaf','أوردر دلفة','دلفة جديدة برسمة',function(){window.mkWk&&mkWk.go('new')},1],
   ['wkSteel','الاستانلس','حاسبة وتقطيع',function(){window.mkWk&&mkWk.go('steel')},1],
-  ['wkOff','الفضل','الفضلات والقص',function(){window.mkWk&&mkWk.go('off')},1],
   ['wkRods','حاسبة الأعواد','الدرف هتاخد كام عود',function(){window.mkWk&&mkWk.go('rods')},1],
   ['wkForf','الفرفورجيه','خط سير العود',function(){window.mkWk&&mkWk.go('forf')},1],
-  ['wkDisp','العرض','بضاعة العرض',function(){window.mkWk&&mkWk.go('disp')},1],
   ['products','الأصناف والمخزون','بحث ورصيد وأسعار',function(){showPage('products')}],
   ['contacts','العملاء والموردين','الحسابات والأرصدة',function(){showPage('contacts')}],
   ['debts','الديون والتذكير','مين عليه فلوس',function(){showPage('debts')},1],
