@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-21';
+const APP_VER='2026-10-22-22';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3257,7 +3257,7 @@ function dbRender(){let el=document.getElementById('dbBody');if(!el)return;
  let ow=document.getElementById('dbOwed');
  if(ow)ow.innerHTML=DB.owed.length?`<h3 style="margin:18px 0 8px">📦 باقي للعملاء (${DB.owed.length})</h3>${DB.owed.map(r=>`<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><b>${esc(r.person||'من غير اسم')}</b> — ${esc(r.name)} × <b>${r.owed}</b><div style="color:var(--muted);font-size:12px">${esc(String(r.day))}${r.invoice_no?' • فاتورة '+esc(r.invoice_no):''}</div></div><button class="primary" onclick="dbDeliver('${r.id}')">✔ سلّمت</button></div>`).join('')}`:'';
  let dd=document.getElementById('dbDayLbl');if(dd)dd.textContent=DB.day===isoToday()?'النهارده':new Date(DB.day).toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})}
-window.dbRender=dbRender;
+window.dbRender=dbRender;window.mkDbDay=()=>DB;
 function dbWaCard(){let host=document.getElementById('dbBody');if(!host)return;let old=document.getElementById('dbWaBox');if(old)old.remove();
  let W=(window.WA&&WA.list||[]).filter(o=>o.status==='new');if(!W.length)return;
  let h='<div id="dbWaBox" style="border:2px solid #7bcf9a;background:#e8f7ee;border-radius:14px;padding:10px;margin-bottom:10px"><div style="font-weight:800;color:#0b5b2b">📩 طلبات واتساب جديدة ('+W.length+')</div>'+
@@ -3272,7 +3272,7 @@ window.dbPayFor=function(p){payCard(null);let w=document.getElementById('lcWho')
  let s=document.querySelector('aside nav [data-page="sales"]');
  if(s)s.insertAdjacentHTML('beforebegin','<button data-page="daybook" onclick="showPage(\'daybook\')"><span style="width:1.15em;text-align:center">📒</span> <span>يومية المحل</span> <span id="dbCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
  let mn=document.querySelector('main');
- if(mn)mn.insertAdjacentHTML('beforeend',`<section id="daybook" class="page"><div class="title-row"><div class="title"><h1>📒 يومية المحل — <span id="dbDayLbl">النهارده</span></h1><p>اكتب كل بيعة على طول، وفي الآخر «صفّي» تتعمل فواتير البيع لوحدها</p></div><div class="btnrow"><input type="date" id="dbDay" class="search" style="max-width:170px" value="${isoToday()}"><button class="secondary" onclick="dbLoad()">🔄</button><button class="secondary" onclick="openImpDaily()">📥 استيراد يومية من Excel</button></div></div>
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="daybook" class="page"><div class="title-row"><div class="title"><h1>📒 يومية المحل — <span id="dbDayLbl">النهارده</span></h1><p>اكتب كل بيعة على طول، وفي الآخر «صفّي» تتعمل فواتير البيع لوحدها</p></div><div class="btnrow"><input type="date" id="dbDay" class="search" style="max-width:170px" value="${isoToday()}"><button class="secondary" onclick="dbLoad()">🔄</button><button class="secondary" onclick="openImpDaily()">📥 استيراد يومية من Excel</button><button class="secondary" onclick="mkPrepDay()">🖨️ ورق التجهيز</button></div></div>
   <div class="dbent"><div class="dbrow1"><div class="who"><input id="dbPerson" placeholder="👤 العميل (فاضي = بيعة من غير اسم)" autocomplete="off"></div>${payChips('dbPay',ENT.pay)}</div>
    <div class="dbsr"><input id="dbSearch" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off"><button type="button" class="secondary" id="dbScan" title="امسح باركود">📷</button><button type="button" class="secondary" id="dbPayBtn" title="دفعة من العميل">💰</button></div><div id="dbBox"></div></div>
   <div id="dbBody"></div><div id="dbFoot" class="dbfoot"></div><div id="dbOwed"></div></section>`);
@@ -6677,6 +6677,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#e8f7ee;border:2px solid #7bcf9a">'+(C.lines.length?C.lines.map(function(l){return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(l.lab)+(l.n>1?' × '+l.n:'')+'</span><b>'+fmt(l.tot)+'</b></div>'}).join('')+'<div style="border-top:1px dashed #7bcf9a;margin-top:6px;padding-top:6px;font-size:20px;font-weight:900;display:flex;justify-content:space-between"><span>الإجمالي</span><span>'+fmt(C.tot)+' ج</span></div><div style="font-size:13px">مجموع التكاليف '+fmt(C.cost)+' ج — ربحك <b>'+fmt(r2(C.tot-C.cost))+'</b> ج</div>':'<span style="color:var(--muted)">اختار العود وضيف الأصناف</span>')+'</div>'+
      (C.short.length?'<div style="margin-top:8px;padding:10px;border-radius:10px;background:#fff4e0;color:#a66a00;font-weight:700">⚠️ ناقص في المخزون (الفاتورة هتتعمل عادي والرصيد هيبقى بالسالب):<br>'+C.short.map(esc).join('<br>')+'</div>':'')+
      '<button type="button" class="wkbtn p" id="fcGo" style="margin-top:10px;width:100%;min-height:52px;font-size:17px">🧾 افتح الفاتورة</button>'+
+     '<button type="button" class="wkbtn" id="fcPrep" style="margin-top:8px;width:100%">🖨️ طباعة ورق التجهيز</button>'+
      '<div style="margin-top:6px;font-size:12px;color:var(--muted);text-align:center">نسخة السيستم: '+(typeof APP_VER!=='undefined'?APP_VER:'?')+' — لو ناقص في المخزون الفاتورة بتتعمل والرصيد بيبقى بالسالب</div>'+
      (!C.lines.some(function(l){return l.t==='swap'})&&C.lines.length>1?'<button type="button" class="wkbtn" id="fcKit" style="margin-top:8px;width:100%">💾 احفظ الأصناف دي كطقم واحد (كود + باركود)</button>':'')+allDL+'</div>'+
     '<div class="wkc"><h3>➕ دفعة جديدة (حديد بيور من المورد)</h3><div class="wkg">'+fi('foS','اشتريناه من','السبتية')+fi('foN','عدد الأعواد','','inputmode="numeric"')+fi('foL','طول العود (متر)',6,'inputmode="decimal"')+fi('foC','سعر العود الحديد (ج)','','inputmode="decimal"')+fi('foO','الفرن (اختياري)','','')+'</div><button type="button" class="wkbtn p" id="foAdd" style="margin-top:10px">حفظ الدفعة</button></div>'+
@@ -6702,6 +6703,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      lines:C2.lines.filter(function(l){return l.t==='item'}).map(function(l){return {name:l.name,pid:l.pid,qty:l.n,price:l.pr}}),
      kits:C2.lines.filter(function(l){return l.t==='rod'||l.t==='swap'}).map(function(l){return {name:l.lab,n:l.n,price:l.pr,comps:l.comps}}),
      after:backAfter(C2.lines.filter(function(l){return l.back}).map(function(l){return l.back}))})};
+   Q('fcPrep').onclick=function(){var C2=calcF();if(!C2.lines.length)return toast('ضيف أصناف الأول');
+    window.mkPrepPrint&&mkPrepPrint({no:'فرفورجيه',date:today(),src:'بيع فرفورجيه',lines:C2.lines.map(function(l){return {name:l.lab,qty:l.n,unit:'',dims:(l.t==='rod'||l.t==='swap')?'قص '+num(FC.lines[l.i].m)+' م من «'+String(C2.R.p?C2.R.p.name:'').trim()+'»':'',sub:l.t==='swap'?['القضيب الأصلي بتاع الطقم يرجع المخزن']:[]}})})};
    if(Q('fcKit'))Q('fcKit').onclick=async function(){var C2=calcF();if(C2.err.length)return toast(C2.err[0]);if(!C2.lines.length)return toast('ضيف أصناف الأول');
     if(!window.mkKT||!mkKT.addKit)return toast('شاشة الأطقم لسه بتحمّل — جرّب كمان شوية');
     var nm=prompt('اسم الطقم',C2.lines.length===1?C2.lines[0].lab:C2.lines.map(function(l){return l.lab}).join(' + '));if(!nm)return;
@@ -6827,11 +6830,16 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     '<div class="wkc"><h3>🪵 الخامات (الأعواد)</h3>'+(P.length+H.length?(function(){var t=function(S,nm,lab){return '📏 '+lab+' محسوب على عود <b>'+fmt(S.len/100)+' م</b> «'+esc(nm)+'»'+(S.ok?'':' <span style="color:#b45309">— '+(S.p?'الطول مش متسجل في بيانات الصنف، استخدمت طول الإعدادات. سجّله من شاشة المنتج (خانة «طول العود»)':'الصنف ده مش موجود في المخزون بالاسم ده، استخدمت طول الإعدادات')+'</span>')};
      return '<div class="sample" style="margin-bottom:8px;line-height:1.9;font-size:15px">'+(P.length?t(SP,R.pProd,'العادي'):'')+(P.length&&H.length?'<br>':'')+(H.length?t(SH,R.hProd,'المقبض'):'')+'</div>'})()+'<div class="wkg"><div class="sample">عود من غير مقبض: <b style="font-size:22px">'+pp.length+'</b></div><div class="sample">عود بمقبض: <b style="font-size:22px">'+hp.length+'</b></div><div class="sample">القطع: '+P.length+' عادي + '+H.length+' بمقبض</div><div class="sample">الأمتار: '+fmt(Math.round(P.concat(H).reduce(function(a,c){return a+c},0))/100)+' م</div></div>'+
      (function(){var rowsB=function(arr,nm,len){return arr.map(function(x,i){return '<div style="font-size:13px;padding:4px 0;border-top:1px dashed var(--border)">'+nm+' '+(i+1)+' ('+len+' سم): '+x.cuts.join(' + ')+' ← فضل <b>'+Math.round(x.left)+'</b> سم</div>'}).join('')};
-     return '<div style="margin-top:8px"><b>محتاج '+(pp.length+hp.length)+' عود: '+pp.length+' عود عادي + '+hp.length+' عود بمقبض</b>'+rowsB(pp,'عود',R.pLen)+rowsB(hp,'عود مقبض',R.hLen)+'</div><button type="button" class="wkbtn p" id="rcInv" style="margin-top:10px;width:100%;min-height:50px;font-size:17px">🧾 حوّل لفاتورة</button>'})()+
+     return '<div style="margin-top:8px"><b>محتاج '+(pp.length+hp.length)+' عود: '+pp.length+' عود عادي + '+hp.length+' عود بمقبض</b>'+rowsB(pp,'عود',R.pLen)+rowsB(hp,'عود مقبض',R.hLen)+'</div><button type="button" class="wkbtn p" id="rcInv" style="margin-top:10px;width:100%;min-height:50px;font-size:17px">🧾 حوّل لفاتورة</button><button type="button" class="wkbtn" id="rcPrep" style="margin-top:8px;width:100%">🖨️ طباعة ورق التجهيز</button>'})()+
      (lf.length?'<p style="margin:8px 0 0;font-size:13px">الفضلات: '+lf.join('، ')+' سم</p><button type="button" class="wkbtn" id="rcOff">🧰 سجّل الفضل الصالح في شاشة الفضل</button>':'')+(bad?'<p style="color:#c0392b">⚠️ في قطعة أطول من العود</p>':''):'<span class="empty">اكتب مقاسات الدرف</span>')+'</div>'+
     '<div class="wkc"><h3>🔧 المصنعية (تقريبي من أسعار الإعدادات)</h3>'+(work.n?'<div class="wkg"><div class="sample">عدد الدرف: <b>'+work.n+'</b></div><div class="sample">للصنايعي: <b>'+fmt(work.fee)+'</b> ج</div><div class="sample">على الزبون: <b>'+fmt(work.price)+'</b> ج</div><div class="sample">ربحك: <b>'+fmt(work.price-work.fee)+'</b> ج</div></div>':'<span class="empty">—</span>')+'</div>';
    b.querySelector('#rcR').onchange=function(){RC.rod=this.value;draw()};
    b.querySelector('#rcK').onchange=function(){RC.kerf=this.value===''?0:num(this.value);draw()};
+   var rcP=b.querySelector('#rcPrep');if(rcP)rcP.onclick=function(){var L=[];
+    RC.rows.forEach(function(x){if(num(x.w)>0&&num(x.h)>0)L.push({name:'درفة '+(x.kind==='slide'?'جرار':'مفصلي'),qty:Math.max(1,num(x.q)||1),unit:'',dims:num(x.w)+' × '+num(x.h)+' سم — '+(HANDLES.find(function(h){return h[0]===x.handle})||['',''])[1]})});
+    pp.forEach(function(x,i){L.push({name:'عود «'+R.pProd+'» '+(i+1),qty:1,unit:'عود',dims:'قص: '+x.cuts.join(' + ')+' سم — يفضل '+Math.round(x.left)+' سم'})});
+    hp.forEach(function(x,i){L.push({name:'عود مقبض «'+R.hProd+'» '+(i+1),qty:1,unit:'عود',dims:'قص: '+x.cuts.join(' + ')+' سم — يفضل '+Math.round(x.left)+' سم'})});
+    window.mkPrepPrint&&mkPrepPrint({no:'حاسبة الأعواد',date:today(),src:R.n+' — على عود '+fmt(R.pLen/100)+' م',lines:L})};
    var rcI=b.querySelector('#rcInv');if(rcI)rcI.onclick=async function(){var need={};if(pp.length)need[R.pProd]=(need[R.pProd]||0)+pp.length;if(hp.length)need[R.hProd]=(need[R.hProd]||0)+hp.length;
     var miss=[],short=[];Object.keys(need).forEach(function(nm){var p=fProd(nm);if(!p)miss.push(nm);else if(num(p.qty)<need[nm])short.push('«'+nm+'»: محتاج '+need[nm]+' والمتاح '+fmt(num(p.qty)))});
     if(miss.length)return toast('⚠️ مش موجود في المخزون بالاسم ده: '+miss.join('، ')+' — عدّل الاسم من إعدادات أنظمة الشغل');
@@ -11059,5 +11067,37 @@ const _ov=openVoice;openVoice=function(){_ov.apply(this,arguments);let r=documen
 window.__voice={sim,findCmd:t=>{return CMD?findCmd(VN(t)):null}};
 })();
 </script>
+<script>
+/* ===== 🖨️ ورق التجهيز (#16): رقم الفاتورة والتاريخ + الأصناف والكميات والمقاسات + ملاحظات التصنيع + المراحل.
+   من غير أسعار ولا إجماليات ولا أرباح ولا اسم العميل. A4 بخط كبير. مابيغيّرش أي بيانات. ===== */
+(function(){
+function sheet(P){let L=P.lines||[];
+ let body=`<div style="font-size:15pt;line-height:1.7"><h1 style="font-size:24pt;margin:0 0 6px">📋 ورقة تجهيز${P.no?' — '+esc(P.no):''}</h1>
+ <div style="font-size:15pt;margin-bottom:10px">${P.date?'التاريخ: <b>'+esc(P.date)+'</b>':''}${P.src?' &nbsp;•&nbsp; '+esc(P.src):''}</div>
+ <table style="font-size:15pt"><thead><tr><th style="font-size:13pt;width:36px">#</th><th style="font-size:13pt">الصنف</th><th style="font-size:13pt;width:110px">الكمية</th><th style="font-size:13pt">المقاس / تفاصيل</th><th style="font-size:13pt;width:70px">✔</th></tr></thead><tbody>
+ ${L.map((x,i)=>`<tr><td style="font-size:14pt">${i+1}</td><td style="font-size:15pt"><b>${esc(x.name)}</b>${(x.sub||[]).length?'<div style="font-size:12pt;color:#444">'+x.sub.map(esc).join('<br>')+'</div>':''}</td><td style="font-size:16pt;font-weight:800">${esc(x.qty!=null?String(x.qty):'')} ${esc(x.unit||'')}</td><td style="font-size:14pt">${esc(x.dims||'')}</td><td><span class="box" style="width:36px;height:26px"></span></td></tr>`).join('')}</tbody></table>
+ ${P.notes?`<div style="border:2px solid #333;border-radius:8px;padding:10px;margin:10px 0;font-size:15pt"><b>ملاحظات التصنيع:</b><br>${esc(P.notes).replace(/\n/g,'<br>')}</div>`:''}
+ ${(P.stages||[]).length?`<div style="margin-top:10px;font-size:15pt"><b>المراحل:</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${P.stages.map((s,i)=>`<span style="border:2px solid #333;border-radius:8px;padding:4px 10px;${i===P.cur?'background:#ffe9a8;font-weight:800':''}">☐ ${esc(s)}</span>`).join('')}</div></div>`:''}
+ <div style="margin-top:22px;font-size:13pt">اسم اللي جهّز: ____________ &nbsp;&nbsp; التوقيع: ____________</div></div>`;
+ window.mkPrintA4('ورقة تجهيز '+(P.no||''),body)}
+window.mkPrepPrint=sheet;
+const dimOf=n=>{let m=String(n||'').match(/(\d+(?:[.,]\d+)?\s*[x×*]\s*\d+(?:[.,]\d+)?(?:\s*[x×*]\s*\d+(?:[.,]\d+)?)?)|(\d+(?:[.,]\d+)?\s*(?:سم|مم|م|متر)(?=\s|$))/);return m?m[0]:''};
+async function wkOf(note){let m=String(note||'').match(/WK-?\d+/i);if(!m)return null;try{let r=await window.mkSB.from('mk_settings').select('value').eq('key','wk_orders').maybeSingle(),O=(r.data&&r.data.value)||[],n=parseInt(m[0].replace(/\D/g,''),10);let o=O.find(o=>+o.no===n)||null;if(o){let c=await window.mkSB.from('mk_settings').select('value').eq('key','wk_cfg').maybeSingle(),S=((c.data&&c.data.value)||{}).stages||{};o.__st=S[o.type]||null}return o}catch(e){return null}}
+async function fromInv(kind,key){let G0=invGroup(kind,key),G=G0.filter(x=>!x.ship&&!(window.mkIntLine&&mkIntLine(x,G0)));if(!G.length)return toast('الفاتورة مش موجودة');
+ let F=window.mkKitFold?mkKitFold(G):G,r=G[0],o=await wkOf(r.note);
+ let lines=F.map(x=>({name:x.product,qty:x.qty,unit:x.kitRows?'طقم':((findP(x)||{}).unit||''),dims:dimOf(x.product),sub:x.kitRows?x.kitRows.map(k=>'• '+k.product+' × '+(+k.qty)):[]}));
+ if(o)lines.unshift({name:(o.type||'')+(o.kind==='slide'?' — جرار':o.kind==='hinge'?' — مفصلي':o.kind==='frame'?' — شاسيه':''),qty:o.qty||1,unit:'',dims:(+o.w&&+o.h?o.w+' × '+o.h+' سم':'')+(o.color?' — '+o.color:'')});
+ let note=String(r.note||'').replace(/\s*—\s*⚙️.*$/,'');
+ sheet({no:kind==='sale'?invNo(r):(r.pno||''),date:r.date,src:kind==='sale'?'فاتورة بيع':'فاتورة شراء',lines,notes:[note,o&&o.notes].filter(Boolean).join('\n'),stages:o&&o.__st||null,cur:o?Math.max(0,o.stage|0):-1})}
+window.mkPrepInv=fromInv;
+function btn(kind,key){return `<button type="button" class="secondary" style="width:100%;padding:12px;margin-top:8px" onclick="mkPrepInv('${kind}','${String(key).replace(/'/g,"\\'")}')">🖨️ طباعة ورق التجهيز (من غير أسعار)</button>`}
+const _oi=window.openInvoiceModal;window.openInvoiceModal=function(id){_oi.apply(this,arguments);try{let r=db.sales.find(x=>x.id===id);let o=document.getElementById('invOut');if(r&&o&&!document.getElementById('prepB')){o.insertAdjacentHTML('beforebegin','<div id="prepB">'+btn('sale',r.no||r.id)+'</div>')}}catch(e){}};
+const _op=window.openPurchaseView;window.openPurchaseView=function(id){_op.apply(this,arguments);try{let r=db.purchases.find(x=>x.id===id);let f=document.querySelector('#modal .modal-foot')||document.querySelector('#modal .card');if(r&&f&&!document.getElementById('prepB'))f.insertAdjacentHTML('beforebegin','<div id="prepB">'+btn('purchase',r.gid||r.id)+'</div>')}catch(e){}};
+/* اليومية: ورقة تجهيز ببيعات اليوم */
+window.mkPrepDay=function(){let D=window.mkDbDay&&mkDbDay();if(!D||!D.rows.length)return toast('مفيش بيعات في اليومية لليوم ده');
+ sheet({no:'يومية '+D.day,date:D.day,src:'يومية المحل',lines:D.rows.filter(x=>(x.kind||'sale')!=='return').map(x=>{let d=dimOf(x.name);return {name:x.name,qty:+x.qty,unit:((db.products||[]).find(p=>p.id===x.product_id)||{}).unit||'',dims:d+(x.note?(d?' — ':'')+x.note:'')}})})};
+})();
+</script>
+
 </body>
 </html>
