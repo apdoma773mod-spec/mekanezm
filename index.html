@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-16';
+const APP_VER='2026-10-22-17';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1795,7 +1795,7 @@ async function fetchIn(t,col,ids){ids=[...new Set(ids.filter(Boolean))];let out=
 const mapProduct=(p,cost)=>({id:p.id,co:p.co||'mk',code:p.code||'',barcode:p.barcode||'',name:p.name,cat:p.cat||'',unit:p.unit||'قطعة',qty:+p.qty||0,price:+p.price||0,min:+p.min||0,len:+p.len_m||0,cost:cost!=null?+cost:0});
 const companyJSON=()=>JSON.stringify({name:db.settings.companyName||'',phone:db.settings.phone||'',address:db.settings.address||'',ownerPhone:db.settings.ownerPhone||''});
 const mapContact=c=>({id:c.id,name:c.name,type:c.type,phone:c.phone||'',addr:c.addr||'',note:c.note||'',balance:+c.balance||0});
-const mapPay=p=>({id:p.id,co:p.co||'mk',cid:p.contact_id,name:p.name,date:p.date_txt||arDate(p.date),iso:isoOf(p.date),amount:+p.amount||0,note:p.note||''});
+const mapPay=p=>({id:p.id,co:p.co||'mk',cid:p.contact_id,name:p.name,date:p.date_txt||arDate(p.date),iso:isoOf(p.date),amount:+p.amount||0,note:p.note||'',at:p.created_at||''});
 const mapRet=r=>({id:r.id,co:r.co||'mk',date:r.date_txt||arDate(r.date),iso:isoOf(r.date),cost:r.cost!=null?+r.cost:undefined,type:r.type,product:r.product_name,pid:r.product_id,person:r.person||'',qty:+r.qty||0,total:+r.total||0,note:r.note||''});
 const mapExp=x=>({id:x.id,co:x.co||'mk',date:x.date_txt||arDate(x.date),iso:isoOf(x.date),note:x.note||'',cat:x.cat||'عام',amount:+x.amount||0});
 const mapQuote=q=>({id:q.id,no:q.no,date:q.date_txt||arDate(q.date),iso:isoOf(q.date),person:q.person||'',phone:q.phone||'',addr:q.addr||'',note:q.note||'',ship:+q.ship||0,items:q.items||[],total:+q.total||0,status:q.status||'open',invNo:q.inv_no||undefined,by:q.created_by_name||'',edited:stamp(q.edited_at)});
@@ -9033,12 +9033,33 @@ function paint(){
   debt=owed(),dbN=db.contacts.filter(c=>c.type==='عميل'&&(+c.balance||0)>0.5).length,
   T=(ic,l,v,go,col)=>`<button type="button" onclick="${go}" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px;border:1px solid var(--border,#e5e7ef);border-radius:14px;background:var(--card,#fff);text-align:right;min-height:84px;min-width:0;cursor:pointer;color:inherit;font:inherit"><span style="font-size:24px;line-height:1">${ic}</span><small style="color:var(--muted);font-size:11px">${l}</small><b style="font-size:14px;${col?'color:'+col:''}">${v}</b></button>`;
  let h=`<div class="card" style="margin-bottom:14px"><h3 style="margin:0 0 10px">📅 النهاردة${window.mkCoOn?' — '+CO_NAME[curCo()]:''}</h3><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">`+
-  T('💰','مبيعات النهاردة',money(tot),"showPage('sales')")+T('🧾','فواتير النهاردة',inv,"showPage('sales')")+
-  T('📥','اتحصّل النهاردة',money(coll),"showPage('cash')",'var(--green)')+T('📤','مصروفات النهاردة',money(exp),"showPage('cash')",exp?'var(--danger)':'')+
-  T('⚠️','أصناف قربت تخلص',low,"showPage('reorder')",low?'var(--danger)':'')+T('👥','فلوس عند العملاء',money(debt),"showPage('debts')")+
+  T('💰','مبيعات النهاردة',money(tot),"mkTodayDetail('sales')")+T('🧾','فواتير النهاردة',inv,"mkTodayDetail('inv')")+
+  T('📥','اتحصّل النهاردة',money(coll),"mkTodayDetail('coll')",'var(--green)')+T('📤','مصروفات النهاردة',money(exp),"mkTodayDetail('exp')",exp?'var(--danger)':'')+
+  T('⚠️','أصناف قربت تخلص',low,"mkTodayDetail('low')",low?'var(--danger)':'')+T('👥','فلوس عند العملاء',money(debt),"showPage('debts')")+
   (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"mkNewMsgs()",'var(--danger)'):'')+`</div></div>`;
  let el=document.getElementById('mkToday');if(!el){el=document.createElement('div');el.id='mkToday';let tr=host.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):host.prepend(el)}
  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+/* تفاصيل كل كارت: نفس الحسبة بالظبط، فمجموع التقرير = رقم الكارت */
+window.mkTodayDetail=function(kind){
+ let k=+isoToday().replace(/-/g,''),isT=r=>{try{return dKey(r)===k&&inCo(r)}catch(e){return false}},sg=db.sales.filter(isT);
+ let tm=v=>{try{return v?new Date(v).toLocaleTimeString('ar-EG',{hour:'numeric',minute:'2-digit'}):''}catch(e){return ''}};
+ let byInv=new Map();sg.forEach(r=>{let key=r.no||r.id;if(!byInv.has(key))byInv.set(key,[]);byInv.get(key).push(r)});
+ let G=[...byInv.values()],src=g=>/يومية/.test(String(g[0].note||''))?'<span class="badge" style="background:#ecfdf5;color:#047857">من اليومية</span>':'<span class="badge">فاتورة مباشرة</span>';
+ let row=(a,b,c,go)=>`<div ${go?`onclick="${go}" style="cursor:pointer;`:'style="'}display:flex;justify-content:space-between;gap:8px;padding:10px 4px;border-bottom:1px solid var(--border)"><div style="min-width:0">${a}</div><b style="white-space:nowrap">${c}</b></div>`;
+ let title='',list='',sum='';
+ if(kind==='sales'||kind==='inv'){let T=0;title=kind==='sales'?'💰 مبيعات النهاردة':'🧾 فواتير النهاردة';
+  list=G.map(g=>{let t=sumBy(g.filter(x=>kind==='inv'||!x.ship),x=>x.total);T+=t;let it=g.filter(x=>!x.ship);
+   return row(`<b>${esc(invNo(g[0]))}</b> ${src(g)}<br><small style="color:var(--muted)">${esc(g[0].person||'عميل نقدي')} • ${it.length} صنف${tm(g[0]._c)?' • '+tm(g[0]._c):''}</small>`,'',money(t),`openInvoiceModal('${g[0].id}')`)}).join('');
+  sum=kind==='sales'?`الإجمالي: <b>${money(T)}</b> (اليومية: ${money(sumBy(G.filter(g=>/يومية/.test(String(g[0].note||''))),g=>sumBy(g.filter(x=>!x.ship),x=>x.total)))})`:`عدد الفواتير: <b>${G.length}</b> — قيمتها ${money(T)}`}
+ else if(kind==='coll'){let P=(db.payments||[]).filter(isT),A=[];
+  G.forEach(g=>{let p=sumBy(g,paidOf);if(p>0.004)A.push({a:`<b>${esc(g[0].person||'عميل نقدي')}</b><br><small style="color:var(--muted)">مدفوع مع فاتورة ${esc(invNo(g[0]))}${tm(g[0]._c)?' • '+tm(g[0]._c):''}</small>`,v:p,t:g[0]._c||'',go:`openInvoiceModal('${g[0].id}')`})});
+  P.forEach(p=>A.push({a:`<b>${esc(p.name||'—')}</b><br><small style="color:var(--muted)">دفعة${p.note?' — '+esc(p.note):''}${tm(p.at)?' • '+tm(p.at):''}</small>`,v:+p.amount||0,t:p.at||''}));
+  A.sort((x,y)=>String(y.t).localeCompare(String(x.t)));title='📥 اتحصّل النهاردة';list=A.map(x=>row(x.a,'',money(x.v),x.go)).join('');sum=`الإجمالي: <b>${money(sumBy(A,x=>x.v))}</b>`}
+ else if(kind==='exp'){let E=(db.expenses||[]).filter(isT);title='📤 مصروفات النهاردة';list=E.map(x=>row(`<b>${esc(x.note||x.cat||'مصروف')}</b><br><small style="color:var(--muted)">${esc(x.cat||'')}</small>`,'',money(x.amount))).join('');sum=`الإجمالي: <b>${money(sumBy(E,x=>x.amount))}</b>`}
+ else if(kind==='low'){let L=prodsCo().filter(p=>p.qty<=p.min),sold=new Set(sg.map(r=>r.pid).filter(Boolean)),A=L.filter(p=>sold.has(p.id)),B=L.filter(p=>!sold.has(p.id));
+  let pr=p=>row(`<b>${esc(p.name)}</b><br><small style="color:var(--muted)">${p.code?'كود '+esc(p.code)+' • ':''}الحد ${p.min}</small>`,'',`باقي ${p.qty}`,`showPage('products')`);
+  title='⚠️ أصناف قربت تخلص';list=`<h4 style="margin:6px 0">اتباعت النهاردة وقربت تخلص (${A.length})</h4>`+(A.map(pr).join('')||'<div class="empty">مفيش</div>')+(B.length?`<details style="margin-top:10px"><summary style="cursor:pointer;font-weight:700">باقي الأصناف اللي قربت تخلص (${B.length})</summary>${B.map(pr).join('')}</details>`:'');sum=`العدد كله: <b>${L.length}</b> — منهم ${A.length} اتباعوا النهاردة`}
+ openModal(`<div class="modal-head"><h2>${title}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div><div class="card" style="background:var(--tint2);border:0;font-size:16px">${sum}</div><div style="margin-top:8px">${list||'<div class="empty">مفيش حاجة النهاردة</div>'}</div>`)};
 let o=window.renderDashboard;if(typeof o==='function')window.renderDashboard=function(){o.apply(this,arguments);try{paint();pull()}catch(e){}};
 })();
 </script>
