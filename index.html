@@ -1356,7 +1356,7 @@ function openContactFile(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;l
  <h3 style="margin:16px 0 8px">الفواتير</h3>
  <div class="table-wrap"><table class="table" style="min-width:480px"><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>${D.groups.length?D.groups.map(G=>{let r=G[0],rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="${isC?'openInvoiceModal':'openPurchaseView'}('${r.id}')"><td><b>${esc(isC?invNo(r):(r.pno||'—'))}</b></td><td>${esc(r.date)}</td><td>${money(sumBy(G,x=>x.total))}</td><td>${money(sumBy(G,paidOf))}</td><td style="color:${rem>0?'var(--danger)':'inherit'}">${money(rem)}</td></tr>`}).join(''):'<tr><td colspan="5"><div class="empty">لا توجد فواتير.</div></td></tr>'}</tbody></table></div>
  <h3 style="margin:16px 0 8px">${isC?'الدفعات المستلمة':'الدفعات المسددة'}</h3>
- <div class="table-wrap"><table class="table" style="min-width:320px"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظة</th></tr></thead><tbody>${D.pays.length?D.pays.map(x=>`<tr><td>${esc(x.date)}</td><td>${money(x.amount)}</td><td>${esc(x.note||'—')}</td></tr>`).join(''):'<tr><td colspan="3"><div class="empty">لا توجد دفعات.</div></td></tr>'}</tbody></table></div>
+ <div class="table-wrap"><table class="table" style="min-width:320px"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظة</th>${typeof window.mkCancelPay==='function'?'<th></th>':''}</tr></thead><tbody>${D.pays.length?D.pays.map(x=>`<tr><td>${esc(x.date)}</td><td>${money(x.amount)}</td><td>${esc(x.note||'—')}</td>${typeof window.mkCancelPay==='function'?`<td><button type="button" class="secondary danger" onclick="mkCancelPay('${x.id}','${id}')">إلغاء</button></td>`:''}</tr>`).join(''):'<tr><td colspan="4"><div class="empty">لا توجد دفعات.</div></td></tr>'}</tbody></table></div>
  ${D.rets.length?`<h3 style="margin:16px 0 8px">المرتجعات</h3><div class="table-wrap"><table class="table" style="min-width:320px"><thead><tr><th>التاريخ</th><th>الصنف</th><th>الكمية</th><th>الإجمالي</th></tr></thead><tbody>${D.rets.map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.product)}</td><td>${x.qty}</td><td>${money(x.total)}</td></tr>`).join('')}</tbody></table></div>`:''}`)}
 function editContact(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;let note=c.addr!=null?c.note||'':'';
  openModal(`<div class="modal-head"><h2>تعديل بيانات ${esc(c.name)}</h2><button class="close" onclick="openContactFile('${id}')"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -1693,7 +1693,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-6';
+const APP_VER='2026-10-22-7';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1954,6 +1954,16 @@ cancelInv=async function(kind,key){let isSale=kind==='sale',G=invGroup(kind,key)
 const _payRecent=new Map();
 window.mkPayDup=function(id,a){let t=_payRecent.get(id+'|'+r2(a));return !!t&&Date.now()-t<120000};
 window.mkPayMark=function(id,a){_payRecent.set(id+'|'+r2(a),Date.now())};
+/* #11 إلغاء دفعة نهائي: الرصيد والخزنة يرجعوا، والسجل المخفي بس يفضل. مقفول لحد ما sql/60-cancel-payment.sql يتطبق */
+const MK_CANCEL_PAY_ON=false;let _cpBusy=false;
+if(MK_CANCEL_PAY_ON)window.mkCancelPay=async function(pid,cid){if(_cpBusy)return;
+ let p=db.payments.concat(db.supPays||[]).find(x=>x.id===pid);if(!p)return toast('الدفعة مش موجودة');
+ if(!await ask('متأكد؟ دفعة '+money(p.amount)+' ('+(p.name||'')+') هتتمسح نهائي، والرصيد والخزنة هيرجعوا زي ما كانوا.','أيوه، الغيها','لا'))return openContactFile(cid);
+ _cpBusy=true;toast('جاري الإلغاء…');
+ try{await rpc('mk_cancel_payment',{p_id:pid});db.payments=db.payments.filter(x=>x.id!==pid);db.supPays=(db.supPays||[]).filter(x=>x.id!==pid);
+  await Promise.all([refreshContacts([cid]),refreshTable('mk_payments')]);donePay();toast('اتلغت الدفعة');openContactFile(cid)}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تلغي الدفعة':errMsg(e));openContactFile(cid)}
+ finally{_cpBusy=false}};
 submitPayment=async function(ev,id){ev.preventDefault();let f=ev.target,a=+payAmt.value;if(!(a>0))return toast('اكتب المبلغ');
  busy(f,'جاري الحفظ…');
  if(mkPayDup(id,a)&&!await ask('نفس الدفعة ('+money(a)+') اتسجلت لنفس العميل من أقل من دقيقتين. تسجلها تاني؟','سجّلها تاني','لا'))return openPayment(id);
@@ -5299,7 +5309,7 @@ const VIEWS={
   <div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzStock" checked style="width:auto" onchange="mkBZ.catCount()"> المتوفر بس</label></div><div class="field"><label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" id="bzImg" ${APPV?'':'checked'} style="width:auto" onchange="mkBZ.catCount()"> اللي ليه صورة بس</label></div></div>
   <div id="bzCnt" class="bz-note" style="background:#e3f4f5;border-radius:10px;padding:8px 12px;color:#0b4e57"></div>
   <div class="modal-foot" style="justify-content:flex-start"><button class="primary" onclick="mkBZ.catalog()">📖 اعمل الكتالوج</button></div>`},
- async log(){let L=[],S=[];try{const [a,b]=await Promise.all([SBc().from('mk_log').select('*').order('at',{ascending:false}).limit(150),SBc().from('mk_stock_moves').select('*').order('at',{ascending:false}).limit(150)]);L=a.data||[];S=b.data||[]}catch(e){}
+ async log(){let L=[],S=[];try{const [a,b]=await Promise.all([SBc().from('mk_log').select('*').order('at',{ascending:false}).limit(150),SBc().from('mk_stock_moves').select('*').order('at',{ascending:false}).limit(150)]);L=(a.data||[]).filter(x=>x.action!=='payment.cancel');S=b.data||[]}catch(e){}
   const rows=[...L.map(x=>({t:x.at,who:x.user_name,what:x.action+(x.ref?' — '+x.ref:'')})),...S.map(x=>({t:x.at,who:x.by_name,what:`📦 ${x.product_name}: ${N(x.qty_before)} ← ${N(x.qty_after)} (${x.diff>0?'+':''}${N(x.diff)})${x.note?' · '+x.note:''}`}))].sort((a,b)=>String(b.t).localeCompare(String(a.t))).slice(0,200);
   return `<p class="bz-note">مين عمل إيه وإمتى — تعديلات الأرصدة، الجرد، الهدايا، الدرجة التانية، وكل العمليات اللي السيرفر سجلها.</p>
   ${rows.length?rows.map(r=>`<div style="border-bottom:1px solid var(--border,#eee);padding:7px 0;font-size:13px;line-height:1.7"><b>${H(r.who||'—')}</b> · ${H(r.what)}<br><small style="color:#7b8a90">${new Date(r.t).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})}</small></div>`).join(''):'<div class="empty">مفيش سجل.</div>'}`}};
