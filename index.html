@@ -1720,7 +1720,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-9';
+const APP_VER='2026-10-22-10';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6596,9 +6596,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  window.mkPrepToInvoice=prepToInvoice;
  /* ---------- 🔥 عود الفرفورجيه: بيع بالمتر (تكلفة وسعر وربح أي طول) + عجل/إكسسوار + «طقم جرار وهيسيب قضيبه» + خط سير الدفعات (اشتريناه ← الفرن ← رجع ← دخل المخزن بفاتورة شراء) ---------- */
  var FST=['🛒 اشتريناه','🔥 عند الفرن','✅ رجع متشطّب','📦 دخل المخزن'];
- var FC={rod:'',L:'',lines:[{t:'rod',m:'',n:1,pr:''}]};
- var FLEN=[1,1.5,2,2.5,3,4,5,6];
- var FTY=[['rod','✂️ قطعة عود بالمتر'],['kit','🧩 طقم كامل (طقم من غير قضيب + قضيب)'],['set','📦 طقم من غير قضيب'],['item','🚪 دلفة / صنف تاني']];
+ var FC={rod:'',L:'',lines:[{t:'swap',set:'',m:'',n:1,pr:'',back:'',bv:''}]};
+ var FLEN=[2,2.5,3,3.6,4,4.6,5,6];
+ /* swap = طقم كامل من المخزون، الزبون ساب قضيبه وخد قضيب مقصوص من العود. القضيب اللي اتساب بيرجع المخزن (قيمته صفر إلا لو اتكتبت) */
+ var FTY=[['swap','🔁 طقم كامل والزبون بدّل قضيبه'],['rod','✂️ قطعة عود بالمتر لوحدها'],['item','📦 صنف زي ما هو (طقم كامل / دلفة / غيره)']];
  function fIsM(p){return !!p&&(/متر/.test(p.unit||'')||/بالمتر/.test(p.name||''))}
  function fProd(nm){nm=String(nm||'').trim();return nm?(db.products||[]).find(function(p){return String(p.name).trim()===nm}):null}
  async function viewForf(){
@@ -6608,14 +6609,16 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var r2=function(x){return Math.round(x*100)/100},r6=function(x){return Math.round(x*1e6)/1e6};
   /* العود: الطول من بيانات الصنف (len)، وتكلفة المتر = تكلفة العود ÷ طوله — مابتتكتبش بإيد */
   function rodInfo(){var p=fProd(FC.rod),isM=fIsM(p),pl=p&&+p.len>0?+p.len:0,L=isM?1:(pl||num(FC.L)||0);
-   return {p:p,isM:isM,pl:pl,L:L,cm:p&&L>0?num(p.cost)/L:0,avM:p?num(p.qty)*L:0}}
+   return {p:p,isM:isM,pl:pl,L:L,cm:p&&L>0?num(p.cost)/L:0,pm:p&&L>0?num(p.price)/L:0,avM:p?num(p.qty)*L:0}}
   function split(qty,L){var full=Math.floor(qty+1e-6),left=r2((qty-full)*L);if(left<0.005)left=0;return {full:full,left:left}}
   function calcF(){var R=rodInfo(),out=[],cost=0,tot=0,need={},err=[];
    FC.lines.forEach(function(x,i){var n=Math.max(1,num(x.n)||1),pr=num(x.pr),c=0,o={i:i,t:x.t,n:n,pr:pr};
-    if(x.t==='rod'||x.t==='kit'){var m=num(x.m);if(!(m>0))return;if(!R.p){err.push('اختار العود من المخزون');return}if(!(R.L>0)){err.push('اكتب طول العود');return}
+    if(x.t==='rod'||x.t==='swap'){var m=num(x.m);if(!(m>0))return;if(!R.p){err.push('اختار العود من المخزون');return}if(!(R.L>0)){err.push('اكتب طول العود');return}
      var rq=R.isM?m:m/R.L;need[R.p.id]=(need[R.p.id]||0)+rq*n;
-     if(x.t==='rod'){o.lab=String(R.p.name).trim()+' — '+m+' م';o.comps=[{id:R.p.id,q:r6(rq)}];c=R.cm*m}
-     else{var sp=fProd(x.set);if(!sp){err.push('اختار «الطقم من غير قضيب» من المخزون');return}need[sp.id]=(need[sp.id]||0)+n;o.lab=String(sp.name).trim()+' + قضيب '+m+' م';o.comps=[{id:sp.id,q:1},{id:R.p.id,q:r6(rq)}];o.m=m;o.sp=sp;c=num(sp.cost)+R.cm*m}}
+     if(x.t==='rod'){o.lab=String(R.p.name).trim()+' — '+m+' م';o.comps=[{id:R.p.id,q:r6(rq)}];c=R.cm*m;o.sug=R.pm*m}
+     else{var sp=fProd(x.set);if(!sp){err.push('اختار الطقم من المخزون');return}need[sp.id]=(need[sp.id]||0)+n;var bv=num(x.bv);
+      o.lab=String(sp.name).trim()+' — بقضيب '+m+' م بدل قضيبه';o.comps=[{id:sp.id,q:1},{id:R.p.id,q:r6(rq)}];o.m=m;o.sp=sp;o.bv=bv;c=num(sp.cost)-bv+R.cm*m;o.sug=num(sp.price)+R.pm*m;
+      o.back={name:(x.back||'').trim()||'قضيب راجع من: '+String(sp.name).trim(),q:n,bv:bv}}}
     else{var ip=fProd(x.set);if(!ip)return;need[ip.id]=(need[ip.id]||0)+n;o.lab=String(ip.name).trim();o.pid=ip.id;o.name=ip.name;o.comps=[{id:ip.id,q:1}];c=num(ip.cost)}
     o.cost=r2(c*n);o.tot=r2(pr*n);cost+=c*n;tot+=pr*n;out.push(o)});
    var short=[];Object.keys(need).forEach(function(id){var p=(db.products||[]).find(function(z){return z.id===id});if(!p||need[id]<=num(p.qty)+1e-6)return;
@@ -6623,20 +6626,29 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    return {R:R,lines:out,cost:r2(cost),tot:r2(tot),need:need,short:short,err:err}}
   function lineHtml(x,i,C){var o=C.lines.find(function(z){return z.i===i}),ip=fProd(x.set);
    var f='<div class="sample" style="margin-top:8px;border:1px solid var(--border)"><div class="wkg" style="align-items:end"><div class="wkf" style="grid-column:1/-1"><label>نوع الصنف</label><select data-fl="t" data-i="'+i+'">'+FTY.map(function(t){return '<option value="'+t[0]+'"'+(x.t===t[0]?' selected':'')+'>'+t[1]+'</option>'}).join('')+'</select></div>';
-   if(x.t!=='rod')f+='<div class="wkf" style="grid-column:1/-1"><label>'+(x.t==='item'?'الصنف (دلفة / عجل / غيره)':'الطقم من غير قضيب (من المخزون)')+'</label><input data-fl="set" data-i="'+i+'" list="fcAll" value="'+esc(x.set||'')+'" placeholder="🔎 دوّر في المخزون"></div>';
-   if(x.t==='rod'||x.t==='kit')f+='<div class="wkf" style="grid-column:1/-1"><label>'+(x.t==='kit'?'طول القضيب (متر) — اختار أو اكتب':'الطول اللي الزبون عايزه (متر)')+'</label><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">'+FLEN.map(function(v){return '<button type="button" class="wkbtn'+(num(x.m)===v?' p':'')+'" data-fm="'+v+'" data-i="'+i+'" style="min-width:52px">'+v+' م</button>'}).join('')+'</div><input data-fl="m" data-i="'+i+'" value="'+esc(x.m)+'" inputmode="decimal" placeholder="طول تاني"></div>';
-   f+=fiL('n',i,'العدد',x.n||1,'inputmode="numeric"')+fiL('pr',i,'سعر البيع للواحد (ج)',x.pr,'inputmode="decimal" placeholder="'+(ip&&num(ip.price)?'سعره '+fmt(num(ip.price)):'اكتب السعر')+'"')+'</div>';
-   f+='<div style="font-size:13px;margin-top:6px;line-height:1.8">'+(o?'تكلفة الواحد <b>'+fmt(r2(o.cost/o.n))+'</b> ج'+(x.t==='kit'?' (الطقم '+fmt(num(o.sp.cost))+' + القضيب '+fmt(r2(C.R.cm*o.m))+')':'')+(o.pr?' — ربح الواحد <b>'+fmt(r2(o.pr-o.cost/o.n))+'</b> ج':''):'<span style="color:var(--muted)">كمّل البيانات</span>')+'</div>';
+   if(x.t!=='rod')f+='<div class="wkf" style="grid-column:1/-1"><label>'+(x.t==='item'?'الصنف من المخزون':'الطقم الكامل من المخزون (أي طقم)')+'</label><input data-fl="set" data-i="'+i+'" list="fcAll" value="'+esc(x.set||'')+'" placeholder="🔎 دوّر في المخزون"></div>';
+   if(x.t==='rod'||x.t==='swap')f+='<div class="wkf" style="grid-column:1/-1"><label>'+(x.t==='swap'?'طول القضيب الجديد من العود (متر) — اختار أو اكتب':'الطول اللي الزبون عايزه (متر)')+'</label><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">'+FLEN.map(function(v){return '<button type="button" class="wkbtn'+(num(x.m)===v?' p':'')+'" data-fm="'+v+'" data-i="'+i+'" style="min-width:52px">'+v+' م</button>'}).join('')+'</div><input data-fl="m" data-i="'+i+'" value="'+esc(x.m)+'" inputmode="decimal" placeholder="طول تاني"></div>';
+   var sug=o&&o.sug>0?r2(o.sug):(ip&&num(ip.price)?num(ip.price):0);
+   f+=fiL('n',i,'العدد',x.n||1,'inputmode="numeric"')+fiL('pr',i,'سعر البيع للواحد (ج)',x.pr,'inputmode="decimal" placeholder="'+(sug?'مقترح '+fmt(sug):'اكتب السعر')+'"')+'</div>';
+   if(x.t==='swap')f+='<details style="margin-top:6px"'+(x.back||num(x.bv)?' open':'')+'><summary style="cursor:pointer;font-size:13px;font-weight:700">↩️ القضيب اللي الزبون ساب: بيرجع المخزن'+(ip?' باسم «'+esc((x.back||'').trim()||'قضيب راجع من: '+String(ip.name).trim())+'»':'')+' بقيمة '+fmt(num(x.bv))+' ج</summary><div class="wkg" style="margin-top:6px">'+fiL('back',i,'اسمه في المخزن (اختياري)',x.back||'','list="fcAll" placeholder="قضيب راجع من: اسم الطقم"')+fiL('bv',i,'قيمته (ج) — سيبها صفر',x.bv||'','inputmode="decimal" placeholder="0"')+'</div></details>';
+   f+='<div style="font-size:13px;margin-top:6px;line-height:1.8">'+(o?'تكلفة الواحد <b>'+fmt(r2(o.cost/o.n))+'</b> ج'+(x.t==='swap'?' (الطقم '+fmt(num(o.sp.cost))+(o.bv?' − القضيب اللي رجع '+fmt(o.bv):'')+' + القضيب الجديد '+o.m+' م '+fmt(r2(C.R.cm*o.m))+')':'')+(o.pr?' — ربح الواحد <b>'+fmt(r2(o.pr-o.cost/o.n))+'</b> ج':''):'<span style="color:var(--muted)">كمّل البيانات</span>')+'</div>';
    return f+'<div class="wkrow" style="margin-top:6px"><button type="button" class="wkbtn d" data-fld="'+i+'">حذف السطر</button></div></div>'}
+  /* بعد حفظ الفاتورة: القضبان اللي الزبون سابها تدخل المخزن (الصنف بيتعمل لو مش موجود، بتكلفة = القيمة اللي اتكتبت أو صفر) */
+  function backAfter(B){if(!B.length)return null;return async function(){var api=window.mkT&&window.mkT.api;if(!api)return;var g={};B.forEach(function(x){(g[x.name]=g[x.name]||{name:x.name,q:0,bv:x.bv}).q+=x.q});
+   for(var k in g){var x=g[k],p=fProd(x.name);
+    if(!p){p={id:crypto.randomUUID(),code:typeof nextCode==='function'?nextCode():'',name:x.name,cat:'قضبان راجعة',unit:'قطعة',qty:0,price:0,cost:num(x.bv),min:0,barcode:''};if(window.mkCoOn&&typeof curCo==='function')p.co=curCo();db.products.push(p);try{typeof codeNote==='function'&&codeNote(p)}catch(e){}window.save&&window.save()}
+    await api.syncNow();await api.refreshProducts([p.id]);var p2=(db.products||[]).find(function(z){return z.id===p.id})||p;
+    await api.rpc('mk_adjust_stock',{p_id:p2.id,p_qty:r6(num(p2.qty)+x.q),p_note:'قضيب سابه الزبون من طقم (بيعة فرفورجيه)'});await api.refreshProducts([p2.id])}
+   api.done&&api.done();toast('✔ القضيب اللي اتساب دخل المخزن')}}
   function fiL(k,i,label,val,extra){return '<div class="wkf"><label>'+label+'</label><input data-fl="'+k+'" data-i="'+i+'" value="'+esc(val)+'" '+(extra||'')+'></div>'}
   function draw(){
    var live=FO.filter(function(x){return x.stage<3}),done=FO.filter(function(x){return x.stage>=3}),C=calcF(),R=C.R;
-   var rods=(db.products||[]).filter(function(p){return /فرفور|فورفور|فورج|فرفج/.test((p.name||'')+' '+(p.cat||''))});
+   var isF=function(p){return /فرفور|فورفور|فورج|فرفج/.test((p.name||'')+' '+(p.cat||''))},rods=(db.products||[]).filter(isF).concat((db.products||[]).filter(function(p){return !isF(p)&&/عود|قضيب|عرد/.test(p.name||'')}));
    var allDL='<datalist id="fcAll">'+(db.products||[]).slice(0,3000).map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist>';
    var st='';if(R.p&&R.L>0){var s0=split(num(R.p.qty),R.L);st='الرصيد: <b>'+fmt(r2(R.avM))+'</b> م'+(R.isM?'':' = '+[s0.full?'<b>'+s0.full+'</b> عود كامل':'',s0.left?'باقي عود <b>'+fmt(s0.left)+'</b> م':''].filter(Boolean).join(' + '))+'<br>'+(R.isM?'تكلفة المتر <b>'+fmt(r2(R.cm))+'</b> ج':'العود '+fmt(R.L)+' م بتكلفة '+fmt(num(R.p.cost))+' ج ← تكلفة المتر <b>'+fmt(r2(R.cm))+'</b> ج (أوتوماتيك)');
     var used=C.need[R.p.id]||0;if(used>0){var aq=r6(num(R.p.qty)-used),s1=split(aq,R.L);st+='<br>بعد البيع يفضل: <b>'+fmt(r2(aq*R.L)||0)+'</b> م'+(R.isM||!(aq>0)?'':' = '+([s1.full?s1.full+' عود كامل':'',s1.left?'باقي عود <b>'+fmt(s1.left)+'</b> م':''].filter(Boolean).join(' + ')||'0'))}}
    b.innerHTML='<div class="wkc"><h3>✂️ بيع فرفورجيه من المخزون</h3><div class="wkg">'+
-     '<div class="wkf" style="grid-column:1/-1"><label>العود من المخزون</label><input id="fcP" list="fcL" value="'+esc(FC.rod)+'" placeholder="🔎 عود فرفورجيه"><datalist id="fcL">'+rods.map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist></div>'+
+     '<div class="wkf" style="grid-column:1/-1"><label>العود اللي بتقص منه (من المخزون — أي عود)</label><input id="fcP" list="fcL" value="'+esc(FC.rod)+'" placeholder="🔎 عود فرفورجيه 6 م"><datalist id="fcL">'+rods.map(function(p){return '<option value="'+esc(String(p.name).trim())+'">'}).join('')+'</datalist></div>'+
      (R.p&&!R.isM&&!R.pl?'<div class="wkf" style="grid-column:1/-1"><label>⚠️ طول العود مش متسجل في بيانات الصنف — اكتبه (متر)</label><div style="display:flex;gap:6px"><input id="fcT" value="'+esc(FC.L)+'" inputmode="decimal" placeholder="6" style="flex:1;min-width:0">'+(window.mkLenOn?'<button type="button" class="wkbtn p" id="fcTs" style="flex:none">💾 احفظه في الصنف</button>':'')+'</div></div>':'')+'</div>'+
      '<div class="sample" style="margin-top:8px;line-height:1.9">'+(R.p?(R.L>0?st:'اكتب طول العود عشان أحسب تكلفة المتر'):(rods.length?'اختار العود':'⚠️ مفيش عود فرفورجيه في المخزون لسه — سجّل دفعة تحت ولما توصل «دخل المخزن» هتتسجل'))+'</div>'+
      FC.lines.map(function(x,i){return lineHtml(x,i,C)}).join('')+
@@ -6644,7 +6656,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#e8f7ee;border:2px solid #7bcf9a">'+(C.lines.length?C.lines.map(function(l){return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(l.lab)+(l.n>1?' × '+l.n:'')+'</span><b>'+fmt(l.tot)+'</b></div>'}).join('')+'<div style="border-top:1px dashed #7bcf9a;margin-top:6px;padding-top:6px;font-size:20px;font-weight:900;display:flex;justify-content:space-between"><span>الإجمالي</span><span>'+fmt(C.tot)+' ج</span></div><div style="font-size:13px">مجموع التكاليف '+fmt(C.cost)+' ج — ربحك <b>'+fmt(r2(C.tot-C.cost))+'</b> ج</div>':'<span style="color:var(--muted)">اختار العود وضيف الأصناف</span>')+'</div>'+
      (C.short.length?'<div style="margin-top:8px;padding:10px;border-radius:10px;background:#fdecec;color:#b33;font-weight:700">⛔ ناقص في المخزون:<br>'+C.short.map(esc).join('<br>')+'</div>':'')+
      '<button type="button" class="wkbtn p" id="fcGo" style="margin-top:10px;width:100%;min-height:52px;font-size:17px">🧾 افتح الفاتورة</button>'+
-     (C.lines.some(function(l){return l.t==='kit'})||C.lines.length>1?'<button type="button" class="wkbtn" id="fcKit" style="margin-top:8px;width:100%">💾 احفظ الأصناف دي كطقم واحد (كود + باركود)</button>':'')+allDL+'</div>'+
+     (!C.lines.some(function(l){return l.t==='swap'})&&C.lines.length>1?'<button type="button" class="wkbtn" id="fcKit" style="margin-top:8px;width:100%">💾 احفظ الأصناف دي كطقم واحد (كود + باركود)</button>':'')+allDL+'</div>'+
     '<div class="wkc"><h3>➕ دفعة جديدة (حديد بيور من المورد)</h3><div class="wkg">'+fi('foS','اشتريناه من','السبتية')+fi('foN','عدد الأعواد','','inputmode="numeric"')+fi('foL','طول العود (متر)',6,'inputmode="decimal"')+fi('foC','سعر العود الحديد (ج)','','inputmode="decimal"')+fi('foO','الفرن (اختياري)','','')+'</div><button type="button" class="wkbtn p" id="foAdd" style="margin-top:10px">حفظ الدفعة</button></div>'+
     '<div class="wkc"><h3>🚚 في الطريق ('+live.length+')</h3>'+(live.map(card).join('')||'<span class="empty">مفيش دفعات شغالة</span>')+'</div>'+
     (done.length?'<div class="wkc"><h3>📦 اتسجلت في المخزن ('+done.length+')</h3>'+done.slice(0,20).map(card).join('')+'</div>':'');
@@ -6655,18 +6667,19 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(Q('fcT'))Q('fcT').addEventListener('input',deb(function(){FC.L=Q('fcT').value;re()}));
    if(Q('fcTs'))Q('fcTs').onclick=async function(){var L=num(Q('fcT').value),p=rodInfo().p;if(!(L>0))return toast('اكتب طول العود');if(!p)return;
     this.disabled=true;this.textContent='جاري الحفظ...';p.len=L;try{window.save&&window.save();var api=window.mkT&&window.mkT.api;if(api)await api.syncNow();toast('✔ الطول اتحفظ في بيانات الصنف: '+L+' م')}catch(e){errAlert(e)}draw()};
-   b.querySelectorAll('[data-fl]').forEach(function(x){var k=x.dataset.fl;x.addEventListener(k==='t'||k==='set'?'change':'input',(k==='t'||k==='set'?function(f){return f}:deb)(function(){var it=FC.lines[+x.dataset.i];if(!it)return;it[k]=x.value.trim();if(k==='t'&&it.t==='rod')it.set='';re()}))});
+   b.querySelectorAll('[data-fl]').forEach(function(x){var k=x.dataset.fl;x.addEventListener(k==='t'||k==='set'||k==='back'?'change':'input',(k==='t'||k==='set'||k==='back'?function(f){return f}:deb)(function(){var it=FC.lines[+x.dataset.i];if(!it)return;it[k]=x.value.trim();if(k==='t'&&it.t==='rod')it.set='';re()}))});
    b.querySelectorAll('[data-fm]').forEach(function(x){x.onclick=function(){var it=FC.lines[+x.dataset.i];if(it){it.m=x.dataset.fm;draw()}}});
-   b.querySelectorAll('[data-fld]').forEach(function(x){x.onclick=function(){FC.lines.splice(+x.dataset.fld,1);if(!FC.lines.length)FC.lines.push({t:'rod',m:'',n:1,pr:''});draw()}});
-   b.querySelectorAll('[data-fla]').forEach(function(x){x.onclick=function(){FC.lines.push({t:x.dataset.fla,m:'',n:1,pr:'',set:''});draw();var L=b.querySelectorAll('[data-fl="'+(x.dataset.fla==='rod'?'m':'set')+'"]');if(L.length)L[L.length-1].focus()}});
+   b.querySelectorAll('[data-fld]').forEach(function(x){x.onclick=function(){FC.lines.splice(+x.dataset.fld,1);if(!FC.lines.length)FC.lines.push({t:'swap',set:'',m:'',n:1,pr:'',back:'',bv:''});draw()}});
+   b.querySelectorAll('[data-fla]').forEach(function(x){x.onclick=function(){FC.lines.push({t:x.dataset.fla,m:'',n:1,pr:'',set:'',back:'',bv:''});draw();var L=b.querySelectorAll('[data-fl="'+(x.dataset.fla==='rod'?'m':'set')+'"]');if(L.length)L[L.length-1].focus()}});
    Q('fcGo').onclick=function(){var C2=calcF();if(C2.err.length)return toast(C2.err[0]);if(!C2.lines.length)return toast(C2.R.p?'ضيف صنف واكتب الطول':'اختار العود من المخزون');
     var np=C2.lines.find(function(l){return !(l.pr>0)});if(np)return toast('اكتب سعر البيع لـ «'+np.lab+'»');
     if(C2.short.length)return toast('⛔ ناقص في المخزون: '+C2.short[0]);
     var note='فرفورجيه: '+C2.lines.map(function(l){return l.lab+(l.n>1?' × '+l.n:'')}).join(' + ');
     close();
     prepToInvoice({customer:'',phone:'',note:note,
-     lines:C2.lines.filter(function(l){return !(l.t==='rod'||l.t==='kit')}).map(function(l){return {name:l.name,pid:l.pid,qty:l.n,price:l.pr}}),
-     kits:C2.lines.filter(function(l){return l.t==='rod'||l.t==='kit'}).map(function(l){return {name:l.lab,n:l.n,price:l.pr,comps:l.comps}})})};
+     lines:C2.lines.filter(function(l){return l.t==='item'}).map(function(l){return {name:l.name,pid:l.pid,qty:l.n,price:l.pr}}),
+     kits:C2.lines.filter(function(l){return l.t==='rod'||l.t==='swap'}).map(function(l){return {name:l.lab,n:l.n,price:l.pr,comps:l.comps}}),
+     after:backAfter(C2.lines.filter(function(l){return l.back}).map(function(l){return l.back}))})};
    if(Q('fcKit'))Q('fcKit').onclick=async function(){var C2=calcF();if(C2.err.length)return toast(C2.err[0]);if(!C2.lines.length)return toast('ضيف أصناف الأول');
     if(!window.mkKT||!mkKT.addKit)return toast('شاشة الأطقم لسه بتحمّل — جرّب كمان شوية');
     var nm=prompt('اسم الطقم',C2.lines.length===1?C2.lines[0].lab:C2.lines.map(function(l){return l.lab}).join(' + '));if(!nm)return;
