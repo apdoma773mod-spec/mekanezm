@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-25';
+const APP_VER='2026-10-22-26';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6804,9 +6804,13 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function rates(){var r=Object.assign({hF:70,sF:100,hP:100,sP:150},CFG.rates||{});return r}
  function workCalc(o){var q=Math.max(1,num(o.qty)||1),r=rates(),sl=o.kind==='slide';return {q:q,fee:sl?r.sF:r.hF,price:sl?r.sP:r.hP,feeT:q*(sl?r.sF:r.hF),priceT:q*(sl?r.sP:r.hP),sl:sl}}
  /* 🏷️ ليبل للفضلات اللي طلعت من الشغل (بتاعة الزبون) */
- function offLeft(o){var r=rodCalc(o);if(!r)return [];var L=[];[[r.pp,'عادي'],[r.hp,'بمقبض']].forEach(function(z){z[0].forEach(function(bx){var lf=Math.round(bx.left);if(lf>=10)L.push({len:lf,t:z[1]})})});return L}
- function printLeftLabels(o){var L=offLeft(o);if(!L.length)return toast('مفيش فضلات تستاهل ليبل');
-  var pg=L.map(function(x){return '<div class="lb"><b>'+esc(o.customer||'')+'</b><br>فضلة '+esc(x.t)+' — <b style="font-size:13px">'+x.len+' سم</b><br>'+esc(ordNo(o))+(o.color?' — '+esc(o.color):'')+'<br><svg class="bc" data-v="'+esc(ordNo(o))+'"></svg></div>'}).join('');
+ function offLeft(o){var r=rodCalc(o);if(!r)return [];var L=[];[[r.pp,'عادي',r.T.pProd,r.T.pLen],[r.hp,'بمقبض',r.T.hProd,r.T.hLen]].forEach(function(z){z[0].forEach(function(bx){var lf=Math.round(bx.left);if(lf>=10)L.push({len:lf,t:z[1],item:z[2],orig:z[3]})})});return L}
+ async function printLeftLabels(o){var L=offLeft(o);if(!L.length)return toast('مفيش فضلات تستاهل ليبل');
+  /* كل فضلة بتتسجّل بكودها (FD-) وصاحبها والأوردر اللي طلعت منه — عشان مسح ليبلها يفتح بياناتها هي مش الأوردر. نفس الأوردر لو اتطبع تاني بياخد نفس الأكواد */
+  try{var O=await get('wk_offcuts',[]);CFG.offNext=CFG.offNext||1;var mine=O.filter(function(z){return z.orderId===o.id}),isNew=false;
+   L.forEach(function(x,i){var rec=mine[i];if(!rec){rec={id:uid(),code:offCode(CFG.offNext++),item:x.item,color:o.color||'',len:x.len,orig:x.orig,place:'',status:'بتاعة الزبون',date:today(),owner:o.customer||'',crafter:o.crafter||'',order:ordNo(o),orderId:o.id};O.push(rec);mine.push(rec);isNew=true}x.code=rec.code});
+   if(isNew){await put('wk_offcuts',O);await saveCfg()}}catch(e){return errAlert(e)}
+  var pg=L.map(function(x){return '<div class="lb"><b>'+esc(o.customer||'')+'</b><br>فضلة '+esc(x.t)+' — <b style="font-size:13px">'+x.len+' سم</b><br>'+esc(x.code)+(o.color?' — '+esc(o.color):'')+'<br><svg class="bc" data-v="'+esc(x.code)+'"></svg></div>'}).join('');
   var html='<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>@page{size:50mm 30mm;margin:0}*{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif;color:#000}body{margin:0}.lb{width:48mm;height:28mm;margin:0 auto;padding:1mm;overflow:hidden;font-size:9px;text-align:center;page-break-after:always}svg{max-width:100%}</style></head><body>'+pg+
    '<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"><\/script><script>window.onload=function(){document.querySelectorAll("svg.bc").forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:"CODE128",displayValue:false,margin:0,height:16})}catch(e){}})}<\/script></body></html>';
   if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(html);
@@ -7401,7 +7405,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  }
 
   /* ---------- الفضل (بواقي الأطوال) ---------- */
- var OFS=['متاحة','محجوزة','اتباعت','خردة'];
+ var OFS=['متاحة','محجوزة','اتباعت','خردة','بتاعة الزبون'];
  function offCode(n){return 'FD-'+String(n).padStart(4,'0')}
  function prodNames(){try{return (db.products||[]).map(function(p){return p.name})}catch(e){return []}}
  /* تقطيع طولي (1D cutting stock): بيجرّب أكتر من أسلوب ويختار الأقل في عدد الأعواد، وبعدين الأكبر فضلة صالحة لإعادة الاستخدام.
@@ -7667,7 +7671,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(/^FD/.test(C)){
    var O=await get('wk_offcuts',[]),k=offCode(parseInt(C.replace(/^FD-?/,''),10)),o=O.find(function(x){return x.code===k});
    if(!o){toast('مفيش فضلة بالكود '+k);return}
-   if(o.status==='اتباعت'||o.status==='خردة'){toast(k+' حالتها «'+o.status+'» — مش متاحة للبيع');return}
+   if(o.status==='اتباعت'||o.status==='خردة'||o.status==='بتاعة الزبون'){toast(k+' حالتها «'+o.status+'» — مش متاحة للبيع');return}
    var p=(db.products||[]).find(function(x){return String(x.name).trim()===String(o.item).trim()});
    var pm=function(len){if(!p||!(+p.price>0))return 0;var u=String(p.unit||'');return Math.round(/متر/.test(u)?p.price*len/100:p.price*len/(num(o.orig)||600))};
    openModal('<div class="modal-head"><h2>🧰 بيع فضلة '+esc(o.code)+'</h2></div>'+
@@ -7722,9 +7726,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    return /^[A-Za-z0-9\-]$/.test(e.key||'')?e.key.toUpperCase():null;
   }
   async function go(code){
+   code=String(code||'');
    var dbOn=(function(){var d=document.getElementById('daybook');var m=document.getElementById('modal');return !!(d&&d.classList.contains('active')&&!(m&&m.offsetParent!==null&&m.innerHTML.trim()))})();
    if(dbOn&&typeof dbAdd==='function'){try{await dbWork(code)}catch(e){errAlert(e)}return}
-   if(/^FD/i.test(code)){try{closeModal()}catch(e){}await loadAll();NS=1;viewOff(code.toUpperCase().replace(/^FD-?(\d+).*/,function(_,d){return offCode(parseInt(d,10))}));return}var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
+   if(/^FD/i.test(code)){try{closeModal()}catch(e){}await offInfo(code);return}var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
    var no=parseInt(m[1],10);
    try{closeModal()}catch(e){}
    try{
@@ -7734,6 +7739,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     viewOrder(o.id);toast('✔ فتحت '+ordNo(o));
    }catch(e){errAlert(e)}
   }
+  window.mkWkScan=function(c){if(isAdm())return go(c)};
   document.addEventListener('keydown',function(e){
    if(!isAdm())return;
    var t=Date.now();
@@ -7754,6 +7760,19 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  })();
  var tw=setInterval(function(){addCard();if(document.getElementById('wkCard'))clearInterval(tw)},1500);
  var _sp0=window.showPage;if(typeof _sp0==='function'){window.showPage=function(id){var r=_sp0.apply(this,arguments);if(id==='settings')setTimeout(addCard,50);return r}}
+ /* 📟 مسح ليبل فضلة: بياناتها (صاحبها، الأوردر، تاريخ الإنتاج، الحالة) من غير ما يفتح الأوردر — الأوردر بزرار جوه البيانات */
+ async function openOrderNo(no){try{closeModal()}catch(e){}await loadAll();NS=1;var o=ORD.find(function(x){return (x.no|0)===(parseInt(no,10)||-1)});if(!o){toast('الأوردر مش موجود');return}viewOrder(o.id)}
+ async function offInfo(code){
+  var k=offCode(parseInt(String(code).toUpperCase().replace(/^FD-?/,''),10)),O=await get('wk_offcuts',[]),o=O.find(function(x){return x.code===k});
+  if(!o){toast('مفيش فضلة بالكود '+k);return}
+  var age=Math.floor((Date.now()-new Date(o.date).getTime())/864e5),own=o.owner?('العميل: <b>'+esc(o.owner)+'</b>'+(o.crafter?' — الصنايعي: <b>'+esc(o.crafter)+'</b>':'')):'فضلة المحل';
+  openModal('<div class="modal-head"><h2>🧰 فضلة '+esc(o.code)+'</h2></div><div class="card" style="background:var(--tint2);border:0;line-height:2">'+
+   '<b style="font-size:17px">'+esc(o.item)+(o.color?' / '+esc(o.color):'')+'</b><br>الطول: <b>'+esc(num(o.len))+' سم</b>'+(o.orig?' (من عود '+esc(num(o.orig))+' سم)':'')+(o.place?' — المكان: '+esc(o.place):'')+'<br>'+own+
+   '<br>الأوردر: <b>'+esc(o.order||'—')+'</b><br>تاريخ الإنتاج: <b>'+esc(o.date||'—')+'</b>'+(isNaN(age)?'':' ('+age+' يوم)')+'<br>الحالة: <span class="badge">'+esc(o.status)+'</span></div>'+
+   '<div class="modal-foot">'+(o.order&&o.orderId?'<button type="button" class="primary" id="ofiO">📋 الأوردر '+esc(o.order)+'</button>':'')+'<button type="button" class="secondary" id="ofiF">🧰 شاشة الفضل</button><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>');
+  var bo=document.getElementById('ofiO');if(bo)bo.onclick=function(){var x=ORD.find(function(z){return z.id===o.orderId});if(x){closeModal();viewOrder(x.id)}else openOrderNo(String(o.order).replace(/\D/g,''))};
+  document.getElementById('ofiF').onclick=async function(){closeModal();await loadAll();NS=1;viewOff(o.code)}}
+ window.mkWkOrderNo=openOrderNo;window.mkWkOffInfo=offInfo;
  window.mkWk={go:async function(k){if(!isAdm()){toast('الشاشة دي للمدير بس');return}await loadAll();NS=1;({ord:viewOrders,new:function(){viewForm(null,'دلفة')},steel:function(){viewSteel(null)},bamboo:function(){viewBamboo(null)},off:function(){viewOff()},rods:viewRods,forf:viewForf,disp:viewDisp,exp:viewExps}[k]||viewOrders)()},menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
 })();
 </script>
@@ -7883,7 +7902,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  async function route(raw,src){
   var code=String(raw||'').trim();if(!code)return;
   var C=code.toUpperCase();
-  if(/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(C))return;      // ليهم معالج في أنظمة الشغل
+  if(/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(C)){if(src==='camera'&&window.mkWkScan)window.mkWkScan(C);return}      // الكيبورد ليه معالج في أنظمة الشغل، والكاميرا بنوجّهها له
   /* أكواد السيستم نفسه: كل كود يروح لشاشته (شحنة / فاتورة شراء / عرض سعر) — مش «صنف مش متسجّل» */
   var sys=/^(SP|SH|QT)-?(\d{1,6})(?:-\d+)?$/.exec(C);
   if(sys){
@@ -7907,8 +7926,17 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(!p){bp(false);flash('باركود مش متسجل: '+code,false);return}
    addByCode(p.barcode&&(p.barcode===code||p.barcode===C)?p.barcode:String(p.code));bp();flash('اتضاف: '+p.name);return;
   }
-  /* ٢) كود فاتورة بيع (MK-0001) */
+  /* ٢) كود فاتورة بيع (MK-0001) — أو كود ورقة تجهيز بنفس الشكل: بنسأل السيرفر الأول */
   var inv=sale(C);
+  if(/^MK-\d{4,6}$/.test(C)){var ps=null;try{var q=await window.mkSB.from('mk_prep_sheets').select('*').eq('code',C).maybeSingle();ps=q&&q.data}catch(e){}
+   if(ps){
+    var openPrep=function(){try{closeModal()}catch(e){}bp();
+     if(ps.wk_no&&window.mkWkOrderNo){flash('ورقة تجهيز '+C+' — أوردر '+ps.wk_no);window.mkWkOrderNo(ps.wk_no);return}
+     var r=ps.kind==='purchase'?(db.purchases||[]).find(function(x){return String(x.gid||x.id)===ps.ref||String(x.pno||'')===ps.ref}):(db.sales||[]).find(function(x){return String(x.no||x.id)===ps.ref});
+     if(r){flash('ورقة تجهيز '+C+' — فاتورة '+(r.no||r.pno||''));ps.kind==='purchase'?openPurchaseView(r.id):openInvoiceModal(r.id)}else{bp(false);flash('ورقة التجهيز '+C+' — الفاتورة مش لاقيها',false)}};
+    if(inv&&!p){openModal('<div class="modal-head"><h2>📟 '+esc(C)+'</h2></div><p style="font-size:15px">الكود ده ورقة تجهيز وكمان رقم فاتورة بيع. تفتح إيه؟</p><div class="mkqk"><button type="button" id="mkPsA"><span>📋</span>ورقة التجهيز</button><button type="button" id="mkPsB"><span>🧾</span>الفاتورة</button></div><div class="modal-foot"><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>');
+     document.getElementById('mkPsA').onclick=openPrep;document.getElementById('mkPsB').onclick=function(){closeModal();openInvoiceModal(inv.id)};return}
+    openPrep();return}}
   if(inv&&!p){try{closeModal()}catch(e){}openInvoiceModal(inv.id);bp();flash('فتحت فاتورة '+inv.no);return}
   if(!p){bp(false);flash('باركود مش متسجل: '+code,false);if(!modalOn())quickUnknown(code);return}
   /* ٣) في اليومية */
