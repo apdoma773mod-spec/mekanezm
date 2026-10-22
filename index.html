@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-23';
+const APP_VER='2026-10-22-24';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2036,12 +2036,16 @@ window.impGo=async function(){let I=window.__imp&&window.__imp.state&&window.__i
   (bad?bad+' صنف مش متطابق هيتخطى.\n\n':'')+'هيتسجل '+G.length+' فاتورة بتاريخ '+iso+' — الإجمالي '+money(tot)+'.\nالمخزون هيتخصم بعد الموافقة. متأكد؟';
  if(!confirm(msg))return;
  let btn=document.getElementById('impGoBtn');if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='جاري الحفظ...'}
- let n=0,errs=[];stat('⏳ جاري الاستيراد…');
- for(let g of G){let nm=(g.cust||'').trim(),items=g.idx.map(i=>R[i].isNew&&!R[i].pid?{product_id:null,name:R[i].prod,qty:R[i].qty,price:R[i].price}:{product_id:R[i].pid,name:(db.products.find(p=>p.id===R[i].pid)||{}).name||R[i].prod,qty:R[i].qty,price:R[i].price}),
+ stat('⏳ جاري الاستيراد…');
+ let invs=G.map(g=>{let nm=(g.cust||'').trim(),items=g.idx.map(i=>R[i].isNew&&!R[i].pid?{product_id:null,name:R[i].prod,qty:R[i].qty,price:R[i].price}:{product_id:R[i].pid,name:(db.products.find(p=>p.id===R[i].pid)||{}).name||R[i].prod,qty:R[i].qty,price:R[i].price}),
    paid=r2(sumBy(g.idx.filter(i=>R[i].pay!=='credit'),i=>R[i].qty*R[i].price)),note=g.idx.map(i=>R[i].note).filter(Boolean).join(' - ');
-  try{await rpc('mk_save_invoice',{p:{...coExtra(),kind:'sale',person:nm||'يومية',no_contact:!nm,date:iso,paid,note:('استيراد يومية Excel'+(note?' — '+note:'')),source:'import',items}});n++}catch(e){errs.push((nm||'يومية')+': '+errMsg(e))}}
- if(n){log.unshift({sig,at:new Date().toISOString(),iso,n,tot});try{await sb.from('mk_settings').upsert([{key:'imp_daily_log',value:log.slice(0,200)}],{onConflict:'key'})}catch(e){}}
- closeModal();await loadAll();toast('تم استيراد '+n+' فاتورة');if(errs.length)alert('فواتير ماتسجلتش:\n'+errs.join('\n'))};
+  return {...coExtra(),kind:'sale',person:nm||'يومية',no_contact:!nm,date:iso,paid,note:('استيراد يومية Excel'+(note?' — '+note:'')),source:'import',items}});
+ /* transaction واحدة على السيرفر: كل الفواتير تتسجل أو ولا واحدة، والخطأ بيظهر مرة واحدة */
+ try{let res=await rpc('mk_import_invoices',{p:{invoices:invs}});
+  log.unshift({sig,at:new Date().toISOString(),iso,n:invs.length,tot});try{await sb.from('mk_settings').upsert([{key:'imp_daily_log',value:log.slice(0,200)}],{onConflict:'key'})}catch(e){}
+  closeModal();await loadAll();toast('✔ تم استيراد '+(res&&res.length||invs.length)+' فاتورة')}
+ catch(e){stat('');if(btn){btn.disabled=false;btn.textContent='تأكيد الاستيراد'}
+  alert('الاستيراد اتلغى — مفيش ولا فاتورة اتسجلت.\n\n'+(netErr(e)?'مفيش اتصال بالسيرفر — جرّب تاني لما النت يرجع.':errMsg(e)))}};
 
 /* عمليات المسح الشامل: مقفولة في النظام الجديد (البيانات على السيرفر) */
 ['clearOps','clearTrial','resetData','restore'].forEach(k=>{window[k]=function(e){if(e&&e.target)e.target.value='';alert('العملية دي مقفولة في النظام الجديد عشان بياناتك على السيرفر. لو محتاجها كلمني.')}});
