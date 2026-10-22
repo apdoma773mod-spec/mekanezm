@@ -1693,7 +1693,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-7';
+const APP_VER='2026-10-22-8';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1955,7 +1955,7 @@ const _payRecent=new Map();
 window.mkPayDup=function(id,a){let t=_payRecent.get(id+'|'+r2(a));return !!t&&Date.now()-t<120000};
 window.mkPayMark=function(id,a){_payRecent.set(id+'|'+r2(a),Date.now())};
 /* #11 إلغاء دفعة نهائي: الرصيد والخزنة يرجعوا، والسجل المخفي بس يفضل. مقفول لحد ما sql/60-cancel-payment.sql يتطبق */
-const MK_CANCEL_PAY_ON=false;let _cpBusy=false;
+const MK_CANCEL_PAY_ON=true;let _cpBusy=false;
 if(MK_CANCEL_PAY_ON)window.mkCancelPay=async function(pid,cid){if(_cpBusy)return;
  let p=db.payments.concat(db.supPays||[]).find(x=>x.id===pid);if(!p)return toast('الدفعة مش موجودة');
  if(!await ask('متأكد؟ دفعة '+money(p.amount)+' ('+(p.name||'')+') هتتمسح نهائي، والرصيد والخزنة هيرجعوا زي ما كانوا.','أيوه، الغيها','لا'))return openContactFile(cid);
