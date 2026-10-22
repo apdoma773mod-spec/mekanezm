@@ -886,12 +886,13 @@ function stockWarn(){
 }
 function statusHtml(i){const r=IMP.rows[i];
   if(r.pid)return '<span style="color:#159447">✓ متطابق</span>';
+  if(r.isNew)return '<span style="color:#1d4ed8">➕ هيتضاف صنف جديد بالاسم ده</span> <button type="button" class="secondary" style="padding:3px 8px;font-size:12px" onclick="impNew('+i+',0)">تراجع</button>';
   const h=r.hint&&pById(r.hint);
-  return '<span style="color:#c0392b">⚠ مش لاقيه في المخزون</span>'+(h?` <button type="button" class="secondary" style="padding:3px 8px;font-size:12px" onclick="impHint(${i})">تقصد: ${esc(h.name)}؟</button>`:'');}
+  return '<span style="color:#c0392b">⚠ مش لاقيه في المخزون — اختار الصح من الخانة أو</span>'+(h?` <button type="button" class="secondary" style="padding:3px 8px;font-size:12px" onclick="impHint(${i})">تقصد: ${esc(h.name)}؟</button>`:'')+` <button type="button" class="secondary" style="padding:3px 8px;font-size:12px" onclick="impNew(${i},1)">➕ صنف جديد</button>`;}
 function updSum(){
-  const R=IMP.rows,G=groupRows(R,IMP.mode),tot=R.reduce((s,r)=>s+r.qty*r.price,0),bad=R.filter(r=>!r.pid).length,w=stockWarn();
+  const R=IMP.rows,G=groupRows(R,IMP.mode),tot=R.reduce((s,r)=>s+r.qty*r.price,0),bad=R.filter(r=>!r.pid&&!r.isNew).length,w=stockWarn(),cr=R.filter(r=>r.pay==='credit').reduce((s,r)=>s+r.qty*r.price,0);
   const e=document.getElementById('impSum');if(e)e.innerHTML=`<b>${G.length}</b> فاتورة • <b>${R.length}</b> صنف • الإجمالي <b>${money(tot)}</b><br>`+
-   (bad?`<span style="color:#c0392b">${bad} صنف مش متطابق (هيتخطى لو سبته)</span><br>`:'<span style="color:#159447">كل الأصناف متطابقة</span><br>')+
+   (cr?`آجل: <b>${money(cr)}</b> • نقدي: <b>${money(tot-cr)}</b><br>`:'')+(bad?`<span style="color:#c0392b">${bad} صنف مش متطابق (هيتخطى لو سبته)</span><br>`:'<span style="color:#159447">كل الأصناف متطابقة</span><br>')+
    (w.length?`<span style="color:#b9770e">المخزون هيبقى بالسالب في ${w.length} صنف: ${esc(w.slice(0,4).join('، '))}${w.length>4?'…':''}</span>`:'');
 }
 function render(){
@@ -903,10 +904,10 @@ function render(){
   <div class="field"><label>الصفوف من غير اسم عميل</label><select onchange="impMode(this.value)"><option value="each" ${IMP.mode==='each'?'selected':''}>فاتورة لكل صف</option><option value="one" ${IMP.mode==='one'?'selected':''}>فاتورة واحدة باسم «يومية»</option></select></div></div>
   <div id="impSum" class="card" style="margin:10px 0;line-height:1.9;font-size:14px"></div>
   ${G.map((g,gi)=>{const T=g.idx.reduce((s,i)=>s+R[i].qty*R[i].price,0);
-   return `<div class="card" style="margin-bottom:10px;padding:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input value="${esc(g.cust)}" placeholder="يومية (من غير اسم عميل)" oninput="impCust(${gi},this.value)" style="flex:1">${VN(g.cust)?(db.contacts.some(x=>x.type==='عميل'&&x.name===g.cust)?'<span class="badge green">عميل مسجل</span>':'<span class="badge">عميل جديد</span>'):'<span class="badge">يومية</span>'}<span class="badge">${g.idx.some(i=>R[i].pay==='credit')?'فيها آجل':'نقدي'}</span></div>
-   ${g.idx.map(i=>{const r=R[i],p=r.pid&&pById(r.pid);return `<div style="border-top:1px solid var(--border);padding:6px 0"><input list="impList" value="${esc(p?p.name:r.prod)}" onchange="impSet(${i},this.value)" style="width:100%"><div style="font-size:13px;color:var(--muted);margin-top:3px">${r.qty} × ${money(r.price)} = <b>${money(r.qty*r.price)}</b>${r.mism?' (السعر اتعدل عشان يطابق الإجمالي)':''}${r.note?' • '+esc(r.note):''}</div><div id="ist${i}" style="font-size:13px">${statusHtml(i)}</div></div>`}).join('')}
+   return `<div class="card" style="margin-bottom:10px;padding:12px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input value="${esc(g.cust)}" placeholder="يومية (من غير اسم عميل)" oninput="impCust(${gi},this.value)" style="flex:1">${VN(g.cust)?(db.contacts.some(x=>x.type==='عميل'&&x.name===g.cust)?'<span class="badge green">عميل مسجل</span>':'<span class="badge">عميل جديد</span>'):'<span class="badge">يومية</span>'}<select onchange="impPay(${gi},this.value)" style="flex:none;width:auto"><option value="cash" ${g.idx.some(i=>R[i].pay==='credit')?'':'selected'}>نقدي</option><option value="credit" ${g.idx.some(i=>R[i].pay==='credit')?'selected':''}>آجل</option></select></div>${g.idx.some(i=>R[i].pay==='credit')&&!VN(g.cust)?'<div style="color:#c0392b;font-size:13px;margin-bottom:6px">⚠ آجل — اكتب اسم العميل فوق</div>':''}
+   ${g.idx.map(i=>{const r=R[i],p=r.pid&&pById(r.pid);return `<div style="border-top:1px solid var(--border);padding:6px;${r.pid?'':r.isNew?'background:#eef6ff;':'background:#fdecec;'}border-radius:8px"><input list="impList" value="${esc(p?p.name:r.prod)}" onchange="impSet(${i},this.value)" style="width:100%"><div style="font-size:13px;color:var(--muted);margin-top:3px">${r.qty} × ${money(r.price)} = <b>${money(r.qty*r.price)}</b>${r.mism?' (السعر اتعدل عشان يطابق الإجمالي)':''}${r.note?' • '+esc(r.note):''}</div><div id="ist${i}" style="font-size:13px">${statusHtml(i)}</div></div>`}).join('')}
    <div style="text-align:left;margin-top:6px;font-weight:700">إجمالي الفاتورة: ${money(T)}</div></div>`}).join('')}
-  <div class="modal-foot"><button class="primary" onclick="impGo()">تأكيد الاستيراد</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
+  <div class="modal-foot"><button class="primary" id="impGoBtn" onclick="impGo()">تأكيد الاستيراد</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
   updSum();
 }
 function pick(k){const s=IMP.sheets[k];IMP.cur=k;IMP.iso=s.iso||isoToday();IMP.rows=s.rows.map(r=>({...r}));IMP.mode='one';IMP.rows.forEach(r=>{const k=VN(r.cust||'');if(k){const c=db.contacts.find(x=>x.type==='عميل'&&VN(x.name)===k);if(c)r.cust=c.name}});matchAll();render()}
@@ -915,8 +916,10 @@ window.impSheet=v=>pick(+v);
 window.impDate=v=>{IMP.iso=v};
 window.impMode=v=>{IMP.mode=v;render()};
 window.impCust=(gi,v)=>{(IMP.G[gi]?IMP.G[gi].idx:[]).forEach(i=>{IMP.rows[i].cust=v.trim()})};
-window.impSet=(i,v)=>{const k=VN(v),p=db.products.find(x=>x.name===v)||db.products.find(x=>VN(x.name)===k);IMP.rows[i].pid=p?p.id:'';updRow(i)};
-window.impHint=i=>{IMP.rows[i].pid=IMP.rows[i].hint;render()};
+window.impSet=(i,v)=>{const k=VN(v),p=db.products.find(x=>x.name===v)||db.products.find(x=>VN(x.name)===k);IMP.rows[i].pid=p?p.id:'';if(p)IMP.rows[i].isNew=false;updRow(i)};
+window.impHint=i=>{IMP.rows[i].pid=IMP.rows[i].hint;IMP.rows[i].isNew=false;render()};
+window.impNew=(i,v)=>{IMP.rows[i].isNew=!!v;if(v)IMP.rows[i].pid='';render()};
+window.impPay=(gi,v)=>{(IMP.G[gi]?IMP.G[gi].idx:[]).forEach(i=>{IMP.rows[i].pay=v});render()};
 window.impGo=()=>{
   const R=IMP.rows,ok=R.filter(r=>r.pid),bad=R.length-ok.length;
   if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
@@ -1720,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-15';
+const APP_VER='2026-10-22-16';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2021,14 +2024,23 @@ submitQuote=async function(ev,id){if(!id&&navigator.onLine){ev.preventDefault();
 
 /* استيراد يومية الإكسيل: كل فاتورة بتتسجل على السيرفر */
 window.impGo=async function(){let I=window.__imp&&window.__imp.state&&window.__imp.state();if(!I)return toast('افتح الملف تاني');
- let R=I.rows,ok=R.filter(r=>r.pid);if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
- let G=window.__imp.groupRows(R,I.mode).map(g=>({...g,idx:g.idx.filter(i=>R[i].pid)})).filter(g=>g.idx.length);
+ let R=I.rows,ok=R.filter(r=>r.pid||r.isNew);if(!ok.length)return toast('مفيش أصناف متطابقة نستورد منها');
+ let G=window.__imp.groupRows(R,I.mode).map(g=>({...g,idx:g.idx.filter(i=>R[i].pid||R[i].isNew)})).filter(g=>g.idx.length);
  if(G.some(g=>!VN(g.cust)&&g.idx.some(i=>R[i].pay==='credit')))return toast('فيه فاتورة آجل من غير اسم عميل — اكتب الاسم');
- let iso=I.iso||isoToday();if(!confirm('هيتسجل '+G.length+' فاتورة بتاريخ '+iso+' على السيرفر. متأكد؟'))return;
+ let iso=I.iso||isoToday(),bad=R.length-ok.length,tot=r2(sumBy(ok,r=>r.qty*r.price));
+ /* منع التكرار: بصمة الملف + أصناف مطابقة في مبيعات نفس اليوم */
+ let src=(I.sheets[I.cur]||{}).rows||R,sig=iso+'|'+src.map(r=>VN(r.prod)+':'+r.qty+':'+r.price).join('|'),h=0;for(let k=0;k<sig.length;k++)h=(h*31+sig.charCodeAt(k))|0;sig='d'+(h>>>0).toString(36)+'_'+src.length;
+ let log=[];try{let q=await sb.from('mk_settings').select('value').eq('key','imp_daily_log').maybeSingle();log=Array.isArray(q.data&&q.data.value)?q.data.value:[]}catch(e){}
+ let seen=log.find(x=>x.sig===sig),dup=ok.filter(r=>{let p=db.products.find(x=>x.id===r.pid);return p&&db.sales.some(x=>x.iso===iso&&x.product===p.name&&+x.qty===+r.qty)}).length;
+ let msg=(seen?'⛔ الملف ده اتستورد قبل كده ('+String(seen.at||'').slice(0,16).replace('T',' ')+' — '+(seen.n||0)+' فاتورة).\n\n':'')+(!seen&&dup>=Math.max(1,ok.length/2)?'⚠️ شكل اليومية دي اتسجلت قبل كده ('+dup+' صنف مطابق في مبيعات نفس اليوم).\n\n':'')+
+  (bad?bad+' صنف مش متطابق هيتخطى.\n\n':'')+'هيتسجل '+G.length+' فاتورة بتاريخ '+iso+' — الإجمالي '+money(tot)+'.\nالمخزون هيتخصم بعد الموافقة. متأكد؟';
+ if(!confirm(msg))return;
+ let btn=document.getElementById('impGoBtn');if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='جاري الحفظ...'}
  let n=0,errs=[];stat('⏳ جاري الاستيراد…');
- for(let g of G){let nm=(g.cust||'').trim(),items=g.idx.map(i=>({product_id:R[i].pid,name:(db.products.find(p=>p.id===R[i].pid)||{}).name||R[i].prod,qty:R[i].qty,price:R[i].price})),
+ for(let g of G){let nm=(g.cust||'').trim(),items=g.idx.map(i=>R[i].isNew&&!R[i].pid?{product_id:null,name:R[i].prod,qty:R[i].qty,price:R[i].price}:{product_id:R[i].pid,name:(db.products.find(p=>p.id===R[i].pid)||{}).name||R[i].prod,qty:R[i].qty,price:R[i].price}),
    paid=r2(sumBy(g.idx.filter(i=>R[i].pay!=='credit'),i=>R[i].qty*R[i].price)),note=g.idx.map(i=>R[i].note).filter(Boolean).join(' - ');
-  try{await rpc('mk_save_invoice',{p:{kind:'sale',person:nm||'يومية',no_contact:!nm,date:iso,paid,note,source:'import',items}});n++}catch(e){errs.push((nm||'يومية')+': '+errMsg(e))}}
+  try{await rpc('mk_save_invoice',{p:{...coExtra(),kind:'sale',person:nm||'يومية',no_contact:!nm,date:iso,paid,note:('استيراد يومية Excel'+(note?' — '+note:'')),source:'import',items}});n++}catch(e){errs.push((nm||'يومية')+': '+errMsg(e))}}
+ if(n){log.unshift({sig,at:new Date().toISOString(),iso,n,tot});try{await sb.from('mk_settings').upsert([{key:'imp_daily_log',value:log.slice(0,200)}],{onConflict:'key'})}catch(e){}}
  closeModal();await loadAll();toast('تم استيراد '+n+' فاتورة');if(errs.length)alert('فواتير ماتسجلتش:\n'+errs.join('\n'))};
 
 /* عمليات المسح الشامل: مقفولة في النظام الجديد (البيانات على السيرفر) */
@@ -3260,7 +3272,7 @@ window.dbPayFor=function(p){payCard(null);let w=document.getElementById('lcWho')
  let s=document.querySelector('aside nav [data-page="sales"]');
  if(s)s.insertAdjacentHTML('beforebegin','<button data-page="daybook" onclick="showPage(\'daybook\')"><span style="width:1.15em;text-align:center">📒</span> <span>يومية المحل</span> <span id="dbCount" class="badge red" style="display:none;margin-right:auto"></span></button>');
  let mn=document.querySelector('main');
- if(mn)mn.insertAdjacentHTML('beforeend',`<section id="daybook" class="page"><div class="title-row"><div class="title"><h1>📒 يومية المحل — <span id="dbDayLbl">النهارده</span></h1><p>اكتب كل بيعة على طول، وفي الآخر «صفّي» تتعمل فواتير البيع لوحدها</p></div><div class="btnrow"><input type="date" id="dbDay" class="search" style="max-width:170px" value="${isoToday()}"><button class="secondary" onclick="dbLoad()">🔄</button></div></div>
+ if(mn)mn.insertAdjacentHTML('beforeend',`<section id="daybook" class="page"><div class="title-row"><div class="title"><h1>📒 يومية المحل — <span id="dbDayLbl">النهارده</span></h1><p>اكتب كل بيعة على طول، وفي الآخر «صفّي» تتعمل فواتير البيع لوحدها</p></div><div class="btnrow"><input type="date" id="dbDay" class="search" style="max-width:170px" value="${isoToday()}"><button class="secondary" onclick="dbLoad()">🔄</button><button class="secondary" onclick="openImpDaily()">📥 استيراد يومية من Excel</button></div></div>
   <div class="dbent"><div class="dbrow1"><div class="who"><input id="dbPerson" placeholder="👤 العميل (فاضي = بيعة من غير اسم)" autocomplete="off"></div>${payChips('dbPay',ENT.pay)}</div>
    <div class="dbsr"><input id="dbSearch" placeholder="اكتب اسم الصنف أو الكود..." autocomplete="off"><button type="button" class="secondary" id="dbScan" title="امسح باركود">📷</button><button type="button" class="secondary" id="dbPayBtn" title="دفعة من العميل">💰</button></div><div id="dbBox"></div></div>
   <div id="dbBody"></div><div id="dbFoot" class="dbfoot"></div><div id="dbOwed"></div></section>`);
