@@ -1693,7 +1693,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-2';
+const APP_VER='2026-10-22-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1947,12 +1947,20 @@ cancelInv=async function(kind,key){let isSale=kind==='sale',G=invGroup(kind,key)
  catch(e){toast(netErr(e)?'محتاج نت عشان تلغي الفاتورة':errMsg(e));if(!netErr(e)&&/sold_after/.test(String(e.message)))openPurchaseView(r.id)}};
 
 /* الدفعات والمرتجعات */
-submitPayment=async function(ev,id){ev.preventDefault();let a=+payAmt.value;if(!(a>0))return toast('اكتب المبلغ');
- try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:payNote.value,...(window.mkCoOn?{p_co:curCo()}:{})});await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل الدفعة');openContactFile(id)}
- catch(e){toast(netErr(e)?'محتاج نت عشان تسجل الدفعة':errMsg(e))}};
-submitSupPay=async function(ev,id){ev.preventDefault();let a=+spAmt.value;if(!(a>0))return toast('اكتب المبلغ');
- try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:spNote.value.trim(),...(window.mkCoOn?{p_co:curCo()}:{})});await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل السداد');openContactFile(id)}
- catch(e){toast(netErr(e)?'محتاج نت عشان تسجل السداد':errMsg(e))}};
+/* منع تكرار الدفعة: نفس العميل + نفس المبلغ في أقل من دقيقتين = تأكيد قبل التسجيل */
+const _payRecent=new Map();
+window.mkPayDup=function(id,a){let t=_payRecent.get(id+'|'+r2(a));return !!t&&Date.now()-t<120000};
+window.mkPayMark=function(id,a){_payRecent.set(id+'|'+r2(a),Date.now())};
+submitPayment=async function(ev,id){ev.preventDefault();let f=ev.target,a=+payAmt.value;if(!(a>0))return toast('اكتب المبلغ');
+ busy(f,'جاري الحفظ…');
+ if(mkPayDup(id,a)&&!await ask('نفس الدفعة ('+money(a)+') اتسجلت لنفس العميل من أقل من دقيقتين. تسجلها تاني؟','سجّلها تاني','لا'))return openPayment(id);
+ try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:payNote.value,...(window.mkCoOn?{p_co:curCo()}:{})});mkPayMark(id,a);await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل الدفعة');openContactFile(id)}
+ catch(e){busy(f,null);toast(netErr(e)?'محتاج نت عشان تسجل الدفعة':errMsg(e))}};
+submitSupPay=async function(ev,id){ev.preventDefault();let f=ev.target,a=+spAmt.value;if(!(a>0))return toast('اكتب المبلغ');
+ busy(f,'جاري الحفظ…');
+ if(mkPayDup(id,a)&&!await ask('نفس الدفعة ('+money(a)+') اتسجلت لنفس المورد من أقل من دقيقتين. تسجلها تاني؟','سجّلها تاني','لا'))return openSupPay(id);
+ try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:spNote.value.trim(),...(window.mkCoOn?{p_co:curCo()}:{})});mkPayMark(id,a);await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);done();toast('تم تسجيل السداد');openContactFile(id)}
+ catch(e){busy(f,null);toast(netErr(e)?'محتاج نت عشان تسجل السداد':errMsg(e))}};
 submitReturn=async function(ev){ev.preventDefault();let type=rtType.value,p=db.products.find(x=>x.id===rtProduct.value),q=+rtQty.value,price=+rtPrice.value;
  if(!p)return toast('اختر منتجاً');if(!(q>0))return toast('اكتب الكمية');
  try{await rpc('mk_save_return',{p:{...coExtra(),type,product_id:p.id,qty:q,price,person:rtPerson.value,note:rtNote.value}});await Promise.all([refreshProducts([p.id]),refreshTable('mk_returns')]);closeModal();done();toast('تم تسجيل المرتجع')}
@@ -4031,11 +4039,13 @@ function payCard(kind){const sup=kind==='out',type=sup?'مورد':'عميل';
  W.addEventListener('input',bal);W.addEventListener('change',bal);W.addEventListener('blur',()=>setTimeout(bal,300));
  document.getElementById('lcX').onclick=document.getElementById('lcNo').onclick=closeCard;
  document.getElementById('lcOk').onclick=async()=>{let c=findContact(W.value,type),a=+val('lcPr'),b=document.getElementById('lcOk');
-  if(!c)return toast('اختار الاسم من القايمة');if(!(a>0))return toast('اكتب المبلغ');b.disabled=true;
+  if(!c)return toast('اختار الاسم من القايمة');if(!(a>0))return toast('اكتب المبلغ');if(b.disabled)return;b.disabled=true;b.textContent='جاري الحفظ…';
+  if(window.mkPayDup&&mkPayDup(c.id,a)&&typeof ask==='function'&&!await ask('نفس الدفعة ('+money(a)+') اتسجلت لـ '+c.name+' من أقل من دقيقتين. تسجلها تاني؟','سجّلها تاني','لا')){b.disabled=false;b.textContent='✔ سجّل';return}
   try{await A().rpc('mk_add_payment',{p_contact:c.id,p_amount:r2(a),p_note:(val('mvNote')||(sup?'دفعة من يومية المحل':'تحصيل من يومية المحل')),...(window.mkCoOn?{p_co:curCo()}:{})});
+   if(window.mkPayMark)mkPayMark(c.id,a);
    await A().refreshContacts([c.id]);if(isAdmin())await A().refreshTable('mk_payments');A().done();
    closeCard();toast('✔ اتسجل '+money(a)+(sup?' لـ ':' من ')+c.name);setTimeout(moneyRender,300)}
-  catch(e){b.disabled=false;toast(A().errMsg?A().errMsg(e):String(e.message||e))}};
+  catch(e){b.disabled=false;b.textContent='✔ سجّل';toast(A().errMsg?A().errMsg(e):String(e.message||e))}};
  setTimeout(()=>W.focus(),60)}
 window.mvExpense=expenseCard;window.mvPay=payCard;
 async function moneyRender(){let host=document.getElementById('dbMoney');if(!host){let f=document.getElementById('dbFoot');if(!f)return;f.insertAdjacentHTML('afterend','<div id="dbMoney"></div>');host=document.getElementById('dbMoney')}
