@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-24';
+const APP_VER='2026-10-22-25';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6559,7 +6559,6 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     o.rodsDeducted=true;await saveOrd();toast('✔ الأعواد اتخصمت من المخزون');viewOrder(id);
    }catch(e){rc.disabled=false;errAlert(e)}
   };
-  ['wkPr','wkLb'].forEach(function(id){var x=b.querySelector('#'+id);if(x&&offLeft(o).length)x.addEventListener('click',function(){setTimeout(async function(){if(await ask('الشغل ده طلع منه '+offLeft(o).length+' فضلة. تطبع ليبل ليهم كمان؟','اطبع','لأ'))printLeftLabels(o)},1500)})});
   b.querySelector('#wkInv').onclick=function(){
    close();
    var L=[],note=ordNo(o)+' — '+o.type;
@@ -11077,23 +11076,28 @@ window.__voice={sim,findCmd:t=>{return CMD?findCmd(VN(t)):null}};
    من غير أسعار ولا إجماليات ولا أرباح ولا اسم العميل. A4 بخط كبير. مابيغيّرش أي بيانات. ===== */
 (function(){
 function sheet(P){let L=P.lines||[];
- let body=`<div style="font-size:15pt;line-height:1.7"><h1 style="font-size:24pt;margin:0 0 6px">📋 ورقة تجهيز${P.no?' — '+esc(P.no):''}</h1>
- <div style="font-size:15pt;margin-bottom:10px">${P.date?'التاريخ: <b>'+esc(P.date)+'</b>':''}${P.src?' &nbsp;•&nbsp; '+esc(P.src):''}</div>
- <table style="font-size:15pt"><thead><tr><th style="font-size:13pt;width:36px">#</th><th style="font-size:13pt">الصنف</th><th style="font-size:13pt;width:110px">الكمية</th><th style="font-size:13pt">المقاس / تفاصيل</th><th style="font-size:13pt;width:70px">✔</th></tr></thead><tbody>
- ${L.map((x,i)=>`<tr><td style="font-size:14pt">${i+1}</td><td style="font-size:15pt"><b>${esc(x.name)}</b>${(x.sub||[]).length?'<div style="font-size:12pt;color:#444">'+x.sub.map(esc).join('<br>')+'</div>':''}</td><td style="font-size:16pt;font-weight:800">${esc(x.qty!=null?String(x.qty):'')} ${esc(x.unit||'')}</td><td style="font-size:14pt">${esc(x.dims||'')}</td><td><span class="box" style="width:36px;height:26px"></span></td></tr>`).join('')}</tbody></table>
- ${P.notes?`<div style="border:2px solid #333;border-radius:8px;padding:10px;margin:10px 0;font-size:15pt"><b>ملاحظات التصنيع:</b><br>${esc(P.notes).replace(/\n/g,'<br>')}</div>`:''}
- ${(P.stages||[]).length?`<div style="margin-top:10px;font-size:15pt"><b>المراحل:</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${P.stages.map((s,i)=>`<span style="border:2px solid #333;border-radius:8px;padding:4px 10px;${i===P.cur?'background:#ffe9a8;font-weight:800':''}">☐ ${esc(s)}</span>`).join('')}</div></div>`:''}
- <div style="margin-top:22px;font-size:13pt">اسم اللي جهّز: ____________ &nbsp;&nbsp; التوقيع: ____________</div></div>`;
- window.mkPrintA4('ورقة تجهيز '+(P.no||''),body)}
+ let css='@page{size:A4;margin:12mm}*{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}body{margin:0;color:#000}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#222;color:#fff;padding:8px;font-size:13pt;text-align:right}td{padding:10px 8px;border-bottom:2px solid #999;vertical-align:middle}.bx{display:inline-block;width:15mm;height:15mm;border:3px solid #000;border-radius:3px;background:#fff}tr{page-break-inside:avoid}thead{display:table-header-group}';
+ let head=`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:4px solid #000;padding-bottom:8px;margin-bottom:8px"><div>${P.code?`<div style="font-size:38pt;font-weight:900;letter-spacing:2px;line-height:1.1" dir="ltr">${esc(P.code)}</div>`:''}<div style="font-size:20pt;font-weight:800;margin-top:4px">ورقة تجهيز${P.owner?': '+esc(P.owner):''}</div><div style="font-size:14pt;margin-top:4px">${P.date?'التاريخ: <b>'+esc(P.date)+'</b>':''}${P.no?' &nbsp;•&nbsp; '+esc(P.src||'')+' <b>'+esc(P.no)+'</b>':(P.src?' &nbsp;•&nbsp; '+esc(P.src):'')}</div></div>${P.code?`<div style="text-align:center"><svg class="bc" data-v="${esc(P.code)}" style="width:62mm;height:20mm"></svg></div>`:''}</div>`;
+ let body=`${head}<table><thead><tr><th style="width:12mm">#</th><th>الصنف</th><th style="width:30mm">الكمية</th><th>المقاس / تفاصيل</th><th style="width:22mm;text-align:center">✔</th></tr></thead><tbody>
+ ${L.map((x,i)=>`<tr><td style="font-size:15pt">${i+1}</td><td style="font-size:16pt"><b>${esc(x.name)}</b>${(x.sub||[]).length?'<div style="font-size:12pt;color:#333">'+x.sub.map(esc).join('<br>')+'</div>':''}</td><td style="font-size:18pt;font-weight:800">${esc(x.qty!=null?String(x.qty):'')} ${esc(x.unit||'')}</td><td style="font-size:15pt">${esc(x.dims||'')}</td><td style="text-align:center"><span class="bx"></span></td></tr>`).join('')}</tbody></table>
+ ${P.notes?`<div style="border:3px solid #000;border-radius:8px;padding:10px;margin:10px 0;font-size:15pt"><b>ملاحظات التصنيع:</b><br>${esc(P.notes).replace(/\n/g,'<br>')}</div>`:''}
+ ${(P.stages||[]).length?`<div style="margin-top:10px;font-size:15pt"><b>المراحل:</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${P.stages.map((s,i)=>`<span style="border:2px solid #000;border-radius:8px;padding:4px 10px;${i===P.cur?'background:#ffe9a8;font-weight:800':''}">☐ ${esc(s)}</span>`).join('')}</div></div>`:''}
+ <div style="margin-top:24px;font-size:15pt">اسم الجاهز: ______________________ &nbsp;&nbsp; التوقيع: ______________________</div>`;
+ let html='<!doctype html><html dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap"><title>ورقة تجهيز '+esc(P.code||P.no||'')+'</title><style>'+css+'</style></head><body>'+body+
+  '<script src="'+BC_SRC+'"><\/script><script>window.onload=function(){document.querySelectorAll("svg.bc").forEach(function(x){try{JsBarcode(x,x.dataset.v,{format:"CODE128",displayValue:false,margin:0,height:60,width:2.4})}catch(e){}});setTimeout(function(){print()},600)}<\/script></body></html>';
+ if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(html);else window.mkPrintA4('ورقة تجهيز '+(P.no||''),body)}
 window.mkPrepPrint=sheet;
 const dimOf=n=>{let m=String(n||'').match(/(\d+(?:[.,]\d+)?\s*[x×*]\s*\d+(?:[.,]\d+)?(?:\s*[x×*]\s*\d+(?:[.,]\d+)?)?)|(\d+(?:[.,]\d+)?\s*(?:سم|مم|م|متر)(?=\s|$))/);return m?m[0]:''};
 async function wkOf(note){let m=String(note||'').match(/WK-?\d+/i);if(!m)return null;try{let r=await window.mkSB.from('mk_settings').select('value').eq('key','wk_orders').maybeSingle(),O=(r.data&&r.data.value)||[],n=parseInt(m[0].replace(/\D/g,''),10);let o=O.find(o=>+o.no===n)||null;if(o){let c=await window.mkSB.from('mk_settings').select('value').eq('key','wk_cfg').maybeSingle(),S=((c.data&&c.data.value)||{}).stages||{};o.__st=S[o.type]||null}return o}catch(e){return null}}
+async function prepCode(kind,key,wk,person){try{let c=window.mkSB,q=await c.from('mk_prep_sheets').select('code').eq('kind',kind).eq('ref',String(key)).order('created_at',{ascending:false}).limit(1);if(q.data&&q.data[0])return q.data[0].code;
+  let r=await c.rpc('mk_prep_new',{p_kind:kind,p_ref:String(key),p_wk:wk||null,p_person:person||''});return r.error?'':String(r.data||'')}catch(e){return ''}}
 async function fromInv(kind,key){let G0=invGroup(kind,key),G=G0.filter(x=>!x.ship&&!(window.mkIntLine&&mkIntLine(x,G0)));if(!G.length)return toast('الفاتورة مش موجودة');
  let F=window.mkKitFold?mkKitFold(G):G,r=G[0],o=await wkOf(r.note);
  let lines=F.map(x=>({name:x.product,qty:x.qty,unit:x.kitRows?'طقم':((findP(x)||{}).unit||''),dims:dimOf(x.product),sub:x.kitRows?x.kitRows.map(k=>'• '+k.product+' × '+(+k.qty)):[]}));
  if(o)lines.unshift({name:(o.type||'')+(o.kind==='slide'?' — جرار':o.kind==='hinge'?' — مفصلي':o.kind==='frame'?' — شاسيه':''),qty:o.qty||1,unit:'',dims:(+o.w&&+o.h?o.w+' × '+o.h+' سم':'')+(o.color?' — '+o.color:'')});
  let note=String(r.note||'').replace(/\s*—\s*⚙️.*$/,'');
- sheet({no:kind==='sale'?invNo(r):(r.pno||''),date:r.date,src:kind==='sale'?'فاتورة بيع':'فاتورة شراء',lines,notes:[note,o&&o.notes].filter(Boolean).join('\n'),stages:o&&o.__st||null,cur:o?Math.max(0,o.stage|0):-1})}
+ let code=await prepCode(kind,key,o&&o.no,r.person);
+ sheet({code,owner:(r.person||'').trim(),no:kind==='sale'?invNo(r):(r.pno||''),date:r.date,src:kind==='sale'?'فاتورة بيع':'فاتورة شراء',lines,notes:[note,o&&o.notes].filter(Boolean).join('\n'),stages:o&&o.__st||null,cur:o?Math.max(0,o.stage|0):-1})}
 window.mkPrepInv=fromInv;
 function btn(kind,key){return `<button type="button" class="secondary" style="width:100%;padding:12px;margin-top:8px" onclick="mkPrepInv('${kind}','${String(key).replace(/'/g,"\\'")}')">🖨️ طباعة ورق التجهيز (من غير أسعار)</button>`}
 const _oi=window.openInvoiceModal;window.openInvoiceModal=function(id){_oi.apply(this,arguments);try{let r=db.sales.find(x=>x.id===id);let o=document.getElementById('invOut');if(r&&o&&!document.getElementById('prepB')){o.insertAdjacentHTML('beforebegin','<div id="prepB">'+btn('sale',r.no||r.id)+'</div>')}}catch(e){}};
