@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-19';
+const APP_VER='2026-10-22-20';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -10989,6 +10989,64 @@ window.mkCtInv=function(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;op
 function side(){document.querySelectorAll('[data-page="contacts"]').forEach(b=>{if(b.dataset.ct)return;b.dataset.ct=1;b.setAttribute('onclick','mkCtChooser()');let sp=b.querySelector('span');if(sp)sp.textContent='العملاء والموردين'})}
 side();setTimeout(side,1500);setTimeout(side,5000);
 const _sp=showPage;showPage=function(id){let r=_sp.apply(this,arguments);if(id==='contacts')try{paint()}catch(e){}return r};
+})();
+</script>
+<script>
+/* ===== 🎤 المايك بيفهم الأوامر (#5): الأمر (من كلمات عبده في الإعدادات) منفصل عن الاسم، والاسم بيتدوّر عليه حتى لو النطق مش مظبوط.
+   لو الكلام فيه أرقام أو أصناف (زي «بيع ٣ سفلي بسعر ٢٦٠») بيروح للطريقة القديمة زي ما هي. ===== */
+(function(){
+const DEF={sale:['فاتورة بيع','فاتوره بيع','بيع','بعت'],purchase:['فاتورة شراء','فاتوره شراء','شراء','اشتريت'],stmt:['كشف حساب','كشف'],payin:['تحصيل','حصل','دفعة من'],payout:['سداد','دفعة ل']};
+const LAB={sale:'فاتورة بيع (عميل)',purchase:'فاتورة شراء (مورد)',stmt:'كشف حساب عميل',payin:'تحصيل دفعة من عميل',payout:'سداد دفعة لمورد'};
+let CMD=null;
+async function load(){if(CMD)return CMD;CMD=JSON.parse(JSON.stringify(DEF));try{let r=await window.mkSB.from('mk_settings').select('value').eq('key','voice_cmds').maybeSingle();let v=r&&r.data&&r.data.value;if(v&&typeof v==='object')Object.keys(DEF).forEach(k=>{if(Array.isArray(v[k])&&v[k].length)CMD[k]=v[k]})}catch(e){}return CMD}
+setTimeout(()=>{if(window.mkSB&&window.mkT_user)load()},7000);
+const FILL=new Set('ل لل للعميل العميل عميل للمورد المورد مورد بتاع بتاعه بتاعت باسم اسم افتح افتحلي اعمل اعملي عايز عاوز لو سمحت من الي ده دي يا'.split(' '));
+const norm=t=>VN(t).split(' ').map(w=>w.replace(/^ال(?=..)/,'')).join(' ');
+function lev(a,b){if(a===b)return 0;let m=a.length,n=b.length,d=[];for(let i=0;i<=m;i++){d[i]=[i]}for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function sim(q,name){let qt=norm(q).split(' ').filter(Boolean),nt=norm(name).split(' ').filter(Boolean);if(!qt.length||!nt.length)return 0;
+ let s=qt.reduce((a,w)=>a+Math.max(...nt.map(k=>k===w?1:(w.length>2&&k.length>2&&(k.startsWith(w)||w.startsWith(k)))?.85:Math.max(0,1-lev(w,k)/Math.max(w.length,k.length)))),0)/qt.length;
+ return s-0.04*Math.max(0,nt.length-qt.length)}
+function findCmd(txt){let best=null;Object.keys(CMD).forEach(k=>CMD[k].forEach(ph=>{let p=VN(ph);if(!p)return;let re=new RegExp('(^| )'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?= |$)');if(re.test(txt)&&(!best||p.length>best.p.length))best={k,p}}));return best}
+const ctype=k=>k==='purchase'||k==='payout'?'مورد':'عميل';
+const box=()=>document.getElementById('vres');
+function go(k,c){try{voiceStop()}catch(e){}
+ if(k==='stmt')return closeModal(),openContactFile(c.id);
+ if(k==='payin')return closeModal(),openPayment(c.id);
+ if(k==='payout')return closeModal(),openSupPay(c.id);
+ let sale=k==='sale',rows=(sale?db.sales:db.purchases).filter(r=>!r.ship&&(r.person||'').trim()===String(c.name).trim()),G=new Map();
+ rows.forEach(r=>{let key=sale?(r.no||r.id):(r.gid||r.id);if(!G.has(key))G.set(key,[]);G.get(key).push(r)});
+ let L=[...G.values()].sort((a,b)=>String(b[0].iso||'').localeCompare(String(a[0].iso||'')));
+ let open=g=>{closeModal();sale?openInvoiceModal(g[0].id):openPurchaseView(g[0].id)};
+ if(L.length===1)return open(L[0]);
+ if(!L.length){box().innerHTML=`<div style="background:var(--tint2);padding:10px;border-radius:12px"><b>${esc(c.name)}</b> مالوش فواتير ${sale?'بيع':'شراء'}.</div><p>تفتح فاتورة ${sale?'بيع':'شراء'} جديدة ${sale?'للعميل':'للمورد'} ده؟</p><button class="primary" style="width:100%" onclick="mkVoiceNew('${k}','${c.id}')">✔ أيوه، فاتورة جديدة</button>`;return}
+ window._vL=L;box().innerHTML=`<p style="margin:6px 0"><b>${esc(c.name)}</b> ليه ${L.length} فاتورة — اختار:</p>`+L.slice(0,8).map((g,i)=>`<button class="secondary" style="width:100%;margin-bottom:6px;display:flex;justify-content:space-between" onclick="mkVoiceOpenInv(${i},'${k}')"><span>${esc(sale?invNo(g[0]):(g[0].pno||''))} — ${esc(g[0].date||'')}</span><b>${money(sumBy(g,x=>x.total))}</b></button>`).join('')+`<button class="primary" style="width:100%" onclick="mkVoiceNew('${k}','${c.id}')">➕ فاتورة جديدة</button>`}
+window.mkVoiceOpenInv=(i,k)=>{let g=(window._vL||[])[i];if(!g)return;closeModal();k==='sale'?openInvoiceModal(g[0].id):openPurchaseView(g[0].id)};
+window.mkVoiceNew=(k,id)=>{let c=db.contacts.find(x=>x.id===id);closeModal();openTransaction(k==='purchase'?'purchase':'sale');setTimeout(()=>{let p=document.getElementById('txPerson');if(p&&c){p.value=c.name;p.dispatchEvent(new Event('input',{bubbles:true}));if(k!=='purchase')try{fillCust()}catch(e){}}},200)};
+window.mkVoicePick=(k,id)=>{let c=db.contacts.find(x=>x.id===id);if(c)go(k,c)};
+const _vp=voiceParse;
+voiceParse=function(){let t=document.getElementById('vtxt'),raw=t?t.value:'';if(!raw.trim())return;if(!CMD){load().then(()=>voiceParse());return}
+ let txt=VN(raw),hit=findCmd(txt);
+ if(!hit)return _vp.apply(this,arguments);
+ let rest=(' '+txt+' ').replace(' '+hit.p+' ',' ').trim().split(' ').filter(w=>w&&!FILL.has(w)).join(' ');
+ if(/\d/.test(rest))return _vp.apply(this,arguments);                  // فيه أرقام = أمر مفصّل بالأصناف → الطريقة القديمة
+ let k=hit.k,T=ctype(k);
+ if(!rest){if(k==='sale'||k==='purchase'){try{voiceStop()}catch(e){}closeModal();return openTransaction(k)}box().innerHTML=`<p>قول الاسم كمان: «${esc(hit.p)} + اسم ${T==='عميل'?'العميل':'المورد'}»</p>`;return}
+ let C=db.contacts.filter(c=>c.type===T).map(c=>({c,s:sim(rest,c.name)})).filter(x=>x.s>=0.55).sort((a,b)=>b.s-a.s);
+ if(!C.length){let P=prodsCo().some(p=>sim(rest,p.name)>=0.7);if(P&&(k==='sale'||k==='purchase'))return _vp.apply(this,arguments);
+  box().innerHTML=`<p style="color:var(--danger)">مالقيتش ${T==='عميل'?'عميل':'مورد'} اسمه «${esc(rest)}».</p>`+((k==='sale'||k==='purchase')?`<button class="secondary" style="width:100%" onclick="closeModal();openTransaction('${k}')">افتح فاتورة جديدة</button>`:'');return}
+ let ex=C.filter(x=>norm(x.c.name)===norm(rest));if(ex.length===1)return go(k,ex[0].c);
+ if(C.length===1||(C[0].s>=0.8&&C[0].s-C[1].s>=0.15))return go(k,C[0].c);
+ box().innerHTML=`<div style="background:var(--tint2);padding:10px;border-radius:12px"><b>${LAB[k]}</b> — مين تقصد؟</div>`+C.slice(0,6).map(x=>`<button class="secondary" style="width:100%;margin-top:6px;text-align:right" onclick="mkVoicePick('${k}','${x.c.id}')">${esc(x.c.name)}${x.c.phone?` <small dir="ltr">${esc(x.c.phone)}</small>`:''}</button>`).join('')};
+/* ⚙️ إعدادات كلمات الأوامر */
+window.mkVoiceCfg=async function(){await load();openModal(`<div class="modal-head"><h2>⚙️ كلمات الأوامر الصوتية</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="font-size:13px;color:var(--muted);margin:0 0 8px">لكل أمر اكتب الكلمات اللي تفتحه، وبينها شرطة مايلة / . بعد الكلمة قول اسم العميل أو المورد. (مفيش أسماء عملاء هنا)</p>
+ ${Object.keys(DEF).map(k=>`<div class="field full" style="margin-bottom:8px"><label>${LAB[k]}</label><input id="vc_${k}" value="${esc(CMD[k].join(' / '))}"></div>`).join('')}
+ <div class="modal-foot"><button class="primary" id="vcSave">💾 حفظ</button><button type="button" class="secondary" onclick="mkVoiceCfgReset()">رجّع الافتراضي</button></div>`);
+ document.getElementById('vcSave').onclick=async function(){let v={};Object.keys(DEF).forEach(k=>{v[k]=document.getElementById('vc_'+k).value.split('/').map(x=>x.trim()).filter(Boolean);if(!v[k].length)v[k]=DEF[k]});
+  this.disabled=true;this.textContent='جاري الحفظ...';let r=await window.mkSB.from('mk_settings').upsert([{key:'voice_cmds',value:v}],{onConflict:'key'});if(r&&r.error){this.disabled=false;this.textContent='💾 حفظ';return toast('ماتحفظش: '+(r.error.message||''))}CMD=v;closeModal();toast('✔ اتحفظت كلمات الأوامر')}};
+window.mkVoiceCfgReset=()=>{Object.keys(DEF).forEach(k=>{let e=document.getElementById('vc_'+k);if(e)e.value=DEF[k].join(' / ')})};
+const _ov=openVoice;openVoice=function(){_ov.apply(this,arguments);let r=document.getElementById('vres');if(r&&!document.getElementById('vcBtn'))r.insertAdjacentHTML('afterend','<button type="button" id="vcBtn" class="secondary" style="width:100%;margin-top:6px" onclick="voiceStop();mkVoiceCfg()">⚙️ كلمات الأوامر</button><p style="font-size:12px;color:#7a8a8f">جديد: «فاتورة بيع المهندس رضا» بتفتح فاتورته، «كشف حساب أحمد»، «تحصيل من علي»، «سداد السبتية».</p>');load()};
+window.__voice={sim,findCmd:t=>{return CMD?findCmd(VN(t)):null}};
 })();
 </script>
 </body>
