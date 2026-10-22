@@ -1720,7 +1720,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-12';
+const APP_VER='2026-10-22-13';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6760,7 +6760,9 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  var HANDLES=[['one','جنب واحد بمقبض'],['both','الجنبين بمقبض'],['none','من غير مقبض'],['ext','مقبض خارجي (لطش) — الأعواد كلها عادية'],['frame','شاسيه ثابت (فريم بس)']];
  function rodCalc(o){var w=num(o.w),h=num(o.h),q=Math.max(1,num(o.qty)||1);if(!(w>0&&h>0)||o.kind==='other'||(o.type!=='دلفة'&&o.type!=='جرار'))return null;
   var hc={none:0,one:1,both:2,ext:0,frame:0}[o.handle||'one'];if(hc==null)hc=1;
-  var T=rodType(o.rod),P=[],H=[],i,k;
+  var T=Object.assign({},rodType(o.rod)),P=[],H=[],i,k;
+  /* الطول من بيانات الصنف (len بالمتر) لو متسجل — غير كده طول الإعدادات زي الأول */
+  [['pLen',o.secProd||T.pProd],['hLen',o.secProd||T.hProd]].forEach(function(z){var p=fProd(z[1]);if(p&&+p.len>0)T[z[0]]=Math.round(+p.len*100)});
   for(i=0;i<q;i++){for(k=0;k<2-hc;k++)P.push(h);for(k=0;k<hc;k++)H.push(h);P.push(w,w)}
   return {T:T,P:P,H:H,pp:P.length?plan(P,T.pLen,num(RC.kerf)||0):[],hp:H.length?plan(H,T.hLen,num(RC.kerf)||0):[],bad:P.some(function(x){return x>T.pLen})||H.some(function(x){return x>T.hLen}),meters:Math.round(P.concat(H).reduce(function(a,b){return a+b},0))/100};
  }
