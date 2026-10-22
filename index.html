@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-18';
+const APP_VER='2026-10-22-19';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -10952,6 +10952,43 @@ if(typeof window.__mkVSOrigWaOpen==='function'){
  const _o2=window.__mkVSOrigWaOpen;
  window.__mkVSOrigWaOpen=async function(id){await _o2(id);try{injectSearch(id)}catch(e){}};
 }
+})();
+</script>
+<script>
+/* ===== 👥 العملاء والموردين (#14): أيقونة واحدة بتفتح اختيارين، وكل شاشة مستقلة ببحثها وإضافتها وأرصدتها.
+   نفس الجدول (mk_contacts بعمود type) — مفيش بيانات بتتنقل أو تتمسح، والأرصدة زي ما هي. ===== */
+(function(){
+let MODE=(()=>{try{return localStorage.getItem('mk_ct_mode')||'عميل'}catch(e){return 'عميل'}})(),Q={'عميل':'','مورد':''};
+const isC=()=>MODE==='عميل';
+function setMode(m){MODE=m==='مورد'?'مورد':'عميل';try{localStorage.setItem('mk_ct_mode',MODE)}catch(e){}}
+window.mkCtOpen=function(m){if(m)setMode(m);try{closeModal()}catch(e){}showPage('contacts');paint()};
+window.mkCtChooser=function(){openModal(`<div class="modal-head"><h2>👥 العملاء والموردين</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${[['عميل','👥','العملاء','رصيد الآجل، كشف حساب، تحصيل، فواتير البيع'],['مورد','🏭','الموردين','اللي علينا، كشف حساب، سداد، فواتير الشراء']].map(x=>{let L=db.contacts.filter(c=>c.type===x[0]),b=L.reduce((a,c)=>a+Math.max(0,+c.balance||0),0);
+  return `<button type="button" onclick="mkCtOpen('${x[0]}')" style="padding:16px 10px;border:2px solid var(--border);border-radius:16px;background:var(--card,#fff);text-align:center;min-height:140px;color:inherit;font:inherit"><div style="font-size:38px">${x[1]}</div><b style="font-size:19px">${x[2]}</b><div style="font-size:13px;color:var(--muted);margin-top:4px">${L.length} — ${x[0]==='عميل'?'عليهم':'علينا'} ${money(b)}</div><small style="display:block;color:var(--muted);margin-top:4px">${x[3]}</small></button>`}).join('')}</div>`)};
+function paint(){let sec=document.getElementById('contacts');if(!sec)return;
+ let h=sec.querySelector('.title-row h1'),p=sec.querySelector('.title-row p');if(h)h.textContent=isC()?'👥 العملاء':'🏭 الموردين';if(p)p.textContent=isC()?'رصيد كل عميل (الآجل)، كشف حساب، تحصيل دفعة، وفواتير البيع':'رصيد كل مورد (اللي علينا)، كشف حساب، سداد دفعة، وفواتير الشراء';
+ let add=sec.querySelector('.title-row .primary');if(add){add.innerHTML=isC()?'➕ إضافة عميل':'➕ إضافة مورد';add.onclick=()=>{openContact();setTimeout(()=>{let t=document.getElementById('ctype');if(t){t.value=MODE;t.closest('.field').style.display='none'}let h2=document.querySelector('#modal .modal-head h2');if(h2)h2.textContent=isC()?'إضافة عميل':'إضافة مورد'},30)}}
+ let tb=document.getElementById('ctTabs');if(!tb){tb=document.createElement('div');tb.id='ctTabs';tb.className='toolbar';let tr=sec.querySelector('.title-row');tr&&tr.insertAdjacentElement('afterend',tb)}
+ tb.innerHTML=[['عميل','👥 العملاء'],['مورد','🏭 الموردين']].map(x=>`<button type="button" class="${MODE===x[0]?'primary':'secondary'}" style="flex:1;min-height:48px;font-size:17px" onclick="mkCtOpen('${x[0]}')">${x[1]}</button>`).join('');
+ let f=document.getElementById('ctF');if(f){f.value=MODE;f.style.display='none'}
+ let q=document.getElementById('ctQ');if(q){if(q.dataset.mode!==MODE){q.value=Q[MODE]||'';q.dataset.mode=MODE}q.placeholder=isC()?'ابحث عن عميل بالاسم أو التليفون...':'ابحث عن مورد بالاسم أو التليفون...';if(!q.dataset.ct){q.dataset.ct=1;q.addEventListener('input',()=>{Q[MODE]=q.value})}}
+ let th=sec.querySelectorAll('thead th');if(th[1])th[1].style.display='none';if(th[3])th[3].textContent=isC()?'الحساب (عليه)':'الحساب (علينا)';
+ let sm=document.getElementById('ctSum');if(!sm){sm=document.createElement('div');sm.id='ctSum';sm.className='card';sm.style.cssText='margin-bottom:10px;line-height:1.9';let cd=sec.querySelector('.card:not(#ctSum)');cd&&cd.insertAdjacentElement('beforebegin',sm)}
+ let L=db.contacts.filter(c=>c.type===MODE),pos=L.reduce((a,c)=>a+Math.max(0,+c.balance||0),0),neg=L.reduce((a,c)=>a+Math.min(0,+c.balance||0),0);
+ sm.innerHTML=`<b>${L.length}</b> ${isC()?'عميل':'مورد'} — ${isC()?'عليهم':'علينا ليهم'}: <b style="color:var(--danger)">${money(pos)}</b>${neg?` — ${isC()?'ليهم رصيد عندنا':'لينا رصيد عندهم'}: <b>${money(-neg)}</b>`:''}`}
+const _rc=renderContacts;
+renderContacts=function(){let sec=document.getElementById('contacts');if(sec&&!document.getElementById('ctTabs'))paint();let f=document.getElementById('ctF');if(f)f.value=MODE;_rc.apply(this,arguments);
+ let b=document.getElementById('contactsBody');if(!b)return;
+ [...b.querySelectorAll('tr.prow')].forEach(tr=>{let m=/openContactFile\('([^']+)'\)/.exec(tr.getAttribute('onclick')||''),c=m&&db.contacts.find(x=>x.id===m[1]);if(!c)return;
+  if(tr.children[1])tr.children[1].style.display='none';let td=tr.lastElementChild;if(!td||td.dataset.ct)return;td.dataset.ct=1;
+  let f0=td.querySelector('button');if(f0)f0.textContent='📄 كشف حساب';
+  td.insertAdjacentHTML('beforeend',` <button class="secondary" onclick="mkCtInv('${c.id}')">${c.type==='عميل'?'🧾 فاتورة بيع':'🧾 فاتورة شراء'}</button>`)});
+ try{paint()}catch(e){}};
+window.mkCtInv=function(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;openTransaction(c.type==='عميل'?'sale':'purchase');setTimeout(()=>{let p=document.getElementById('txPerson');if(p){p.value=c.name;p.dispatchEvent(new Event('input',{bubbles:true}));if(c.type==='عميل')try{fillCust()}catch(e){}}},200)};
+/* الأيقونة في الشريط الجانبي بتفتح الاختيارين */
+function side(){document.querySelectorAll('[data-page="contacts"]').forEach(b=>{if(b.dataset.ct)return;b.dataset.ct=1;b.setAttribute('onclick','mkCtChooser()');let sp=b.querySelector('span');if(sp)sp.textContent='العملاء والموردين'})}
+side();setTimeout(side,1500);setTimeout(side,5000);
+const _sp=showPage;showPage=function(id){let r=_sp.apply(this,arguments);if(id==='contacts')try{paint()}catch(e){}return r};
 })();
 </script>
 </body>
