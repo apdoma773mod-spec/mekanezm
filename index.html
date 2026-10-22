@@ -1720,7 +1720,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-11';
+const APP_VER='2026-10-22-12';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6656,6 +6656,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
      '<div style="margin-top:12px;padding:12px;border-radius:12px;background:#e8f7ee;border:2px solid #7bcf9a">'+(C.lines.length?C.lines.map(function(l){return '<div style="display:flex;justify-content:space-between;gap:8px"><span>'+esc(l.lab)+(l.n>1?' × '+l.n:'')+'</span><b>'+fmt(l.tot)+'</b></div>'}).join('')+'<div style="border-top:1px dashed #7bcf9a;margin-top:6px;padding-top:6px;font-size:20px;font-weight:900;display:flex;justify-content:space-between"><span>الإجمالي</span><span>'+fmt(C.tot)+' ج</span></div><div style="font-size:13px">مجموع التكاليف '+fmt(C.cost)+' ج — ربحك <b>'+fmt(r2(C.tot-C.cost))+'</b> ج</div>':'<span style="color:var(--muted)">اختار العود وضيف الأصناف</span>')+'</div>'+
      (C.short.length?'<div style="margin-top:8px;padding:10px;border-radius:10px;background:#fff4e0;color:#a66a00;font-weight:700">⚠️ ناقص في المخزون (الفاتورة هتتعمل عادي والرصيد هيبقى بالسالب):<br>'+C.short.map(esc).join('<br>')+'</div>':'')+
      '<button type="button" class="wkbtn p" id="fcGo" style="margin-top:10px;width:100%;min-height:52px;font-size:17px">🧾 افتح الفاتورة</button>'+
+     '<div style="margin-top:6px;font-size:12px;color:var(--muted);text-align:center">نسخة السيستم: '+(typeof APP_VER!=='undefined'?APP_VER:'?')+' — لو ناقص في المخزون الفاتورة بتتعمل والرصيد بيبقى بالسالب</div>'+
      (!C.lines.some(function(l){return l.t==='swap'})&&C.lines.length>1?'<button type="button" class="wkbtn" id="fcKit" style="margin-top:8px;width:100%">💾 احفظ الأصناف دي كطقم واحد (كود + باركود)</button>':'')+allDL+'</div>'+
     '<div class="wkc"><h3>➕ دفعة جديدة (حديد بيور من المورد)</h3><div class="wkg">'+fi('foS','اشتريناه من','السبتية')+fi('foN','عدد الأعواد','','inputmode="numeric"')+fi('foL','طول العود (متر)',6,'inputmode="decimal"')+fi('foC','سعر العود الحديد (ج)','','inputmode="decimal"')+fi('foO','الفرن (اختياري)','','')+'</div><button type="button" class="wkbtn p" id="foAdd" style="margin-top:10px">حفظ الدفعة</button></div>'+
     '<div class="wkc"><h3>🚚 في الطريق ('+live.length+')</h3>'+(live.map(card).join('')||'<span class="empty">مفيش دفعات شغالة</span>')+'</div>'+
