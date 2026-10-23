@@ -1728,7 +1728,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-10';
+const APP_VER='2026-10-23-11';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3648,8 +3648,11 @@ function injectBtn(){let m=document.getElementById('modal');if(!m||m.querySelect
  if(window.mkScanList)mkScanList()}
 const _otI=openTransaction;openTransaction=function(type){_otI.apply(this,arguments);if(type==='purchase')try{injectBtn()}catch(e){}};
 
-window.ivStart=function(mode){let f=document.createElement('input');f.type='file';f.accept=mode==='file'?'image/*,application/pdf,.pdf':'image/*';if(mode==='cam'||mode===true)f.setAttribute('capture','environment');
- f.onchange=()=>{if(f.files&&f.files[0]){if(window.mkScanAdd)mkScanAdd(f.files[0]);else toast('حدّث الصفحة')}};f.click()};
+window.ivStart=function(mode){let f=document.createElement('input');f.type='file';f.accept=mode==='file'?'image/*,application/pdf,.pdf':'image/*';if(mode==='cam'||mode===true)f.setAttribute('capture','environment');else f.multiple=true;
+ /* لازم الخانة تتحط في الصفحة: آيفون (Safari) بيمسح الخانة الطايرة قبل ما يبعت الصورة فمابيحصلش حاجة */
+ f.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(f);
+ const kill=()=>{try{f.remove()}catch(e){}};setTimeout(kill,300000);
+ f.onchange=()=>{let fs=[...(f.files||[])];if(!fs.length)return kill();toast('📷 وصلت '+(fs.length>1?fs.length+' صور':'الصورة')+' — بجهّزها…');if(window.mkScanAdd)mkScanAdd(fs.length>1?fs:fs[0]);else toast('حدّث الصفحة');setTimeout(kill,2000)};f.click()};
 window.ivShrink=shrink;
 
 /* بيانات الفاتورة اللي اتقرت (من الطابور) → شاشة المراجعة */
@@ -3759,8 +3762,8 @@ async function pdfPages(file){await loadJS('https://cdnjs.cloudflare.com/ajax/li
 window.mkScanAdd=async function(file){
  if(!sbx()||!navigator.onLine)return toast('محتاج نت');
  busy('⏳ بجهّز الفاتورة…');
- try{let pdf=/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||'');
-  let pages=pdf?await pdfPages(file):[await window.ivShrink(file,1600)];if(!pages.length)throw new Error('الملف فاضي');
+ try{let pdf=!Array.isArray(file)&&(/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||''));
+  let pages;if(Array.isArray(file)){pages=[];for(const x of file){pages.push(...(/pdf/i.test(x.type||'')||/\.pdf$/i.test(x.name||'')?await pdfPages(x):[await window.ivShrink(x,1600)]))}pages=pages.slice(0,8)}else pages=pdf?await pdfPages(file):[await window.ivShrink(file,1600)];if(!pages.length)throw new Error('الملف فاضي');
   let id=crypto.randomUUID(),paths=[];
   for(let i=0;i<pages.length;i++){busy(pages.length>1?`⏳ برفع صفحة ${i+1} من ${pages.length}…`:'⏳ برفع الصورة…');let p=`${id}/p${i+1}.jpg`;
    let {error}=await sbx().storage.from('invoice-scans').upload(p,b64toBlob(pages[i]),{contentType:'image/jpeg',upsert:true});if(error)throw error;paths.push(p)}
@@ -4864,7 +4867,7 @@ const imgOf=p=>{const inf=window.mkPC&&mkPC._info&&mkPC._info[p.id];if(inf&&inf.
 const locOf=p=>{const inf=window.mkPC&&mkPC._info&&mkPC._info[p.id];return inf&&inf.loc||''};
 function box(html){let b=document.getElementById('vsBox');if(!b){b=document.createElement('div');b.id='vsBox';b.onclick=e=>{if(e.target===b)close()};document.body.appendChild(b)}b.innerHTML='<div class="vs">'+html+'</div>'}
 function close(){const b=document.getElementById('vsBox');if(b)b.remove()}
-function pick(ctx){CTX=ctx||'prod';const f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=()=>{if(f.files&&f.files[0])run(f.files[0])};f.click()}
+function pick(ctx){CTX=ctx||'prod';const f=document.createElement('input');f.type='file';f.accept='image/*';f.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(f);const kill=()=>{try{f.remove()}catch(e){}};setTimeout(kill,300000);f.onchange=()=>{if(f.files&&f.files[0])run(f.files[0]);setTimeout(kill,2000)};f.click()}
 async function run(file){let big,thumb;try{big=await shrink(file,1024,.82);thumb=await shrink(file,220,.6)}catch(e){return toast(e.message)}
  box(`<div class="vsh"><b>📷 بدوّر على القطعة…</b><button class="secondary" onclick="mkVS.close()">✕</button></div><img class="vsph" src="${big}"><div class="vsseen">⏳ الذكاء الاصطناعي بيشوف الصورة ويقارنها بأصنافك… (ثواني)</div>`);
  try{const r=await SBc().functions.invoke('match-product',{body:{image:big,media_type:'image/jpeg'}});let err='';
