@@ -2110,11 +2110,18 @@ window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.leng
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
  <div style="position:relative"><input id="wPin" type="text" inputmode="numeric" placeholder="الرقم السري" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="mkpin-nofill" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc;padding-left:56px"><button type="button" onclick="(function(b){var i=document.getElementById('wPin'),on=i.style.webkitTextSecurity!=='none';i.style.webkitTextSecurity=i.style.textSecurity=on?'none':'disc';b.textContent=on?'🙈':'👁';i.focus()})(this)" style="position:absolute;left:6px;top:6px;width:44px;height:40px;padding:0;background:none;border:0;font-size:20px;box-shadow:none;color:inherit;margin:0">👁</button></div><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
-function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
+function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل أو رقم الموبايل، وكلمة السر')}</p><input id="wEmail" type="text" placeholder="الإيميل أو رقم الموبايل" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
 window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();
 async function signIn(email,pass){let e=document.getElementById('wErr');if(!email||!pass){if(e)e.textContent='اكتب البيانات';return}
+ /* رقم الموبايل: بنجيب الإيميل المرتبط بيه من السيرفر، وبعدين الدخول بنفس كلمة السر */
+ email=String(email).trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+ if(!/@/.test(email)){let dg=email.replace(/\D/g,'');if(dg.length<10){if(e)e.textContent='اكتب الإيميل أو رقم الموبايل كامل';return}
+  if(!sb){if(e)e.textContent='مفيش نت — لازم نت عشان تدخل أول مرة';return}
+  let rr=await sb.rpc('mk_phone_to_email',{p_phone:email});if(rr.error){if(e)e.textContent=netErr(rr.error)?'مفيش نت — لازم نت عشان تدخل':'حصلت مشكلة، جرّب تاني';return}
+  if(!rr.data){if(e)e.textContent='الرقم ده مش متسجل عندنا — كلم عبده';return}
+  email=rr.data}
  pass=String(pass).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));   // كيبورد الآيفون العربي بيكتب ٠١٢
  if(!sb){if(e)e.textContent='مفيش نت — لازم نت عشان تدخل أول مرة';return}
  if(e)e.textContent='جاري الدخول…';let b=document.getElementById('wGo');if(b)b.disabled=true;
