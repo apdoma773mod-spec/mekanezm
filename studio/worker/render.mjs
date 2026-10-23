@@ -41,7 +41,9 @@ function probe(file) {
   let w = v.width, h = v.height;
   const rot = Math.abs(+(((v.side_data_list || []).find(x => x.rotation !== undefined) || {}).rotation || (v.tags && v.tags.rotate) || 0));
   if (rot === 90 || rot === 270) [w, h] = [h, w];
-  return { dur: +(j.format.duration || v.duration || 0), w, h, hasAudio: !!a };
+  /* فيديو الآيفون HDR (HLG/PQ) لو اتفك من غير تحويل بيطلع باهت ومصفر */
+  const hdr = /arib-std-b67|smpte2084/.test(String(v.color_transfer || ''));
+  return { dur: +(j.format.duration || v.duration || 0), w, h, hasAudio: !!a, hdr };
 }
 
 /* ---------- الصوت والذكاء ---------- */
@@ -72,7 +74,7 @@ async function analyze(file, spec, prog) {
   const seg = [], ev = []; let title = '';
   res.forEach((r, i) => {
     const off = jobs[i].a / 16000; if (i === 0) title = r.title || '';
-    (r.segments || []).forEach(x => { if (String(x.t || '').trim()) seg.push({ s: off + (+x.s || 0), e: off + (+x.e || +x.s + 1), t: String(x.t).trim() }); });
+    (r.segments || []).forEach(x => { if (String(x.t || '').trim()) seg.push({ s: off + (+x.s || 0), e: off + (+x.e || +x.s + 1), t: String(x.t).trim(), cut: !!x.cut, kw: Array.isArray(x.kw) ? x.kw.map(String).filter(Boolean).slice(0, 3) : [] }); });
     (r.events || []).forEach(x => { if (String(x.label || '').trim()) ev.push({ s: off + (+x.s || 0), e: off + (+x.e || 0), type: String(x.type || 'point'), label: String(x.label).trim(), value: en(x.value || ''), unit: String(x.unit || ''), on: true }); });
   });
   seg.sort((a, b) => a.s - b.s); ev.sort((a, b) => a.s - b.s);
@@ -94,7 +96,9 @@ async function render(inFile, job, D, info, outFile, prog) {
   const spec = job.spec || {}, tmp = path.dirname(outFile), framesDir = path.join(tmp, 'frames'); fs.mkdirSync(framesDir, { recursive: true });
   /* فريمات الفيديو بحجم مناسب (القصير ≤ ١٠٨٠). القائمة الأوتوماتيك بتلف حسب الدوران */
   await prog(36, 'بجهّز فريمات الفيديو…');
-  run('ffmpeg', ['-v', 'error', '-y', '-i', inFile, '-vf', `fps=${FPS},scale='if(gt(iw,ih),-2,min(1080,iw))':'if(gt(iw,ih),min(1080,ih),-2)'`, '-q:v', '3', path.join(framesDir, 'f%06d.jpg')]);
+  const tone = info.hdr ? 'zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p,' : '';
+  if (info.hdr) log('فيديو HDR — بحوّله لألوان عادية');
+  run('ffmpeg', ['-v', 'error', '-y', '-i', inFile, '-vf', `${tone}fps=${FPS},scale='if(gt(iw,ih),-2,min(1080,iw))':'if(gt(iw,ih),min(1080,ih),-2)'`, '-q:v', '3', path.join(framesDir, 'f%06d.jpg')]);
   const total = fs.readdirSync(framesDir).filter(x => x.endsWith('.jpg')).length;
   if (!total) throw new Error('ماقدرتش أفك فريمات الفيديو');
   const { s: srv, port } = await serve(STUDIO, framesDir);
@@ -113,18 +117,30 @@ async function render(inFile, job, D, info, outFile, prog) {
       /* صور الأصناف لازم تتحمّل قبل أول فريم */
       await new Promise(r => setTimeout(r, 400));
     }, { spec, D, fontNames: [spec.S && spec.S.font, 'Cairo'].filter(Boolean) });
-    const st = await page.evaluate(() => { const s = mkzSmart.state(); return { gaps: s.GAPS, dur: window.__im.duration }; });
+    /* مكان الشخص (عشان الكلام والكروت مايغطّوش وشه): عينة كل نص ثانية */
+    if (await page.evaluate(() => mkzSmart._test.wantPeople())) {
+      await prog(37, 'بدوّر على مكانك في الفيديو…');
+      const found = await page.evaluate(async ({ total, FPS }) => {
+        const times = []; for (let i = 0; i < total; i += 15) times.push(i / FPS);
+        const n = await mkzSmart._test.detect(times, async t => { const im = new Image(); im.src = '/frames/f' + String(Math.min(total - 1, Math.round(t * FPS)) + 1).padStart(6, '0') + '.jpg'; await im.decode(); return im; });
+        mkzSmart._test.build(); mkzSmart._test.setup(); return n;
+      }, { total, FPS });
+      log('مكان الشخص:', found < 0 ? 'ماقدرتش أحمّل الكشف — تقدير' : found + ' عينة');
+    }
+    let st = await page.evaluate(() => { const s = mkzSmart.state(); return { gaps: s.GAPS, dur: window.__im.duration }; });
+    /* فيديو طويل بعد القص: ٧٢٠ عشان الملف يفضل تحت حد التخزين وبجودة كويسة */
+    { const cut = st.gaps.reduce((a, g) => a + (Math.min(g[1], st.dur) - g[0]), 0);
+      if (st.dur - cut > 270 && !(spec.S && +spec.S.q === 720)) { await page.evaluate(() => { mkzSmart._test.setS({ q: 720 }); mkzSmart._test.setup(); }); log('فيديو طويل — هيطلع 720'); } }
     const inGap = t => st.gaps.find(g => t >= g[0] && t < g[1]);
     const keep = []; for (let i = 0; i < total; i++) { const t = i / FPS; if (!inGap(t)) keep.push(i); }
     const outDur = keep.length / FPS;
     /* حجم الملف تحت ٤٥ ميجا (حد التخزين): البت ريت بالدقيقة */
-    const kbps = Math.max(1500, Math.min(8000, Math.floor(42 * 8 * 1024 / Math.max(outDur, 1))));
+    const kbps = Math.max(600, Math.min(8000, Math.floor(42 * 8 * 1024 / Math.max(outDur, 1))));
     const args = ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-'];
     const gapExpr = st.gaps.slice(0, 120).map(g => `between(t,${g[0].toFixed(3)},${g[1].toFixed(3)})`).join('+');
     if (info.hasAudio) args.push('-i', inFile, '-filter_complex', st.gaps.length ? `[1:a]aselect='not(${gapExpr})',asetpts=N/SR/TB[a]` : '[1:a]anull[a]', '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '128k');
     else args.push('-an');
-    /* تصحيح لون خفيف: بيشيل الصفار ويظبط التشبع (الفيديوهات المصفرة بتطلع رخيصة) */
-    args.push('-vf', 'colortemperature=temperature=6500,eq=saturation=1.05:contrast=1.04', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', kbps + 'k', '-bufsize', 2 * kbps + 'k', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', outFile);
+    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', kbps + 'k', '-bufsize', 2 * kbps + 'k', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', outFile);
     const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'ignore', 'pipe'] }); let ferr = ''; ff.stderr.on('data', d => { ferr += d; });
     const done = new Promise((res, rej) => ff.on('close', c => c === 0 ? res() : rej(new Error('ffmpeg فشل: ' + ferr.slice(-400)))));
     let last = Date.now();
@@ -145,7 +161,7 @@ async function render(inFile, job, D, info, outFile, prog) {
 async function runJob(inFile, job, outFile, prog) {
   const info = probe(inFile);
   log('فيديو', info.w + 'x' + info.h, info.dur.toFixed(1) + 's', info.hasAudio ? 'بصوت' : 'من غير صوت');
-  if (info.dur > 300) throw new Error('الفيديو أطول من ٥ دقايق — قصّره');
+  if (info.dur > 600) throw new Error('الفيديو أطول من ١٠ دقايق — قصّره');
   let D = job.D || (job.spec && job.spec.D);
   if (!D) { if (!info.hasAudio) D = { title: '', seg: [], ev: [], dur: info.dur }; else { await prog(8, 'بسحب الصوت…'); D = await analyze(inFile, job.spec || {}, prog); } }
   D.dur = D.dur || info.dur;

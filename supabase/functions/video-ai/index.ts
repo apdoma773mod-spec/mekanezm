@@ -1,6 +1,7 @@
 // video-ai — مونتاج ذكي لميكانيزم ستوديو: بياخد صوت جزء من الفيديو (WAV مضغوط، ١٦ كيلو مونو) ويرجّع:
 //   segments: الكلام بتوقيته (ثواني من أول الجزء) — للترجمة على الفيديو
-//   events:   حاجات تتوضّح على الشاشة: مقاس/رقم بوحدة (measure) — نموذج أو صنف (product) — نقطة مهمة (point) — سعر (price)
+//   events:   حاجات تتوضّح على الشاشة: مقاس/رقم بوحدة (measure) — نموذج أو صنف (product) — نقطة مهمة (point) — سعر (price) — خطوة (step) — تحذير (warn) — قسم جديد (topic)
+//   segments[].kw = أهم كلمة/كلمتين تتلوّن — segments[].cut = جملة تتشال (إعادة/تهتهة)
 //   title:    عنوان قصير للفيديو (من أول جزء بس)
 // الدخول: توكن مستخدم مسجّل في ميكانيزم (نفس حساب السيستم). المفتاح GEMINI_API_KEY من Secrets (نفس parse-invoice).
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -14,7 +15,7 @@ const SCHEMA = {
   type: "OBJECT",
   properties: {
     title: { type: "STRING" },
-    segments: { type: "ARRAY", items: { type: "OBJECT", properties: { s: { type: "NUMBER" }, e: { type: "NUMBER" }, t: { type: "STRING" } }, required: ["s", "e", "t"] } },
+    segments: { type: "ARRAY", items: { type: "OBJECT", properties: { s: { type: "NUMBER" }, e: { type: "NUMBER" }, t: { type: "STRING" }, cut: { type: "BOOLEAN" }, kw: { type: "ARRAY", items: { type: "STRING" } } }, required: ["s", "e", "t"] } },
     events: { type: "ARRAY", items: { type: "OBJECT", properties: {
       s: { type: "NUMBER" }, e: { type: "NUMBER" }, type: { type: "STRING" }, label: { type: "STRING" }, value: { type: "STRING" }, unit: { type: "STRING" },
     }, required: ["s", "type", "label"] } },
@@ -27,7 +28,13 @@ events = الحاجات اللي محتاجة تتوضّح على الشاشة �
 - measure: أي مقاس أو رقم بوحدة (سم، مم، متر، م، كيلو، بوصة، درجة، لتر). value = الرقم بالإنجليزي، unit = الوحدة زي ما اتقالت مختصرة (سم/مم/م/كجم/بوصة)، label = الجملة القصيرة اللي توضّحه (مثلًا «عرض الدرج 60 سم»).
 - product: لما يذكر صنف أو نموذج أو موديل (مفصلة، مجرى، مقبض، كالون، ميكانيزم ركنة، سلة، ...). label = اسم الصنف.${products.length ? " لو الكلام قريب من صنف من دول اكتب اسمه زي ما هو: " + products.slice(0, 80).join(" | ") : ""}
 - price: لو قال سعر. value = الرقم، unit = «جنيه».
-- point: نقطة مهمة أو نصيحة أو ميزة (مثلًا «قفلة هادية من غير خبط»). label قصير جدًا (٢ لـ ٥ كلمات).
+- point: نقطة مهمة أو ميزة (مثلًا «قفلة هادية من غير خبط»). label قصير جدًا (٢ لـ ٥ كلمات).
+- step: لما يشرح خطوات (أولًا/تاني حاجة/بعد كده). value = رقم الخطوة، label = الخطوة في ٢ لـ ٥ كلمات.
+- warn: تحذير أو غلطة بيحذر منها (مثلًا «ماتركبش المجرى مايل»). label قصير.
+- topic: لما يبدأ يتكلم في موضوع جديد جوه الفيديو. label = عنوان القسم في ٢ لـ ٤ كلمات. ماتكترش منه (مرة كل ٢٠-٤٠ ثانية بالكتير).
+في كل جملة من segments:
+- kw = من كلمة لكلمتين بالظبط زي ما مكتوبين في t، أهم كلمات في الجملة (رقم، اسم صنف، ميزة، كلمة فيها حماس). لو مفيش رجّع kw فاضية.
+- cut = true لو الجملة دي لازم تتشال من الفيديو: بداية غلط واتعادت بعدها، أو تكرار لنفس الكلام، أو تهتهة/«إيه… يعني…» من غير معنى، أو كلام مش للجمهور (زي «استنى نعيد» أو «كده تمام؟»). غير كده cut = false. لو اتعادت جملة خلي آخر واحدة بس.
 ماتخترعش حاجة مااتقالتش. لو مفيش كلام خالص رجّع segments فاضية.${first ? "\ntitle = عنوان قصير جذاب للفيديو (٣ لـ ٦ كلمات) من موضوع الكلام." : ""}
 (ملحوظة: الجزء ده بيبدأ من الثانية ${offset} في الفيديو الأصلي، بس التوقيت اللي ترجعه يكون من أول الجزء نفسه.)`;
 
