@@ -1728,7 +1728,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-12';
+const APP_VER='2026-10-23-13';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3644,7 +3644,7 @@ const busy=t=>{let b=document.getElementById('ivBusy');b.textContent=t||'';b.cla
 
 /* ---------- زرار الكاميرا جوه فاتورة الشراء ---------- */
 function injectBtn(){let m=document.getElementById('modal');if(!m||m.querySelector('#ivBtn'))return;let s=m.querySelector('#txSearch');if(!s)return;
- s.closest('.field').insertAdjacentHTML('beforebegin',`<div class="field full" id="ivBtn"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" style="flex:1;min-width:120px" onclick="ivStart('cam')">📷 صوّر الفاتورة</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('gal')">🖼️ من الصور</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('file')">📄 من الملفات</button></div><small style="color:var(--muted)">صورة أو PDF لفاتورة المورد — بتتقري في الخلفية، ولو جوجل زحمة بيعيد المحاولة لوحده، وتلاقيها في «📥 فواتير للمراجعة»</small><div id="ivQ"></div></div>`);
+ s.closest('.field').insertAdjacentHTML('beforebegin',`<div class="field full" id="ivBtn"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" style="flex:1;min-width:120px" onclick="ivStart('cam')">📷 صوّر الفاتورة</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('gal')">🖼️ من الصور</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivStart('file')">📄 من الملفات</button><button type="button" class="secondary" style="flex:1;min-width:100px" onclick="ivClaude()">🤖 من Claude</button></div><small style="color:var(--muted)">صورة أو PDF لفاتورة المورد — بتتقري في الخلفية، ولو جوجل زحمة بيعيد المحاولة لوحده، وتلاقيها في «📥 فواتير للمراجعة»</small><div id="ivQ"></div></div>`);
  if(window.mkScanList)mkScanList()}
 const _otI=openTransaction;openTransaction=function(type){_otI.apply(this,arguments);if(type==='purchase')try{injectBtn()}catch(e){}};
 
@@ -3654,6 +3654,30 @@ window.ivStart=function(mode){let f=document.createElement('input');f.type='file
  const kill=()=>{try{f.remove()}catch(e){}};setTimeout(kill,300000);
  f.onchange=()=>{let fs=[...(f.files||[])];if(!fs.length)return kill();toast('📷 وصلت '+(fs.length>1?fs.length+' صور':'الصورة')+' — بجهّزها…');if(window.mkScanAdd)mkScanAdd(fs.length>1?fs:fs[0]);else toast('حدّث الصفحة');setTimeout(kill,2000)};f.click()};
 window.ivShrink=shrink;
+/* 🤖 من Claude: عبده بيبعت صور الفاتورة لـ Claude (التطبيق العادي) بالتعليمات دي، وبيلصق رده هنا → نفس شاشة المراجعة والمطابقة */
+const CL_PROMPT=`اقرا صورة/صور فاتورة الشراء دي (ممكن تكون مطبوعة أو بخط اليد) واكتب كل بنود الأصناف من أول الجدول لآخره — ماتسيبش ولا صف.
+اكتب الرد بلوك JSON واحد بس بالشكل ده بالظبط (من غير أي كلام قبله أو بعده):
+{"supplier":"اسم المورد","invoice_no":"رقم الفاتورة","date":"YYYY-MM-DD","row_count":عدد_صفوف_الأصناف,"grand_total":الإجمالي_المكتوب,"discount":الخصم_لو_موجود,"items":[{"text":"اسم الصنف زي ما هو مكتوب","code":"كود المورد لو موجود","qty":الكمية,"unit":"الوحدة","price":سعر_الوحدة,"total":إجمالي_البند}]}
+قواعد: الأرقام بالإنجليزي. اسم الصنف زي ما هو بالظبط من غير ترجمة. ماتحطش سطور الإجمالي أو الخصم كبنود. لو حاجة مش مقروءة اكتبها في "notes" وماتخمنش. لو الفاتورة كذا صورة اجمعهم في نفس الـ JSON.`;
+const en=t=>String(t==null?'':t).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/٫/g,'.').replace(/٬/g,',');
+const nn=v=>{if(typeof v==='number')return v;let t=en(v).replace(/[^0-9.,\-]/g,'');if(/,\d{3}(\D|$)/.test(t))t=t.replace(/,/g,'');else t=t.replace(/,/g,'.');let x=parseFloat(t);return isNaN(x)?0:x};
+function clParse(raw){let t=en(raw||'').trim();if(!t)throw new Error('الصق رد Claude الأول');
+ let m=t.match(/```(?:json)?\s*([\s\S]*?)```/i);if(m)t=m[1];let a=t.indexOf('{'),b=t.lastIndexOf('}');
+ if(a>=0&&b>a){let d;try{d=JSON.parse(t.slice(a,b+1))}catch(e){throw new Error('الرد مش كامل — انسخ رد Claude كله تاني (من أول { لآخر })')}
+  let L=(d.items||d.بنود||[]).map(x=>({text:String(x.text||x.name||x.product||x.الصنف||'').trim(),code:String(x.code||'').trim(),qty:nn(x.qty!=null?x.qty:x.quantity!=null?x.quantity:x.الكمية)||1,unit:x.unit||'',price:nn(x.price!=null?x.price:x.السعر),total:nn(x.total!=null?x.total:x.الإجمالي)})).filter(x=>x.text);
+  return {supplier:d.supplier||'',invoice_no:String(d.invoice_no||''),date:d.date||'',notes:d.notes||'',items:L,_check:{rows:nn(d.row_count),grand_total:nn(d.grand_total),discount:nn(d.discount)}}}
+ /* احتياطي: سطور «اسم | كمية | سعر» */
+ let L=t.split(/\n+/).map(l=>l.split(/\s*[|\t]\s*/).map(x=>x.trim()).filter(Boolean)).filter(c=>c.length>=2&&/[^\d\s.,]/.test(c[0])).map(c=>({text:c[0],qty:nn(c[1])||1,price:nn(c[2]),total:nn(c[3])}));
+ if(!L.length)throw new Error('مش لاقي بنود في الرد — اتأكد إنك نسخت رد Claude كله');return {supplier:'',items:L}}
+window.ivClaude=function(){let h=`<div class="ivh"><h2>🤖 قراءة الفاتورة بـ Claude</h2><button type="button" class="secondary" onclick="ivClose()">رجوع</button></div>
+ <div class="card" style="line-height:1.9;margin-bottom:10px"><b>١)</b> دوس «📋 انسخ التعليمات».<br><b>٢)</b> افتح تطبيق Claude، اعمل محادثة جديدة، ابعت صورة/صور الفاتورة والصق التعليمات معاها.<br><b>٣)</b> لما يرد، انسخ رده كله وارجع هنا والصقه تحت ودوس «✅ اقرا الرد».</div>
+ <button type="button" class="primary" style="width:100%;min-height:50px;margin-bottom:10px" id="clCp">📋 انسخ التعليمات لـ Claude</button>
+ <textarea id="clTx" rows="9" style="width:100%;font-size:14px;direction:ltr;text-align:left" placeholder="الصق رد Claude هنا..."></textarea>
+ <div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="secondary" style="flex:1" id="clPs">📥 الصق</button><button type="button" class="primary" style="flex:2;min-height:50px" id="clGo">✅ اقرا الرد</button></div>`;
+ let el=document.getElementById('mkInv');el.innerHTML=h;el.classList.add('show');
+ document.getElementById('clCp').onclick=async()=>{try{await navigator.clipboard.writeText(CL_PROMPT);toast('✔ التعليمات اتنسخت — الصقها في Claude مع الصور')}catch(e){prompt('انسخ التعليمات دي:',CL_PROMPT)}};
+ document.getElementById('clPs').onclick=async()=>{try{document.getElementById('clTx').value=await navigator.clipboard.readText()}catch(e){toast('دوس جوه الخانة واختار «لصق»')}};
+ document.getElementById('clGo').onclick=async function(){try{let d=clParse(document.getElementById('clTx').value);this.disabled=true;await window.ivShow(d,null);toast('✔ اتقرا '+d.items.length+' بند — راجعهم')}catch(e){this.disabled=false;toast('❌ '+(e.message||e))}}};
 
 /* بيانات الفاتورة اللي اتقرت (من الطابور) → شاشة المراجعة */
 window.ivShow=async function(data,job){
@@ -3689,7 +3713,7 @@ function renderIv(){let el=document.getElementById('mkInv');if(!el||!IV)return;
 /* 📊 مراجعة القراءة: عدد البنود ومجموعها قصاد إجمالي الفاتورة المكتوب — ولو فيه فرق: «اقرا تاني بدقة أعلى» أو «بند ناقص» */
 function ivCheckHTML(){let c=IV.check||{},L=IV.items.filter(x=>!x.manual),sum=r2(sumBy(L,x=>(+x.qty||0)*(+x.price||0))),gt=+c.grand_total||0,diff=r2(gt-sum),rows=+c.rows||0,bad=(gt>0&&Math.abs(diff)>Math.max(1,gt*.01))||(rows&&L.length<rows);
  return `<div class="card" style="margin-bottom:10px;line-height:1.9;border:2px solid ${bad?'#e0a100':'#9fd7b3'};background:${bad?'#fff8e6':'#f2fbf5'}">📊 قرأنا <b>${L.length}</b> بند — مجموعهم <b>${num(sum)}</b>${gt>0?` • إجمالي الفاتورة المكتوب <b>${num(gt)}</b> ${Math.abs(diff)<=Math.max(1,gt*.01)?'✅ مطابق':`⚠️ فرق <b>${num(diff)}</b>`}`:''}${rows&&L.length<rows?` • ⚠️ الجدول فيه حوالي <b>${rows}</b> صف`:''}${c.strips?' • 🔍 اتقرت بالتقطيع':''}
-  ${bad?'<br><small>شكل فيه بنود ناقصة — جرّب «اقرا تاني بدقة أعلى» أو ضيف البند الناقص بإيدك.</small>':''}
+  ${bad?(gt>0&&diff<0&&!(rows&&L.length<rows)?'<br><small>مجموع البنود أكبر من إجمالي الفاتورة — راجع الكميات والأسعار (أو فيه خصم).</small>':'<br><small>شكل فيه بنود ناقصة — جرّب «اقرا تاني بدقة أعلى» أو ضيف البند الناقص بإيدك.</small>'):''}
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${IV.job&&window.mkScanDeep?`<button type="button" class="${bad?'primary':'secondary'}" style="flex:1;min-width:46%" onclick="mkScanDeep('${IV.job}')">🔍 اقرا تاني بدقة أعلى</button>`:''}<button type="button" class="secondary" style="flex:1;min-width:46%" onclick="ivAdd()">➕ ضيف بند ناقص</button></div></div>`}
 window.ivAdd=()=>{let n=prompt('اسم الصنف الناقص زي ما هو في الفاتورة');if(!n||!n.trim())return;n=n.trim();let m=matchRow(IV.sup||IV.supRaw,{text:n,code:''});
  IV.items.push(Object.assign({text:n,code:'',qty:1,price:0,inc:true,newName:n,open:false,manual:true},m));renderIv();setTimeout(()=>{let r=document.querySelector(`#mkInv .ivrow[data-i="${IV.items.length-1}"]`);if(r){r.scrollIntoView({block:'center'});let q=r.querySelector('.ivn input');q&&q.focus()}},60)};
