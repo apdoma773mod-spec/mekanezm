@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-2';
+const APP_VER='2026-10-23-3';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2413,13 +2413,15 @@ window.openLabels=function(pre){if(pre)LB=pre.map(id=>({id,n:1}));
  openModal(`<div class="modal-head"><h2>🏷️ طباعة ملصقات باركود</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <div class="form"><div class="field"><label>المقاس</label><select id="lbSize"><option value="50x30">رول 50×30 مم</option><option value="38x25">رول 38×25 مم</option><option value="a4">ورق A4 (3×8 = 24 ملصق)</option></select></div>
  <div class="field"><label>يظهر على الملصق</label><label class="chk"><input type="checkbox" id="lbPrice"> سعر البيع</label><label class="chk"><input type="checkbox" id="lbShop" checked> اسم المحل</label></div>
- <div class="field full"><label>ضيف أصناف</label><input id="lbAdd" placeholder="اكتب اسم الصنف..." autocomplete="off"><div id="lbBox"></div></div></div>
+ <div class="field full"><label>ضيف أصناف</label><input id="lbAdd" placeholder="اكتب اسم الصنف..." autocomplete="off"><div id="lbBox"></div></div>
+ <div class="field full"><label>كل المنتجات</label><div style="display:flex;gap:8px;align-items:center"><input type="number" id="lbAllN" min="1" value="1" style="width:80px;text-align:center"><span style="font-size:13px">ملصق لكل منتج</span><button type="button" class="secondary" id="lbAll" style="flex:1">➕ ضيف كل المنتجات</button></div><small style="color:var(--muted)">العدد ده بيتطبق على الكل، وبعدها تقدر تغيّر عدد أي منتج لوحده.</small></div></div>
  <div id="lbList" style="margin-top:10px"></div>
  <div class="modal-foot"><button class="primary" onclick="printLabels()">🖨️ طباعة</button><button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div>`);
  let draw=()=>{lbList.innerHTML=LB.length?LB.map((x,i)=>{let p=db.products.find(y=>y.id===x.id);return p?`<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)"><div style="flex:1;min-width:0"><b>${esc(p.name)}</b><br><small style="color:var(--muted)" dir="ltr">${esc(p.barcode||p.code||'—')}</small></div><input type="number" min="1" value="${x.n}" style="width:70px;text-align:center" oninput="LBn(${i},this.value)"><button class="secondary danger" type="button" onclick="LBdel(${i})">✕</button></div>`:''}).join(''):'<div class="empty">ضيف الأصناف اللي عايز تطبعلها ملصقات</div>'};
  window.LBn=(i,v)=>{LB[i].n=Math.max(1,parseInt(v)||1)};window.LBdel=i=>{LB.splice(i,1);draw()};
  lbAdd.oninput=()=>{let q=VN(lbAdd.value).split(' ').filter(Boolean);if(!q.length){lbBox.innerHTML='';return}
   lbBox.innerHTML='<div style="border:1px solid var(--border);border-radius:10px;max-height:200px;overflow:auto">'+prodsCo().filter(p=>q.every(w=>VN(p.name+' '+p.code).includes(w))).slice(0,12).map(p=>`<div class="prow" data-id="${p.id}" style="padding:9px">${esc(p.name)}</div>`).join('')+'</div>'};
+ lbAll.onclick=()=>{let n=Math.max(1,parseInt(lbAllN.value)||1),L=prodsCo();if(!L.length)return toast('مفيش منتجات');if(LB.length&&!confirm('القايمة الحالية هتتستبدل بكل المنتجات ('+L.length+' منتج × '+n+' ملصق = '+L.length*n+' ملصق). تكمّل؟'))return;LB=L.map(p=>({id:p.id,n}));draw();toast('✔ '+L.length+' منتج — '+L.length*n+' ملصق')};
  lbBox.onclick=e=>{let d=e.target.closest('[data-id]');if(!d)return;if(!LB.some(x=>x.id===d.dataset.id))LB.push({id:d.dataset.id,n:1});lbAdd.value='';lbBox.innerHTML='';draw()};
  draw()};
 window.printLabels=function(){if(!LB.length)return toast('ضيف صنف واحد على الأقل');let size=val('lbSize'),price=lbPrice.checked,shop=lbShop.checked?esc(db.settings.companyName||''):'';
@@ -2603,7 +2605,7 @@ const _ss=saveSettings;saveSettings=function(){let e=document.getElementById('co
 /* ---------- الصفحات والأزرار ---------- */
 (function(){
  let pt=document.querySelector('#products .title-row .btnrow');
- if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary" onclick="productScan()">📷 بالباركود</button><button class="secondary own" onclick="openLabels()">🏷️ ملصقات</button><button class="secondary own" onclick="openBulkPrice()">💲 أسعار جماعي</button><button class="secondary own" onclick="showPage(\'count\')">🧮 جرد</button>');
+ if(pt)pt.insertAdjacentHTML('afterbegin','<button class="secondary" onclick="productScan()">📷 بالباركود</button><button class="secondary own" onclick="openLabels()">🏷️ ملصقات</button><button class="secondary own" onclick="openLabels(prodsCo().map(p=>p.id))">🏷️ ملصقات كل المنتجات</button><button class="secondary own" onclick="openBulkPrice()">💲 أسعار جماعي</button><button class="secondary own" onclick="showPage(\'count\')">🧮 جرد</button>');
  let nv=document.querySelector('aside nav [data-page="products"]');
  if(nv)nv.insertAdjacentHTML('afterend','<button data-page="count" class="own" onclick="showPage(\'count\')"><span style="width:1.15em;text-align:center">🧮</span> <span>الجرد</span></button>');
  let mn=document.querySelector('main');
