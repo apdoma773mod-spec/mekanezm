@@ -21,7 +21,9 @@ jobs:
         id: q
         run: |
           if [ -z "$VR_SECRET" ]; then echo "VR_SECRET مش متسجل — ضيفه في Secrets"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
-          n=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" | jq -r '.n // 0' 2>/dev/null || true)
+          res=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" || true)
+          if echo "$res" | grep -q forbidden; then echo "::error::VR_SECRET غلط — مش زي اللي في السيرفر"; fi
+          n=$(echo "$res" | jq -r '.n // 0' 2>/dev/null || true)
           case "$n" in ''|*[!0-9]*) n=0;; esac
           echo "في الطابور: $n"
           echo "n=$n" >> "$GITHUB_OUTPUT"
