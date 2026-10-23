@@ -3,7 +3,7 @@
 //   events:   حاجات تتوضّح على الشاشة: مقاس/رقم بوحدة (measure) — نموذج أو صنف (product) — نقطة مهمة (point) — سعر (price)
 //   title:    عنوان قصير للفيديو (من أول جزء بس)
 // الدخول: توكن مستخدم مسجّل في ميكانيزم (نفس حساب السيستم). المفتاح GEMINI_API_KEY من Secrets (نفس parse-invoice).
-const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 const MODELS = [Deno.env.get("VIDEO_MODEL") || "gemini-2.5-flash", "gemini-2.5-pro"].filter((m, i, a) => a.indexOf(m) === i);
 const MAX_B64 = 9_000_000;
@@ -29,7 +29,16 @@ events = الحاجات اللي محتاجة تتوضّح على الشاشة �
 ماتخترعش حاجة مااتقالتش. لو مفيش كلام خالص رجّع segments فاضية.${first ? "\ntitle = عنوان قصير جذاب للفيديو (٣ لـ ٦ كلمات) من موضوع الكلام." : ""}
 (ملحوظة: الجزء ده بيبدأ من الثانية ${offset} في الفيديو الأصلي، بس التوقيت اللي ترجعه يكون من أول الجزء نفسه.)`;
 
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+async function workerOk(req: Request) {   // العامل بتاع المونتاج في الخلفية (GitHub Actions) بيدخل بالسر بدل توكن مستخدم
+  const sec = req.headers.get("x-vr-secret") || "";
+  if (!sec) return false;
+  const c = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const r = await c.from("mk_vr_secret").select("secret").limit(1).maybeSingle();
+  return !!(r.data && String(r.data.secret) === sec);
+}
 async function authed(req: Request) {
+  if (await workerOk(req)) return true;
   const auth = req.headers.get("authorization") || "", url = Deno.env.get("SUPABASE_URL"), key = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
   if (!auth.startsWith("Bearer ") || !url) return false;
   const r = await fetch(`${url}/auth/v1/user`, { headers: { Authorization: auth, apikey: key } }).catch(() => null);
