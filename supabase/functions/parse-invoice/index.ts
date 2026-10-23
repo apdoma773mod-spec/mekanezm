@@ -88,7 +88,12 @@ const GSCHEMA = {
 // ١) الموديل الأقوى أولًا (القراءة بتحصل في الخلفية فالدقة أهم من السرعة) — لو فشل/اتأخر: الأسرع.
 // ٢) مراجعة: عدد الصفوف اللي الموديل عدّها + الإجمالي المكتوب مقابل مجموع البنود. لو ناقص → قراءة تانية بتنبيه «ناقص بنود» ونختار الأحسن.
 // ٣) part = {i, n}: شريحة من صورة طويلة (العميل بيقطّعها لما القراءة الكاملة تبان ناقصة).
-const INV_STRONG = Deno.env.get("INVOICE_STRONG_MODEL") || "gemini-2.5-pro";
+// جوجل بيقفل موديلات قديمة (gemini-2.5-pro اتقفل للمستخدمين الجداد): كل درجة ليها قايمة، ولو موديل اتقفل بنعدّي للي بعده على طول
+const uniq = (a: (string | undefined)[]) => a.filter((m, i) => m && a.indexOf(m) === i) as string[];
+const STRONG_LIST = uniq([Deno.env.get("INVOICE_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest", "gemini-2.5-pro"]);
+const FAST_LIST = uniq([Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash"]);
+const GONE = /no longer available|not found|is not supported|deprecated|unknown model/i;
+const INV_STRONG = STRONG_LIST[0];
 type Inv = { items?: { text?: string; qty?: number; price?: number; total?: number }[]; row_count?: number; grand_total?: number; discount?: number; [k: string]: unknown };
 function invCheck(d: Inv) {
   const it = (d.items || []).filter((x) => x && String(x.text || "").trim());
@@ -124,23 +129,32 @@ async function geminiInv(key: string, image: string, mt: string, model: string, 
 async function viaGemini(key: string, image: string, mt: string, part?: { i: number; n: number }) {
   const t0 = Date.now(), left = () => 118000 - (Date.now() - t0);
   const partHint = part && part.n > 1 ? `دي شريحة رقم ${part.i} من ${part.n} من صورة فاتورة طويلة (الشرايح متداخلة شوية). اكتب كل صفوف الأصناف الظاهرة في الشريحة دي بس — حتى أول وآخر صف لو مقروءين. row_count = عدد الصفوف في الشريحة دي. grand_total بس لو الإجمالي النهائي ظاهر في الشريحة دي.` : "";
-  const order = [INV_STRONG, GEMINI_MODEL].filter((m, i, a) => m && a.indexOf(m) === i);
   let best: { d: Inv; c: ReturnType<typeof invCheck>; model: string } | null = null, lastErr = { status: 502, error: "ماقدرتش أقرا الفاتورة" }, passes = 0;
-  for (const m of order) {
-    if (left() < 15000) break;
-    const r = await geminiInv(key, image, mt, m, Math.min(m === INV_STRONG ? 70000 : 45000, left()), partHint);
-    passes++;
-    if (!r.ok) { lastErr = r; continue; }
-    const c = invCheck(r.d);
-    if (!best || invScore(c) > invScore(best.c)) best = { d: r.d, c, model: m };
+  // موديل شغال من القايمة (بيعدّي اللي جوجل قفله)
+  const tryTier = async (list: string[], ms: number, hint: string) => {
+    for (const m of list) {
+      if (left() < 12000) break;
+      const r = await geminiInv(key, image, mt, m, Math.min(ms, left()), hint);
+      passes++;
+      if (!r.ok && (GONE.test(r.error) || r.status === 404)) { lastErr = { status: 502, error: "موديل جوجل اتقفل: " + m }; continue; }
+      return { r, m };
+    }
+    return null;
+  };
+  const tiers: [string[], number][] = [[STRONG_LIST, 70000], [FAST_LIST, 45000]];
+  for (let ti = 0; ti < tiers.length; ti++) {
+    const got = await tryTier(tiers[ti][0], tiers[ti][1], partHint);
+    if (!got) continue;
+    if (!got.r.ok) { lastErr = got.r; continue; }
+    const c = invCheck(got.r.d);
+    if (!best || invScore(c) > invScore(best.c)) best = { d: got.r.d, c, model: got.m };
     if (c.ok) break;
-    // ناقص: قراءة تانية بالموديل الجاي ومعاها اللي اتلاحظ
+    // ناقص: قراءة تانية بالدرجة التانية ومعاها اللي اتلاحظ
     if (left() > 20000) {
       const miss = `\nتنبيه: قراءة سابقة طلّعت ${c.n} بند بس` + (c.rows ? ` مع إن الجدول فيه حوالي ${c.rows} صف` : "") + (c.grand_total > 0 && !c.total_ok ? ` ومجموعهم ${c.sum} والإجمالي المكتوب ${c.grand_total}` : "") + `. ارجع للصورة سطر سطر واكتب كل الصفوف كاملة.`;
-      const nx = order.find((x) => x !== m) || m;
-      const r2 = await geminiInv(key, image, mt, nx, Math.min(nx === INV_STRONG ? 60000 : 45000, left()), partHint + miss);
-      passes++;
-      if (r2.ok) { const c2 = invCheck(r2.d); if (invScore(c2) > invScore(best.c)) best = { d: r2.d, c: c2, model: nx }; }
+      const other = tiers[ti === 0 ? 1 : 0];
+      const g2 = await tryTier(other[0], Math.min(other[1], 60000), partHint + miss);
+      if (g2 && g2.r.ok) { const c2 = invCheck(g2.r.d); if (invScore(c2) > invScore(best.c)) best = { d: g2.r.d, c: c2, model: g2.m }; }
       break;
     }
   }
@@ -195,8 +209,8 @@ const TF_PROMPT = `دي صورة جاية على واتساب محل في مصر
 - confidence عالية (0.9+) بس لو المبلغ واضح تمامًا ومفيش شك.
 - status=failed لو مكتوب فشلت/مرفوضة/failed، pending لو قيد التنفيذ.`;
 
-const TF_MODELS = [...new Set([Deno.env.get("TRANSFER_MODEL"), Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean))] as string[];
-const TF_STRONG = [...new Set([Deno.env.get("TRANSFER_STRONG_MODEL"), "gemini-pro-latest", "gemini-2.5-pro"].filter(Boolean))] as string[];
+const TF_MODELS = [...new Set([Deno.env.get("TRANSFER_MODEL"), Deno.env.get("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean))] as string[];
+const TF_STRONG = [...new Set([Deno.env.get("TRANSFER_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest"].filter(Boolean))] as string[];
 
 async function tfGemini(key: string, models: string[], image: string, mt: string, hint = "") {
   let last = "";

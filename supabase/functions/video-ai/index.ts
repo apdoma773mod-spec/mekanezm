@@ -5,7 +5,9 @@
 // الدخول: توكن مستخدم مسجّل في ميكانيزم (نفس حساب السيستم). المفتاح GEMINI_API_KEY من Secrets (نفس parse-invoice).
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-const MODELS = [Deno.env.get("VIDEO_MODEL") || "gemini-2.5-flash", "gemini-2.5-pro"].filter((m, i, a) => a.indexOf(m) === i);
+// الموديلات بالترتيب: لو جوجل قفل موديل (زي gemini-2.5-pro «no longer available») بنعدّي للي بعده على طول
+const MODELS = [Deno.env.get("VIDEO_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-pro-latest", "gemini-3.1-pro-preview"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
+const GONE = /no longer available|not found|is not supported|deprecated|unknown model|404/i;
 const MAX_B64 = 9_000_000;
 
 const SCHEMA = {
@@ -76,7 +78,7 @@ Deno.serve(async (req) => {
         const n = (e as Error).name; last = n === "TimeoutError" || n === "AbortError" ? "timeout: جوجل متأخر" : String((e as Error).message || e); continue;
       }
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) { last = body?.error?.message || `Gemini ${r.status}`; continue; }
+      if (!r.ok) { last = body?.error?.message || `Gemini ${r.status}`; if (GONE.test(last) || r.status === 404) last = "موديل جوجل اتقفل: " + m; continue; }
       const txt = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
       try { const d = JSON.parse(txt); return json({ ...d, _model: m }); } catch { last = "الرد مش مفهوم"; }
     }
