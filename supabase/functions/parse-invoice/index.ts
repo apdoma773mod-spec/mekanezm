@@ -54,7 +54,9 @@ const PROMPT = `دي صورة فاتورة (ممكن تكون مطبوعة من 
 - الأرقام بالإنجليزي (0-9) حتى لو مكتوبة بالعربي.
 - متضيفش سطور الإجماليات أو الخصم أو الضريبة أو الشحن كأنها أصناف.
 - لو سعر الوحدة مش مكتوب وفيه إجمالي وكمية احسبه. لو الكمية مش واضحة خليها 1.
-- لو في حاجة مش مقروءة اكتبها في notes وماتخمنش أرقام.`;
+- لو في حاجة مش مقروءة اكتبها في notes وماتخمنش أرقام.
+- مهم جدًا: قبل ما تكتب البنود عِدّ صفوف الأصناف كلها في الجدول واكتب العدد في row_count، وبعدين اكتب كل صف منهم من أول الجدول لآخره — حتى لو الصفوف كتير أو الخط صغير أو بالقلم أو الصورة مايلة. ممنوع تقف بدري أو تكتفي بأول صف.
+- grand_total = الإجمالي النهائي المكتوب في الفاتورة (لو موجود)، و discount = الخصم لو موجود. ماتحسبهمش من عندك.`;
 
 
 const GSCHEMA = {
@@ -75,19 +77,30 @@ const GSCHEMA = {
       },
     },
     notes: { type: "STRING" },
+    row_count: { type: "NUMBER" },
+    grand_total: { type: "NUMBER" },
+    discount: { type: "NUMBER" },
   },
-  required: ["items"],
+  required: ["items", "row_count"],
 };
 
-// الفاتورة: بنجرب الموديل السريع الأول. لو مارجعش أصناف أو فشل، بنجرب الموديل الأقوى (أبطأ شوية بس أدق)
+// ═════════ الفاتورة: قراءة دقيقة بمراجعة ذاتية
+// ١) الموديل الأقوى أولًا (القراءة بتحصل في الخلفية فالدقة أهم من السرعة) — لو فشل/اتأخر: الأسرع.
+// ٢) مراجعة: عدد الصفوف اللي الموديل عدّها + الإجمالي المكتوب مقابل مجموع البنود. لو ناقص → قراءة تانية بتنبيه «ناقص بنود» ونختار الأحسن.
+// ٣) part = {i, n}: شريحة من صورة طويلة (العميل بيقطّعها لما القراءة الكاملة تبان ناقصة).
 const INV_STRONG = Deno.env.get("INVOICE_STRONG_MODEL") || "gemini-2.5-pro";
-// مهلة لكل محاولة (الأسرع ٤٠ ثانية، الأقوى ٧٠) عشان الطلب مايفضلش معلّق: الإجمالي أقل من ١٢٠ ثانية والعميل بيستنى ١٢٥
-async function viaGemini(key: string, image: string, mt: string) {
-  const first = await viaGeminiOne(key, image, mt, GEMINI_MODEL, 40000);
-  if (first.ok && (await first.clone().text()).match(/"text"\s*:\s*"[^"]+"/)) return first;
-  return viaGeminiOne(key, image, mt, INV_STRONG, 70000);
+type Inv = { items?: { text?: string; qty?: number; price?: number; total?: number }[]; row_count?: number; grand_total?: number; discount?: number; [k: string]: unknown };
+function invCheck(d: Inv) {
+  const it = (d.items || []).filter((x) => x && String(x.text || "").trim());
+  const sum = Math.round(it.reduce((a, x) => a + (Number(x.total) > 0 ? Number(x.total) : (Number(x.qty) || 1) * (Number(x.price) || 0)), 0) * 100) / 100;
+  const rows = Number(d.row_count) || 0, gt = Number(d.grand_total) || 0, disc = Number(d.discount) || 0;
+  const near = (a: number, b: number) => Math.abs(a - b) <= Math.max(1, b * 0.01);
+  const rowsOk = !rows || it.length >= rows;
+  const totalOk = !(gt > 0) || near(sum, gt) || near(sum - disc, gt) || near(sum + disc, gt);
+  return { n: it.length, rows, sum, grand_total: gt, discount: disc, rows_ok: rowsOk, total_ok: totalOk, ok: it.length > 0 && rowsOk && totalOk };
 }
-async function viaGeminiOne(key: string, image: string, mt: string, model: string, timeoutMs: number) {
+const invScore = (c: ReturnType<typeof invCheck>) => c.n * 10 + (c.total_ok ? 25 : 0) + (c.rows_ok ? 15 : 0);
+async function geminiInv(key: string, image: string, mt: string, model: string, timeoutMs: number, hint: string): Promise<{ ok: true; d: Inv } | { ok: false; status: number; error: string }> {
   let r: Response;
   try {
     r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -95,18 +108,44 @@ async function viaGeminiOne(key: string, image: string, mt: string, model: strin
       signal: AbortSignal.timeout(timeoutMs),
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") }, { inline_data: { mime_type: mt, data: image } }] }],
-        generationConfig: { responseMimeType: "application/json", responseSchema: GSCHEMA, temperature: 0 },
+        contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") + (hint ? "\n" + hint : "") }, { inline_data: { mime_type: mt, data: image } }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: GSCHEMA, temperature: 0, maxOutputTokens: 32768 },
       }),
     });
   } catch (e) {
-    const n = (e as Error).name;
-    return json({ error: n === "TimeoutError" || n === "AbortError" ? "timeout: جوجل متأخر في الرد" : "Gemini: " + String((e as Error).message || e) }, n === "TimeoutError" || n === "AbortError" ? 504 : 502);
+    const n = (e as Error).name, to = n === "TimeoutError" || n === "AbortError";
+    return { ok: false, status: to ? 504 : 502, error: to ? "timeout: جوجل متأخر في الرد" : "Gemini: " + String((e as Error).message || e) };
   }
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) return json({ error: body?.error?.message || `Gemini ${r.status}` }, 502);
+  if (!r.ok) return { ok: false, status: 502, error: body?.error?.message || `Gemini ${r.status}` };
   const txt = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-  try { return json(JSON.parse(txt)); } catch { return json({ error: "ماقدرتش أقرا الفاتورة" }, 422); }
+  try { return { ok: true, d: JSON.parse(txt) }; } catch { return { ok: false, status: 422, error: body?.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "الفاتورة طويلة قوي — اتقطعت" : "ماقدرتش أقرا الفاتورة" }; }
+}
+async function viaGemini(key: string, image: string, mt: string, part?: { i: number; n: number }) {
+  const t0 = Date.now(), left = () => 118000 - (Date.now() - t0);
+  const partHint = part && part.n > 1 ? `دي شريحة رقم ${part.i} من ${part.n} من صورة فاتورة طويلة (الشرايح متداخلة شوية). اكتب كل صفوف الأصناف الظاهرة في الشريحة دي بس — حتى أول وآخر صف لو مقروءين. row_count = عدد الصفوف في الشريحة دي. grand_total بس لو الإجمالي النهائي ظاهر في الشريحة دي.` : "";
+  const order = [INV_STRONG, GEMINI_MODEL].filter((m, i, a) => m && a.indexOf(m) === i);
+  let best: { d: Inv; c: ReturnType<typeof invCheck>; model: string } | null = null, lastErr = { status: 502, error: "ماقدرتش أقرا الفاتورة" }, passes = 0;
+  for (const m of order) {
+    if (left() < 15000) break;
+    const r = await geminiInv(key, image, mt, m, Math.min(m === INV_STRONG ? 70000 : 45000, left()), partHint);
+    passes++;
+    if (!r.ok) { lastErr = r; continue; }
+    const c = invCheck(r.d);
+    if (!best || invScore(c) > invScore(best.c)) best = { d: r.d, c, model: m };
+    if (c.ok) break;
+    // ناقص: قراءة تانية بالموديل الجاي ومعاها اللي اتلاحظ
+    if (left() > 20000) {
+      const miss = `\nتنبيه: قراءة سابقة طلّعت ${c.n} بند بس` + (c.rows ? ` مع إن الجدول فيه حوالي ${c.rows} صف` : "") + (c.grand_total > 0 && !c.total_ok ? ` ومجموعهم ${c.sum} والإجمالي المكتوب ${c.grand_total}` : "") + `. ارجع للصورة سطر سطر واكتب كل الصفوف كاملة.`;
+      const nx = order.find((x) => x !== m) || m;
+      const r2 = await geminiInv(key, image, mt, nx, Math.min(nx === INV_STRONG ? 60000 : 45000, left()), partHint + miss);
+      passes++;
+      if (r2.ok) { const c2 = invCheck(r2.d); if (invScore(c2) > invScore(best.c)) best = { d: r2.d, c: c2, model: nx }; }
+      break;
+    }
+  }
+  if (!best) return json({ error: lastErr.error }, lastErr.status);
+  return json({ ...best.d, _check: { ...best.c, model: best.model, passes } });
 }
 
 // ═════════ قراءة صورة تحويل فلوس (انستاباي / محافظ / بنك) — kind: "transfer"
@@ -234,7 +273,7 @@ Deno.serve(async (req) => {
     const key = Deno.env.get("ANTHROPIC_API_KEY");
     if (!gkey && !key) return json({ error: "ضيف GEMINI_API_KEY (مجاني) أو ANTHROPIC_API_KEY في Secrets" }, 500);
 
-    const { image, media_type, kind } = await req.json();
+    const { image, media_type, kind, part } = await req.json();
     if (typeof image !== "string" || !image) return json({ error: "مفيش صورة" }, 400);
     if (image.length > MAX_B64) return json({ error: "الصورة كبيرة — صوّرها تاني بحجم أصغر" }, 413);
     const mt = TYPES.includes(media_type) ? media_type : "image/jpeg";
@@ -242,7 +281,7 @@ Deno.serve(async (req) => {
       try { return json(await readTransfer(gkey || undefined, key || undefined, image.replace(/^data:[^,]+,/, ""), mt)); }
       catch (e) { return json({ error: String((e as Error).message || e) }, 502); }
     }
-    if (gkey) return await viaGemini(gkey, image, mt);
+    if (gkey) return await viaGemini(gkey, image, mt, part && Number(part.n) > 1 ? { i: Number(part.i) || 1, n: Number(part.n) } : undefined);
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

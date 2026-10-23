@@ -1728,7 +1728,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-11';
+const APP_VER='2026-10-23-12';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3662,7 +3662,7 @@ window.ivShow=async function(data,job){
   if(!items.length)throw new Error('ماقدرتش ألاقي أصناف في الفاتورة دي');
   let sup=document.getElementById('txPerson'),supName=(sup&&sup.value.trim())||String(data.supplier||'').trim();
   let sm=null;if(!(sup&&sup.value.trim())&&supName){let c=db.contacts.filter(c=>c.type==='مورد').map(c=>({c,s:nameSim(supName,c.name)})).sort((a,b)=>b.s-a.s)[0];if(c&&c.s>=.7)sm=c.c}
-  IV={job:job||null,sup:sm?sm.name:supName,supRaw:data.supplier||'',no:data.invoice_no||'',date:data.date||'',notes:data.notes||'',
+  IV={job:job||null,check:(data&&data._check)||null,sup:sm?sm.name:supName,supRaw:data.supplier||'',no:data.invoice_no||'',date:data.date||'',notes:data.notes||'',
    items:items.map(x=>{let qty=+x.qty>0?+x.qty:1,price=+x.price>=0&&x.price!=null?+x.price:0;if(!(price>0)&&+x.total>0)price=r2(+x.total/qty);
     let m=matchRow(sm?sm.name:supName,{text:String(x.text).trim(),code:x.code});return Object.assign({text:String(x.text).trim(),code:x.code||'',qty,price,inc:true,newName:String(x.text).trim(),open:false},m)})};
   busy('');renderIv()}
@@ -3680,12 +3680,19 @@ function renderIv(){let el=document.getElementById('mkInv');if(!el||!IV)return;
  let n=IV.items.filter(x=>x.inc&&!x.skip).length,tot=r2(sumBy(IV.items.filter(x=>x.inc&&!x.skip),x=>x.qty*x.price));
  el.innerHTML=`<div class="ivh"><h2>📷 راجع بنود الفاتورة</h2><button type="button" class="secondary" onclick="ivClose()">رجوع</button></div>
  <div class="card" style="margin-bottom:10px;line-height:1.9">${IV.supRaw||IV.sup?`المورد: <b>${esc(IV.sup||IV.supRaw)}</b>`:'<span style="color:var(--muted)">اسم المورد مش ظاهر</span>'}${IV.no?` • فاتورة <b>${esc(IV.no)}</b>`:''}${IV.date?` • ${esc(IV.date)}`:''}
-  <br><small style="color:var(--muted)">🟢 مطابق • 🟡 راجعه • 🔴 جديد أو مش لاقيله شبه. بعد ما تأكد، الأسماء بتتحفظ للمورد والفاتورة الجاية تنزل لوحدها.</small>${IV.notes?`<br><small style="color:#8a4b00">ملاحظة القراءة: ${esc(IV.notes)}</small>`:''}</div>`
+  <br><small style="color:var(--muted)">🟢 مطابق • 🟡 راجعه • 🔴 جديد أو مش لاقيله شبه. بعد ما تأكد، الأسماء بتتحفظ للمورد والفاتورة الجاية تنزل لوحدها.</small>${IV.notes?`<br><small style="color:#8a4b00">ملاحظة القراءة: ${esc(IV.notes)}</small>`:''}</div>`+ivCheckHTML()
  +IV.items.map((it,i)=>`<div class="ivrow${it.inc?'':' off'}" data-i="${i}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="ivt">${esc(it.text)}${it.code?` <small>كود ${esc(it.code)}</small>`:''}</div><label class="chk"><input type="checkbox" ${it.inc?'checked':''} onchange="ivSet(${i},'inc',this.checked)"></label></div>
   ${matchBtn(it,i)}<div class="ivn"><div><small>الكمية</small><input type="number" min="0" step="0.01" value="${it.qty}" oninput="ivSet(${i},'qty',+this.value,1)"></div><div><small>سعر الشراء</small><input type="number" min="0" step="0.01" value="${it.price}" oninput="ivSet(${i},'price',+this.value,1)"></div><div style="flex:1"><small>الإجمالي</small><b>${num(it.qty*it.price)}</b></div></div>
   ${it.open?`<div class="ivpk"><input placeholder="ابحث عن صنف..." oninput="ivSearch(${i},this.value)" value="" autocomplete="off"><div id="ivres${i}">${pickList(i,'')}</div></div>`:''}</div>`).join('')
  +`<div class="ivbar"><label class="chk" style="width:100%"><input type="checkbox" id="ivSave" checked> احفظ أسماء الأصناف للمورد ده (الفاتورة الجاية تنزل لوحدها)</label><button type="button" class="primary" onclick="ivApply()">✅ أضف ${n} صنف للفاتورة — ${num(tot)} ج.م</button><button type="button" class="secondary" onclick="ivClose()">إلغاء</button></div>`;
  el.classList.add('show')}
+/* 📊 مراجعة القراءة: عدد البنود ومجموعها قصاد إجمالي الفاتورة المكتوب — ولو فيه فرق: «اقرا تاني بدقة أعلى» أو «بند ناقص» */
+function ivCheckHTML(){let c=IV.check||{},L=IV.items.filter(x=>!x.manual),sum=r2(sumBy(L,x=>(+x.qty||0)*(+x.price||0))),gt=+c.grand_total||0,diff=r2(gt-sum),rows=+c.rows||0,bad=(gt>0&&Math.abs(diff)>Math.max(1,gt*.01))||(rows&&L.length<rows);
+ return `<div class="card" style="margin-bottom:10px;line-height:1.9;border:2px solid ${bad?'#e0a100':'#9fd7b3'};background:${bad?'#fff8e6':'#f2fbf5'}">📊 قرأنا <b>${L.length}</b> بند — مجموعهم <b>${num(sum)}</b>${gt>0?` • إجمالي الفاتورة المكتوب <b>${num(gt)}</b> ${Math.abs(diff)<=Math.max(1,gt*.01)?'✅ مطابق':`⚠️ فرق <b>${num(diff)}</b>`}`:''}${rows&&L.length<rows?` • ⚠️ الجدول فيه حوالي <b>${rows}</b> صف`:''}${c.strips?' • 🔍 اتقرت بالتقطيع':''}
+  ${bad?'<br><small>شكل فيه بنود ناقصة — جرّب «اقرا تاني بدقة أعلى» أو ضيف البند الناقص بإيدك.</small>':''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">${IV.job&&window.mkScanDeep?`<button type="button" class="${bad?'primary':'secondary'}" style="flex:1;min-width:46%" onclick="mkScanDeep('${IV.job}')">🔍 اقرا تاني بدقة أعلى</button>`:''}<button type="button" class="secondary" style="flex:1;min-width:46%" onclick="ivAdd()">➕ ضيف بند ناقص</button></div></div>`}
+window.ivAdd=()=>{let n=prompt('اسم الصنف الناقص زي ما هو في الفاتورة');if(!n||!n.trim())return;n=n.trim();let m=matchRow(IV.sup||IV.supRaw,{text:n,code:''});
+ IV.items.push(Object.assign({text:n,code:'',qty:1,price:0,inc:true,newName:n,open:false,manual:true},m));renderIv();setTimeout(()=>{let r=document.querySelector(`#mkInv .ivrow[data-i="${IV.items.length-1}"]`);if(r){r.scrollIntoView({block:'center'});let q=r.querySelector('.ivn input');q&&q.focus()}},60)};
 function pickList(i,q){let it=IV.items[i],c=q?db.products.map(p=>({p,s:nameSim(q,p.name)+(VN(p.name).includes(VN(q))?.5:0)})).sort((a,b)=>b.s-a.s).slice(0,8):best(it.text,it.code).concat([]);
  return c.map(o=>`<div class="opt" onclick="ivChoose(${i},'${o.p.id}')">${esc(o.p.name)} <small>(${num(o.p.qty)} ${esc(o.p.unit||'')})</small></div>`).join('')
  +`<div class="opt" style="color:var(--blue);font-weight:700" onclick="ivNew(${i})">➕ صنف جديد باسم «${esc(it.newName)}»</div><div class="opt" style="color:var(--danger)" onclick="ivSkip(${i})">⏭ تجاهل البند ده</div>`}
@@ -3753,7 +3760,7 @@ const inMin=t=>Math.max(0,Math.ceil((new Date(t).getTime()-Date.now())/60000));
 async function pdfPages(file){await loadJS('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
  window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
  let pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,out=[];
- for(let i=1;i<=Math.min(pdf.numPages,6);i++){let pg=await pdf.getPage(i),v1=pg.getViewport({scale:1}),k=Math.min(2.5,1800/Math.max(v1.width,v1.height)),v=pg.getViewport({scale:k});
+ for(let i=1;i<=Math.min(pdf.numPages,6);i++){let pg=await pdf.getPage(i),v1=pg.getViewport({scale:1}),k=Math.min(3,2200/Math.max(v1.width,v1.height)),v=pg.getViewport({scale:k});
   let c=document.createElement('canvas');c.width=Math.round(v.width);c.height=Math.round(v.height);let g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);
   await pg.render({canvasContext:g,viewport:v}).promise;out.push(c.toDataURL('image/jpeg',.86).split(',')[1])}
  return out}
@@ -3763,7 +3770,7 @@ window.mkScanAdd=async function(file){
  if(!sbx()||!navigator.onLine)return toast('محتاج نت');
  busy('⏳ بجهّز الفاتورة…');
  try{let pdf=!Array.isArray(file)&&(/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||''));
-  let pages;if(Array.isArray(file)){pages=[];for(const x of file){pages.push(...(/pdf/i.test(x.type||'')||/\.pdf$/i.test(x.name||'')?await pdfPages(x):[await window.ivShrink(x,1600)]))}pages=pages.slice(0,8)}else pages=pdf?await pdfPages(file):[await window.ivShrink(file,1600)];if(!pages.length)throw new Error('الملف فاضي');
+  let pages;if(Array.isArray(file)){pages=[];for(const x of file){pages.push(...(/pdf/i.test(x.type||'')||/\.pdf$/i.test(x.name||'')?await pdfPages(x):[await window.ivShrink(x,2200)]))}pages=pages.slice(0,8)}else pages=pdf?await pdfPages(file):[await window.ivShrink(file,2200)];if(!pages.length)throw new Error('الملف فاضي');
   let id=crypto.randomUUID(),paths=[];
   for(let i=0;i<pages.length;i++){busy(pages.length>1?`⏳ برفع صفحة ${i+1} من ${pages.length}…`:'⏳ برفع الصورة…');let p=`${id}/p${i+1}.jpg`;
    let {error}=await sbx().storage.from('invoice-scans').upload(p,b64toBlob(pages[i]),{contentType:'image/jpeg',upsert:true});if(error)throw error;paths.push(p)}
@@ -3777,9 +3784,9 @@ window.mkScanAdd=async function(file){
 async function tick(prefer){if(busyW||!sbx()||!window.mkT_user||!navigator.onLine)return;busyW=true;
  try{for(let n=0;n<3;n++){let {data:job,error}=await sbx().rpc('mk_scan_claim');if(error||!job)break;await work(job)}}
  catch(e){}finally{busyW=false;await refresh()}}
-async function callFn(img){
+async function callFn(img,part){
  // مهلة (١٢٥ ثانية = أطول من محاولتي السيرفر ٤٠+٧٠): لو الخدمة علّقت من غير رد، نرمي خطأ "timeout" بدل ما الفاتورة تفضل "لسه بتتقري" للأبد وتقفل الطابور عن أي صورة جديدة
- let timer,invoke=sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
+ let timer,invoke=sbx().functions.invoke('parse-invoice',{body:part?{image:img,media_type:'image/jpeg',part}:{image:img,media_type:'image/jpeg'}});
  let timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('timeout: الخدمة متأخرة في الرد')),125000)});
  let data,error;
  try{({data,error}=await Promise.race([invoke,timeout]))}finally{clearTimeout(timer)}
@@ -3787,14 +3794,53 @@ async function callFn(img){
   if(st===404)m='دالة parse-invoice مش متنشرة';throw new Error(m)}
  if(data&&data.error)throw new Error(data.error);return data||{}}
 // محاولات سريعة في نفس اللحظة لو الخدمة زحمة (بدل ما الفاتورة تستنى دقايق في الطابور)
-async function callFnQ(img){for(let k=0;;k++){try{return await callFn(img)}catch(e){if(k>=2||!TRANSIENT.test(errTxt(e)))throw e;await new Promise(r=>setTimeout(r,k?8000:3000))}}}
+async function callFnQ(img,part){for(let k=0;;k++){try{return await callFn(img,part)}catch(e){if(k>=2||!TRANSIENT.test(errTxt(e)))throw e;await new Promise(r=>setTimeout(r,k?8000:3000))}}}
+/* ===== محرك القراءة القوي: قراءة كاملة + مراجعة ذاتية، ولو ناقصة → تقطيع الصورة شرايح متداخلة بتفاصيل أعلى وتجميعها من غير تكرار ===== */
+const ldImg=b=>new Promise((ok,no)=>{let i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('الصورة مش بتتفتح'));i.src='data:image/jpeg;base64,'+b});
+async function cut(b,x,y,w,h,max){let im=await ldImg(b);w=w||im.width;h=h||im.height;let k=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+ let g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,x||0,y||0,w,h,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.88).split(',')[1]}
+const nk=t=>VN(String(t||'')).replace(/\s+/g,' ').trim();
+const rowKey=x=>nk(x.text)+'|'+(+x.qty||0)+'|'+(+x.price||0);
+const lineSum=L=>r2(L.reduce((a,x)=>a+(+x.total>0?+x.total:(+x.qty||1)*(+x.price||0)),0));
+/* تجميع الشرايح: الصفوف اللي في منطقة التداخل بتظهر في آخر شريحة وأول اللي بعدها — بنشيل المكرر عند الحدود بس */
+function mergeStrips(parts){let out=[];parts.forEach((P,pi)=>{let L=(P.items||[]).filter(x=>x&&String(x.text||'').trim());
+ if(pi&&out.length){let best=0;for(let k=Math.min(4,L.length,out.length);k>0;k--){let ok=true;for(let j=0;j<k;j++){let a=out[out.length-k+j],b=L[j];if(rowKey(a)!==rowKey(b)&&nk(a.text)!==nk(b.text)){ok=false;break}}if(ok){best=k;break}}L=L.slice(best)}
+ out=out.concat(L)});return out}
+function chk(items,c){c=c||{};let it=(items||[]).filter(x=>x&&String(x.text||'').trim()),sum=lineSum(it),gt=+c.grand_total||0,disc=+c.discount||0,rows=+c.rows||0;
+ const near=(a,b)=>Math.abs(a-b)<=Math.max(1,b*.01);let totalOk=!(gt>0)||near(sum,gt)||near(sum-disc,gt)||near(sum+disc,gt),rowsOk=!rows||it.length>=rows;
+ return {n:it.length,rows,sum,grand_total:gt,discount:disc,total_ok:totalOk,rows_ok:rowsOk,ok:it.length>0&&totalOk&&rowsOk}}
+const scoreC=c=>c.n*10+(c.total_ok?25:0)+(c.rows_ok?15:0);
+async function readPage(b,force){
+ let full=null,err=null;
+ if(!force){try{full=await callFnQ(await cut(b,0,0,0,0,1600))}catch(e){err=e}
+  if(full&&(!full._check||full._check.ok))return full}
+ /* شرايح: الطول ÷ العرض بيحدد عددها (٢ لـ ٤)، وكل شريحة متداخلة ١٢٪ مع جيرانها */
+ let im=await ldImg(b),W=im.width,H=im.height,n=Math.max(2,Math.min(4,Math.round(H/(W*.8)))),step=H/n,ov=Math.round(step*.12),parts;
+ try{parts=await Promise.all([...Array(n)].map(async(_,i)=>{let y=Math.max(0,Math.round(i*step-ov)),h=Math.min(H-y,Math.round(step+2*ov));return callFnQ(await cut(b,0,y,W,h,1800),{i:i+1,n})}))}
+ catch(e){if(full)return full;throw err||e}
+ let fc=(full&&full._check)||{},gt=+fc.grand_total||(parts.map(p=>p._check&&+p._check.grand_total).filter(x=>x>0).pop())||0;
+ let items=mergeStrips(parts),c=chk(items,{grand_total:gt,discount:fc.discount,rows:fc.rows});
+ if(full&&scoreC(chk(full.items,{grand_total:gt,discount:fc.discount,rows:fc.rows}))>=scoreC(c))return full;
+ let base=full||parts.find(p=>p.supplier||p.invoice_no)||parts[0]||{};
+ return Object.assign({},base,{items,_check:Object.assign(c,{strips:n})})}
+async function readAll(pages,force){let RS=await Promise.all(pages.map(p=>readPage(p,force)));
+ let R={supplier:'',invoice_no:'',date:'',notes:'',items:[]},gt=0,rows=0,disc=0,strips=0;
+ for(const r of RS){R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[]);
+  let c=r._check||{};if(+c.grand_total>0)gt=+c.grand_total;rows+=+c.rows||0;disc+=+c.discount||0;strips+=+c.strips||0}
+ R._check=Object.assign(chk(R.items,{grand_total:gt,rows,discount:disc}),{strips,pages:pages.length});return R}
+/* 🔍 «اقرا تاني بدقة أعلى» من شاشة المراجعة: شرايح على طول لكل الصفحات */
+window.mkScanDeep=async function(id){let s=SC.find(x=>x.id===id);if(!s)return toast('الفاتورة مش في الطابور');chip('🔍 بقرا الفاتورة تاني بدقة أعلى… كمّل شغلك');
+ try{let pages=LOCAL.get(id);if(!pages){pages=[];for(const p of s.pages||[]){let {data,error}=await sbx().storage.from('invoice-scans').download(p);if(error)throw error;pages.push(await blobTo64(data))}LOCAL.set(id,pages)}
+  if(!pages.length)throw new Error('صورة الفاتورة مش موجودة');
+  let R=await readAll(pages,true);if(!R.items.length)throw new Error('ماقدرتش ألاقي أصناف');await fin(id,'done',R,'',0);s.result=R;chip('');
+  if(document.getElementById('txLines')&&TTYPE==='purchase')openScan(id,R);else toast('🔍 اتقرت تاني — '+R.items.length+' بند')}
+ catch(e){chip('');toast('❌ '+errTxt(e))}};
 const fin=(id,st,res,err,mins)=>sbx().rpc('mk_scan_finish',{p_id:id,p_status:st,p_result:res,p_error:err||'',p_retry_min:mins||0});
-async function work(job){
+async function work(job){let hb=setInterval(()=>{try{sbx().from('mk_scans').update({updated_at:new Date().toISOString()}).eq('id',job.id).then(()=>{},()=>{})}catch(e){}},60000);try{return await work0(job)}finally{clearInterval(hb)}}
+async function work0(job){
  try{let pages=LOCAL.get(job.id);
   if(!pages){pages=[];for(const p of job.pages||[]){let {data,error}=await sbx().storage.from('invoice-scans').download(p);if(error)throw error;pages.push(await blobTo64(data))}LOCAL.set(job.id,pages)}
-  let R={supplier:'',invoice_no:'',date:'',notes:'',items:[]};
-  let RS=await Promise.all(pages.map(callFnQ));  // كل الصفحات مع بعض (مش واحدة ورا التانية)
-  for(const r of RS){R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[])}
+  let R=await readAll(pages,false);  // كل الصفحات مع بعض + مراجعة ذاتية + شرايح لو القراءة ناقصة
   if(!R.items.filter(x=>x&&String(x.text||'').trim()).length){await fin(job.id,'failed',null,'ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب',0);if(WAIT===job.id){WAIT=null;busy('');chip('');toast('❌ ماقدرتش ألاقي أصناف — صوّرها أوضح')}return}
   await fin(job.id,'done',R,'',0);LOCAL.delete(job.id);
   if(WAIT===job.id){WAIT=null;busy('');chip('');if(document.getElementById('txLines')&&TTYPE==='purchase')return openScan(job.id,R)}
