@@ -1381,6 +1381,12 @@ function renderContacts(){let b=document.getElementById('contactsBody');if(!b)re
 const _rtC=renderTables;renderTables=function(){_rtC();renderContacts()};
 function contactData(c){let isC=c.type==='عميل',nm=String(c.name).trim(),rows=(isC?db.sales:db.purchases).filter(x=>(x.person||'').trim()===nm);
  return {isC,rows,groups:groupInv(rows,isC?(r=>r.no||r.id):(r=>r.gid||r.id)),pays:(isC?db.payments:sp()).filter(x=>x.cid===c.id),rets:db.returns.filter(r=>r.type===(isC?'sale':'purchase')&&(r.person||'').trim()===nm)}}
+/* 📦 حالة الاستلام في ملف العميل: اللي اتستلم، واللي فاضل (من ملاحظات الفاتورة) */
+function invStatusHtml(D){let N=db.invNotes||{},rows=[];
+ D.groups.forEach(G=>{let key=G[0].no||G[0].id,n=N[key];if(!n||!(n.recv||n.got||n.miss))return;
+  rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>'+esc(invNo(G[0]))+'</b>'+(n.recv?' — ✔ اتستلم'+(n.gotDate?' بتاريخ '+esc(n.gotDate):' '+esc(n.recv)):'')+(n.miss?'<div style="color:#b3261e">⚠️ فاضل: '+esc(n.miss)+'</div>':'')+(n.got?'<div style="font-size:13px;color:var(--muted)">اللي اتسلّم: '+esc(n.got)+'</div>':'')+'</div>')});
+ if(!rows.length)return '';
+ return '<h3 style="margin:16px 0 8px">📦 حالة الاستلام</h3><div class="card" style="line-height:1.8">'+rows.join('')+'</div>'}
 function openContactFile(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;let D=contactData(c),isC=D.isC,
  tot=sumBy(D.rows,x=>x.total),pd=sumBy(D.rows,paidOf),rt=sumBy(D.rets,x=>x.total),pp=sumBy(D.pays,x=>x.amount);
  openModal(`<div class="modal-head"><h2>ملف ${isC?'العميل':'المورد'}: ${esc(c.name)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -1388,7 +1394,7 @@ function openContactFile(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;l
  <div style="margin-top:6px">الحساب: <b style="font-size:22px;color:${balColor(c)}">${balTxt(c)}</b></div></div>
  <div class="cstats"><div><small>عدد الفواتير</small><b>${D.groups.length}</b></div><div><small>${isC?'إجمالي اللي اشتراه':'إجمالي اللي اشتريته منه'}</small><b>${money(tot)}</b></div><div><small>المدفوع في الفواتير</small><b>${money(pd)}</b></div><div><small>${isC?'دفعات استلمتها منه':'دفعات سددتها له'}</small><b>${money(pp)}</b></div><div><small>المرتجعات</small><b>${money(rt)}</b></div><div><small>صافي التعامل</small><b>${money(tot-rt)}</b></div></div>
  <div class="btnrow">${isC?`<button class="primary" onclick="openPayment('${id}')">تحصيل دفعة</button>`:`<button class="primary" onclick="openSupPay('${id}')">سداد للمورد</button>`}${Math.abs(+c.balance||0)>0.004?`<button class="primary" style="background:#16a34a" onclick="mkZeroAcct('${id}')">💯 صفّر الحساب (${(+c.balance)>0?money(c.balance):(isC?'ليه ':'لينا ')+money(-c.balance)})</button>`:''}<button class="secondary" onclick="openTransaction('${isC?'sale':'purchase'}',{person:db.contacts.find(x=>x.id==='${id}').name})">${isC?'فاتورة بيع جديدة':'فاتورة شراء جديدة'}</button><button class="secondary" onclick="contactReport(db.contacts.find(x=>x.id==='${id}').name,'${c.type}')">📄 كشف حساب</button><button class="secondary" onclick="editContact('${id}')">✏️ تعديل البيانات</button></div>
- <h3 style="margin:16px 0 8px">الفواتير</h3>
+ ${invStatusHtml(D)}<h3 style="margin:16px 0 8px">الفواتير</h3>
  <div class="table-wrap"><table class="table" style="min-width:480px"><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>${D.groups.length?D.groups.map(G=>{let r=G[0],rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="${isC?'openInvoiceModal':'openPurchaseView'}('${r.id}')"><td><b>${esc(isC?invNo(r):(r.pno||'—'))}</b></td><td>${esc(r.date)}</td><td>${money(sumBy(G,x=>x.total))}</td><td>${money(sumBy(G,paidOf))}</td><td style="color:${rem>0?'var(--danger)':'inherit'}">${money(rem)}</td></tr>`}).join(''):'<tr><td colspan="5"><div class="empty">لا توجد فواتير.</div></td></tr>'}</tbody></table></div>
  <h3 style="margin:16px 0 8px">${isC?'الدفعات المستلمة':'الدفعات المسددة'}</h3>
  <div class="table-wrap"><table class="table" style="min-width:320px"><thead><tr><th>التاريخ</th><th>المبلغ</th><th>ملاحظة</th>${typeof window.mkCancelPay==='function'?'<th></th>':''}</tr></thead><tbody>${D.pays.length?D.pays.map(x=>`<tr><td>${esc(x.date)}</td><td>${money(x.amount)}</td><td>${esc(x.note||'—')}</td>${typeof window.mkCancelPay==='function'?`<td><button type="button" class="secondary danger" onclick="mkCancelPay('${x.id}','${id}')">إلغاء</button></td>`:''}</tr>`).join(''):'<tr><td colspan="4"><div class="empty">لا توجد دفعات.</div></td></tr>'}</tbody></table></div>
@@ -1832,6 +1838,7 @@ async function loadAll(){if(!sb||!T.user)return;T.loading=true;stat('⏳ جار�
   let S={};R.settings.forEach(s=>S[s.key]=s.value);let co=S.company||{};
   db.settings=Object.assign(db.settings||{},{companyName:co.name||'MEKANIZM | ميكانيزم',phone:co.phone||'',address:co.address||'',ownerPhone:co.ownerPhone||''});
   db.theme=Object.assign({},DEFT,S.theme||{});
+  db.invNotes=(S.inv_notes&&typeof S.inv_notes==='object')?S.inv_notes:(db.invNotes||{});
   T.members=R.members||T.members||[];
   if(admin){LS.set('mk_t_staff',JSON.stringify(T.members.filter(m=>m.active&&m.email).map(m=>({name:m.name,role:m.role,email:m.email}))))}
   snapAll();T.ready=true;cacheDb();
@@ -9180,8 +9187,12 @@ window.invNotes=function(key,id){
  <div class="field"><label>اللي اتسلّم بعد كده (سطر لكل صنف)</label><textarea id="inGot" rows="5" style="min-height:130px">${esc(n.got||'')}</textarea></div>
  <div style="font-size:13px;color:var(--muted)">ده بيظهر للعميل في صفحته.</div>
  <button class="primary" style="width:100%;padding:16px;margin-top:10px" onclick="invNotesSave('${esc(key)}','${id}')">حفظ</button></div>`)};
-window.invNotesSave=function(key,id){db.invNotes=db.invNotes||{};let g=i=>document.getElementById(i).value.trim(),o={recv:g('inRecv'),miss:g('inMiss'),gotDate:g('inGD'),got:g('inGot')};
- if(o.recv||o.miss||o.gotDate||o.got)db.invNotes[key]=o;else delete db.invNotes[key];save();toast('اتحفظ');openInvoiceModal(id);window.mkPortalSoon&&mkPortalSoon()};
+window.invNotesSave=async function(key,id){db.invNotes=db.invNotes||{};let g=i=>document.getElementById(i).value.trim(),o={recv:g('inRecv'),miss:g('inMiss'),gotDate:g('inGD'),got:g('inGot')};
+ if(o.recv||o.miss||o.gotDate||o.got)db.invNotes[key]=o;else delete db.invNotes[key];
+ /* الملاحظات بتتحفظ على السيرفر عشان تفضل بعد الريفريش وتبان على أي جهاز */
+ try{let r=await window.mkSB.from('mk_settings').upsert([{key:'inv_notes',value:db.invNotes}],{onConflict:'key'});if(r.error)throw r.error}
+ catch(e){toast('⚠️ ماتحفظتش على السيرفر — اتأكد من النت وجرّب تاني');return}
+ save();toast('✔ اتحفظ');openInvoiceModal(id);window.mkPortalSoon&&mkPortalSoon()};
 let oi=window.openInvoiceModal;
 if(oi)window.openInvoiceModal=function(id){oi.apply(this,arguments);try{let r=db.sales.find(x=>x.id===id);if(!r)return;let o=document.getElementById('invOut');if(o&&!document.getElementById('invNb')){let key=r.no||r.id,n=(db.invNotes||{})[key],b=document.createElement('button');b.id='invNb';b.className='secondary';b.style.cssText='width:100%;padding:14px;margin-top:10px';b.textContent='📦 استلام وناقص'+(n&&n.miss?' (فيه ناقص)':'');b.onclick=()=>invNotes(key,id);o.parentNode.insertBefore(b,o)}}catch(e){}};
 })();
