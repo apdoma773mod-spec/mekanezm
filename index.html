@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-14';
+const APP_VER='2026-10-23-15';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11372,26 +11372,36 @@ const API=()=>window.mkT&&window.mkT.api;
 const last10=p=>String(p||'').replace(/\D/g,'').slice(-10);
 const findC=p=>{let k=last10(p);return k.length===10?(db.contacts||[]).find(c=>last10(c.phone)===k):null};
 const who=x=>{let c=findC(x.phone);return c?`<b>${esc(c.name)}</b>`:'<span style="color:var(--danger)">الرقم ده مش متسجل عندنا</span>'};
-/* الصادر: أي فلوس بعتها لرقم عميل متسجل بتتخصم من حسابه على طول */
-async function autoOut(){try{
- let L=(await pending()).filter(x=>x.direction==='out'&&findC(x.phone));
- for(const x of L){let c=findC(x.phone);
-  let r=await SB().from('mk_sms_inbox').update({status:'used'}).eq('id',x.id).eq('status','pending').select('id');
-  if(r.error||!(r.data||[]).length)continue;
-  try{await API().rpc('mk_add_payment',{p_contact:c.id,p_amount:Number(x.amount),p_note:'تحويل فودافون كاش صادر — لرقم '+x.phone,...(window.mkCoOn?{p_co:curCo()}:{})});
-   await API().refreshContacts([c.id]);await API().refreshTable('mk_payments');toast('اتخصمت '+money(x.amount)+' من حساب '+c.name)}
-  catch(e){await SB().from('mk_sms_inbox').update({status:'pending'}).eq('id',x.id);toast('ماقدرتش أخصم من حساب '+c.name)}
- }}catch(e){}}
-window.mkSmsOpen=async function(){await autoOut();let L=await pending();
+/* أي فلوس فودافون كاش مستنية بتتسجل على الحساب بس بعد ما تأكد انت */
+async function applySms(x,c){
+ let r=await SB().from('mk_sms_inbox').update({status:'used'}).eq('id',x.id).eq('status','pending').select('id');
+ if(r.error||!(r.data||[]).length){toast('الحركة دي اتسجلت قبل كده');return false}
+ try{await API().rpc('mk_add_payment',{p_contact:c.id,p_amount:Number(x.amount),p_note:(x.direction==='out'?'تحويل فودافون كاش صادر':'تحويل فودافون كاش وارد')+' — رقم '+x.phone,...(window.mkCoOn?{p_co:curCo()}:{})});
+  await API().refreshContacts([c.id]);await API().refreshTable('mk_payments');toast('✔ اتسجل '+money(x.amount)+' على حساب '+c.name);return true}
+ catch(e){await SB().from('mk_sms_inbox').update({status:'pending'}).eq('id',x.id);toast('ماتسجلش، جرب تاني');return false}}
+/* لما تفتح حساب عميل/مورد، لو فيه فلوس وصلت على رقمه بيظهرلك تأكيد */
+async function smsBanner(cid){try{
+ let c=(db.contacts||[]).find(x=>x.id===cid);if(!c)return;
+ let k=last10(c.phone);if(k.length!==10)return;
+ let L=(await pending()).filter(x=>last10(x.phone)===k);
+ let host=document.querySelector('#modal .modal-head');if(!L.length||!host)return;
+ let box=document.createElement('div');box.id='mkSmsBox';box.className='card';box.style.cssText='margin:8px 0;padding:10px;border:2px solid var(--danger)';
+ box.innerHTML='<b>📲 فيه فلوس فودافون كاش على رقم الحساب ده مستنية تأكيدك</b>'+L.map(x=>`<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><span>${x.direction==='out'?'📤 بعت':'📥 استلمت'} <b>${money(x.amount)}</b></span><button type="button" class="primary" data-sa="${x.id}">✔ سجّل على حسابه</button><button type="button" class="secondary" data-si="${x.id}">تجاهل</button></div>`).join('');
+ host.insertAdjacentElement('afterend',box);
+ box.querySelectorAll('[data-sa]').forEach(b=>b.onclick=async()=>{let x=L.find(y=>y.id===b.dataset.sa);if(x&&await applySms(x,c))openContactFile(c.id)});
+ box.querySelectorAll('[data-si]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.si,'ignored');box.remove()}catch(e){toast('ماتحفظتش')}});
+}catch(e){}}
+['openContactFile','openPayment'].forEach(n=>{let f=window[n];if(typeof f!=='function')return;window[n]=function(id){let r=f.apply(this,arguments);setTimeout(()=>smsBanner(id),0);return r}});
+window.mkSmsOpen=async function(){let L=await pending();
  openModal(`<div class="modal-head"><h2>📲 فلوس فودافون كاش الواصلة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
  <p style="font-size:13px;color:var(--muted);margin:0 0 8px">دي المبالغ اللي وصلت على الموبايل. لما تسجلها في الفاتورة أو اليومية دوس «✔ اتسجل»، ولو مش محتاجها دوس «تجاهل».</p>
  ${L.map(x=>`<div class="card" style="margin-bottom:8px;padding:10px"><b style="font-size:18px">${x.direction==='out'?'📤 بعت ':'📥 استلمت '}${money(x.amount)}</b> <small style="color:var(--muted)">${esc(String(x.received_at||'').slice(0,16).replace('T',' '))}</small>${x.phone?`<div style="font-size:13px;margin-top:4px">الرقم: ${esc(x.phone)} — ${who(x)}</div>`:''}
-  <div style="display:flex;gap:6px;margin-top:6px">${x.direction!=='out'&&findC(x.phone)?`<button type="button" class="primary" data-acc="${x.id}">📂 افتح حسابه وسجّل</button>`:''}<button type="button" class="primary" data-ok="${x.id}">✔ اتسجل</button><button type="button" class="secondary" data-ig="${x.id}">تجاهل</button></div></div>`).join('')||'<div class="empty">مفيش مبالغ جديدة 👌</div>'}`);
+  <div style="display:flex;gap:6px;margin-top:6px">${findC(x.phone)?`<button type="button" class="primary" data-acc="${x.id}">📂 افتح حسابه وسجّل</button>`:''}<button type="button" class="primary" data-ok="${x.id}">✔ اتسجل</button><button type="button" class="secondary" data-ig="${x.id}">تجاهل</button></div></div>`).join('')||'<div class="empty">مفيش مبالغ جديدة 👌</div>'}`);
  document.querySelectorAll('#modal [data-acc]').forEach(b=>b.onclick=()=>{let x=L.find(y=>y.id===b.dataset.acc),c=x&&findC(x.phone);if(!c)return;closeModal();openContactFile(c.id)});
  document.querySelectorAll('#modal [data-ok]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ok,'used');mkSmsOpen()}catch(e){toast('ماتحفظتش')}});
  document.querySelectorAll('#modal [data-ig]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ig,'ignored');mkSmsOpen()}catch(e){toast('ماتحفظتش')}})};
 const _rt=window.renderDashboard;
-window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);autoOut().then(pending).then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
+window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
  if(!L.length){if(b)b.remove();return}
  if(!b){b=document.createElement('button');b.id='mkSmsTile';b.type='button';b.onclick=()=>mkSmsOpen();b.style.cssText='margin:8px 0;width:100%;padding:12px;border-radius:14px;border:2px solid var(--danger);background:var(--card,#fff);font:inherit;font-weight:800;color:var(--danger)';host.insertAdjacentElement('afterbegin',b)}
  b.textContent='📲 فيه '+L.length+' مبلغ فودافون كاش مستني تسجيله';})};
