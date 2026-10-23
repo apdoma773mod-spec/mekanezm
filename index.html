@@ -2104,7 +2104,7 @@ function showWho(html){let w=who();if(!w)return;w.innerHTML=html;w.classList.add
 function chooser(){let s=staff();
  if(!s.length)return emailForm('أول مرة على الجهاز ده: ادخل بالإيميل وكلمة السر بتوعك (المدير).');
  showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${TEST?'🧪 نسخة تجريبية — ':''}اختار طريقة الدخول</p><button type="button" onclick="mkT_role('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="mkT_role('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button>
- <p style="margin:14px 0 0;text-align:center"><a href="#" onclick="mkT_email();return false" style="color:#718087;font-size:13px">الدخول بالإيميل</a></p></div>`)}
+ <button type="button" class="alt" onclick="mkT_email()" style="padding:16px;font-size:17px;margin-top:14px">📱 الدخول برقم الموبايل أو الإيميل</button></div>`)}
 window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.length)return toast(role==='emp'?'مفيش موظفين متسجلين — المدير يضيفهم من الإعدادات':'مفيش مدير متسجل على الجهاز ده — ادخل بالإيميل');
  showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
