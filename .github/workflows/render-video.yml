@@ -1,9 +1,10 @@
-# مونتاج الفيديو في الخلفية (ميكانيزم ستوديو): كل ٥ دقايق بيبص على الطابور في سوبابيز، ولو فيه فيديو مستني بيعمله ويرفعه جاهز.
+# مونتاج الفيديو في الخلفية (ميكانيزم ستوديو): العامل فاضل صاحي ~٥ ساعات ونص بيبص على الطابور كل ٢٠ ثانية، فأي فيديو بيبدأ في ثواني.
+# الجدول كل ساعة بيصحّي عامل جديد (بيستنى اللي قبله يخلص) — كده دايمًا فيه عامل صاحي حتى لو جيت هب أخّر الجدول.
 # مفيش سر تنسخه: العامل بيثبت لسوبابيز إنه من الريبو ده بتوكن OIDC من جيت هب وياخد السر لوحده (لو فيه VR_SECRET متسجل بيتجرب كمان).
 name: Render videos
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
 concurrency:
   group: render-videos
@@ -14,7 +15,7 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 350
     env:
       OLD_SECRET: ${{ secrets.VR_SECRET }}
       SB_URL: https://tkzfjeizvanfptnqvrmr.supabase.co
@@ -44,17 +45,24 @@ jobs:
           echo "في الطابور: $n"
           echo "n=$n" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
-        if: steps.q.outputs.n != '0'
       - uses: actions/setup-node@v4
-        if: steps.q.outputs.n != '0'
         with:
           node-version: 20
-      - name: تجهيز الأدوات
-        if: steps.q.outputs.n != '0'
+      - name: شغال على طول (بيبص على الطابور كل ٢٠ ثانية)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-          cd studio && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.49.1 @supabase/supabase-js@2.45.4
-          npx playwright install --with-deps chromium
-      - name: مونتاج
-        if: steps.q.outputs.n != '0'
-        run: cd studio && node worker/render.mjs
+          [ -z "$VR_SECRET" ] && { echo "::error::مفيش سر للعامل"; exit 1; }
+          end=$(( $(date +%s) + 320*60 )); ready=0
+          while [ "$(date +%s)" -lt "$end" ]; do
+            n=$(curl -s -m 20 -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" | jq -r '.n // 0' 2>/dev/null || true)
+            case "$n" in ''|*[!0-9]*) n=0;; esac
+            if [ "$n" != "0" ]; then
+              echo "::group::فيديو جديد في الطابور ($n) — $(date -u +%H:%M:%S)"
+              if [ "$ready" = "0" ]; then
+                sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+                (cd studio && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.49.1 @supabase/supabase-js@2.45.4 && npx playwright install --with-deps chromium) && ready=1
+              fi
+              [ "$ready" = "1" ] && (cd studio && node worker/render.mjs) || echo "::warning::العامل وقف — هيحاول تاني"
+              echo "::endgroup::"
+            fi
+            sleep 20
+          done
