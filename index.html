@@ -1387,7 +1387,7 @@ function openContactFile(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;l
  <div class="card" style="background:var(--tint2);border:0;line-height:2"><div>التليفون: <b dir="ltr">${esc(c.phone||'—')}</b></div><div>العنوان: <b>${esc(cAddr(c)||'—')}</b></div>${c.addr!=null&&c.note?`<div>ملاحظات: ${esc(c.note)}</div>`:''}
  <div style="margin-top:6px">الحساب: <b style="font-size:22px;color:${balColor(c)}">${balTxt(c)}</b></div></div>
  <div class="cstats"><div><small>عدد الفواتير</small><b>${D.groups.length}</b></div><div><small>${isC?'إجمالي اللي اشتراه':'إجمالي اللي اشتريته منه'}</small><b>${money(tot)}</b></div><div><small>المدفوع في الفواتير</small><b>${money(pd)}</b></div><div><small>${isC?'دفعات استلمتها منه':'دفعات سددتها له'}</small><b>${money(pp)}</b></div><div><small>المرتجعات</small><b>${money(rt)}</b></div><div><small>صافي التعامل</small><b>${money(tot-rt)}</b></div></div>
- <div class="btnrow">${isC?`<button class="primary" onclick="openPayment('${id}')">تحصيل دفعة</button>`:`<button class="primary" onclick="openSupPay('${id}')">سداد للمورد</button>`}${(+c.balance||0)>0.004?`<button class="primary" style="background:#16a34a" onclick="mkZeroAcct('${id}')">💯 صفّر الحساب (${money(c.balance)})</button>`:''}<button class="secondary" onclick="openTransaction('${isC?'sale':'purchase'}',{person:db.contacts.find(x=>x.id==='${id}').name})">${isC?'فاتورة بيع جديدة':'فاتورة شراء جديدة'}</button><button class="secondary" onclick="contactReport(db.contacts.find(x=>x.id==='${id}').name,'${c.type}')">📄 كشف حساب</button><button class="secondary" onclick="editContact('${id}')">✏️ تعديل البيانات</button></div>
+ <div class="btnrow">${isC?`<button class="primary" onclick="openPayment('${id}')">تحصيل دفعة</button>`:`<button class="primary" onclick="openSupPay('${id}')">سداد للمورد</button>`}${Math.abs(+c.balance||0)>0.004?`<button class="primary" style="background:#16a34a" onclick="mkZeroAcct('${id}')">💯 صفّر الحساب (${(+c.balance)>0?money(c.balance):(isC?'ليه ':'لينا ')+money(-c.balance)})</button>`:''}<button class="secondary" onclick="openTransaction('${isC?'sale':'purchase'}',{person:db.contacts.find(x=>x.id==='${id}').name})">${isC?'فاتورة بيع جديدة':'فاتورة شراء جديدة'}</button><button class="secondary" onclick="contactReport(db.contacts.find(x=>x.id==='${id}').name,'${c.type}')">📄 كشف حساب</button><button class="secondary" onclick="editContact('${id}')">✏️ تعديل البيانات</button></div>
  <h3 style="margin:16px 0 8px">الفواتير</h3>
  <div class="table-wrap"><table class="table" style="min-width:480px"><thead><tr><th>الفاتورة</th><th>التاريخ</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th></tr></thead><tbody>${D.groups.length?D.groups.map(G=>{let r=G[0],rem=sumBy(G,x=>x.rem||0);return `<tr class="prow" onclick="${isC?'openInvoiceModal':'openPurchaseView'}('${r.id}')"><td><b>${esc(isC?invNo(r):(r.pno||'—'))}</b></td><td>${esc(r.date)}</td><td>${money(sumBy(G,x=>x.total))}</td><td>${money(sumBy(G,paidOf))}</td><td style="color:${rem>0?'var(--danger)':'inherit'}">${money(rem)}</td></tr>`}).join(''):'<tr><td colspan="5"><div class="empty">لا توجد فواتير.</div></td></tr>'}</tbody></table></div>
  <h3 style="margin:16px 0 8px">${isC?'الدفعات المستلمة':'الدفعات المسددة'}</h3>
@@ -1728,7 +1728,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-8';
+const APP_VER='2026-10-23-9';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2009,14 +2009,21 @@ submitSupPay=async function(ev,id){ev.preventDefault();let f=ev.target,a=+spAmt.
  if(mkPayDup(id,a)&&!await ask('نفس الدفعة ('+money(a)+') اتسجلت لنفس المورد من أقل من دقيقتين. تسجلها تاني؟','سجّلها تاني','لا'))return openSupPay(id);
  try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:spNote.value.trim(),...(window.mkCoOn?{p_co:curCo()}:{})});mkPayMark(id,a);await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);donePay();toast('تم تسجيل السداد');openContactFile(id)}
  catch(e){busy(f,null);toast(netErr(e)?'محتاج نت عشان تسجل السداد':errMsg(e))}};
-/* 💯 صفّر الحساب: دفعة واحدة بكل الرصيد (تحصيل من عميل / سداد لمورد) بعد تأكيد */
-let _zaBusy=false;window.mkZeroAcct=async function(id){let c=db.contacts.find(x=>x.id===id);if(!c||_zaBusy)return;let a=r2(+c.balance||0);if(!(a>0))return toast('الحساب خالص');
- let isC=c.type==='عميل';
- if(!await ask('هتسجّل '+(isC?'تحصيل ':'سداد ')+money(a)+(isC?' من ':' لـ ')+c.name+' وحسابه يبقى صفر. تأكيد؟','أيوه، صفّر الحساب','لا'))return;
- if(mkPayDup(id,a)&&!await ask('نفس المبلغ ('+money(a)+') اتسجل لنفس الشخص من أقل من دقيقتين. تسجله تاني؟','سجّله تاني','لا'))return;
+/* 💯 صفّر الحساب: دفعة واحدة بكل الرصيد بعد تأكيد. رصيد موجب (عليه/ليه) = تحصيل أو سداد كامل. رصيد سالب (رصيد ليه عندنا / لينا عنده) = رد الفلوس (من الدرج) أو تسوية من غير فلوس */
+let _zaBusy=false;window.mkZeroAcct=async function(id){let c=db.contacts.find(x=>x.id===id);if(!c||_zaBusy)return;let bal=r2(+c.balance||0);if(Math.abs(bal)<0.005)return toast('الحساب خالص');
+ let isC=c.type==='عميل',cash=true;
+ if(bal>0){
+  if(!await ask('هتسجّل '+(isC?'تحصيل ':'سداد ')+money(bal)+(isC?' من ':' لـ ')+c.name+' وحسابه يبقى صفر. تأكيد؟','أيوه، صفّر الحساب','لا'))return;
+  if(mkPayDup(id,bal)&&!await ask('نفس المبلغ ('+money(bal)+') اتسجل لنفس الشخص من أقل من دقيقتين. تسجله تاني؟','سجّله تاني','لا'))return;
+ }else{
+  let a=money(-bal);
+  if(await ask((isC?c.name+' ليه عندك رصيد '+a+'.\nرجّعت له الفلوس فعلًا؟ (هتتسجل خارجة من الدرج وحسابه يبقى صفر)':c.name+' عليه لينا رصيد '+a+'.\nاستلمت الفلوس منه فعلًا؟ (هتتسجل داخلة الدرج وحسابه يبقى صفر)'),isC?'أيوه، رجّعتها':'أيوه، استلمتها','لأ، مش دلوقتي'))cash=true;
+  else if(await ask('تصفّر الحساب من غير فلوس (تسوية بس، مفيش حاجة بتدخل ولا بتخرج من الدرج)؟','أيوه، تسوية','لا'))cash=false;
+  else return;
+ }
  _zaBusy=true;toast('جاري التسجيل…');
- try{await rpc('mk_add_payment',{p_contact:id,p_amount:a,p_note:'تصفير الحساب',...(window.mkCoOn?{p_co:curCo()}:{})});mkPayMark(id,a);await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);donePay();toast('✔ حساب '+c.name+' اتصفّر');openContactFile(id)}
- catch(e){toast(netErr(e)?'محتاج نت عشان تسجل الدفعة':errMsg(e))}
+ try{await rpc('mk_zero_account',{p_contact:id,p_cash:cash,...(window.mkCoOn?{p_co:curCo()}:{})});mkPayMark(id,Math.abs(bal));await Promise.all([refreshContacts([id]),refreshTable('mk_payments')]);donePay();toast('✔ حساب '+c.name+' اتصفّر');openContactFile(id)}
+ catch(e){toast(netErr(e)?'محتاج نت عشان تصفّر الحساب':/already_zero/.test(String(e&&e.message))?'الحساب كان خالص':errMsg(e))}
  finally{_zaBusy=false}};
 submitReturn=async function(ev){ev.preventDefault();let type=rtType.value,p=db.products.find(x=>x.id===rtProduct.value),q=+rtQty.value,price=+rtPrice.value;
  if(!p)return toast('اختر منتجاً');if(!(q>0))return toast('اكتب الكمية');
