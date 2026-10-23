@@ -11362,5 +11362,26 @@ setTimeout(function chk(){if(window.mkSB&&window.mkT_user)mkPend.count().then(()
  bg.addEventListener('touchmove',function(e){if(e.target===bg)e.preventDefault()},{passive:false});
 }catch(e){}})();
 </script>
+<script>
+/* ===== 📲 مبالغ فودافون كاش الواصلة على الموبايل (الدالة sms-in بتكتبها هنا). مابتتسجلش في الحسابات غير لما انت توافق ===== */
+(function(){
+const SB=()=>window.mkSB;
+async function pending(){try{let r=await SB().from('mk_sms_inbox').select('*').eq('status','pending').order('received_at',{ascending:false}).limit(200);return r.data||[]}catch(e){return []}}
+async function setStatus(id,st){let r=await SB().from('mk_sms_inbox').update({status:st}).eq('id',id);if(r.error)throw r.error}
+window.mkSmsOpen=async function(){let L=await pending();
+ openModal(`<div class="modal-head"><h2>📲 فلوس فودافون كاش الواصلة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="font-size:13px;color:var(--muted);margin:0 0 8px">دي المبالغ اللي وصلت على الموبايل. لما تسجلها في الفاتورة أو اليومية دوس «✔ اتسجل»، ولو مش محتاجها دوس «تجاهل».</p>
+ ${L.map(x=>`<div class="card" style="margin-bottom:8px;padding:10px"><b style="font-size:18px">${money(x.amount)}</b> <small style="color:var(--muted)">${esc(String(x.received_at||'').slice(0,16).replace('T',' '))}</small>
+  <div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="primary" data-ok="${x.id}">✔ اتسجل</button><button type="button" class="secondary" data-ig="${x.id}">تجاهل</button></div></div>`).join('')||'<div class="empty">مفيش مبالغ جديدة 👌</div>'}`);
+ document.querySelectorAll('#modal [data-ok]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ok,'used');mkSmsOpen()}catch(e){toast('ماتحفظتش')}});
+ document.querySelectorAll('#modal [data-ig]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ig,'ignored');mkSmsOpen()}catch(e){toast('ماتحفظتش')}})};
+const _rt=window.renderDashboard;
+window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
+ if(!L.length){if(b)b.remove();return}
+ if(!b){b=document.createElement('button');b.id='mkSmsTile';b.type='button';b.onclick=()=>mkSmsOpen();b.style.cssText='margin:8px 0;width:100%;padding:12px;border-radius:14px;border:2px solid var(--danger);background:var(--card,#fff);font:inherit;font-weight:800;color:var(--danger)';host.insertAdjacentElement('afterbegin',b)}
+ b.textContent='📲 فيه '+L.length+' مبلغ فودافون كاش مستني تسجيله';})};
+})();
+</script>
+</body>
 </body>
 </html>
