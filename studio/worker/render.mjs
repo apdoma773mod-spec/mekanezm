@@ -123,7 +123,8 @@ async function render(inFile, job, D, info, outFile, prog) {
     const gapExpr = st.gaps.slice(0, 120).map(g => `between(t,${g[0].toFixed(3)},${g[1].toFixed(3)})`).join('+');
     if (info.hasAudio) args.push('-i', inFile, '-filter_complex', st.gaps.length ? `[1:a]aselect='not(${gapExpr})',asetpts=N/SR/TB[a]` : '[1:a]anull[a]', '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '128k');
     else args.push('-an');
-    args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', kbps + 'k', '-bufsize', 2 * kbps + 'k', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', outFile);
+    /* تصحيح لون خفيف: بيشيل الصفار ويظبط التشبع (الفيديوهات المصفرة بتطلع رخيصة) */
+    args.push('-vf', 'colortemperature=temperature=6500,eq=saturation=1.05:contrast=1.04', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', kbps + 'k', '-bufsize', 2 * kbps + 'k', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', outFile);
     const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'ignore', 'pipe'] }); let ferr = ''; ff.stderr.on('data', d => { ferr += d; });
     const done = new Promise((res, rej) => ff.on('close', c => c === 0 ? res() : rej(new Error('ffmpeg فشل: ' + ferr.slice(-400)))));
     let last = Date.now();
