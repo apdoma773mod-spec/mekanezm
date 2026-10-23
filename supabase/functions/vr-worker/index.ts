@@ -5,7 +5,11 @@
 //   uploadurl → رابط رفع مؤقت للفيديو الجاهز
 //   done / fail → يقفل المهمة
 // السر متخزن في جدول mk_vr_secret (مفيش service role برّه سوبابيز). الملفات في باكت video-jobs الخاص.
+// hello     → العامل بيثبت إنه GitHub Actions بتاع ريبو ميكانيزم (توكن OIDC موقّع من جيت هب) وياخد السر — من غير ما حد ينسخ سر بإيده
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { createRemoteJWKSet, jwtVerify } from "npm:jose@5.9.6";
+const GH_JWKS = createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"));
+const GH_REPO = "apdoma773mod-spec/mekanezm";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 const db = () => createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -19,6 +23,14 @@ Deno.serve(async (req) => {
     const b = await req.json().catch(() => ({}));
     const c = db();
     const s = await c.from("mk_vr_secret").select("secret").limit(1).maybeSingle();
+    if (b.action === "hello") {
+      if (!s.data || typeof b.oidc !== "string") return json({ error: "forbidden" }, 403);
+      try {
+        const { payload } = await jwtVerify(b.oidc, GH_JWKS, { issuer: "https://token.actions.githubusercontent.com", audience: "mekanizm-vr" });
+        if (payload.repository !== GH_REPO || payload.ref !== "refs/heads/main") return json({ error: "forbidden" }, 403);
+      } catch (_) { return json({ error: "forbidden" }, 403); }
+      return json({ secret: s.data.secret });
+    }
     if (!s.data || typeof b.secret !== "string" || !safeEq(String(s.data.secret), b.secret)) return json({ error: "forbidden" }, 403);
 
     if (b.action === "peek") {

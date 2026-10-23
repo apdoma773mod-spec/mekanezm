@@ -1,5 +1,5 @@
 # مونتاج الفيديو في الخلفية (ميكانيزم ستوديو): كل ٥ دقايق بيبص على الطابور في سوبابيز، ولو فيه فيديو مستني بيعمله ويرفعه جاهز.
-# المطلوب مرة واحدة: سر باسم VR_SECRET في Settings → Secrets and variables → Actions (القيمة اللي اتبعتتلك).
+# مفيش سر تنسخه: العامل بيثبت لسوبابيز إنه من الريبو ده بتوكن OIDC من جيت هب وياخد السر لوحده (لو فيه VR_SECRET متسجل بيتجرب كمان).
 name: Render videos
 on:
   schedule:
@@ -8,22 +8,32 @@ on:
 concurrency:
   group: render-videos
   cancel-in-progress: false
+permissions:
+  contents: read
+  id-token: write
 jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      VR_SECRET: ${{ secrets.VR_SECRET }}
+      OLD_SECRET: ${{ secrets.VR_SECRET }}
       SB_URL: https://tkzfjeizvanfptnqvrmr.supabase.co
       SB_KEY: sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ
     steps:
       - name: فيه فيديو مستني؟
         id: q
         run: |
-          VR_SECRET=$(printf %s "$VR_SECRET" | grep -oE '[0-9a-fA-F]{48}' | head -1 | tr A-F a-f || true)
-          if [ -z "$VR_SECRET" ]; then echo "::error::VR_SECRET مش متسجل أو مش مكتوب صح"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          VR_SECRET=""
+          if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            oidc=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mekanizm-vr" | jq -r '.value // empty' || true)
+            [ -n "$oidc" ] && VR_SECRET=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"action\":\"hello\",\"oidc\":\"$oidc\"}" | jq -r '.secret // empty' || true)
+          fi
+          [ -z "$VR_SECRET" ] && VR_SECRET=$(printf %s "$OLD_SECRET" | grep -oE '[0-9a-fA-F]{48}' | head -1 | tr A-F a-f || true)
+          if [ -z "$VR_SECRET" ]; then echo "::error::ماقدرتش آخد سر العامل من السيرفر"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "::add-mask::$VR_SECRET"
+          echo "VR_SECRET=$VR_SECRET" >> "$GITHUB_ENV"
           res=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" || true)
-          if echo "$res" | grep -q forbidden; then echo "::error::VR_SECRET غلط — مش زي اللي في السيرفر"; fi
+          if echo "$res" | grep -q forbidden; then echo "::error::سر العامل مش مقبول"; fi
           n=$(echo "$res" | jq -r '.n // 0' 2>/dev/null || true)
           case "$n" in ''|*[!0-9]*) n=0;; esac
           echo "في الطابور: $n"
