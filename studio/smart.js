@@ -181,7 +181,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label>الجودة<select id="sm_q"><option value="1080" ${S.q==1080?'selected':''}>عالية 1080</option><option value="720" ${S.q==720?'selected':''}>متوسطة 720 (أسرع وأخف)</option></select></label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
- <button class="b" id="sm_cl" style="width:100%;min-height:56px;font-size:18px">☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)</button>
+ <button class="b" id="sm_bg" style="width:100%;min-height:56px;font-size:18px">☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)</button>
  <p class="mu" style="margin:4px 0 10px">بيرفع الفيديو، وبعدها السيرفر هو اللي بيسمع ويعمل المونتاج ويطلّعه جاهز — تلاقيه تحت في «فيديوهاتي». بياخد من دقيقتين لـ ١٥ دقيقة على حسب طول الفيديو.</p>
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
@@ -200,7 +200,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
- $s('sm_go').onclick=go;$s('sm_cl').onclick=cloudSubmit;loadJobs();clearInterval(JT);JT=setInterval(()=>{if($s('sm_jobs')&&document.visibilityState==='visible'&&$s('v-smart').classList.contains('on'))loadJobs()},15000)}
+ $s('sm_go').onclick=go;$s('sm_bg').onclick=cloudSubmit;loadJobs();clearInterval(JT);JT=setInterval(()=>{if($s('sm_jobs')&&document.visibilityState==='visible'&&$s('v-smart').classList.contains('on'))loadJobs()},15000)}
 function paintTpl(){document.querySelectorAll('#sm_tp [data-tp]').forEach(b=>b.classList.toggle('o',b.dataset.tp!==S.tpl))}
 async function go(){if(busy)return;if(!F)return say('اختار الفيديو الأول');const b=$s('sm_go'),pg=$s('sm_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';
  const key='mkz-ai:'+F.name+':'+F.size;
@@ -232,7 +232,7 @@ const PART=40*1024*1024;
 function slimImg(src,max){return new Promise(res=>{if(!src||String(src).length<10)return res('');const im=new Image();im.onload=()=>{try{const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.8))}catch(e){res('')}};im.onerror=()=>res('');im.src=src})}
 async function cloudSubmit(){if(busy)return;if(!F)return say('اختار الفيديو الأول');
  if(F.size>1500*1024*1024)return say('الفيديو أكبر من ١٫٥ جيجا — قصّره');
- const pg=$s('sm_pg'),b=$s('sm_cl');busy=true;b.disabled=true;let wl=null,step='الدخول';
+ const pg=$s('sm_pg'),b=$s('sm_bg');busy=true;b.disabled=true;let wl=null,step='الدخول';
  pg.textContent='⏳ بجهّز الرفع…';b.textContent='⏳ بجهّز…';pg.scrollIntoView({behavior:'smooth',block:'center'});
  try{const tok=await withTO(token(),20000,'الدخول اتأخر — اتأكد من النت');if(!tok){const a=$s('sm_auth');a.innerHTML=loginBox();$s('sm_li').onclick=doLogin;a.scrollIntoView({behavior:'smooth'});throw new Error('سجّل دخول بحساب ميكانيزم الأول')}
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}
