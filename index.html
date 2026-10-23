@@ -1728,7 +1728,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-7';
+const APP_VER='2026-10-23-8';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -3580,7 +3580,7 @@ setTimeout(()=>{try{renderCharts();roBanner()}catch(e){}},1500);
 .ivbusy{position:fixed;inset:0;z-index:95;background:#102b2fcc;color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;font-weight:700;text-align:center;padding:20px}
 .ivbusy.show{display:flex}
 </style>
-<div id="mkInv"></div><div id="ivBusy" class="ivbusy"></div>
+<div id="mkInv"></div><div id="ivBusy" class="ivbusy" onclick="this.classList.remove('show')"></div>
 <script>
 /* =====================================================================
    ميكانيزم — 📷 قراءة فاتورة المورد بالكاميرا: البنود تنزل على فاتورة الشراء + مطابقة بالتشابه + حفظ أسماء المورد
@@ -3728,6 +3728,8 @@ window.mkScanGoInv=pn=>{let r=(db.purchases||[]).find(x=>x.pno===pn);if(r&&typeo
 const LOCAL=new Map();
 const loadJS=src=>new Promise((res,rej)=>{if(document.querySelector('script[src="'+src+'"]'))return res();let s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('مكتبة مااتحملتش — اتأكد من النت'));document.head.appendChild(s)});
 const busyEl=()=>document.getElementById('ivBusy');
+/* شريط صغير تحت الشاشة (مش بيقفل حاجة): الفاتورة بتتقري في الخلفية */
+function chip(t){let c=document.getElementById('ivChip');if(!t){if(c)c.remove();return}if(!c){c=document.createElement('div');c.id='ivChip';c.style.cssText='position:fixed;left:12px;right:12px;bottom:14px;z-index:60;background:#0b4a8b;color:#fff;border-radius:14px;padding:12px 14px;font-size:15px;text-align:center;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.25)';document.body.appendChild(c)}c.textContent=t}
 const busy=t=>{let b=busyEl();if(b){b.textContent=t||'';b.classList.toggle('show',!!t)}};
 function errTxt(e){let m=String(e&&(e.message||e.error||e)||'');
  if(/mk_scans|relation|does not exist|schema cache|Bucket not found|bucket/i.test(m))return 'محتاج تشغّل ملف scans.sql في Supabase الأول';
@@ -3751,25 +3753,24 @@ window.mkScanAdd=async function(file){
  if(!sbx()||!navigator.onLine)return toast('محتاج نت');
  busy('⏳ بجهّز الفاتورة…');
  try{let pdf=/pdf/i.test(file.type||'')||/\.pdf$/i.test(file.name||'');
-  let pages=pdf?await pdfPages(file):[await window.ivShrink(file)];if(!pages.length)throw new Error('الملف فاضي');
+  let pages=pdf?await pdfPages(file):[await window.ivShrink(file,1600)];if(!pages.length)throw new Error('الملف فاضي');
   let id=crypto.randomUUID(),paths=[];
   for(let i=0;i<pages.length;i++){busy(pages.length>1?`⏳ برفع صفحة ${i+1} من ${pages.length}…`:'⏳ برفع الصورة…');let p=`${id}/p${i+1}.jpg`;
    let {error}=await sbx().storage.from('invoice-scans').upload(p,b64toBlob(pages[i]),{contentType:'image/jpeg',upsert:true});if(error)throw error;paths.push(p)}
   let sup=((document.getElementById('txPerson')||{}).value||'').trim();
   let {error}=await sbx().from('mk_scans').insert({id,pages:paths,supplier:sup,created_by:userName()||''});if(error)throw error;
-  LOCAL.set(id,pages);WAIT=id;busy('⏳ بقرا الفاتورة…');
-  await refresh();await tick(id);
-  if(WAIT===id){busy('');toast('📥 الفاتورة في الطابور — هتتقري لوحدها وتلاقيها في «فواتير للمراجعة»')}}
- catch(e){busy('');toast('❌ '+errTxt(e))}};
+  LOCAL.set(id,pages);WAIT=id;busy('');chip('⏳ بقرا الفاتورة في الخلفية… كمّل شغلك، هتفتحلك لوحدها أول ما تخلص');
+  refresh();tick(id).then(()=>{if(WAIT===id){WAIT=null;chip('');toast('📥 الفاتورة في الطابور — هتتقري لوحدها وتلاقيها في «فواتير للمراجعة»')}}).catch(()=>{chip('')})}
+ catch(e){busy('');chip('');toast('❌ '+errTxt(e))}};
 
 /* ---------- العامل: بياخد الفواتير المستنية ويقراها ---------- */
 async function tick(prefer){if(busyW||!sbx()||!window.mkT_user||!navigator.onLine)return;busyW=true;
  try{for(let n=0;n<3;n++){let {data:job,error}=await sbx().rpc('mk_scan_claim');if(error||!job)break;await work(job)}}
  catch(e){}finally{busyW=false;await refresh()}}
 async function callFn(img){
- // مهلة (٥٥ ثانية): لو الخدمة علّقت من غير رد، نرمي خطأ "timeout" بدل ما الفاتورة تفضل "لسه بتتقري" للأبد وتقفل الطابور عن أي صورة جديدة
+ // مهلة (١٢٥ ثانية = أطول من محاولتي السيرفر ٤٠+٧٠): لو الخدمة علّقت من غير رد، نرمي خطأ "timeout" بدل ما الفاتورة تفضل "لسه بتتقري" للأبد وتقفل الطابور عن أي صورة جديدة
  let timer,invoke=sbx().functions.invoke('parse-invoice',{body:{image:img,media_type:'image/jpeg'}});
- let timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('timeout: الخدمة متأخرة في الرد')),55000)});
+ let timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error('timeout: الخدمة متأخرة في الرد')),125000)});
  let data,error;
  try{({data,error}=await Promise.race([invoke,timeout]))}finally{clearTimeout(timer)}
  if(error){let m=error.message||'',st=error.context&&error.context.status;try{let j=await error.context.json();m=j.error||m}catch(e){}
@@ -3784,14 +3785,14 @@ async function work(job){
   let R={supplier:'',invoice_no:'',date:'',notes:'',items:[]};
   let RS=await Promise.all(pages.map(callFnQ));  // كل الصفحات مع بعض (مش واحدة ورا التانية)
   for(const r of RS){R.supplier=R.supplier||r.supplier||'';R.invoice_no=R.invoice_no||r.invoice_no||'';R.date=R.date||r.date||'';if(r.notes)R.notes=(R.notes?R.notes+' • ':'')+r.notes;R.items=R.items.concat(r.items||[])}
-  if(!R.items.filter(x=>x&&String(x.text||'').trim()).length){await fin(job.id,'failed',null,'ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب',0);if(WAIT===job.id){WAIT=null;busy('');toast('❌ ماقدرتش ألاقي أصناف — صوّرها أوضح')}return}
+  if(!R.items.filter(x=>x&&String(x.text||'').trim()).length){await fin(job.id,'failed',null,'ماقدرتش ألاقي أصناف في الصورة — صوّرها أوضح وقريب',0);if(WAIT===job.id){WAIT=null;busy('');chip('');toast('❌ ماقدرتش ألاقي أصناف — صوّرها أوضح')}return}
   await fin(job.id,'done',R,'',0);LOCAL.delete(job.id);
-  if(WAIT===job.id){WAIT=null;busy('');if(document.getElementById('txLines')&&TTYPE==='purchase')return openScan(job.id,R)}
+  if(WAIT===job.id){WAIT=null;busy('');chip('');if(document.getElementById('txLines')&&TTYPE==='purchase')return openScan(job.id,R)}
   toast('📥 فاتورة اتقرت ومستنية مراجعتك')}
  catch(e){let m=errTxt(e);
   if(TRANSIENT.test(m)&&(job.attempts||1)<=BACK.length){await fin(job.id,'pending',null,m,BACK[Math.max(0,(job.attempts||1)-1)]);
-   if(WAIT===job.id){WAIT=null;busy('');toast('⏳ جوجل زحمة دلوقتي — هعيد المحاولة لوحدي وهتلاقيها في «فواتير للمراجعة»')}}
-  else{await fin(job.id,'failed',null,m,0);if(WAIT===job.id){WAIT=null;busy('');toast('❌ '+m)}}}}
+   if(WAIT===job.id){WAIT=null;busy('');chip('');toast('⏳ جوجل زحمة دلوقتي — هعيد المحاولة لوحدي وهتلاقيها في «فواتير للمراجعة»')}}
+  else{await fin(job.id,'failed',null,m,0);if(WAIT===job.id){WAIT=null;busy('');chip('');toast('❌ '+m)}}}}
 
 /* ---------- القايمة ---------- */
 async function refresh(){if(!sbx()||!window.mkT_user)return;

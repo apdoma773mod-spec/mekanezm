@@ -81,21 +81,29 @@ const GSCHEMA = {
 
 // الفاتورة: بنجرب الموديل السريع الأول. لو مارجعش أصناف أو فشل، بنجرب الموديل الأقوى (أبطأ شوية بس أدق)
 const INV_STRONG = Deno.env.get("INVOICE_STRONG_MODEL") || "gemini-2.5-pro";
+// مهلة لكل محاولة (الأسرع ٤٠ ثانية، الأقوى ٧٠) عشان الطلب مايفضلش معلّق: الإجمالي أقل من ١٢٠ ثانية والعميل بيستنى ١٢٥
 async function viaGemini(key: string, image: string, mt: string) {
-  const first = await viaGeminiOne(key, image, mt, GEMINI_MODEL);
+  const first = await viaGeminiOne(key, image, mt, GEMINI_MODEL, 40000);
   if (first.ok && (await first.clone().text()).match(/"text"\s*:\s*"[^"]+"/)) return first;
-  return viaGeminiOne(key, image, mt, INV_STRONG);
+  return viaGeminiOne(key, image, mt, INV_STRONG, 70000);
 }
-async function viaGeminiOne(key: string, image: string, mt: string, model: string) {
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "content-type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") }, { inline_data: { mime_type: mt, data: image } }] }],
-      generationConfig: { responseMimeType: "application/json", responseSchema: GSCHEMA, temperature: 0 },
-    }),
-  });
-  const body = await r.json();
+async function viaGeminiOne(key: string, image: string, mt: string, model: string, timeoutMs: number) {
+  let r: Response;
+  try {
+    r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { "x-goog-api-key": key, "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") }, { inline_data: { mime_type: mt, data: image } }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: GSCHEMA, temperature: 0 },
+      }),
+    });
+  } catch (e) {
+    const n = (e as Error).name;
+    return json({ error: n === "TimeoutError" || n === "AbortError" ? "timeout: جوجل متأخر في الرد" : "Gemini: " + String((e as Error).message || e) }, n === "TimeoutError" || n === "AbortError" ? 504 : 502);
+  }
+  const body = await r.json().catch(() => ({}));
   if (!r.ok) return json({ error: body?.error?.message || `Gemini ${r.status}` }, 502);
   const txt = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
   try { return json(JSON.parse(txt)); } catch { return json({ error: "ماقدرتش أقرا الفاتورة" }, 422); }
