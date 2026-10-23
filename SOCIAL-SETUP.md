@@ -28,6 +28,7 @@ Supabase ← مشروع mekanezm ← Edge Functions ← Secrets.
 8. **إنستجرام:** لازم حساب إنستجرام المحل يكون **Business** ومربوط بصفحة الفيسبوك (من إعدادات إنستجرام ← Account type).
    في Instagram ← Webhooks حط نفس الرابط ونفس الكلمة وعلّم `messages`.
    (لو Meta إدّتك توكن مختلف لإنستجرام، حطه في Secret اسمه `META_IG_TOKEN`. لو مفيش، توكن الصفحة بيكفي.)
+8.5. **التعليقات:** في Webhooks الصفحة علّم كمان على `feed` (فيسبوك)، وفي Webhooks إنستجرام علّم على `comments`. ولازم توكن الصفحة يكون معاه صلاحيات `pages_read_engagement` و`pages_manage_engagement` (للرد على تعليق فيسبوك) و`instagram_manage_comments` (للتعليقات والرد على إنستجرام). التعليقات بتظهر في «💬 رسايل الصفحات ← 🗨️ التعليقات» ومفيش ليها رد تلقائي: انت اللي بترد.
 9. **تشغيل للكل:** طول ما الأب في وضع Development، الرسايل بتشتغل معاك انت بس (وأي حد ضايفه كـ Tester).
    عشان الزباين: من **App Review** اطلب صلاحيات `pages_messaging` و `instagram_manage_messages`، وبعد الموافقة حوّل الأب لـ **Live**.
 

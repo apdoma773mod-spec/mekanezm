@@ -1,6 +1,7 @@
 // social-webhook — صندوق رسايل الصفحات الموحد لميكانيزم (#15)
 // • GET  (Meta)  : تأكيد الـ webhook (hub.verify_token = META_VERIFY_TOKEN)
 // • POST (Meta)  : رسايل فيسبوك ماسنجر وإنستجرام (توقيع X-Hub-Signature-256 بـ META_APP_SECRET)
+// • تعليقات الصفحات: فيسبوك (feed) وإنستجرام (comments) بتتسجل kind='comment' من غير رد تلقائي، والرد عليها يدوي من الشاشة
 // • POST ?src=tiktok : رسايل تيك توك (توقيع TikTok-Signature بـ TIKTOK_CLIENT_SECRET)
 // • POST {action:'send'|'status'} من شاشة السيستم: لازم توكن المستخدم ويكون مدير (mk_social_can)
 // القواعد: نفس كلمات الواتساب (mk_settings: wa_rules)، والرد لكل نوع في mk_settings: social_cfg.
@@ -72,6 +73,14 @@ async function sendMeta(platform: string, to: string, text: string) {
   const j = await r.json().catch(() => ({}));
   return r.ok ? { ok: true, id: j.message_id || "" } : { ok: false, err: (j.error && j.error.message) || ("HTTP " + r.status) };
 }
+async function replyComment(platform: string, commentId: string, text: string) {
+  const tok = platform === "instagram" ? (env("META_IG_TOKEN") || env("META_PAGE_TOKEN")) : env("META_PAGE_TOKEN");
+  if (!tok) return { ok: false, err: "مفتاح الصفحة (META_PAGE_TOKEN) مش متسجل" };
+  const path = platform === "instagram" ? "replies" : "comments";
+  const r = await fetch(`${GRAPH}/${encodeURIComponent(commentId)}/${path}?access_token=${encodeURIComponent(tok)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text }) });
+  const j = await r.json().catch(() => ({}));
+  return r.ok ? { ok: true, id: String(j.id || "") } : { ok: false, err: (j.error && j.error.message) || ("HTTP " + r.status) };
+}
 async function sendTikTok(to: string, text: string, meta: Record<string, unknown>) {
   const tok = env("TIKTOK_ACCESS_TOKEN"), biz = env("TIKTOK_BUSINESS_ID"), url = env("TIKTOK_SEND_URL") || "https://business-api.tiktok.com/open_api/v1.3/business/message/send/";
   if (!tok || !biz) return { ok: false, err: "مفاتيح تيك توك مش متسجلة", pending: true };
@@ -98,6 +107,10 @@ async function incoming(m: { platform: string; page_id: string; thread_id: strin
   await c.from("mk_social_msgs").update({ rule_type: type, status: res.ok ? "auto" : "new" }).eq("id", ins.data!.id);
   await c.from("mk_social_msgs").insert({ platform: m.platform, page_id: m.page_id, thread_id: m.thread_id, ext_id: res.ok && res.id ? res.id : null, body: String(rep.text), direction: "out", rule_type: type, status: res.ok ? "sent" : (res.pending ? "pending" : "failed"), by_name: "رد تلقائي (" + type + ")", meta: res.ok ? {} : { err: res.err } });
 }
+// تعليق: بيتسجل بس (من غير رد تلقائي عشان ما نردش علني على سبام)، والرد من الشاشة
+async function incomingComment(m: { platform: string; page_id: string; comment_id: string; body: string; name?: string; meta?: Record<string, unknown> }) {
+  await db().from("mk_social_msgs").insert({ platform: m.platform, page_id: m.page_id, thread_id: m.comment_id, ext_id: m.comment_id, body: m.body || "", sender_name: m.name || "", direction: "in", status: "new", kind: "comment", meta: m.meta || {} });
+}
 async function metaName(platform: string, id: string) {
   const tok = platform === "instagram" ? (env("META_IG_TOKEN") || env("META_PAGE_TOKEN")) : env("META_PAGE_TOKEN"); if (!tok) return "";
   try { const r = await fetch(`${GRAPH}/${id}?fields=${platform === "instagram" ? "username,name" : "name"}&access_token=${encodeURIComponent(tok)}`); const j = await r.json(); return j.name || j.username || ""; } catch { return ""; }
@@ -121,9 +134,17 @@ Deno.serve(async (req) => {
     const uc = createClient(URL_, ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
     const can = await uc.rpc("mk_social_can"); if (can.error || can.data !== true) return json({ error: "admin_only" }, 403);
     if (body.action === "status") return json({ meta: !!(env("META_APP_SECRET") && env("META_PAGE_TOKEN") && env("META_VERIFY_TOKEN")), instagram: !!(env("META_APP_SECRET") && (env("META_IG_TOKEN") || env("META_PAGE_TOKEN"))), tiktok: !!(env("TIKTOK_CLIENT_SECRET") && env("TIKTOK_ACCESS_TOKEN") && env("TIKTOK_BUSINESS_ID")) });
-    const text = String(body.text || "").trim(), platform = String(body.platform || ""), thread = String(body.thread_id || "");
+    const text = String(body.text || "").trim(), platform = String(body.platform || ""), thread = String(body.thread_id || ""), isComment = body.kind === "comment";
     if (!text || !thread || !["facebook", "instagram", "tiktok"].includes(platform)) return json({ error: "bad_request" }, 400);
     const who = await uc.rpc("mk_me_name"); const c = db();
+    if (isComment) {
+      if (platform === "tiktok") return json({ ok: false, error: "تعليقات تيك توك مش مدعومة" }, 400);
+      const lc = await c.from("mk_social_msgs").select("page_id").eq("thread_id", thread).eq("direction", "in").limit(1).maybeSingle();
+      const rc = await replyComment(platform, thread, text);
+      await c.from("mk_social_msgs").insert({ platform, page_id: (lc.data && lc.data.page_id) || "", thread_id: thread, ext_id: rc.ok && rc.id ? rc.id : null, body: text, direction: "out", status: rc.ok ? "sent" : "failed", kind: "comment", by_name: String(who.data || ""), meta: rc.ok ? {} : { err: rc.err } });
+      if (rc.ok) await c.from("mk_social_msgs").update({ status: "replied" }).eq("thread_id", thread).eq("direction", "in").in("status", ["new", "auto"]);
+      return json(rc.ok ? { ok: true } : { ok: false, error: rc.err }, rc.ok ? 200 : 502);
+    }
     const last = await c.from("mk_social_msgs").select("page_id,meta").eq("thread_id", thread).eq("direction", "in").order("created_at", { ascending: false }).limit(1).maybeSingle();
     const res = await send(platform, thread, text, (last.data && last.data.meta) || {});
     await c.from("mk_social_msgs").insert({ platform, page_id: (last.data && last.data.page_id) || "", thread_id: thread, ext_id: res.ok && res.id ? res.id : null, body: text, direction: "out", status: res.ok ? "sent" : (res.pending ? "pending" : "failed"), by_name: String(who.data || ""), meta: res.ok ? {} : { err: res.err } });
@@ -155,6 +176,16 @@ Deno.serve(async (req) => {
     const text = msg.text || ((msg.attachments || []).length ? "📎 مرفق (" + msg.attachments.map((a: { type: string }) => a.type).join("، ") + ")" : "");
     const id = String(ev.sender && ev.sender.id || ""); if (!id) continue;
     await incoming({ platform, page_id: String(e.id || ""), thread_id: id, ext_id: String(msg.mid || ""), body: text, name: await metaName(platform, id) });
+  }
+  for (const e of body.entry || []) for (const ch of e.changes || []) {
+    const v = ch.value || {};
+    if (platform === "facebook" && ch.field === "feed" && v.item === "comment" && v.verb === "add" && v.comment_id) {
+      if (String((v.from && v.from.id) || "") === String(e.id)) continue; // تعليق الصفحة نفسها
+      await incomingComment({ platform, page_id: String(e.id || ""), comment_id: String(v.comment_id), body: String(v.message || ""), name: String((v.from && v.from.name) || ""), meta: { post_id: v.post_id || "", parent_id: v.parent_id || "" } });
+    } else if (platform === "instagram" && ch.field === "comments" && v.id) {
+      if (String((v.from && v.from.id) || "") === String(e.id)) continue;
+      await incomingComment({ platform, page_id: String(e.id || ""), comment_id: String(v.id), body: String(v.text || ""), name: String((v.from && v.from.username) || ""), meta: { media_id: (v.media && v.media.id) || "" } });
+    }
   }
   return new Response("EVENT_RECEIVED");
 });
