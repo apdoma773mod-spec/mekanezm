@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-22-26';
+const APP_VER='2026-10-23-1';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6616,7 +6616,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(svc){try{var names=JSON.parse(svc),api=window.mkT&&window.mkT.api,c=window.mkSB;if(api&&c){var q=await c.from('mk_products').select('id,qty,name').in('name',names);var ids=[];
      for(var i=0;i<(q.data||[]).length;i++){var row=q.data[i];ids.push(row.id);if(+row.qty!==0)await api.rpc('mk_adjust_stock',{p_id:row.id,p_qty:0,p_note:'صنف خدمة/تجهيز — مش مخزون'})}
      if(ids.length){await api.refreshProducts(ids);var ch=0;ids.forEach(function(id){var p=(db.products||[]).find(function(x){return x.id===id});if(p&&!p.cat){p.cat='خدمات وتجهيز';ch++}});if(ch){try{window.save&&window.save();await api.syncNow()}catch(e){}}api.done&&api.done()}}}catch(e){}}
-   if(aft){try{await aft()}catch(e){toast('⚠️ '+(e&&e.message||e))}}}
+   if(aft){try{await aft()}catch(e){alert('⚠️ الفاتورة اتحفظت ✔ بس الخطوة اللي بعدها ماكملتش:\n'+(e&&e.message||e)+'\n\nلو ليها حركة مخزون هتلاقيها في «حركات مخزون معلّقة» في لوحة التحكم.')}}}
   return rr}})();
  window.mkPrepToInvoice=prepToInvoice;
  /* ---------- 🔥 عود الفرفورجيه: بيع بالمتر (تكلفة وسعر وربح أي طول) + عجل/إكسسوار + «طقم جرار وهيسيب قضيبه» + خط سير الدفعات (اشتريناه ← الفرن ← رجع ← دخل المخزن بفاتورة شراء) ---------- */
@@ -6660,11 +6660,12 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    return f+'<div class="wkrow" style="margin-top:6px"><button type="button" class="wkbtn d" data-fld="'+i+'">حذف السطر</button></div></div>'}
   /* بعد حفظ الفاتورة: القضبان اللي الزبون سابها تدخل المخزن (الصنف بيتعمل لو مش موجود، بتكلفة = القيمة اللي اتكتبت أو صفر) */
   function backAfter(B){if(!B.length)return null;return async function(){var api=window.mkT&&window.mkT.api;if(!api)return;var g={};B.forEach(function(x){(g[x.name]=g[x.name]||{name:x.name,q:0,bv:x.bv}).q+=x.q});
-   for(var k in g){var x=g[k],p=fProd(x.name);
+   var fail=[];for(var k in g){var x=g[k],p=null;try{p=fProd(x.name);
     if(!p){p={id:crypto.randomUUID(),code:typeof nextCode==='function'?nextCode():'',name:x.name,cat:'قضبان راجعة',unit:'قطعة',qty:0,price:0,cost:num(x.bv),min:0,barcode:''};if(window.mkCoOn&&typeof curCo==='function')p.co=curCo();db.products.push(p);try{typeof codeNote==='function'&&codeNote(p)}catch(e){}window.save&&window.save()}
     await api.syncNow();await api.refreshProducts([p.id]);var p2=(db.products||[]).find(function(z){return z.id===p.id})||p;
     await api.rpc('mk_adjust_stock',{p_id:p2.id,p_qty:r6(num(p2.qty)+x.q),p_note:'قضيب سابه الزبون من طقم (بيعة فرفورجيه)'});await api.refreshProducts([p2.id])}
-   api.done&&api.done();toast('✔ القضيب اللي اتساب دخل المخزن')}}
+    catch(e){fail.push(x.name+' × '+x.q);if(window.mkPend)await mkPend.add({pid:p&&p.id,name:x.name,delta:x.q,cost:x.bv,cat:'قضبان راجعة',note:'قضيب سابه الزبون من طقم (بيعة فرفورجيه)',err:String(e&&e.message||e).slice(0,120)})}}
+   api.done&&api.done();if(fail.length)alert('⚠️ الفاتورة اتحفظت ✔ بس القضيب ده مادخلش المخزن:\n'+fail.join('\n')+'\n\nاتسجّل في «حركات مخزون معلّقة» في لوحة التحكم — دوس «نفّذ» لما النت يبقى كويس.');else toast('✔ القضيب اللي اتساب دخل المخزن')}}
   function fiL(k,i,label,val,extra){return '<div class="wkf"><label>'+label+'</label><input data-fl="'+k+'" data-i="'+i+'" value="'+esc(val)+'" '+(extra||'')+'></div>'}
   function draw(){
    var live=FO.filter(function(x){return x.stage<3}),done=FO.filter(function(x){return x.stage>=3}),C=calcF(),R=C.R;
@@ -7612,7 +7613,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     var id=d.id,fs=d.fromStock,pid=d.pid;close();
     /* الفاتورة بتخصم من المخزون، والقطعة كانت اتخصمت لما اتحطت في العرض — فبنرجّع نفس الكمية للمخزون بعد الحفظ وننقص العرض */
     prepToInvoice({customer:'',phone:'',note:'من بضاعة العرض',lines:[{name:d.name,pid:pid,qty:n,price:num(d.value)||null}],
-     after:async function(){if(fs)await stockMove(pid,n,'بيع من بضاعة العرض (كان متخصم لما اتحط في العرض)');var D2=await get(K.disp,[]),z=D2.find(function(y){return y.id===id});if(z){z.qty=r3(num(z.qty)-n);if(z.qty<=0){z.qty=0;z.status='اتباع'}await put(K.disp,D2)}toast('✔ العرض اتحدّث')}})}});
+     after:async function(){var sf=null;if(fs){try{await stockMove(pid,n,'بيع من بضاعة العرض (كان متخصم لما اتحط في العرض)')}catch(e){sf=e;if(window.mkPend)await mkPend.add({pid:pid,name:d.name,delta:n,note:'بيع من بضاعة العرض (كان متخصم لما اتحط في العرض)',err:String(e&&e.message||e).slice(0,120)})}}
+      if(sf)alert('⚠️ الفاتورة اتحفظت ✔ بس رجوع '+n+' من «'+d.name+'» للمخزون ماكملش.\nاتسجّل في «حركات مخزون معلّقة» في لوحة التحكم — دوس «نفّذ» لما النت يبقى كويس.');var D2=await get(K.disp,[]),z=D2.find(function(y){return y.id===id});if(z){z.qty=r3(num(z.qty)-n);if(z.qty<=0){z.qty=0;z.status='اتباع'}await put(K.disp,D2)}toast('✔ العرض اتحدّث')}})}});
   }
   draw();
  }
@@ -9097,7 +9099,7 @@ function paint(){
   T('💰','مبيعات النهاردة',money(tot),"mkTodayDetail('sales')")+T('🧾','فواتير النهاردة',inv,"mkTodayDetail('inv')")+
   T('📥','اتحصّل النهاردة',money(coll),"mkTodayDetail('coll')",'var(--green)')+T('📤','مصروفات النهاردة',money(exp),"mkTodayDetail('exp')",exp?'var(--danger)':'')+
   T('⚠️','أصناف قربت تخلص',low,"mkTodayDetail('low')",low?'var(--danger)':'')+T('👥','فلوس عند العملاء',money(debt),"showPage('debts')")+
-  (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"mkNewMsgs()",'var(--danger)'):'')+`</div></div>`;
+  (nMsg?T('🔗','طلبات عملاء جديدة',nMsg,"mkNewMsgs()",'var(--danger)'):'')+(window.__pendN?T('⚠️','حركات مخزون معلّقة',window.__pendN,"mkPend.open()",'var(--danger)'):'')+`</div></div>`;
  let el=document.getElementById('mkToday');if(!el){el=document.createElement('div');el.id='mkToday';let tr=host.querySelector('.title-row');tr?tr.insertAdjacentElement('afterend',el):host.prepend(el)}
  if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
 /* تفاصيل كل كارت: نفس الحسبة بالظبط، فمجموع التقرير = رقم الكارت */
@@ -11181,6 +11183,35 @@ function thread(b){let [p,id]=CUR.split('|'),R=M.filter(m=>m.platform===p&&m.thr
   try{let r=await SB().functions.invoke('social-webhook',{body:{action:'send',platform:p,thread_id:id,text:t}});if(r.error)throw r.error;toast('✔ اتبعت')}catch(e){toast('⚠️ ماتبعتش — اتسجل في المحادثة: '+String(e&&e.message||e).slice(0,80))}draw()};
  document.getElementById('socIgn').onclick=async function(){this.disabled=true;let r=await SB().from('mk_social_msgs').update({status:'ignored'}).eq('platform',p).eq('thread_id',id).eq('direction','in').eq('status','new');if(r.error)toast('ماتحفظش');CUR=null;draw()}}
 window.mkSoc={open,tab:t=>{TAB=t;CUR=null;let h=document.getElementById('socT');if(h)h.outerHTML=tabs();document.getElementById('socB').innerHTML='⏳';draw()},f:v=>{F=v;draw()},re:()=>draw(),th:k=>{CUR=k;draw()},back:()=>{CUR=null;draw()}};
+})();
+</script>
+
+<script>
+/* ===== ⚠️ حركات مخزون معلّقة: لو الفاتورة اتحفظت وحركة مخزون بعدها فشلت (نت/سيرفر)، الحركة بتتسجّل هنا
+   (mk_settings: stock_pending) وتظهر كارت في لوحة التحكم بزرار «نفّذ» — بدل ما تضيع من غير ما حد يعرف. ===== */
+(function(){
+const KEY='stock_pending',SB=()=>window.mkSB,A=()=>window.mkT&&window.mkT.api;
+const r6=n=>Math.round((+n||0)*1e6)/1e6;
+async function get(){try{let r=await SB().from('mk_settings').select('value').eq('key',KEY).maybeSingle();return Array.isArray(r.data&&r.data.value)?r.data.value:[]}catch(e){return null}}
+async function put(L){let r=await SB().from('mk_settings').upsert([{key:KEY,value:L}],{onConflict:'key'});if(r.error)throw r.error;window.__pendN=L.length;try{window.renderDashboard&&renderDashboard()}catch(e){}}
+async function add(x){let L=await get();if(L===null)L=[];L.push(Object.assign({id:crypto.randomUUID(),at:new Date().toISOString()},x));
+ try{await put(L)}catch(e){try{let b=JSON.parse(localStorage.getItem('mk_pend_local')||'[]');b.push(L[L.length-1]);localStorage.setItem('mk_pend_local',JSON.stringify(b))}catch(_){}}return L.length}
+async function run(x){let api=A();if(!api||!api.rpc)throw new Error('السيستم لسه بيحمّل');
+ let p=(db.products||[]).find(z=>z.id===x.pid)||(db.products||[]).find(z=>String(z.name).trim()===String(x.name).trim());
+ if(!p){p={id:crypto.randomUUID(),code:typeof nextCode==='function'?nextCode():'',name:x.name,cat:x.cat||'',unit:'قطعة',qty:0,price:0,cost:+x.cost||0,min:0,barcode:''};if(window.mkCoOn&&typeof curCo==='function')p.co=curCo();db.products.push(p);try{codeNote(p)}catch(e){}window.save&&window.save()}
+ await api.syncNow();await api.refreshProducts([p.id]);let p2=(db.products||[]).find(z=>z.id===p.id)||p;
+ await api.rpc('mk_adjust_stock',{p_id:p2.id,p_qty:r6((+p2.qty||0)+(+x.delta||0)),p_note:(x.note||'')+' (حركة معلّقة اتنفذت)'});await api.refreshProducts([p2.id]);api.done&&api.done()}
+async function open(){let L=await get();if(L===null)return toast('مفيش اتصال بالسيرفر');
+ try{let b=JSON.parse(localStorage.getItem('mk_pend_local')||'[]');if(b.length){L=L.concat(b);await put(L);localStorage.removeItem('mk_pend_local')}}catch(e){}
+ openModal(`<div class="modal-head"><h2>⚠️ حركات مخزون معلّقة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
+ <p style="font-size:14px;color:var(--muted);margin:0 0 8px">الفواتير دي اتحفظت، بس حركة المخزون اللي بعدها ماكملتش. دوس «نفّذ» عشان تتعمل دلوقتي.</p>
+ ${L.map(x=>`<div class="card" style="margin-bottom:8px;padding:10px;line-height:1.8"><b>${esc(x.name)}</b> — ${(+x.delta>0?'يرجع للمخزون ':'يتخصم من المخزون ')}<b>${Math.abs(+x.delta)}</b><br><small style="color:var(--muted)">${esc(x.note||'')} • ${esc(String(x.at||'').slice(0,16).replace('T',' '))}${x.err?' • السبب: '+esc(x.err):''}</small>
+  <div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="primary" data-run="${x.id}">✔ نفّذ</button><button type="button" class="secondary danger" data-skip="${x.id}">تجاهلها</button></div></div>`).join('')||'<div class="empty">مفيش حاجة معلّقة 👌</div>'}`);
+ document.querySelectorAll('#modal [data-run]').forEach(b=>b.onclick=async function(){let x=L.find(z=>z.id===b.dataset.run);if(!x)return;b.disabled=true;b.textContent='جاري الحفظ...';
+  try{await run(x);L=(await get()||L).filter(z=>z.id!==x.id);await put(L);toast('✔ اتنفذت');open()}catch(e){b.disabled=false;b.textContent='✔ نفّذ';alert('لسه مش راضية: '+(e&&e.message||e))}});
+ document.querySelectorAll('#modal [data-skip]').forEach(b=>b.onclick=async function(){if(!confirm('تتجاهل الحركة دي؟ المخزون مش هيتعدّل.'))return;L=(await get()||L).filter(z=>z.id!==b.dataset.skip);await put(L);open()})}
+window.mkPend={add,open,run,count:async()=>{let L=await get();window.__pendN=L?L.length:0;return window.__pendN}};
+setTimeout(function chk(){if(window.mkSB&&window.mkT_user)mkPend.count().then(()=>{try{window.renderDashboard&&renderDashboard()}catch(e){}});else setTimeout(chk,6000)},5000);
 })();
 </script>
 
