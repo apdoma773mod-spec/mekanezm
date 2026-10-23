@@ -1723,7 +1723,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-1';
+const APP_VER='2026-10-23-2';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6250,7 +6250,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function errAlert(e){alert('مقدرتش:\n'+[e&&e.message,e&&e.code,e&&e.details,e&&e.hint].filter(Boolean).join('\n'))}
  function contacts(){try{return (typeof db!=='undefined'&&db.contacts)||[]}catch(e){return []}}
  function shop(){try{return (db.settings&&(db.settings.companyName||db.settings.name))||'ميكانيزم'}catch(e){return 'ميكانيزم'}}
- function ordNo(o){return 'WK-'+String(o.no||0).padStart(4,'0')}
+ function ordNo(o){return o.code||('WK-'+String(o.no||0).padStart(4,'0'))}
+ /* كود الأوردر بتسلسل لكل نوع: دلفة DL / بامبو BM / استانلس ST. o.no يفضل رقم داخلي مش بيتكرر (ورقة التجهيز بتربط بيه) */
+ function wkPre(t){return t==='بامبو'?'BM':t==='استانلس'?'ST':'DL'}
+ function wkNewCode(o){var p=wkPre(o.type);CFG.cnt=CFG.cnt||{};CFG.cnt[p]=(+CFG.cnt[p]||0)+1;o.code=p+'-'+String(CFG.cnt[p]).padStart(4,'0')}
+ function wkFind(C){C=String(C||'').toUpperCase();var m=/^(WK|DL|BM|ST)-?(\d{1,6})/.exec(C);if(!m)return null;var k=m[1]+'-'+('0000'+m[2]).slice(-4);return ORD.find(function(x){return ordNo(x)===k})||null}
 
  /* ---------- الهيكل والتنسيق ---------- */
  function css(){
@@ -6542,7 +6546,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#wkPr').onclick=function(){printMenu(o)};
   b.querySelector('#wkLb').onclick=function(){printOrder(o,'lab',false)};
   b.querySelector('#wkEd').onclick=function(){o.type==='بامبو'?viewBamboo(id):viewForm(id,o.type)};
-  b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
+  b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;wkNewCode(n);n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
   b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}};
   var ol=b.querySelector('#wkOffL');if(ol)ol.onclick=function(){printLeftLabels(o)};
   var rc=b.querySelector('#wkRodCut');if(rc)rc.onclick=async function(){
@@ -6962,7 +6966,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    read();if(!o.customer)return toast('اكتب اسم العميل');
    o.mats=o.mats.filter(function(m){return m.n||m.q||m.p});
    if(old){var i=ORD.findIndex(function(x){return x.id===id});ORD[i]=Object.assign(ORD[i],o)}
-   else{o.id=uid();o.no=CFG.next++;o.stage=0;o.hist=[{n:stages(o.type)[0],at:new Date().toISOString(),by:who()}];ORD.push(o)}
+   else{o.id=uid();o.no=CFG.next++;wkNewCode(o);o.stage=0;o.hist=[{n:stages(o.type)[0],at:new Date().toISOString(),by:who()}];ORD.push(o)}
    try{await saveOrd();if(!old)await saveCfg();toast('✔ اتحفظ '+ordNo(o));
     if(after==='print')printMenu(o);else if(after==='inv'){viewOrder(o.id);setTimeout(function(){var x=document.getElementById('wkInv');if(x)x.click()},100)}else viewOrder(o.id)}catch(e){errAlert(e)}}
   q('fSave').onclick=function(){save()};q('fSavePr').onclick=function(){save('print')};q('fSaveInv').onclick=function(){save('inv')};
@@ -7248,7 +7252,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   async function save(after){
    read();
    var o=old||{id:uid(),no:CFG.next++,date:today(),hist:[],stage:0,mats:[]};
-   o.type='بامبو';o.kind='other';o.bamboo=m;o.w=num(m.a);o.h=num(m.b);o.qty=num(m.q)||1;
+   o.type='بامبو';if(!old)wkNewCode(o);o.kind='other';o.bamboo=m;o.w=num(m.a);o.h=num(m.b);o.qty=num(m.q)||1;
    o.customer=q('bCu').value.trim();o.phone=q('bPh').value.trim();o.crafter=q('bCr').value.trim();o.crafterPhone=q('bCrPh').value.trim();o.price=q('bPc').value;o.paid=q('bPd').value;o.notes=q('bNo').value.trim();
    if(!old){o.hist.push({n:stages('بامبو')[0],at:new Date().toISOString(),by:who()});ORD.push(o)}
    try{
@@ -7387,7 +7391,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    o.cost=String(LAST.total);o.steel=steel;o.w=S.W;o.h=S.H;o.qty=LAST.sheets;
    if(pre&&pre.wa_id)o.src={wa:pre.wa_id};
    if(after==='prep'&&stages('استانلس').length>1&&!old){o.stage=1;o.hist.push({n:stages('استانلس')[1],at:new Date().toISOString(),by:who()})}
-   if(!old)ORD.push(o);
+   if(!old){wkNewCode(o);ORD.push(o)}
    try{
     await saveOrd();if(!old)await saveCfg();
     if(pre&&pre.wa_id){try{await SBc().from('wa_orders').update({status:'done'}).eq('id',pre.wa_id)}catch(e){}}
@@ -7698,8 +7702,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    };
    return;
   }
-  var m=/^WK-?(\d{1,6})/.exec(C);if(!m)return;
-  await loadAll();var od=ORD.find(function(x){return (x.no|0)===parseInt(m[1],10)});
+  if(!/^(WK|DL|BM|ST)-?\d/.test(C))return;
+  await loadAll();var od=wkFind(C);
   if(!od){toast('مفيش أوردر برقم '+C);return}
   var last=(STG[od.type]||[]).length-1,done=od.stage>=last,rem=Math.max(0,num(od.price)-num(od.paid));
   openModal('<div class="modal-head"><h2>🛠️ '+esc(ordNo(od))+' — '+esc(od.type||'')+'</h2></div>'+
@@ -7721,7 +7725,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  /* مسح الباركود (WK-0001 أو WK-0001-2) من أي شاشة يفتح الأوردر على طول، وبيشتغل مع أي لغة كيبورد */
  (function(){
   var buf='',last=0,sEl=null,sVal=null,bad=false;
-  var CODE={Minus:'-',NumpadSubtract:'-',KeyW:'W',KeyK:'K',KeyF:'F',KeyD:'D'};
+  var CODE={Minus:'-',NumpadSubtract:'-',KeyW:'W',KeyK:'K',KeyF:'F',KeyD:'D',KeyL:'L',KeyB:'B',KeyM:'M',KeyS:'S',KeyT:'T'};
   function ch(e){
    if(CODE[e.code])return CODE[e.code];
    var m=/^(Digit|Numpad)(\d)$/.exec(e.code||'');if(m)return m[2];
@@ -7731,12 +7735,11 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    code=String(code||'');
    var dbOn=(function(){var d=document.getElementById('daybook');var m=document.getElementById('modal');return !!(d&&d.classList.contains('active')&&!(m&&m.offsetParent!==null&&m.innerHTML.trim()))})();
    if(dbOn&&typeof dbAdd==='function'){try{await dbWork(code)}catch(e){errAlert(e)}return}
-   if(/^FD/i.test(code)){try{closeModal()}catch(e){}await offInfo(code);return}var m=/^WK-?(\d{1,6})/i.exec(code);if(!m)return;
-   var no=parseInt(m[1],10);
+   if(/^FD/i.test(code)){try{closeModal()}catch(e){}await offInfo(code);return}if(!/^(WK|DL|BM|ST)-?\d/i.test(code))return;
    try{closeModal()}catch(e){}
    try{
     await loadAll();NS=1;
-    var o=ORD.find(function(x){return (x.no|0)===no});
+    var o=wkFind(code);
     if(!o){toast('مفيش أوردر برقم '+code);return}
     viewOrder(o.id);toast('✔ فتحت '+ordNo(o));
    }catch(e){errAlert(e)}
@@ -7748,7 +7751,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(t-last>70){buf='';bad=false;sEl=document.activeElement;sVal=(sEl&&typeof sEl.value==='string')?sEl.value:null}
    last=t;
    if(e.key==='Enter'){
-    var ok=!bad&&buf.length>=5&&/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(buf);
+    var ok=!bad&&buf.length>=5&&/^(WK|FD|DL|BM|ST)-?\d{1,6}(-\d+)?$/.test(buf);
     if(ok){
      e.preventDefault();e.stopPropagation();
      if(sEl&&sVal!==null&&typeof sEl.value==='string'){sEl.value=sVal;try{sEl.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
@@ -7763,7 +7766,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  var tw=setInterval(function(){addCard();if(document.getElementById('wkCard'))clearInterval(tw)},1500);
  var _sp0=window.showPage;if(typeof _sp0==='function'){window.showPage=function(id){var r=_sp0.apply(this,arguments);if(id==='settings')setTimeout(addCard,50);return r}}
  /* 📟 مسح ليبل فضلة: بياناتها (صاحبها، الأوردر، تاريخ الإنتاج، الحالة) من غير ما يفتح الأوردر — الأوردر بزرار جوه البيانات */
- async function openOrderNo(no){try{closeModal()}catch(e){}await loadAll();NS=1;var o=ORD.find(function(x){return (x.no|0)===(parseInt(no,10)||-1)});if(!o){toast('الأوردر مش موجود');return}viewOrder(o.id)}
+ async function openOrderNo(no){try{closeModal()}catch(e){}await loadAll();NS=1;var o=/[A-Za-z]/.test(String(no))?wkFind(no):ORD.find(function(x){return (x.no|0)===(parseInt(no,10)||-1)});if(!o){toast('الأوردر مش موجود');return}viewOrder(o.id)}
  async function offInfo(code){
   var k=offCode(parseInt(String(code).toUpperCase().replace(/^FD-?/,''),10)),O=await get('wk_offcuts',[]),o=O.find(function(x){return x.code===k});
   if(!o){toast('مفيش فضلة بالكود '+k);return}
@@ -7772,7 +7775,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<b style="font-size:17px">'+esc(o.item)+(o.color?' / '+esc(o.color):'')+'</b><br>الطول: <b>'+esc(num(o.len))+' سم</b>'+(o.orig?' (من عود '+esc(num(o.orig))+' سم)':'')+(o.place?' — المكان: '+esc(o.place):'')+'<br>'+own+
    '<br>الأوردر: <b>'+esc(o.order||'—')+'</b><br>تاريخ الإنتاج: <b>'+esc(o.date||'—')+'</b>'+(isNaN(age)?'':' ('+age+' يوم)')+'<br>الحالة: <span class="badge">'+esc(o.status)+'</span></div>'+
    '<div class="modal-foot">'+(o.order&&o.orderId?'<button type="button" class="primary" id="ofiO">📋 الأوردر '+esc(o.order)+'</button>':'')+'<button type="button" class="secondary" id="ofiF">🧰 شاشة الفضل</button><button type="button" class="secondary" onclick="closeModal()">إغلاق</button></div>');
-  var bo=document.getElementById('ofiO');if(bo)bo.onclick=function(){var x=ORD.find(function(z){return z.id===o.orderId});if(x){closeModal();viewOrder(x.id)}else openOrderNo(String(o.order).replace(/\D/g,''))};
+  var bo=document.getElementById('ofiO');if(bo)bo.onclick=function(){var x=ORD.find(function(z){return z.id===o.orderId});if(x){closeModal();viewOrder(x.id)}else openOrderNo(o.order)};
   document.getElementById('ofiF').onclick=async function(){closeModal();await loadAll();NS=1;viewOff(o.code)}}
  window.mkWkOrderNo=openOrderNo;window.mkWkOffInfo=offInfo;
  window.mkWk={go:async function(k){if(!isAdm()){toast('الشاشة دي للمدير بس');return}await loadAll();NS=1;({ord:viewOrders,new:function(){viewForm(null,'دلفة')},steel:function(){viewSteel(null)},bamboo:function(){viewBamboo(null)},off:function(){viewOff()},rods:viewRods,forf:viewForf,disp:viewDisp,exp:viewExps}[k]||viewOrders)()},menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
@@ -7904,7 +7907,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  async function route(raw,src){
   var code=String(raw||'').trim();if(!code)return;
   var C=code.toUpperCase();
-  if(/^(WK|FD)-?\d{1,6}(-\d+)?$/.test(C)){if(src==='camera'&&window.mkWkScan)window.mkWkScan(C);return}      // الكيبورد ليه معالج في أنظمة الشغل، والكاميرا بنوجّهها له
+  if(/^(WK|FD|DL|BM|ST)-?\d{1,6}(-\d+)?$/.test(C)){if(src==='camera'&&window.mkWkScan)window.mkWkScan(C);return}      // الكيبورد ليه معالج في أنظمة الشغل، والكاميرا بنوجّهها له
   /* أكواد السيستم نفسه: كل كود يروح لشاشته (شحنة / فاتورة شراء / عرض سعر) — مش «صنف مش متسجّل» */
   var sys=/^(SP|SH|QT)-?(\d{1,6})(?:-\d+)?$/.exec(C);
   if(sys){
@@ -7930,7 +7933,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   }
   /* ٢) كود فاتورة بيع (MK-0001) — أو كود ورقة تجهيز بنفس الشكل: بنسأل السيرفر الأول */
   var inv=sale(C);
-  if(/^MK-\d{4,6}$/.test(C)){var ps=null;try{var q=await window.mkSB.from('mk_prep_sheets').select('*').eq('code',C).maybeSingle();ps=q&&q.data}catch(e){}
+  if(/^(MK|PS)-\d{4,6}$/.test(C)){var ps=null;try{var q=await window.mkSB.from('mk_prep_sheets').select('*').eq('code',C).maybeSingle();ps=q&&q.data}catch(e){}
    if(ps){
     var openPrep=function(){try{closeModal()}catch(e){}bp();
      if(ps.wk_no&&window.mkWkOrderNo){flash('ورقة تجهيز '+C+' — أوردر '+ps.wk_no);window.mkWkOrderNo(ps.wk_no);return}
@@ -7995,7 +7998,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    var code=buf;buf='';
    if(!fast||bad)return;
    /* ذكاء: لو السرعة مش أكيد سرعة جهاز، منتدخلش إلا لو الكود معروف (صنف/فاتورة/أوردر/فضلة) — عشان الكتابة العادية متتسرقش */
-   var known=!!(prod(code)||sale(code.toUpperCase())||/^(WK|FD)-?\d/i.test(code));
+   var known=!!(prod(code)||sale(code.toUpperCase())||/^(WK|FD|DL|BM|ST)-?\d/i.test(code));
    if(!known&&avg>SURE)return;
    var ae=document.activeElement;
    if(ownField(ae))return;                       // الخانة ليها معالجها
@@ -8004,7 +8007,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     if(ae===el0&&val0!==null){ae.value=val0+code;try{ae.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
     return;
    }
-   if(/^(WK|FD)-?\d/i.test(code))return;          // معالج أنظمة الشغل
+   if(/^(WK|FD|DL|BM|ST)-?\d/i.test(code))return;          // معالج أنظمة الشغل
    e.preventDefault();e.stopPropagation();
    if(el0&&val0!==null&&typeof el0.value==='string'&&el0.value!==val0){el0.value=val0;try{el0.dispatchEvent(new Event('input',{bubbles:true}))}catch(_){}}
    route(code,'scanner');return;
@@ -11118,7 +11121,7 @@ function sheet(P){let L=P.lines||[];
  if(typeof window.mkPrintHTML==='function')window.mkPrintHTML(html);else window.mkPrintA4('ورقة تجهيز '+(P.no||''),body)}
 window.mkPrepPrint=sheet;
 const dimOf=n=>{let m=String(n||'').match(/(\d+(?:[.,]\d+)?\s*[x×*]\s*\d+(?:[.,]\d+)?(?:\s*[x×*]\s*\d+(?:[.,]\d+)?)?)|(\d+(?:[.,]\d+)?\s*(?:سم|مم|م|متر)(?=\s|$))/);return m?m[0]:''};
-async function wkOf(note){let m=String(note||'').match(/WK-?\d+/i);if(!m)return null;try{let r=await window.mkSB.from('mk_settings').select('value').eq('key','wk_orders').maybeSingle(),O=(r.data&&r.data.value)||[],n=parseInt(m[0].replace(/\D/g,''),10);let o=O.find(o=>+o.no===n)||null;if(o){let c=await window.mkSB.from('mk_settings').select('value').eq('key','wk_cfg').maybeSingle(),S=((c.data&&c.data.value)||{}).stages||{};o.__st=S[o.type]||null}return o}catch(e){return null}}
+async function wkOf(note){let m=String(note||'').match(/(WK|DL|BM|ST)-?\d+/i);if(!m)return null;try{let r=await window.mkSB.from('mk_settings').select('value').eq('key','wk_orders').maybeSingle(),O=(r.data&&r.data.value)||[],n=parseInt(m[0].replace(/\D/g,''),10),K=m[0].slice(0,2).toUpperCase()+'-'+String(n).padStart(4,'0');let o=O.find(o=>(o.code||('WK-'+String(o.no||0).padStart(4,'0')))===K)||null;if(o){let c=await window.mkSB.from('mk_settings').select('value').eq('key','wk_cfg').maybeSingle(),S=((c.data&&c.data.value)||{}).stages||{};o.__st=S[o.type]||null}return o}catch(e){return null}}
 async function prepCode(kind,key,wk,person){try{let c=window.mkSB,q=await c.from('mk_prep_sheets').select('code').eq('kind',kind).eq('ref',String(key)).order('created_at',{ascending:false}).limit(1);if(q.data&&q.data[0])return q.data[0].code;
   let r=await c.rpc('mk_prep_new',{p_kind:kind,p_ref:String(key),p_wk:wk||null,p_person:person||''});return r.error?'':String(r.data||'')}catch(e){return ''}}
 async function fromInv(kind,key){let G0=invGroup(kind,key),G=G0.filter(x=>!x.ship&&!(window.mkIntLine&&mkIntLine(x,G0)));if(!G.length)return toast('الفاتورة مش موجودة');
