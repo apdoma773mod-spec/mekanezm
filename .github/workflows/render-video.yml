@@ -20,7 +20,8 @@ jobs:
       - name: فيه فيديو مستني؟
         id: q
         run: |
-          if [ -z "$VR_SECRET" ]; then echo "VR_SECRET مش متسجل — ضيفه في Secrets"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
+          VR_SECRET=$(printf %s "$VR_SECRET" | grep -oE '[0-9a-fA-F]{48}' | head -1 | tr A-F a-f || true)
+          if [ -z "$VR_SECRET" ]; then echo "::error::VR_SECRET مش متسجل أو مش مكتوب صح"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
           res=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" || true)
           if echo "$res" | grep -q forbidden; then echo "::error::VR_SECRET غلط — مش زي اللي في السيرفر"; fi
           n=$(echo "$res" | jq -r '.n // 0' 2>/dev/null || true)

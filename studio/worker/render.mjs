@@ -14,7 +14,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STUDIO = path.resolve(HERE, '..');
 const SB_URL = process.env.SB_URL || 'https://tkzfjeizvanfptnqvrmr.supabase.co';
 const SB_KEY = process.env.SB_KEY || 'sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
-const SECRET = process.env.VR_SECRET || '';
+const SECRET = ((process.env.VR_SECRET || '').match(/[0-9a-f]{48}/i) || [''])[0].toLowerCase(); // بيتجاهل أي مسافات أو سطر زيادة اتلصق مع السر
 const FPS = 30;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
