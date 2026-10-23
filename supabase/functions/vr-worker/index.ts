@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
       if (!s.data || typeof b.oidc !== "string") return json({ error: "forbidden" }, 403);
       try {
         const { payload } = await jwtVerify(b.oidc, GH_JWKS, { issuer: "https://token.actions.githubusercontent.com", audience: "mekanizm-vr" });
-        if (payload.repository !== GH_REPO || payload.ref !== "refs/heads/main") return json({ error: "forbidden" }, 403);
-      } catch (_) { return json({ error: "forbidden" }, 403); }
+        if (payload.repository !== GH_REPO || payload.ref !== "refs/heads/main") return json({ error: "forbidden", why: `repo=${payload.repository} ref=${payload.ref}` }, 403);
+      } catch (e) { return json({ error: "forbidden", why: String((e as Error).message || e).slice(0, 160) }, 403); }
       return json({ secret: s.data.secret });
     }
     if (!s.data || typeof b.secret !== "string" || !safeEq(String(s.data.secret), b.secret)) return json({ error: "forbidden" }, 403);

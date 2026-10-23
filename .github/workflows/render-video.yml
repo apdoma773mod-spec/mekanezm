@@ -26,7 +26,12 @@ jobs:
           VR_SECRET=""
           if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
             oidc=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mekanizm-vr" | jq -r '.value // empty' || true)
-            [ -n "$oidc" ] && VR_SECRET=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"action\":\"hello\",\"oidc\":\"$oidc\"}" | jq -r '.secret // empty' || true)
+            [ -z "$oidc" ] && echo "::warning::مفيش توكن OIDC من جيت هب"
+            if [ -n "$oidc" ]; then
+              hi=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"action\":\"hello\",\"oidc\":\"$oidc\"}" || true)
+              VR_SECRET=$(echo "$hi" | jq -r '.secret // empty' 2>/dev/null || true)
+              [ -z "$VR_SECRET" ] && echo "::warning::hello: $(echo "$hi" | jq -c '{error,why}' 2>/dev/null || echo "$hi" | head -c 200)"
+            fi
           fi
           [ -z "$VR_SECRET" ] && VR_SECRET=$(printf %s "$OLD_SECRET" | grep -oE '[0-9a-fA-F]{48}' | head -1 | tr A-F a-f || true)
           if [ -z "$VR_SECRET" ]; then echo "::error::ماقدرتش آخد سر العامل من السيرفر"; echo "n=0" >> "$GITHUB_OUTPUT"; exit 0; fi
