@@ -1382,11 +1382,19 @@ const _rtC=renderTables;renderTables=function(){_rtC();renderContacts()};
 function contactData(c){let isC=c.type==='عميل',nm=String(c.name).trim(),rows=(isC?db.sales:db.purchases).filter(x=>(x.person||'').trim()===nm);
  return {isC,rows,groups:groupInv(rows,isC?(r=>r.no||r.id):(r=>r.gid||r.id)),pays:(isC?db.payments:sp()).filter(x=>x.cid===c.id),rets:db.returns.filter(r=>r.type===(isC?'sale':'purchase')&&(r.person||'').trim()===nm)}}
 /* 📦 حالة الاستلام في ملف العميل: اللي اتستلم، واللي فاضل (من ملاحظات الفاتورة) */
-function invStatusHtml(D){let N=db.invNotes||{},rows=[];
- D.groups.forEach(G=>{let key=G[0].no||G[0].id,n=N[key];if(!n||!(n.recv||n.got||n.miss))return;
+function invStatusHtml(D){let N=db.invNotes||{},rows=[],open=0;
+ D.groups.forEach(G=>{let key=G[0].no||G[0].id,n=N[key];if(!n||!(n.recv||n.got||n.miss))return;if(n.miss)open++;
   rows.push('<div style="padding:8px 0;border-bottom:1px solid var(--border)"><b>'+esc(invNo(G[0]))+'</b>'+(n.recv?' — ✔ اتستلم'+(n.gotDate?' بتاريخ '+esc(n.gotDate):' '+esc(n.recv)):'')+(n.miss?'<div style="color:#b3261e">⚠️ فاضل: '+esc(n.miss)+'</div>':'')+(n.got?'<div style="font-size:13px;color:var(--muted)">اللي اتسلّم: '+esc(n.got)+'</div>':'')+'</div>')});
  if(!rows.length)return '';
- return '<h3 style="margin:16px 0 8px">📦 حالة الاستلام</h3><div class="card" style="line-height:1.8">'+rows.join('')+'</div>'}
+ return '<h3 style="margin:16px 0 8px">📦 حالة الاستلام</h3><div class="card" style="line-height:1.8">'+(open?'<div style="color:#b3261e;font-weight:800;margin-bottom:6px">فاضل له بضاعة في '+open+' فاتورة</div>':'<div style="color:#1e7a3c;font-weight:800;margin-bottom:6px">كل البضاعة اتستلمت ✔</div>')+rows.join('')+'</div>'}
+/* 📦 البضاعة الفاضلة لكل العملاء: قايمة بالعملاء اللي فاضل لهم بضاعة + الفواتير */
+window.mkMissing=function(){let N=db.invNotes||{},L=[];
+ (db.contacts||[]).filter(c=>c.type==='عميل').forEach(c=>{let D=contactData(c),F=[];
+  D.groups.forEach(G=>{let key=G[0].no||G[0].id,n=N[key];if(n&&n.miss)F.push({no:invNo(G[0]),date:G[0].date,miss:n.miss,tot:sumBy(G,x=>x.total)})});
+  if(F.length)L.push({c,F})});
+ let rows=L.map(x=>`<div class="card" style="margin-bottom:8px;padding:10px;line-height:1.8"><b style="font-size:16px">${esc(x.c.name)}</b>${x.c.phone?' <small dir="ltr">'+esc(x.c.phone)+'</small>':''}
+  ${x.F.map(f=>`<div style="border-top:1px dashed var(--border);padding-top:4px;margin-top:4px">${esc(f.no)} — ${esc(f.date||'')} — <span style="color:#b3261e">فاضل: ${esc(f.miss)}</span></div>`).join('')}</div>`).join('');
+ openModal(`<div class="modal-head"><h2>📦 البضاعة الفاضلة (${L.length} عميل)</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>${rows||'<div class="empty">مفيش بضاعة فاضلة عند أي عميل 👌</div>'}`)};
 function openContactFile(id){let c=db.contacts.find(x=>x.id===id);if(!c)return;let D=contactData(c),isC=D.isC,
  tot=sumBy(D.rows,x=>x.total),pd=sumBy(D.rows,paidOf),rt=sumBy(D.rets,x=>x.total),pp=sumBy(D.pays,x=>x.amount);
  openModal(`<div class="modal-head"><h2>ملف ${isC?'العميل':'المورد'}: ${esc(c.name)}</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
@@ -11150,6 +11158,7 @@ function paint(){let sec=document.getElementById('contacts');if(!sec)return;
  let f=document.getElementById('ctF');if(f){f.value=MODE;f.style.display='none'}
  let q=document.getElementById('ctQ');if(q){if(q.dataset.mode!==MODE){q.value=Q[MODE]||'';q.dataset.mode=MODE}q.placeholder=isC()?'ابحث عن عميل بالاسم أو التليفون...':'ابحث عن مورد بالاسم أو التليفون...';if(!q.dataset.ct){q.dataset.ct=1;q.addEventListener('input',()=>{Q[MODE]=q.value})}}
  let th=sec.querySelectorAll('thead th');if(th[1])th[1].style.display='none';if(th[3])th[3].textContent=isC()?'الحساب (عليه)':'الحساب (علينا)';
+ let mb=document.getElementById('ctMissBtn');if(!mb){mb=document.createElement('button');mb.id='ctMissBtn';mb.type='button';mb.className='secondary';mb.style.cssText='margin-bottom:10px;width:100%;min-height:46px';mb.textContent='📦 البضاعة الفاضلة للعملاء';mb.onclick=()=>window.mkMissing&&mkMissing();let tb2=document.getElementById('ctTabs');tb2&&tb2.insertAdjacentElement('afterend',mb)}
  let sm=document.getElementById('ctSum');if(!sm){sm=document.createElement('div');sm.id='ctSum';sm.className='card';sm.style.cssText='margin-bottom:10px;line-height:1.9';let cd=sec.querySelector('.card:not(#ctSum)');cd&&cd.insertAdjacentElement('beforebegin',sm)}
  let L=db.contacts.filter(c=>c.type===MODE),pos=L.reduce((a,c)=>a+Math.max(0,+c.balance||0),0),neg=L.reduce((a,c)=>a+Math.min(0,+c.balance||0),0);
  let bt=document.getElementById('ctBal');if(!bt){bt=document.createElement('div');bt.id='ctBal';bt.className='toolbar';bt.style.cssText='flex-wrap:wrap;margin-bottom:8px';let tb2=document.getElementById('ctTabs');tb2&&tb2.insertAdjacentElement('afterend',bt)}
