@@ -61,6 +61,8 @@ jobs:
                 sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
                 (cd studio && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.49.1 @supabase/supabase-js@2.45.4 && npx playwright install --with-deps chromium) && ready=1
               fi
+              # آخر نسخة من كود المونتاج قبل كل فيديو (العامل بيفضل صاحي ساعات، فمن غير ده بيرسم بالكود القديم)
+              git fetch -q --depth 1 origin main && git checkout -q FETCH_HEAD -- studio || echo "::warning::ماقدرتش أحدّث كود المونتاج — هكمل بالموجود"
               [ "$ready" = "1" ] && (cd studio && node worker/render.mjs) || echo "::warning::العامل وقف — هيحاول تاني"
               echo "::endgroup::"
             fi
