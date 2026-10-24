@@ -75,7 +75,7 @@ async function analyze(file, spec, prog) {
   res.forEach((r, i) => {
     const off = jobs[i].a / 16000; if (i === 0) title = r.title || '';
     (r.segments || []).forEach(x => { if (String(x.t || '').trim()) seg.push({ s: off + (+x.s || 0), e: off + (+x.e || +x.s + 1), t: String(x.t).trim(), cut: !!x.cut, kw: Array.isArray(x.kw) ? x.kw.map(String).filter(Boolean).slice(0, 3) : [] }); });
-    (r.events || []).forEach(x => { if (String(x.label || '').trim()) ev.push({ s: off + (+x.s || 0), e: off + (+x.e || 0), type: String(x.type || 'point'), label: String(x.label).trim(), value: en(x.value || ''), unit: String(x.unit || ''), on: true }); });
+    (r.events || []).forEach(x => { if (String(x.label || '').trim()) ev.push({ s: off + (+x.s || 0), e: off + (+x.e || 0), type: String(x.type || 'point'), label: String(x.label).trim(), value: en(x.value || ''), unit: String(x.unit || ''), scene: String(x.scene || ''), action: String(x.action || ''), on: true }); });
   });
   seg.sort((a, b) => a.s - b.s); ev.sort((a, b) => a.s - b.s);
   return { title, seg, ev, dur: f32.length / 16000 };
