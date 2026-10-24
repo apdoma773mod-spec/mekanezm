@@ -983,4 +983,51 @@ secArt=function(s){if(s.img)return _sa2(s);const k=A[s.id]?s.id:byName(s.name)||
 })();
 </script>
 
+<style>
+/* ميكانيزم — لمسات احترافية: ليه ميكانيزم، أرقام، أسئلة شائعة، موقع، فلتر، رجوع لفوق */
+.mkp{margin:22px 16px}.mkp>h2{font-size:21px;margin:0 0 4px}.mkp>p.s{color:var(--mut);margin:0 0 14px;font-size:14px}
+.mkw{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mkw>div{background:var(--card);border-radius:18px;padding:16px 12px;box-shadow:0 2px 14px #0001;text-align:center}
+.mkw i{font-style:normal;display:flex;margin:0 auto 8px;width:52px;height:52px;border-radius:16px;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(145deg,#2f6f8f,#0f2b3d);box-shadow:0 6px 14px #0f2b3d55}
+.mkw b{display:block;font-size:14px;margin-bottom:3px}.mkw span{font-size:12.5px;color:var(--mut);line-height:1.6}
+.mks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:linear-gradient(135deg,#0f2b3d,#1b5e7b);color:#fff;border-radius:20px;padding:18px 8px;text-align:center}
+.mks b{display:block;font-size:26px}.mks span{font-size:12px;opacity:.85}
+.mkf details{background:var(--card);border-radius:14px;margin-bottom:8px;box-shadow:0 1px 8px #0001;overflow:hidden}
+.mkf summary{padding:14px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.mkf summary::-webkit-details-marker{display:none}.mkf summary:after{content:"+";font-size:20px;color:var(--accent);line-height:1}
+.mkf details[open] summary:after{content:"−"}.mkf details p{margin:0;padding:0 14px 14px;color:var(--mut);line-height:1.8;font-size:14px}
+.mkl{display:flex;gap:10px;flex-wrap:wrap}.mkl a{flex:1 1 140px;text-align:center;text-decoration:none;font-weight:800;padding:13px;border-radius:14px;background:var(--accent);color:#fff}.mkl a.g{background:#25D366}
+.mkc{display:flex;gap:8px;margin:0 16px 10px;overflow-x:auto}.mkc button{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:8px 14px;font:700 13px Cairo,Tahoma,sans-serif;color:var(--fg)}.mkc button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mkr{opacity:0;transform:translateY(18px);transition:opacity .6s,transform .6s}.mkr.in{opacity:1;transform:none}
+#mkTop{position:fixed;bottom:84px;left:14px;width:42px;height:42px;border-radius:50%;border:0;background:#0f2b3d;color:#fff;font-size:20px;box-shadow:0 4px 14px #0004;opacity:0;pointer-events:none;transition:opacity .3s;z-index:40}
+#mkTop.on{opacity:1;pointer-events:auto}
+@media(prefers-reduced-motion:reduce){.mkr{opacity:1;transform:none;transition:none}}
+</style>
+<script>
+(function(){
+let avOnly=false;
+const FAQ=[['إزاي أطلب؟','اختار المنتج واضغط «أضف للطلب» أو «اطلب على الواتساب»، وهنكلمك نأكد الطلب والسعر.'],['المنتج مش موجود عندكم؟','اضغط «مش لاقي اللي بتدوّر عليه؟» وابعت صورته، وهنرد عليك ونقولك نوفّره إمتى.'],['بتوصلوا فين؟','توصيل للقاهرة والجيزة، وشحن لكل المحافظات. اختار طريقة الاستلام وانت بتبعت طلبك.'],['أعرف السعر منين؟','اضغط «اسأل عن السعر» تحت أي منتج وهنرد عليك على الواتساب بالسعر الحالي.'],['أقدر أعاين المنتج؟','أيوه، المعرض في أرض اللواء – الجيزة، ومرحب بيك تيجي تشوف المنتجات بنفسك.']];
+const MAP='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('ميكانيزم أرض اللواء الجيزة');
+function sections(){
+ const np=(S.products||[]).length,ns=(S.sections||[]).length;
+ return `<section class="mkp mkr" id="mkWhy"><h2>ليه ميكانيزم؟</h2><p class="s">إكسسوارات مطابخ ودريسنج روم بجودة نثق فيها</p><div class="mkw"><div><i>🏅</i><b>أصناف مختارة</b><span>إكسسوارات مطابخ ودريسنج روم بخامات قوية</span></div><div><i>💬</i><b>رد سريع</b><span>بنرد على الواتساب ونحدد السعر والتوفر</span></div><div><i>🚚</i><b>توصيل وشحن</b><span>القاهرة والجيزة وكل المحافظات</span></div><div><i>🧰</i><b>مساعدة في الاختيار</b><span>نساعدك تختار المقاس والنوع المناسب</span></div></div></section>`
+ +`<section class="mkp mkr"><div class="mks"><div><b data-n="${np}">0</b><span>منتج</span></div><div><b data-n="${ns}">0</b><span>قسم</span></div><div><b>📲</b><span>اطلب من موبايلك</span></div></div></section>`
+ +`<section class="mkp mkr mkf" id="mkFaq"><h2>أسئلة شائعة</h2><p class="s">إجابات سريعة قبل ما تطلب</p>${FAQ.map(q=>`<details><summary>${q[0]}</summary><p>${q[1]}</p></details>`).join('')}</section>`
+ +`<section class="mkp mkr" id="mkLoc"><h2>📍 تعالى زورنا</h2><p class="s">أرض اللواء – الجيزة</p><div class="mkl"><a href="${MAP}" target="_blank" rel="noopener">🗺️ افتح الموقع على الخريطة</a><a class="g" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أسأل عن مكان المحل')}">💬 كلّمنا واتساب</a></div></section>`}
+function chips(){return `<div class="mkc" id="mkChips"><button data-mkf="all" class="on">كل المنتجات</button><button data-mkf="av">✔ المتوفر فقط</button></div>`}
+function reveal(){const els=document.querySelectorAll('.mkr:not(.in)');if(!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('in'));return}
+ const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);e.target.querySelectorAll('[data-n]').forEach(c=>{const t=+c.dataset.n,s=performance.now();const f=n=>{const k=Math.min(1,(n-s)/900);c.textContent=Math.round(t*k);if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)})}}),{threshold:.15});
+ els.forEach(e=>io.observe(e))}
+function add(){const m=document.getElementById('main');if(!m||admin)return;
+ if(!document.getElementById('mkWhy')){m.insertAdjacentHTML('beforeend',sections());reveal()}
+ const p=document.getElementById('prods');if(p&&!document.getElementById('mkChips'))p.insertAdjacentHTML('beforebegin',chips());
+ if(!document.getElementById('mkTop')){document.body.insertAdjacentHTML('beforeend','<button id="mkTop" aria-label="لفوق">↑</button>');window.addEventListener('scroll',()=>document.getElementById('mkTop').classList.toggle('on',scrollY>700),{passive:true})}}
+const _pmX=pubMain;pubMain=function(){_pmX();setTimeout(add,80)};
+const _dpX=drawProds;drawProds=function(){_dpX();if(!avOnly)return;document.querySelectorAll('#prods .card').forEach(c=>{if(c.querySelector('.avb.no'))c.remove()});document.querySelectorAll('#prods section[id^=s-]').forEach(s=>{if(!s.querySelector('.card'))s.remove()})};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mkf]');if(b){avOnly=b.dataset.mkf==='av';document.querySelectorAll('#mkChips button').forEach(x=>x.classList.toggle('on',x===b));drawProds();return}
+ if(e.target.id==='mkTop')scrollTo({top:0,behavior:'smooth'})});
+setTimeout(add,500);setTimeout(add,2200);
+})();
+</script>
+
 </body></html>
