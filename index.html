@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-32';
+const APP_VER='2026-10-23-33';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11619,7 +11619,7 @@ window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(
   if(ai.reply_suggestion||nonOrder){h+='<div style="margin-top:8px"><label style="font-size:13px;color:var(--muted)">الرد (عدّله براحتك)</label><textarea data-wu="reply" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:10px;font:inherit">'+E(replyText(ai,M))+'</textarea></div>'}
   h+='<div class="btnrow" style="margin-top:8px;flex-wrap:wrap">';
   if(ai.intent==='stainless'||ai.intent==='delf')h+='<button type="button" class="primary" data-wu="steel">🔩 جهّز القطعة</button>';
-  if(o.phone&&(ai.reply_suggestion||nonOrder))h+='<button type="button" class="primary" data-wu="send">💬 ابعت الرد على الواتساب</button>';
+  if(ai.reply_suggestion||nonOrder)h+='<button type="button" class="primary" data-wu="out">📤 ابعت الرد دلوقتي</button><button type="button" class="secondary" data-wu="send">💬 افتحه في واتساب</button>';
   if(nonOrder||ai.intent==='stainless'||ai.intent==='delf')h+='<button type="button" class="secondary" data-wu="build">🧾 حوّلها لطلب / فاتورة</button>';
   if(nonOrder)h+='<button type="button" class="secondary" data-wu="done">✔ تم الرد (اقفل)</button>';
   h+='<button type="button" class="secondary" data-wu="retry">🔄 افهمها تاني</button></div>'+(ai.needs_photo?'<div style="font-size:12px;color:var(--muted);margin-top:6px">📷 صورة القطعة هتساعد — اطلبها من العميل</div>':'')+'</div>';
@@ -11636,6 +11636,11 @@ window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(
    ask(o).then(function(ai){paint(card,o,ai)})})}
  document.addEventListener('click',function(e){var b=e.target.closest('.wu [data-wu]');if(!b)return;var card=b.closest('[data-wa]');if(!card)return;var o=(window.WA&&WA.list||[]).find(function(x){return x.id===card.dataset.wa});if(!o)return;var a=b.dataset.wu,ai=C[o.id]||{};
   if(a==='retry'){delete C[o.id];var h=card.querySelector('.wu');if(h)h.innerHTML='<div style="margin:8px 0;padding:8px;border-radius:10px;background:#f3f5f6;font-size:13px">🤖 بيفهم الرسالة…</div>';ask(o,true).then(function(r){paint(card,o,r)})}
+  else if(a==='out'){var t2=((card.querySelector('textarea[data-wu=reply]')||{}).value||'').trim();if(!t2)return toast('اكتب الرد الأول');if(!o.phone)return toast('مفيش رقم للعميل ده');
+   (async function(){try{if(!await ask('تبعت الرد ده لـ '+(cleanName(o.customer_name)||o.phone)+' من واتساب المحل؟','ابعت','رجوع'))return;b.disabled=true;b.textContent='⏳ بيتبعت…';
+    var r=await window.mkSB.from('wa_out').insert({to_phone:o.phone,body:t2,imgs:[],by_name:(window.mkT_user&&mkT_user.name)||''});if(r.error)throw r.error;
+    toast('✔ الرد اتبعت — هيوصل خلال لحظات');b.textContent='✔ اتبعت';var nonO=['inquiry','issue','chat','other','transfer'].indexOf((C[o.id]||{}).intent)>-1;if(nonO&&window.waSet)waSet(o.id,null)}
+    catch(e){b.disabled=false;b.textContent='📤 ابعت الرد دلوقتي';toast('ماتبعتش: '+((e&&e.message)||e))}})()}
   else if(a==='send'){var t=(card.querySelector('textarea[data-wu=reply]')||{}).value||'';if(!t.trim())return toast('اكتب الرد الأول');window.open(waUrl(o,t),'_blank')}
   else if(a==='steel'){if(window.mkWk&&mkWk.stainlessFrom)mkWk.stainlessFrom({id:o.id,customer:cleanName(o.customer_name),phone:o.phone,body:o.body});else toast('الشاشة لسه بتتحمّل، جرّب تاني')}
   else if(a==='build'){card.dataset.wuShow='1';var tw=card.querySelector('.table-wrap');if(tw)tw.style.display='';var inv=card.querySelector('.btnrow .primary[onclick*="waInvoice"]');if(inv)inv.style.display='';b.remove();if(tw)tw.scrollIntoView({behavior:'smooth',block:'center'})}
