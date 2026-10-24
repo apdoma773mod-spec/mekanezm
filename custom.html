@@ -82,15 +82,17 @@ function drawBamboo(v){const w=num(v.w),l=num(v.l),h=num(v.h);if(!(w>0&&l>0&&h>0
  return svgWrap(s)}
 
 function drawDelf(v){const W=num(v.w),H=num(v.h);if(!(W>0&&H>0))return '';
- const k=Math.min(200/W,172/H),dw=W*k,dh=H*k,x0=140,y0=52,mat=v.mat==='خشب'?['#c9a77a','#8a6a3a']:['#cfd6dc','#6f7a84'];
- let s=`<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" rx="3" fill="${mat[0]}" stroke="${mat[1]}" stroke-width="3"/><rect x="${x0+7}" y="${y0+7}" width="${dw-14}" height="${dh-14}" fill="none" stroke="${mat[1]}" stroke-opacity=".5"/>`;
+ const k=Math.min(190/W,172/H),dw=W*k,dh=H*k,x0=150,y0=52,pw=Math.max(7,Math.min(14,4*k));
+ const defs=`<defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f1f5"/><stop offset=".5" stop-color="#cfdde5"/><stop offset="1" stop-color="#b9cbd6"/></linearGradient><linearGradient id="bk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2d31"/><stop offset=".5" stop-color="#4a4f55"/><stop offset="1" stop-color="#1c1e21"/></linearGradient><linearGradient id="al" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d98a1"/><stop offset=".4" stop-color="#f4f6f8"/><stop offset="1" stop-color="#7b8791"/></linearGradient></defs>`;
+ let s=defs+`<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" rx="2" fill="url(#bk)" stroke="#111" stroke-width="1"/><rect x="${x0+pw}" y="${y0+pw}" width="${dw-2*pw}" height="${dh-2*pw}" fill="url(#gl)" stroke="#8d98a1" stroke-width="1.2"/><path d="M${x0+pw+8} ${y0+dh-pw-8}L${x0+pw+Math.min(60,dw*.4)} ${y0+pw+8}M${x0+pw+22} ${y0+dh-pw-8}L${x0+pw+Math.min(74,dw*.4+14)} ${y0+pw+8}" stroke="#fff" stroke-width="6" opacity=".55"/>`;
  const hs=v.handle==='both'?['L','R']:v.handle==='one'?[v.hside==='left'?'L':'R']:[];
- hs.forEach(x=>{const hx=x==='L'?x0+10:x0+dw-16;s+=`<rect x="${hx}" y="${y0+dh/2-24}" width="6" height="48" rx="3" fill="#a8741a" stroke="#6b4a1f"/>`});
- if(v.type==='hinged'&&v.drill==='yes'){const n=Math.max(1,Math.min(8,Math.round(num(v.hn)||2))),hx=v.hinge==='left'?x0+14:x0+dw-14;for(let i=0;i<n;i++){const y=n===1?y0+dh/2:y0+30+(dh-60)*i/(n-1);s+=`<circle cx="${hx}" cy="${y}" r="9" fill="#fff" stroke="#12202b" stroke-width="2"/><circle cx="${hx}" cy="${y}" r="3" fill="#12202b"/>`}}
- if(v.type==='slide'&&v.wheel==='yes'){[x0,x0+dw].forEach((x,i)=>{const nx=i?x-22:x;s+=`<rect x="${nx}" y="${y0-1}" width="22" height="26" fill="#fff" stroke="#c0392b" stroke-width="2" stroke-dasharray="4 3"/><circle cx="${i?x-11:x+11}" cy="${y0+12}" r="7" fill="#12202b"/>`});}
+ hs.forEach(x=>{const hx=x==='L'?x0+pw+3:x0+dw-pw-9;s+=`<rect x="${hx}" y="${y0+dh/2-26}" width="6" height="52" rx="3" fill="url(#al)" stroke="#59636c"/>`});
+ if(v.type==='hinged'&&v.drill==='yes'){const n=Math.max(1,Math.min(8,Math.round(num(v.hn)||2))),hx=v.hinge==='left'?x0+pw/2:x0+dw-pw/2;for(let i=0;i<n;i++){const y=n===1?y0+dh/2:y0+22+(dh-44)*i/(n-1);s+=`<circle cx="${hx}" cy="${y}" r="${Math.min(6,pw/2-0.5)}" fill="#cfd6dc" stroke="#111" stroke-width="1.2"/><circle cx="${hx}" cy="${y}" r="1.8" fill="#111"/>`}}
+ if(v.type==='slide'&&v.wheel==='yes'){[0,1].forEach(i=>{const px=i?x0+dw-pw-12:x0+pw-2,py=y0+dh*.1;
+  s+=`<rect x="${i?x0+dw-pw:x0}" y="${py-2}" width="${pw}" height="34" fill="none" stroke="#e24c3b" stroke-width="1.6" stroke-dasharray="4 3"/><rect x="${px}" y="${py}" width="14" height="30" rx="2" fill="#7b8084" stroke="#33383c"/><circle cx="${px+4}" cy="${py+6}" r="1.6" fill="#ddd"/><circle cx="${px+4}" cy="${py+24}" r="1.6" fill="#ddd"/><circle cx="${i?px+16:px-3}" cy="${py+15}" r="6" fill="#cfd6dc" stroke="#33383c" stroke-width="1.2"/>`})}
  s+=dimH(x0,x0+dw,y0+dh+22,'العرض '+W+' سم')+dimV(x0-14,y0,y0+dh,'الارتفاع '+H+' سم',-1);
- const lab=(v.type==='hinged'?'مفصلي':'جرار')+' — '+(v.mat||'')+' — '+({none:'بدون مقبض',one:'مقبض من ناحية',both:'مقبض من الناحيتين'}[v.handle]||'');
- return svgWrap(s+`<text x="200" y="283" text-anchor="middle" font-size="12" fill="#667" ${F}>${esc(lab)}</text>`)}
+ const lab=(v.type==='hinged'?'مفصلي':'جرار')+' — إطار ألمنيوم أسود وزجاج — '+({none:'بدون مقبض',one:'مقبض من ناحية',both:'مقبض من الناحيتين'}[v.handle]||'');
+ return svgWrap(s+`<text x="200" y="293" text-anchor="middle" font-size="11" fill="#667" ${F}>${esc(lab)}</text>`)}
 
 const DRAWERS={steel:drawSteel,bamboo:drawBamboo,delf:drawDelf};
 
@@ -104,8 +106,7 @@ function formHTML(){
   <label style="display:block;margin-top:12px">التقسيم</label>${chips('split',[['no','بدون تقسيم'],['yes','متقسم']])}
   <div id="dvbox" class="${V.split==='yes'?'':'hid'}" style="margin-top:10px">${fld('dv','عدد الفواصل','مثلاً 2')}</div>
   <div class="g" style="margin-top:12px">${fld('w','العرض (سم)','')}${fld('l','الطول (سم)','')}${fld('h','الارتفاع (سم) — هو عمق الدرج','')}${fld('q','العدد','1')}</div><div class="hint">المقاس برّه برّه (مقاس الفتحة اللي الدرج هيتركّب فيها).</div></div>`;
- return `<div class="card"><h3>🚪 دلف الدريسنج روم</h3><label>نوع الدلفة</label>${chips('type',[['hinged','مفصلي'],['slide','جرار']])}
-  <label style="display:block;margin-top:12px">خامة الدلفة</label>${chips('mat',[['ألمنيوم','قطاع ألمنيوم'],['خشب','خشب']])}
+ return `<div class="card"><h3>🚪 دلف الدريسنج روم (إطار ألمنيوم وزجاج)</h3><label>نوع الدلفة</label>${chips('type',[['hinged','مفصلي'],['slide','جرار']])}
   <div class="g" style="margin-top:12px">${fld('w','عرض الدلفة (سم)','')}${fld('h','ارتفاع الدلفة (سم)','')}${fld('q','عدد الدلف','1')}</div>
   <label style="display:block;margin-top:12px">المقبض</label>${chips('handle',[['none','بدون مقبض'],['one','مقبض من ناحية'],['both','مقبض من الناحيتين']])}
   <div id="hsbox" class="${V.handle==='one'?'':'hid'}" style="margin-top:8px"><label>ناحية المقبض</label>${chips('hside',[['right','يمين'],['left','شمال']])}</div>
@@ -132,7 +133,7 @@ function home(){K=null;history.replaceState(null,'',location.pathname);$('app').
 function summary(){const q=Math.max(1,Math.round(num(V.q))||1);let L=[KIND[K]+' — عدد '+q];
  if(K==='steel')L.push('سُمك الباب: '+V.t+' سم','عرض الباب: '+V.w+' سم','الاستانلس من الوش: '+V.hf+' سم','الاستانلس من الضهر: '+V.hb+' سم','طول الشريحة المفرودة: '+(Math.round((num(V.hf)+num(V.t)+num(V.hb))*10)/10)+' سم (حدّين ثنية)');
  if(K==='bamboo')L.push('النوع: '+V.kind,V.split==='yes'?'متقسم — '+(Math.round(num(V.dv))||0)+' فاصل':'بدون تقسيم','العرض: '+V.w+' سم','الطول: '+V.l+' سم','الارتفاع (العمق): '+V.h+' سم','المقاس برّه برّه');
- if(K==='delf'){L.push('النوع: '+(V.type==='hinged'?'مفصلي':'جرار'),'الخامة: '+V.mat,'العرض: '+V.w+' سم','الارتفاع: '+V.h+' سم','المقبض: '+({none:'بدون مقبض',one:'من ناحية '+(V.hside==='left'?'الشمال':'اليمين'),both:'من الناحيتين'}[V.handle]));
+ if(K==='delf'){L.push('النوع: '+(V.type==='hinged'?'مفصلي':'جرار'),'العرض: '+V.w+' سم','الارتفاع: '+V.h+' سم','المقبض: '+({none:'بدون مقبض',one:'من ناحية '+(V.hside==='left'?'الشمال':'اليمين'),both:'من الناحيتين'}[V.handle]));
   if(V.type==='hinged')L.push(V.drill==='yes'?'تخريم مفصلات: '+(Math.round(num(V.hn))||0)+' مفصلة — ناحية '+(V.hinge==='left'?'الشمال':'اليمين'):'من غير تخريم مفصلات');
   else L.push(V.wheel==='yes'?'تتخلّع لفتحة العجلة (العجلة بتتباع لوحدها)':'من غير فتحة عجلة')}
  return L.join('\n')}
