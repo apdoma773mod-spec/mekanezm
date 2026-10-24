@@ -19,9 +19,14 @@ const brand=()=>Object.assign({shop:'ميكانيزم',cta:'اطلب دلوقت�
 
 /* ---------- الدخول بحساب ميكانيزم ---------- */
 let SBK=null;
-function sbk(){if(SBK)return SBK;if(!window.supabase||!supabase.createClient)return null;SBK=supabase.createClient(MK_URL,MK_KEY,{auth:{storageKey:'mkz-mk-auth',persistSession:true,autoRefreshToken:true}});return SBK}
+function sbk(){if(SBK)return SBK;if(!window.supabase||!supabase.createClient)return null;/* lock: من غير قفل المتصفح — على الآيفون القفل ده ساعات بيعلّق والطلبات تقف («السيرفر مابيردش») */
+ SBK=supabase.createClient(MK_URL,MK_KEY,{auth:{storageKey:'mkz-mk-auth',persistSession:true,autoRefreshToken:true,lock:(n,t,fn)=>fn()}});return SBK}
 async function token(){const c=sbk();if(!c)throw new Error('مكتبة الدخول مااتحملتش — اتأكد من النت');
- let {data}=await c.auth.getSession();if(data&&data.session)return data.session.access_token;
+ /* الدخول بيخلص كل ساعة، والآيفون ساعات مابيجددهوش لوحده (JWT expired) — نجدده إحنا قبل ما يخلص */
+ const TO=(p,ms)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error('النت بطيء — جرّب تاني')),ms))]);
+ let {data}=await TO(c.auth.getSession(),15000);let ses=data&&data.session;
+ if(ses&&(!ses.expires_at||ses.expires_at*1000-Date.now()<120000)){try{const r=await TO(c.auth.refreshSession(),20000);ses=r&&r.data&&r.data.session||null}catch(e){ses=null}}
+ if(ses)return ses.access_token;
  /* لو ميكانيزم مفتوح على نفس الموبايل (Safari) نستخدم نفس الدخول */
  try{const o=JSON.parse(localStorage.getItem('sb-tkzfjeizvanfptnqvrmr-auth-token')||'null');if(o&&o.refresh_token){const r=await c.auth.setSession({access_token:o.access_token,refresh_token:o.refresh_token});if(r.data&&r.data.session)return r.data.session.access_token}}catch(e){}
  return null}
@@ -539,7 +544,7 @@ async function loadJobs(){const el=$s('sm_jobs');if(!el)return;const c=sbk();if(
    ${j.status==='done'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="b" data-vw="${j.id}" style="flex:1">▶️ شاهد</button><button class="b o" data-sh="${j.id}" style="flex:1">📤 شارك</button><button class="b o" data-dl="${j.id}" style="flex:1">⬇️ نزّل</button></div>${Array.isArray(j.parts)&&j.parts.length?`<button class="b o" data-rr="${j.id}" style="width:100%;margin-top:6px">🔁 اعمله تاني بالقالب والاختيارات اللي فوق</button>`:''}<small class="mu">${esc(j.note&&j.note!=='جاهز'?j.note:'')}</small>`:''}
    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px"><small class="mu">${new Date(j.created_at).toLocaleString('ar-EG',{day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}</small>${j.status!=='working'?`<button class="b o" data-rm="${j.id}" style="flex:none;padding:6px 12px;color:#ff8a80">🗑️ امسح</button>`:''}</div></div>`).join(''):'مفيش فيديوهات في الخلفية لسه.';
   JOBS=Object.fromEntries(L.map(j=>[j.id,j]))}
- catch(e){el.textContent=/mk_video_jobs|relation/.test(String(e&&e.message))?'جدول المهام مش متعمل':'❌ '+(e.message||e)}}
+ catch(e){const m=String(e&&e.message||e);if(/JWT|expired|token/i.test(m)){el.innerHTML='الدخول خلص وقته — سجّل دخول تاني.';const a=$s('sm_auth');if(a){a.innerHTML=loginBox();$s('sm_li').onclick=doLogin}return}el.textContent=/mk_video_jobs|relation/.test(m)?'جدول المهام مش متعمل':'❌ '+m}}
 let JOBS={};
 async function jobUrl(id,dl){const j=JOBS[id];if(!j||!j.out_path)throw new Error('الفيديو مش موجود');const r=await sbk().storage.from('video-jobs').createSignedUrl(j.out_path,3600,dl?{download:(j.name||'ميكانيزم').replace(/\.[^.]+$/,'')+'-ميكانيزم.mp4'}:undefined);if(r.error)throw r.error;return r.data.signedUrl}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-vw],[data-sh],[data-dl],[data-rt],[data-rr],[data-rm]');if(!b||!$s('sm_jobs')||!$s('sm_jobs').contains(b))return;
