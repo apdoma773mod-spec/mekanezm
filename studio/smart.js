@@ -358,14 +358,41 @@ function drawIcon(kind,x,y,r,dt,acc){CX.save();CX.translate(x,y);const s=back(cl
  else if(kind==='tools'){CX.rotate(Math.sin(dt*6)*.6);CX.lineWidth=8*k;CX.beginPath();CX.moveTo(-18*k,18*k);CX.lineTo(10*k,-10*k);CX.stroke();CX.beginPath();CX.arc(14*k,-14*k,10*k,0,7);CX.lineWidth=6*k;CX.stroke()}
  else{const q=cl(dt/.5);CX.lineWidth=8*k;CX.beginPath();CX.moveTo(-16*k,0);if(q>0)CX.lineTo(lerp(-16,-4,cl(q*2))*k,lerp(0,12,cl(q*2))*k);if(q>.5)CX.lineTo(lerp(-4,18,(q-.5)*2)*k,lerp(12,-14,(q-.5)*2)*k);CX.stroke()}
  CX.restore()}
+/* ---------- 🎨 رسمة الذكاء (video-scene): أشكال بسيطة + حركتها، مخصوصة لكل جملة ---------- */
+const okC=c=>typeof c==='string'&&/^(#[0-9a-f]{3,8}|rgba?\([\d.,\s%]+\)|transparent)$/i.test(c.trim())?c.trim():null;
+const fin=(v,d)=>Number.isFinite(+v)&&v!==null&&v!==''?+v:d;
+const kk=e=>Math.round(e.s*10)+'|'+e.label;
+/* الرسومات اللي محتاجة رسمة من الذكاء + الكلام اللي حواليها */
+function animList(){return EV.filter(e=>e.type==='anim'&&showEv(e)).map(e=>({key:kk(e),label:e.label,scene:e.scene,action:e.action,ctx:(D.seg||[]).filter(g=>g.e>e.s-2.5&&g.s<e.s+4.5).map(g=>g.t).join(' ').slice(0,380)||e.label})).slice(0,24)}
+async function sceneMap(list,headers,prog){const out={},B=[];for(let i=0;i<list.length;i+=6)B.push(list.slice(i,i+6));let done=0;
+ const run=async b=>{try{const r=await fetch(MK_URL+'/functions/v1/video-scene',{method:'POST',headers:Object.assign({'Content-Type':'application/json',apikey:MK_KEY},headers),body:JSON.stringify({items:b.map((x,i)=>({i,label:x.label,ctx:x.ctx,scene:x.scene,action:x.action}))})});
+   const j=await r.json().catch(()=>({}));(j.scenes||[]).forEach(sc=>{const x=b[sc.i];if(x&&dslOk(sc))out[x.key]={shapes:sc.shapes.slice(0,40)}})}catch(e){console.warn('scene',e)}done++;prog&&prog(done,B.length)};
+ for(let i=0;i<B.length;i+=3)await Promise.all(B.slice(i,i+3).map(run));return out}
+function kfAt(sh,p){if(!sh._k){let cur={dx:0,dy:0,rot:0,s:1,o:1};sh._k=(Array.isArray(sh.kf)?sh.kf:[]).filter(k=>k&&Number.isFinite(+k.t)).sort((a,b)=>a.t-b.t).map(k=>{cur={t:cl(+k.t),dx:fin(k.dx,cur.dx),dy:fin(k.dy,cur.dy),rot:fin(k.rot,cur.rot),s:Math.max(0,fin(k.s,cur.s)),o:cl(fin(k.o,cur.o))};return cur})}
+ const K=sh._k;if(!K.length)return {dx:0,dy:0,rot:0,s:1,o:1};if(p<=K[0].t)return K[0];
+ for(let i=1;i<K.length;i++)if(p<=K[i].t){const a=K[i-1],b=K[i],q=(p-a.t)/Math.max(.001,b.t-a.t),e=q*q*(3-2*q),r={};['dx','dy','rot','s','o'].forEach(k=>r[k]=a[k]+(b[k]-a[k])*e);return r}return K[K.length-1]}
+const dslOk=sc=>sc&&Array.isArray(sc.shapes)&&sc.shapes.filter(x=>x&&x.k).length>=3;
+function drawDsl(sc,p,bw,bh){const k=Math.min(bw/400,bh/260);CX.save();CX.scale(k,k);CX.translate(-200,-130);CX.textAlign='center';CX.textBaseline='middle';CX.direction='rtl';
+ for(const sh of sc.shapes){if(!sh||!sh.k)continue;const f=kfAt(sh,p);if(f.o<=.01)continue;CX.save();CX.globalAlpha*=f.o;
+  const x=fin(sh.x,0),y=fin(sh.y,0),w=fin(sh.w,0),h=fin(sh.h,0),ox=fin(sh.ox,x+w/2),oy=fin(sh.oy,y+h/2);CX.translate(f.dx+ox,f.dy+oy);if(f.rot)CX.rotate(f.rot*Math.PI/180);if(f.s!==1)CX.scale(f.s,f.s);CX.translate(-ox,-oy);
+  let fill=okC(sh.fill),stroke=okC(sh.stroke);const sw=Math.max(.5,Math.min(12,fin(sh.sw,2)));CX.lineWidth=sw;CX.lineCap='round';CX.lineJoin='round';
+  if(!fill&&!stroke&&/rect|circle|path/.test(sh.k))fill='#9DA7B1';const paint=()=>{if(fill){CX.fillStyle=fill;CX.fill()}if(stroke){CX.strokeStyle=stroke;CX.stroke()}};
+  try{if(sh.k==='rect'){CX.beginPath();const r=Math.min(fin(sh.rx,0),Math.abs(w)/2,Math.abs(h)/2);if(r>0&&CX.roundRect)CX.roundRect(x,y,w,h,r);else CX.rect(x,y,w,h);paint()}
+   else if(sh.k==='circle'){CX.beginPath();CX.arc(x,y,Math.max(0,fin(sh.r,8)),0,7);paint()}
+   else if(sh.k==='line'||sh.k==='arrow'){const x2=fin(sh.x2,x),y2=fin(sh.y2,y);CX.strokeStyle=stroke||fill||'#2E2A26';CX.beginPath();CX.moveTo(x,y);CX.lineTo(x2,y2);CX.stroke();
+    if(sh.k==='arrow'){const a=Math.atan2(y2-y,x2-x),L=Math.max(8,sw*3.5);CX.fillStyle=stroke||fill||'#2E2A26';CX.beginPath();CX.moveTo(x2,y2);CX.lineTo(x2-L*Math.cos(a-.45),y2-L*Math.sin(a-.45));CX.lineTo(x2-L*Math.cos(a+.45),y2-L*Math.sin(a+.45));CX.closePath();CX.fill()}}
+   else if(sh.k==='path'&&typeof sh.d==='string'&&sh.d.length<4000){const P=new Path2D(sh.d);if(fill){CX.fillStyle=fill;CX.fill(P)}if(stroke){CX.strokeStyle=stroke;CX.stroke(P)}}
+   else if(sh.k==='text'&&sh.txt){CX.font=`800 ${Math.round(Math.max(12,Math.min(26,fin(sh.h,18))))}px Cairo,sans-serif`;CX.fillStyle=fill||'#2E2A26';CX.fillText(String(sh.txt).slice(0,40),x,y)}}catch(e){}
+  CX.restore()}
+ CX.restore()}
 /* الكارت الكبير للمشهد: خلفية فاتحة + المشهد + سطر الشرح تحت. compare = نصين: العادي بيتكسر ✖ وميكانيزم ✔ */
 function drawAnimPanel(e,y,t,W,H,u,F,acc){const d=Math.max(1,e.e-e.s),p=cl((t-e.s)/d),pw=Math.min(W*.9,820*u),ph=Math.min(H*.27,490*u),lab=56*u;SCX.label=e.label||'';
  const a=Math.min(ease((t-e.s)/.35),1-ease((t-e.e+.35)/.35));if(a<=0)return;CX.save();CX.globalAlpha=a;CX.translate(W/2,y);const s=.85+.15*back(cl((t-e.s)/.45));CX.scale(s,s);
  rr(-pw/2,-ph/2,pw,ph,30*u);CX.fillStyle=SC_COL.bg;CX.fill();CX.lineWidth=6*u;CX.strokeStyle=acc;CX.stroke();
  CX.save();rr(-pw/2,-ph/2,pw,ph,30*u);CX.clip();const sh=ph-lab,k=sh/320;
- if(e.action==='compare'){const hw=pw/2;[['break',-hw/2,'العادي'],['open',hw/2,'ميكانيزم']].forEach(([ac,x,tt])=>{CX.save();CX.translate(x,-lab/2+6*u);CX.scale(.5,.5);drawScene(e.scene,ac,cl(p*1.15),k*1.05);CX.restore();
+ if(e.action==='compare'&&!dslOk(D&&D.dsl&&D.dsl[kk(e)])){const hw=pw/2;[['break',-hw/2,'العادي'],['open',hw/2,'ميكانيزم']].forEach(([ac,x,tt])=>{CX.save();CX.translate(x,-lab/2+6*u);CX.scale(.5,.5);drawScene(e.scene,ac,cl(p*1.15),k*1.05);CX.restore();
    CX.fillStyle=ac==='break'?SC_COL.bad:SC_COL.good;CX.font=`900 ${Math.round(30*u)}px ${F}`;CX.textAlign='center';CX.textBaseline='middle';CX.fillText(tt,x,-ph/2+30*u)});scLine(0,-ph/2+14*u,0,ph/2-lab-10*u,3*u,'rgba(46,42,38,.25)')}
- else{CX.save();CX.translate(0,-lab/2+4*u);drawScene(e.scene,e.action,p,k);CX.restore()}
+ else{const ds=D&&D.dsl&&D.dsl[kk(e)];CX.save();CX.translate(0,-lab/2+4*u);if(dslOk(ds))drawDsl(ds,p,pw-24*u,sh-14*u);else drawScene(e.scene,e.action,p,k);CX.restore()}
  CX.restore();
  rr(-pw/2,ph/2-lab,pw,lab,0);CX.save();rr(-pw/2,-ph/2,pw,ph,30*u);CX.clip();CX.fillStyle='rgba(10,10,12,.9)';CX.fillRect(-pw/2,ph/2-lab,pw,lab);CX.restore();
  CX.fillStyle=e.action==='break'?'#FF8A80':'#fff';CX.font=`800 ${Math.round(36*u)}px ${F}`;CX.textAlign='center';CX.textBaseline='middle';CX.direction='rtl';CX.fillText(e.label||'',0,ph/2-lab/2+2*u);CX.restore()}
@@ -539,6 +566,8 @@ async function go(){if(busy)return;if(!F)return say('اختار الفيديو �
  try{let cached=null;try{cached=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   D=cached||await analyze(m=>pg.textContent=m);
   if(!D.people&&S.smart){await new Promise(r=>{if(V.readyState>=1)r();else V.onloadedmetadata=r});await phonePeople(pg)}
+  /* رسومات الذكاء المخصوصة لكل جملة */
+  if(!D.dsl&&O('anim')){build();const L=animList();if(L.length){pg.textContent='🎨 برسم الرسومات المتحركة…';try{const tk=await token();D.dsl=await sceneMap(L,{Authorization:'Bearer '+tk},(a,b)=>pg.textContent='🎨 برسم الرسومات المتحركة… '+a+' من '+b)}catch(e){D.dsl={}}}}
   try{localStorage.setItem(key,JSON.stringify(D))}catch(e){}
   if(!D.seg.length&&!D.ev.length)say('⚠️ مالقيتش كلام في الفيديو — اتأكد إن الصوت واضح');
   build();const cutN=(D.seg||[]).filter(g=>g.cut).length;
@@ -627,6 +656,7 @@ function mount(){if($s('v-smart'))return;const s=document.createElement('section
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA}),_test:{build,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
+ animList:()=>animList(),setDsl:m=>{D.dsl=Object.assign(D.dsl||{},m||{})},
  sfx:()=>{if(!O('sfx'))return [];const L=[];EV.forEach(e=>{if(!showEv(e))return;L.push({t:outT(e.s),k:e.type==='topic'||e.type==='anim'?'whoosh':'pop'});if(e.type==='anim'&&(e.action==='break'||e.action==='compare'))L.push({t:outT(e.s+.45*(e.e-e.s)),k:'pop'})});STK.forEach(x=>L.push({t:outT(x.s),k:'pop'}));if(CTA)L.push({t:outT(CTA.s),k:'whoosh'});
   return L.filter(x=>x.t>.2).sort((a,b)=>a.t-b.t).filter((x,i,a)=>!i||x.t-a[i-1].t>.25).slice(0,90)},
  wantPeople:()=>!!S.smart&&!(D&&D.people),detect:async(times,frame)=>{try{D.people=await detectPeople(times,frame);return D.people.filter(x=>!x.none).length}catch(e){console.warn('pose',e&&e.message);return -1}}}};
