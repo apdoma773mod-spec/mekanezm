@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-28';
+const APP_VER='2026-10-23-29';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4029,7 +4029,7 @@ function waParse(body){
   if(!good&&body2.split(' ').length>=6&&!/\d/.test(body2)){out.notes.push(ln);return}
   if(!good&&PLACE.test(' '+VN(body2)+' ')){out.addr=(out.addr?out.addr+' - ':'')+body2;return}
   /* اسم العميل من غير كلمة «اسم»: أول سطر بعد «طلب»، كلمتين لـ ٤ ومن غير أرقام، ومش شبه أي صنف */
-  if(!good&&!out.name&&!out.lines.length&&!/\d/.test(body2)){let w=VN(body2).split(' ').filter(Boolean);if(w.length>=1&&w.length<=4&&!w.some(x=>STOP.has(x))){out.name=body2.replace(/\s+/g,' ').trim();return}}
+  if(!good&&!out.name&&!out.lines.length&&!/\d/.test(body2)&&!(window.mkSteelWord&&mkSteelWord(body2))){let w=VN(body2).split(' ').filter(Boolean);if(w.length>=1&&w.length<=4&&!w.some(x=>STOP.has(x))){out.name=body2.replace(/\s+/g,' ').trim();return}}
   pl.forEach(l=>out.lines.push(l))});
  return out}
 window.waParse=waParse;window.mkWaCand=candidates;window.mkWaScore=score;window.mkWaToks=toks;
@@ -8022,10 +8022,15 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
     الكلمات المدمجة: مطابقة كلمة كاملة أو غلطة إملائية صغيرة. كلمات قواعد الواتساب (EXTRA): كلمة كاملة بس، ومالهاش أثر لو الطلب فيه أصناف عادية معروفة (زي «منظم ادراج»). */
  function wordsOf(t){return t.split(/[^\p{L}\p{N}]+/u).filter(Boolean)}
  function prodWords(){var S={};try{(window.db&&db.products||[]).forEach(function(p){wordsOf(norm(p.name)).forEach(function(w){if(w.length>=3)S[w]=1})})}catch(e){}return S}
+  /* كلمة استانلس بأي كتابة: مع «ال» (الاستانلس) وغلطات إملائية (استنالس / الاستانليس) */
+ function steelHit(text){
+  var ws=wordsOf(norm(text)),kw=KW.map(norm),hit='';
+  ws.some(function(w){var w2=w.replace(/^(?:وال|بال|كال|فال|لل|ال)(?=.{4,})/,'');return kw.some(function(k){if(!k)return false;if(w===k||w2===k){hit=w;return true}
+   if(k.length>=6&&w2.length>=6&&w2[0]===k[0]&&Math.abs(w2.length-k.length)<=2&&lev(w2,k)<=(k.length>=7?2:1)){hit=w;return true}return false})});
+  return hit}
+ window.mkSteelWord=steelHit;
  function isSteel(text){
-  var t=norm(text),ws=wordsOf(t),hit='',kw=KW.map(norm);
-  ws.some(function(w){return kw.some(function(k){if(!k)return false;if(w===k){hit=w;return true}
-   if(k.length>=5&&w.length>=4&&w[0]===k[0]&&Math.abs(w.length-k.length)<=1&&lev(w,k)<=1){hit=w;return true}return false})});
+  var t=norm(text),ws=wordsOf(t),hit=steelHit(text);
   if(hit)return hit;
   var P=null,padded=' '+ws.join(' ')+' ';
   EXTRA.some(function(k){if(!k)return false;if(padded.indexOf(' '+k+' ')>-1){hit=k;return true}return false});
