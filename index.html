@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-20';
+const APP_VER='2026-10-23-21';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6462,8 +6462,14 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(ORD.length){try{await put(K.ord,ORD);await put(K.cfg,CFG)}catch(e){}}
   }
  }
- var WEBLINK=null;
- async function saveOrd(){await put(K.ord,ORD);if(WEBLINK){var w=WEBLINK,o=ORD[ORD.length-1];WEBLINK=null;if(o&&!o.src){o.src={web:w.id,img:w.img||''};await put(K.ord,ORD);try{await window.mkSB.from('web_custom_orders').update({status:'opened',work_id:o.id}).eq('id',w.id)}catch(e){}if(window.loadCustom)window.loadCustom()}}}
+ var WEBLINK=null,WEBSIG={};
+ function webPayload(o){var st=stages(o.type),ix=Math.max(0,Math.min(+o.stage||0,st.length-1));return {work_id:o.id,stages:st,stage_idx:ix,stage:st[ix],status:ix>=st.length-1?'done':'opened'}}
+ async function webSync(){var sb=window.mkSB;if(!sb)return;
+  for(var k=0;k<ORD.length;k++){var o=ORD[k];if(!(o.src&&o.src.web))continue;var pl=webPayload(o),sig=JSON.stringify(pl);if(WEBSIG[o.id]===sig)continue;
+   try{var r=await sb.from('web_custom_orders').update(pl).eq('id',o.src.web);if(!r.error)WEBSIG[o.id]=sig}catch(e){}}
+  if(window.loadCustom)window.loadCustom()}
+ async function webCancel(o){if(!(o&&o.src&&o.src.web)||!window.mkSB)return;try{await window.mkSB.from('web_custom_orders').update({status:'cancelled',work_id:o.id}).eq('id',o.src.web)}catch(e){}if(window.loadCustom)window.loadCustom()}
+ async function saveOrd(){await put(K.ord,ORD);if(WEBLINK){var w=WEBLINK,o=ORD[ORD.length-1];WEBLINK=null;if(o&&!o.src){o.src={web:w.id,img:w.img||''};await put(K.ord,ORD)}}try{await webSync()}catch(e){}}
  async function saveCfg(){await put(K.cfg,CFG)}
 
  /* ---------- الرسم ---------- */
@@ -6692,7 +6698,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelector('#wkLb').onclick=function(){printOrder(o,'lab',false)};
   b.querySelector('#wkEd').onclick=function(){o.type==='بامبو'?viewBamboo(id):viewForm(id,o.type)};
   b.querySelector('#wkDup').onclick=async function(){var n=JSON.parse(JSON.stringify(o));n.id=uid();n.no=CFG.next++;wkNewCode(n);n.stage=0;n.hist=[{n:st[0],at:new Date().toISOString(),by:who()}];n.date=today();ORD.push(n);try{await saveOrd();await saveCfg();toast('✔ اتنسخ');viewOrder(n.id)}catch(e){errAlert(e)}};
-  b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}};
+  b.querySelector('#wkDel').onclick=async function(){if(await ask('تمسح الأوردر ده؟','مسح','لأ')){var dd=ORD.find(function(x){return x.id===id});ORD=ORD.filter(function(x){return x.id!==id});try{await saveOrd();webCancel(dd);viewOrders()}catch(e){errAlert(e)}}};
   var ol=b.querySelector('#wkOffL');if(ol)ol.onclick=function(){printLeftLabels(o)};
   var rc=b.querySelector('#wkRodCut');if(rc)rc.onclick=async function(){
    var needs=rodNeeds(o),prods=needs.map(function(nd){return {nd:nd,prod:(db.products||[]).find(function(p){return String(p.name).trim()===nd.name})}});
