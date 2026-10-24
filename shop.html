@@ -166,7 +166,7 @@ function stk(){form('تحديث المخزون من السيستم',[{l:'الص�
 let cur='',q='';
 const ART={"s1": "<rect x=\"14\" y=\"14\" width=\"7\" height=\"72\" rx=\"3\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"79\" y=\"14\" width=\"7\" height=\"72\" rx=\"3\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"21\" y=\"24\" width=\"58\" height=\"5\" rx=\"2.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"21\" y=\"36\" width=\"58\" height=\"5\" rx=\"2.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"21\" y=\"48\" width=\"58\" height=\"5\" rx=\"2.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"21\" y=\"60\" width=\"58\" height=\"5\" rx=\"2.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"21\" y=\"72\" width=\"58\" height=\"5\" rx=\"2.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/>", "s2": "<rect x=\"16\" y=\"14\" width=\"68\" height=\"72\" rx=\"4\" fill=\"#d8c5a0\" stroke=\"#a58d5f\"/><rect x=\"24\" y=\"24\" width=\"52\" height=\"24\" rx=\"2\" fill=\"none\" stroke=\"#5b6670\" stroke-width=\"2\"/><path d=\"M32 24v24M42 24v24M52 24v24M62 24v24M70 24v24\" stroke=\"#8a949e\"/><rect x=\"24\" y=\"54\" width=\"52\" height=\"24\" rx=\"2\" fill=\"none\" stroke=\"#5b6670\" stroke-width=\"2\"/><path d=\"M32 54v24M42 54v24M52 54v24M62 54v24M70 54v24\" stroke=\"#8a949e\"/>", "s3": "<circle cx=\"34\" cy=\"50\" r=\"19\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"34\" cy=\"50\" r=\"11\" fill=\"#dfe3e7\" stroke=\"#5b6670\"/><rect x=\"50\" y=\"43\" width=\"40\" height=\"14\" rx=\"4\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"60\" cy=\"50\" r=\"3\" fill=\"#5b6670\"/><circle cx=\"80\" cy=\"50\" r=\"3\" fill=\"#5b6670\"/>", "s4": "<rect x=\"8\" y=\"34\" width=\"84\" height=\"10\" rx=\"3\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"8\" y=\"48\" width=\"84\" height=\"10\" rx=\"3\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"8\" y=\"62\" width=\"84\" height=\"6\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"18\" cy=\"39\" r=\"2\" fill=\"#5b6670\"/><circle cx=\"50\" cy=\"39\" r=\"2\" fill=\"#5b6670\"/><circle cx=\"82\" cy=\"39\" r=\"2\" fill=\"#5b6670\"/>", "s5": "<rect x=\"14\" y=\"24\" width=\"72\" height=\"38\" rx=\"3\" fill=\"#e9ecef\" stroke=\"#5b6670\" stroke-width=\"2\"/><rect x=\"14\" y=\"62\" width=\"72\" height=\"6\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"14\" y=\"72\" width=\"72\" height=\"7\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"10\" y=\"68\" width=\"8\" height=\"14\" rx=\"2\" fill=\"#4a5560\"/><rect x=\"82\" y=\"68\" width=\"8\" height=\"14\" rx=\"2\" fill=\"#4a5560\"/>", "s6": "<polygon points=\"30,22 50,22 60,40 50,58 30,58 20,40\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"40\" cy=\"40\" r=\"7\" fill=\"#dfe3e7\" stroke=\"#5b6670\"/><rect x=\"36\" y=\"58\" width=\"8\" height=\"26\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"66\" y=\"50\" width=\"22\" height=\"9\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"80\" cy=\"76\" r=\"9\" fill=\"#4a5560\"/><circle cx=\"80\" cy=\"76\" r=\"3\" fill=\"#dfe3e7\"/>", "s7": "<text x=\"50\" y=\"58\" font-family=\"Arial,sans-serif\" font-weight=\"800\" font-size=\"30\" text-anchor=\"middle\" fill=\"#14201a\" letter-spacing=\"1\">blum</text><rect x=\"26\" y=\"66\" width=\"48\" height=\"3\" rx=\"1.5\" fill=\"#3cba2c\"/>", "s8": "<text x=\"50\" y=\"56\" font-family=\"Arial,sans-serif\" font-weight=\"800\" font-size=\"25\" text-anchor=\"middle\" fill=\"#14201a\" letter-spacing=\"2\">GRASS</text><rect x=\"22\" y=\"64\" width=\"56\" height=\"3\" rx=\"1.5\" fill=\"#3cba2c\"/>", "s9": "<rect x=\"12\" y=\"20\" width=\"76\" height=\"60\" rx=\"3\" fill=\"#d8c5a0\" stroke=\"#a58d5f\"/><rect x=\"22\" y=\"40\" width=\"56\" height=\"9\" rx=\"4.5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"28\" y=\"49\" width=\"7\" height=\"11\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"65\" y=\"49\" width=\"7\" height=\"11\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/>", "s10": "<rect x=\"12\" y=\"20\" width=\"76\" height=\"60\" rx=\"3\" fill=\"#d8c5a0\" stroke=\"#a58d5f\"/><circle cx=\"50\" cy=\"50\" r=\"15\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"46\" cy=\"46\" r=\"5\" fill=\"#fff\" opacity=\".6\"/>", "s11": "<rect x=\"8\" y=\"36\" width=\"84\" height=\"16\" rx=\"2\" fill=\"#f2c94c\" stroke=\"#8a7a2a\"/><rect x=\"8\" y=\"58\" width=\"84\" height=\"16\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><path d=\"M14 36v8M14 58v8\" stroke=\"#333\"/><path d=\"M20 36v11M20 58v11\" stroke=\"#333\"/><path d=\"M26 36v8M26 58v8\" stroke=\"#333\"/><path d=\"M32 36v8M32 58v8\" stroke=\"#333\"/><path d=\"M38 36v8M38 58v8\" stroke=\"#333\"/><path d=\"M44 36v8M44 58v8\" stroke=\"#333\"/><path d=\"M50 36v8M50 58v8\" stroke=\"#333\"/><path d=\"M56 36v8M56 58v8\" stroke=\"#333\"/><path d=\"M62 36v8M62 58v8\" stroke=\"#333\"/><path d=\"M68 36v8M68 58v8\" stroke=\"#333\"/><path d=\"M74 36v8M74 58v8\" stroke=\"#333\"/><path d=\"M80 36v11M80 58v11\" stroke=\"#333\"/><path d=\"M86 36v8M86 58v8\" stroke=\"#333\"/>", "i22rqml": "<path d=\"M22 22h56v14H22z\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"50\" cy=\"62\" r=\"24\" fill=\"#2f353b\" stroke=\"#14181c\" stroke-width=\"2\"/><circle cx=\"50\" cy=\"62\" r=\"14\" fill=\"#6b747d\"/><circle cx=\"50\" cy=\"62\" r=\"5\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"46\" y=\"34\" width=\"8\" height=\"14\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/>", "1v09wpx": "<rect x=\"8\" y=\"14\" width=\"84\" height=\"8\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"34\" cy=\"31\" r=\"8\" fill=\"#2f353b\" stroke=\"#14181c\"/><circle cx=\"66\" cy=\"31\" r=\"8\" fill=\"#2f353b\" stroke=\"#14181c\"/><rect x=\"26\" y=\"36\" width=\"48\" height=\"8\" rx=\"2\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><rect x=\"14\" y=\"44\" width=\"72\" height=\"42\" rx=\"3\" fill=\"#d8c5a0\" stroke=\"#a58d5f\"/>"};
 const DART="<circle cx=\"50\" cy=\"50\" r=\"22\" fill=\"url(#mt)\" stroke=\"#5b6670\" stroke-width=\"1\"/><circle cx=\"50\" cy=\"50\" r=\"9\" fill=\"#dfe3e7\" stroke=\"#5b6670\"/>";
-const secArt=s=>s.img?`<img src="${s.img}" alt="${esc(s.name)}">`:`<svg viewBox="0 0 100 100" aria-hidden="true">${ART[s.id]||DART}</svg>`;
+let secArt=s=>s.img?`<img src="${s.img}" alt="${esc(s.name)}">`:`<svg viewBox="0 0 100 100" aria-hidden="true">${ART[s.id]||DART}</svg>`;
 function drawProds(){
  const ql=q.toLowerCase();
  let h=S.sections.filter(s=>!cur||s.id===cur).map(s=>{const ps=S.products.filter(p=>p.sec===s.id&&(!favOn||fav.has(p.id))&&(!ql||(p.name+' '+(p.desc||'')).toLowerCase().includes(ql)));return ps.length?`<section id="s-${s.id}"><h2>${esc(s.name)}</h2><div class="grid">${ps.map(card).join('')}</div></section>`:''}).join('');
@@ -876,6 +876,62 @@ function addShip(){const m=$('main');if(!m||admin||document.getElementById('ship
  const t=document.getElementById('trkHome');if(t){document.getElementById('shipHome').insertAdjacentElement('afterend',t)}}
 const _pmH=pubMain;pubMain=function(){_pmH();setTimeout(addShip,20)};
 setTimeout(addShip,400);setTimeout(addShip,2000);
+})();
+</script>
+
+<style>
+/* ميكانيزم — تحسين شكل المتجر: الأقسام، كروت المنتجات، صفحة المنتج، وخانة «مش لاقي» */
+.tile{border:0;box-shadow:0 2px 12px #0001;border-radius:18px;transition:transform .2s,box-shadow .2s}
+.tile:active{transform:scale(.97)}@media(hover:hover){.tile:hover{transform:translateY(-3px);box-shadow:0 10px 24px #0002}}
+.tile .im.g{position:relative;flex-direction:column;gap:2px;color:#fff;background:linear-gradient(145deg,var(--g1),var(--g2))}
+.tile .im.g:before{content:"";position:absolute;width:120px;height:120px;border-radius:50%;background:#ffffff22;top:-40px;left:-30px}
+.tile .im.g:after{content:"";position:absolute;width:80px;height:80px;border-radius:50%;background:#ffffff18;bottom:-30px;right:-20px}
+.tile .im.g span{font-size:46px;line-height:1;filter:drop-shadow(0 3px 6px #0004);position:relative;z-index:1}
+.tile.on .im.g{box-shadow:0 0 0 3px #fff}
+.card{box-shadow:0 2px 14px #0001;border:0}
+.card .imw{overflow:hidden;background:#fff}
+.card img.mainimg{transition:transform .5s;background:#fff}
+@media(hover:hover){.card:hover img.mainimg{transform:scale(1.06)}}
+.card .imw.sk,.pvs .sk{background:linear-gradient(100deg,#eef0f2 30%,#f8f9fa 50%,#eef0f2 70%);background-size:200% 100%;animation:mksk 1.2s infinite}
+@keyframes mksk{to{background-position:-200% 0}}
+.avb{position:absolute;bottom:8px;right:8px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;color:#fff;background:#1e9e5a;box-shadow:0 2px 6px #0003;z-index:2}.avb.no{background:#b7791f}
+.card .ph,.pvs .ph{background:linear-gradient(145deg,var(--g1,#e8ecef),var(--g2,#cfd6dc))!important;color:#fff;flex-direction:column;gap:4px;font-size:54px!important}
+.card .ph small,.pvs .ph small{font-size:11px;font-weight:700;opacity:.9}
+.card .av{display:none}
+.card .ask{font-weight:700}
+.pvs img{background:#fff}
+.mktr{display:flex;gap:8px;margin:12px 0;overflow-x:auto}.mktr span{flex:1 0 auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+/* فيديو شرح «مش لاقي» */
+.rqv{background:linear-gradient(145deg,#0f2b3d,#1b5e7b);color:#fff;border-radius:20px;padding:16px 12px 12px;margin:0 0 10px;position:relative;overflow:hidden}
+.rqv h4{margin:0 0 10px;font-size:15px;text-align:center}
+.rqs{display:flex;justify-content:space-around;align-items:flex-start;gap:4px;text-align:center}
+.rqs>div{flex:1;font-size:12px;line-height:1.5;opacity:.45;animation:rqa 6s infinite}
+.rqs>div:nth-child(2){animation-delay:2s}.rqs>div:nth-child(3){animation-delay:4s}
+.rqs i{display:flex;margin:0 auto 6px;width:58px;height:58px;border-radius:18px;background:#ffffff1f;align-items:center;justify-content:center;font-style:normal;font-size:30px}
+.rqs b{display:block;font-size:13px}
+@keyframes rqa{0%,5%{opacity:.45;transform:scale(1)}10%,30%{opacity:1;transform:scale(1.07)}36%,100%{opacity:.45;transform:scale(1)}}
+.rqs>div:nth-child(1) i{animation:rqs1 6s infinite}
+@keyframes rqs1{0%,8%{box-shadow:0 0 0 0 #fff0}15%{box-shadow:0 0 0 8px #ffffff40}30%,100%{box-shadow:0 0 0 0 #fff0}}
+.rqbar{height:4px;background:#ffffff30;border-radius:4px;margin-top:12px;overflow:hidden}.rqbar:after{content:"";display:block;height:100%;background:#7fe3a5;animation:rqb 6s linear infinite}
+@keyframes rqb{from{width:0}to{width:100%}}
+.reqbtn{background:linear-gradient(135deg,var(--accent),#0f2b3d)!important;color:#fff!important;border:0!important;box-shadow:0 6px 18px #0003}.reqbtn small{color:#ffffffcc!important}
+</style>
+<script>
+/* ميكانيزم — تحسينات المتجر (أيقونات الأقسام، كروت، فيديو شرح، صفحة المنتج) */
+(function(){
+const SK=[[/دلف|ألمني|المني|المونيوم/,'🗄️','#5b7c99','#2f4b66'],[/مقبض|يد|مقابض/,'🚪','#c0883b','#7a4e17'],[/مفصل|مفصلات|هنج/,'🔩','#6b7280','#374151'],[/مسطر|سلة|سلك|رف|شبك/,'🧺','#3d8f8f','#1e5656'],[/درج|ادراج|أدراج|بامبو|مجرى|ريل/,'🗃️','#a0764a','#5e3f1d'],[/اضاء|إضاء|ليد|لمب|نور/,'💡','#d9a21b','#8a5e00'],[/مطبخ|دريسنج|غرف/,'🍽️','#c26a4a','#7a3320'],[/ستانلس|استانلس|ستانليس/,'✨','#7b8794','#3e4c59'],[/سلايد|جرار|باب|زجاج/,'🪟','#3f7cac','#1d4565'],[/مسمار|برغي|ترس|عدة|أدوات|ادوات/,'🛠️','#8a6d3b','#4e3b17']];
+const pick=n=>{n=String(n||'');for(const k of SK)if(k[0].test(n))return k;const c=['#4a7c8c','#2c4f5e'];return['',n?'🔧':'🔧',c[0],c[1]]};
+const _sa=secArt;secArt=function(s){if(s.img)return _sa(s);const k=pick(s.name);return `<div class="im g" style="--g1:${k[2]};--g2:${k[3]};width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span>${k[1]}</span></div>`};
+const _c=card;card=function(p){const k=pick((byId(S.sections,p.sec)||{}).name),ok=stockOk(p);let h=_c(p);
+ h=h.replace('class="mainimg"','class="mainimg" loading="lazy" decoding="async"').replace('<div class="ph">🔧</div>',`<div class="ph" style="--g1:${k[2]};--g2:${k[3]}">${k[1]}<small>الصورة قريباً</small></div>`);
+ return h.replace(/(<div class="imw">[\s\S]*?)(<button class="hrt)/,`$1<span class="avb${ok?'':' no'}">${ok?'متوفر':'بالحجز'}</span>$2`)};
+/* صفحة المنتج: شريط ثقة */
+const _po=pvOpen;pvOpen=function(id,np){_po(id,np);const m=document.querySelector('#pv .pvi .pvmeta');if(m&&!document.querySelector('#pv .mktr'))m.insertAdjacentHTML('afterend','<div class="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>')};
+/* فيديو شرح مصغّر */
+const VID='<div class="rqv" aria-hidden="true"><h4>إزاي تطلب منتج مش موجود؟ 3 خطوات بس</h4><div class="rqs"><div><i>📷</i><b>١) صوّره</b>صوّر المنتج أو اختار صورة من موبايلك</div><div><i>📤</i><b>٢) ابعته</b>اكتب اسمك ورقمك واضغط إرسال</div><div><i>💬</i><b>٣) هنرد عليك</b>على الواتساب نقولك متوفر ولا لأ وبكام</div></div><div class="rqbar"></div></div>';
+const _rq=reqOpen;reqOpen=function(){_rq();const mc=document.querySelector('#modal .mc h3');if(mc&&!document.querySelector('#modal .rqv'))mc.insertAdjacentHTML('afterend',VID)};
+const _pm=pubMain;pubMain=function(){_pm();const r=document.getElementById('reqHome');if(r&&!r.querySelector('.rqv'))r.insertAdjacentHTML('afterbegin',VID)};
+setTimeout(()=>{try{const r=document.getElementById('reqHome');if(r&&!r.querySelector('.rqv'))r.insertAdjacentHTML('afterbegin',VID)}catch(e){}},900);
 })();
 </script>
 
