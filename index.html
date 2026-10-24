@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-15';
+const APP_VER='2026-10-23-16';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2852,7 +2852,25 @@ window.reqClose=async function(id){let {error}=await sbx().from('web_requests').
  if(wb)wb.insertAdjacentHTML('afterend','<h2 style="margin:22px 0 10px">📷 طلبات بالصور <span id="rqCount" class="badge red" style="display:none"></span></h2><p style="color:var(--muted);margin:-4px 0 10px;font-size:13px">منتجات العملاء بعتوا صورها لأنهم مالقوهاش في الموقع</p><div id="rqBody"></div>');
  let ban=document.getElementById('woBanner');
  if(ban)ban.insertAdjacentHTML('afterend','<button id="rqBanner" onclick="showPage(\'weborders\');setTimeout(()=>document.getElementById(\'rqBody\').scrollIntoView({behavior:\'smooth\'}),200)" style="display:none;width:100%;margin-bottom:14px;background:#eef6ff;color:#0b4a8b;border:1px solid #9cc3ef;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
-const _lo=loadOrders;loadOrders=async function(f){let r=await _lo(f);loadReqs();return r};
+/* ---------- 🛠️ طلبات تجهيز من الموقع (استانلس / بامبو / دلفة بمقاسات) ---------- */
+let CUS=[],cusAll=false;
+const CUS_K={steel:'🔩 استانلس',bamboo:'🎍 بامبو',delf:'🚪 دلفة'};
+async function loadCustom(){if(!sbx()||!window.mkT_user)return;let {data,error}=await sbx().from('web_custom_orders').select('*').order('created_at',{ascending:false}).limit(100);if(error)return;
+ CUS=data||[];let n=CUS.filter(r=>r.status==='new').length;
+ let c=document.getElementById('cuCount');if(c){c.textContent=n;c.style.display=n?'':'none'}renderCustom()}
+window.loadCustom=loadCustom;
+function renderCustom(){let el=document.getElementById('cuBody');if(!el)return;let L=cusAll?CUS:CUS.filter(r=>r.status==='new');
+ el.innerHTML=(L.length?L.map(r=>`<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b style="font-size:17px">${esc(r.name)}</b> — <span dir="ltr">${esc(r.phone)}</span><div style="color:var(--muted);font-size:12px">${esc(new Date(r.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div><span class="badge ${r.status==='new'?'red':''}">${r.status==='new'?'جديد':r.status==='opened'?'اتفتح كأوردر':esc(r.status)}</span></div>
+  <div style="margin-top:8px;font-weight:700">${CUS_K[r.kind]||esc(r.kind)}</div>${r.summary?`<p style="margin:6px 0 0;white-space:pre-line">${esc(r.summary)}</p>`:''}${r.note?`<p style="margin:6px 0 0;white-space:pre-line">📝 ${esc(r.note)}</p>`:''}
+  ${r.img?`<a href="${esc(r.img)}" target="_blank" rel="noopener"><img src="${esc(r.img)}" style="max-width:100%;max-height:220px;object-fit:contain;margin-top:10px;border-radius:12px;border:1px solid var(--border);background:#fff" loading="lazy"></a>`:''}
+  <div class="btnrow" style="margin-top:10px">${r.status==='new'?`<button class="primary" onclick="cusOpen('${r.id}')">🛠️ افتح كأوردر</button><button class="secondary" onclick="cusSkip('${r.id}')">✔ اقفل بدون أوردر</button>`:''}<a class="secondary" style="padding:10px 14px;border-radius:10px;text-decoration:none" href="https://wa.me/${esc((String(r.phone||'').replace(/\D/g,'').replace(/^0/,'20')))}" target="_blank" rel="noopener">💬 واتساب</a></div></div>`).join(''):'<div class="card"><div class="empty">مفيش طلبات تجهيز'+(cusAll?'':' جديدة')+'</div></div>')
+  +`<button class="secondary" style="margin-top:4px" onclick="cusToggle()">${cusAll?'اعرض الجديد بس':'اعرض كل الطلبات'}</button>`}
+window.cusToggle=()=>{cusAll=!cusAll;renderCustom()};
+window.cusOpen=function(id){let r=CUS.find(x=>x.id===id);if(!r)return;if(!window.mkWk||!mkWk.openWeb)return toast('نظام الشغل لسه ما اتحمّلش — جرّب بعد ثانية');mkWk.openWeb(r)};
+window.cusSkip=async function(id){let {error}=await sbx().from('web_custom_orders').update({status:'closed'}).eq('id',id);if(error)return toast(error.message);await loadCustom();toast('اتقفل')};
+(function(){let wb=document.getElementById('woBody');
+ if(wb)wb.insertAdjacentHTML('afterend','<h2 style="margin:22px 0 10px">🛠️ طلبات تجهيز من الموقع <span id="cuCount" class="badge red" style="display:none"></span></h2><p style="color:var(--muted);margin:-4px 0 10px;font-size:13px">عملاء حدّدوا مقاسات استانلس أو بامبو أو دلفة من الموقع</p><div id="cuBody"></div>')})();
+const _lo=loadOrders;loadOrders=async function(f){let r=await _lo(f);loadReqs();loadCustom();return r};
 
 /* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
 let lastNew=null;
@@ -6415,7 +6433,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   document.head.appendChild(s);
  }
  function shell(title,backFn){
-  css();
+  WEBLINK=null;css();
   var a=document.getElementById('wkApp');
   if(!a){a=document.createElement('div');a.id='wkApp';document.body.appendChild(a)}
   a.innerHTML='<div class="wkh"><button type="button" class="wkbtn" id="wkBack">'+(backFn?'← رجوع':'')+'</button><h2>'+title+'</h2><button type="button" class="wkbtn d" id="wkX">✕ إغلاق</button></div>'+
@@ -6439,7 +6457,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    if(ORD.length){try{await put(K.ord,ORD);await put(K.cfg,CFG)}catch(e){}}
   }
  }
- async function saveOrd(){await put(K.ord,ORD)}
+ var WEBLINK=null;
+ async function saveOrd(){await put(K.ord,ORD);if(WEBLINK){var w=WEBLINK,o=ORD[ORD.length-1];WEBLINK=null;if(o&&!o.src){o.src={web:w.id,img:w.img||''};await put(K.ord,ORD);try{await window.mkSB.from('web_custom_orders').update({status:'opened',work_id:o.id}).eq('id',w.id)}catch(e){}if(window.loadCustom)window.loadCustom()}}}
  async function saveCfg(){await put(K.cfg,CFG)}
 
  /* ---------- الرسم ---------- */
@@ -6994,9 +7013,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  }
  /* ---------- النموذج ---------- */
  function fi(id,label,val,extra,type){return '<div class="wkf"><label>'+label+'</label><input id="'+id+'" '+(type?'type="'+type+'" ':'')+'value="'+esc(val)+'" '+(extra||'')+'></div>'}
- function viewForm(id,type){
+ function viewForm(id,type,pre){
   var old=id?ORD.find(function(x){return x.id===id}):null;
   var o=old?JSON.parse(JSON.stringify(old)):{type:type||'دلفة',date:today(),customer:'',phone:'',crafter:'',kind:'hinge',w:'',h:'',qty:1,hinges:3,hingePos:'',side:'right',color:'',profile:'',mats:[{n:'',q:'',p:''}],fee:'',cost:'',price:'',paid:'',notes:'',stage:0,hist:[],handle:'one',rod:'blum',rodP:'',rodH:'',wOff:'11',wWing:'9',wLen:'6'};
+  if(!old&&pre)Object.assign(o,pre);
   if(!o.handle)o.handle='one';if(!o.rod)o.rod=rodTypeDefs()[0].k;if(o.handle==='frame')o.kind='frame';if(o.type==='جرار'&&o.kind!=='slide'&&o.kind!=='frame')o.kind='slide';if(o.type==='استانلس'||o.type==='أخرى')o.kind='other';
   var b=shell(old?'تعديل '+esc(ordNo(old)):'➕ أوردر جديد',old?function(){viewOrder(id)}:viewOrders);mark(old?'ord':'new');
   var sups=contacts().filter(function(c){return c.type==='مورد'}),custs=contacts().filter(function(c){return c.type==='عميل'});
@@ -7357,6 +7377,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
  function viewBamboo(id,pre){
   var old=id?ORD.find(function(x){return x.id===id}):null;
   var m=old&&old.bamboo?JSON.parse(JSON.stringify(old.bamboo)):{n:'',a:'',b:'',c:'',lip:'',div:'',kind2:'طبيعي',q:1};
+  if(!old&&pre&&pre.bamboo)m=Object.assign(m,pre.bamboo);
   var b=shell(old?'🎍 تعديل '+esc(ordNo(old)):'🎍 أوردر بامبو',old?function(){viewOrder(id)}:viewOrders);mark('bamboo');
   b.innerHTML='<div class="wkc"><h3>القطعة</h3><div class="wkg">'+fi('bN','الاسم (مثلا: درج بامبو)',m.n)+
    '<div class="wkf"><label>النوع</label><select id="bKind"><option'+(m.kind2==='طبيعي'?' selected':'')+'>طبيعي</option><option'+(m.kind2==='صناعي'?' selected':'')+'>صناعي</option></select></div>'+
@@ -7902,7 +7923,18 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   var bo=document.getElementById('ofiO');if(bo)bo.onclick=function(){var x=ORD.find(function(z){return z.id===o.orderId});if(x){closeModal();viewOrder(x.id)}else openOrderNo(o.order)};
   document.getElementById('ofiF').onclick=async function(){closeModal();await loadAll();NS=1;viewOff(o.code)}}
  window.mkWkOrderNo=openOrderNo;window.mkWkOffInfo=offInfo;
- window.mkWk={go:async function(k){if(!isAdm()){toast('الشاشة دي للمدير بس');return}await loadAll();NS=1;({ord:viewOrders,new:function(){viewForm(null,'دلفة')},steel:function(){viewSteel(null)},bamboo:function(){viewBamboo(null)},off:function(){viewOff()},rods:viewRods,forf:viewForf,disp:viewDisp,exp:viewExps}[k]||viewOrders)()},menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
+ async function openWeb(r){
+  if(!isAdm()){toast('الشاشة دي للمدير بس');return}
+  await loadAll();NS=1;var sp=r.spec||{},w=num(sp.w),h=num(sp.h),q=num(sp.q)||1,cu=r.name||'',ph=r.phone||'',note=(r.summary||'')+(r.note?'\n'+r.note:'');
+  if(r.kind==='steel'){var t=num(sp.t),hf=num(sp.hf),hb=num(sp.hb);
+   viewSteel(null,{customer:cu,phone:ph,body:note,pieces:[{n:'حماية باب',a:w,b:hf+t+hb,q:q,shape:'مسطحة',bends:2,flange:3}],note:''})}
+  else if(r.kind==='bamboo'){
+   viewBamboo(null,{customer:cu,phone:ph,bamboo:{n:'درج بامبو',kind2:sp.kind==='صناعي'?'صناعي':'طبيعي',a:w,b:h,c:num(sp.l)||'',lip:'',div:sp.split==='yes'?(num(sp.dv)||''):'',q:q}})}
+  else{var sl=sp.type==='slide',hd=sp.handle==='both'?'both':sp.handle==='none'?'none':'one';
+   var nt=note+'\nخامة: '+(sp.mat||'')+(sp.handle==='one'?'\nالمقبض ناحية: '+(sp.hside==='left'?'الشمال':'اليمين'):'')+(sl?(sp.wheel==='yes'?'\nيتخلّع لفتحة العجلة':''):(sp.drill==='yes'?'\nتخريم مفصلات':'\nمن غير تخريم'));
+   viewForm(null,sl?'جرار':'دلفة',{customer:cu,phone:ph,kind:sl?'slide':'hinge',w:w||'',h:h||'',qty:q,handle:hd,side:sp.hinge==='left'?'left':'right',hinges:sl?'':(num(sp.hn)||''),notes:nt})}
+  WEBLINK={id:r.id,img:r.img||''}}
+ window.mkWk={openWeb:openWeb,go:async function(k){if(!isAdm()){toast('الشاشة دي للمدير بس');return}await loadAll();NS=1;({ord:viewOrders,new:function(){viewForm(null,'دلفة')},steel:function(){viewSteel(null)},bamboo:function(){viewBamboo(null)},off:function(){viewOff()},rods:viewRods,forf:viewForf,disp:viewDisp,exp:viewExps}[k]||viewOrders)()},menu:open,leaf:open,disp:open,exps:open,steel:function(){loadAll().then(function(){NS=1;viewSteel(null)})},stainlessFrom:stainlessFrom,open:open};
 })();
 </script>
 
