@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-22';
+const APP_VER='2026-10-23-23';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2876,6 +2876,24 @@ window.cusSkip=async function(id){let {error}=await sbx().from('web_custom_order
  if(wb)wb.insertAdjacentHTML('afterend','<h2 style="margin:22px 0 10px">🛠️ طلبات تجهيز من الموقع <span id="cuCount" class="badge red" style="display:none"></span></h2><p style="color:var(--muted);margin:-4px 0 10px;font-size:13px">عملاء حدّدوا مقاسات استانلس أو بامبو أو دلفة من الموقع</p><div id="cuBody"></div>')})();
 const _lo=loadOrders;loadOrders=async function(f){let r=await _lo(f);loadReqs();loadCustom();return r};
 setTimeout(loadCustom,4000);setInterval(()=>{if(!document.hidden)loadCustom()},30000);
+/* ---------- 🔔 شريط التنبيهات الدايم: ثابت فوق على أي شاشة، بيزق المحتوى لتحت (مايداريش حاجة) ومايختفيش غير لما الطلبات تتعالج ---------- */
+(function(){
+ let st=document.createElement('style');st.textContent='#mkNb{position:fixed;top:0;left:0;right:0;z-index:99990;display:none;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff4d6;border-bottom:2px solid #f0b46a;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;direction:rtl;box-shadow:0 2px 10px #0002}#mkNb button{flex:none;border:0;border-radius:99px;padding:8px 13px;font-size:14px;font-weight:700;background:#fff;color:#7a4a00;border:1px solid #f0b46a;white-space:nowrap}#mkNb button b{background:#d62d20;color:#fff;border-radius:99px;padding:1px 8px;margin-inline-start:4px}body.hasNb{padding-top:var(--nbH,48px)!important}body.hasNb #wkApp{top:var(--nbH,48px)!important}';document.head.appendChild(st);
+ function items(){let L=[];
+  let wo=(typeof WO!=='undefined'&&WO.list||[]).filter(o=>o.status==='new').length;if(wo)L.push(['🛒 طلب من الموقع',wo,()=>showPage('weborders')]);
+  let cu=(typeof CUS!=='undefined'?CUS:[]).filter(o=>o.status==='new').length;if(cu)L.push(['🛠️ طلب تجهيز',cu,()=>{showPage('weborders');setTimeout(()=>{let e=document.getElementById('cuBody');e&&e.scrollIntoView({behavior:'smooth'})},250)}]);
+  let rq=(typeof RQS!=='undefined'?RQS:[]).filter(o=>o.status==='new').length;if(rq)L.push(['📷 طلب بالصور',rq,()=>{showPage('weborders');setTimeout(()=>{let e=document.getElementById('rqBody');e&&e.scrollIntoView({behavior:'smooth'})},250)}]);
+  if(window.mkWaCnt)L.push(['💬 صورة واتساب',window.mkWaCnt,()=>window.mkWaList&&window.mkWaList()]);
+  return L}
+ window.mkBar=function(){let L=items(),el=document.getElementById('mkNb');
+  if(!L.length||!window.mkT_user){if(el)el.style.display='none';document.body.classList.remove('hasNb');return}
+  if(!el){el=document.createElement('div');el.id='mkNb';document.body.appendChild(el)}
+  el.innerHTML=L.map((x,i)=>'<button type="button" data-i="'+i+'">'+x[0]+'<b>'+x[1]+'</b></button>').join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>L[+b.dataset.i][2]());
+  el.style.display='flex';document.body.classList.add('hasNb');
+  document.documentElement.style.setProperty('--nbH',el.offsetHeight+'px')};
+ setInterval(()=>window.mkBar(),2000);window.addEventListener('resize',()=>window.mkBar());
+})();
 
 /* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
 let lastNew=null;
@@ -5034,7 +5052,7 @@ async function waMiss(id,tell){const x=WAP[id];try{let th='';try{th=await new Pr
 const shopN=()=>(db.settings&&(db.settings.companyName||db.settings.name))||'';
 async function waIgn(id){await waMark(id,'ignored');waList()}
 /* زرار عايم بعدد الصور الجديدة + تنبيه لما توصل صورة */
-function chip(){let c=document.getElementById('waChip');if(!WCNT){if(c)c.remove();return}if(!c){c=document.createElement('button');c.id='waChip';c.type='button';c.className='primary';c.style.cssText='position:fixed;left:14px;bottom:84px;z-index:9990;border-radius:99px;padding:10px 16px;box-shadow:0 8px 24px #0003;font-weight:700';c.onclick=waList;document.body.appendChild(c)}c.textContent='📷 '+WCNT+' صورة من الواتساب'}
+function chip(){let c=document.getElementById('waChip');if(c)c.remove();window.mkWaCnt=WCNT||0;window.mkWaList=waList;if(window.mkBar)window.mkBar()}
 async function poll(){if(!OWNER||!SBc()||!window.mkT_user)return;try{const r=await SBc().from('wa_photos').select('id',{count:'exact',head:true}).eq('status','new');if(r.error)return;const n=r.count||0;if(n>WCNT&&WCNT>=0&&window._waPolled){toast('📷 عميل بعت صورة قطعة على الواتساب');try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.08;o.start();setTimeout(()=>{o.stop();a.close()},300)}catch(e){}}window._waPolled=1;WCNT=n;chip()}catch(e){}}
 if(OWNER){setTimeout(poll,4000);setInterval(poll,45000)}
 
