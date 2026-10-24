@@ -1,0 +1,82 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>ميكانيزم — المنتجات بالتفصيل</title><meta name="description" content="اتفرج على منتجات ميكانيزم بالتفصيل: صور ومواصفات بالتمرير"><meta name="robots" content="noindex"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#fff;font-family:Cairo,Tahoma,sans-serif;color:#111}.top{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eee}.top b{font-family:"Reem Kufi",Cairo;font-size:22px;color:#a8741a}.top a{color:#667;text-decoration:none;font-size:14px}#list{max-width:900px;margin:0 auto;padding:22px 16px 60px}#list h1{font-family:"Reem Kufi",Cairo;font-size:30px;margin:0 0 6px}#list p{color:#667;margin:0 0 18px}.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}.g a{text-decoration:none;color:inherit;background:#faf8f3;border-radius:18px;padding:10px;text-align:center;border:1px solid #eee4d0}.g img{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:12px}.g span{display:block;font-weight:700;font-size:13px;margin-top:6px;line-height:1.5}
+/* وضع «القصة» — عرض المنتج بالتمرير على طريقة المواقع الكبيرة */
+.mkbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:10px 0;padding:14px;border:0;border-radius:16px;background:linear-gradient(135deg,#10202c,#1b3a4d);color:#f6d77a;font:800 16px Cairo,sans-serif;box-shadow:0 6px 18px #0f2b3d55;cursor:pointer}
+#mkSt{position:fixed;inset:0;z-index:3000;background:#fff;overflow-y:auto;overscroll-behavior:contain;direction:rtl;font-family:Cairo,Tahoma,sans-serif;color:#111;display:none}
+#mkSt.on{display:block}
+#mkSt .x{position:fixed;top:12px;left:12px;z-index:5;width:42px;height:42px;border-radius:50%;border:0;background:#111c;color:#fff;font-size:20px;backdrop-filter:blur(6px)}
+#mkSt .bar{position:fixed;top:0;right:0;left:0;height:3px;z-index:5;background:#0001}#mkSt .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f6d77a,#a8741a)}
+#mkSt .intro{height:240vh;position:relative}
+#mkSt .pin{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;padding:0 20px}
+#mkSt .eb{font-size:13px;letter-spacing:.18em;color:#a8741a;font-weight:700;margin-bottom:10px}
+#mkSt h1{font-family:'Reem Kufi',Cairo,sans-serif;font-size:clamp(34px,9vw,72px);line-height:1.15;margin:0 0 8px;max-width:900px;will-change:transform,opacity}
+#mkSt .sub{color:#667;font-size:16px;margin:0 0 18px;will-change:opacity}
+#mkSt .hero-i{width:min(86vw,520px);aspect-ratio:1;object-fit:contain;will-change:transform;mix-blend-mode:multiply}
+#mkSt .hint{position:absolute;bottom:22px;color:#889;font-size:13px;animation:mkh 1.6s infinite}@keyframes mkh{50%{transform:translateY(6px)}}
+#mkSt .seq{position:relative}
+#mkSt .stage{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#fff 40%,#f3f1ec)}
+#mkSt .frames{position:relative;width:min(88vw,560px);aspect-ratio:1}
+#mkSt .frames img{mix-blend-mode:multiply;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;will-change:opacity,transform}
+#mkSt .cap{position:absolute;bottom:7vh;right:0;left:0;text-align:center;padding:0 20px}
+#mkSt .cap .n{font-size:12px;color:#a8741a;letter-spacing:.2em;font-weight:700}
+#mkSt .cap .t{font-family:'Reem Kufi',Cairo,sans-serif;font-size:clamp(22px,6vw,40px);transition:opacity .35s,transform .35s;min-height:1.4em}
+#mkSt .cap .t.o{opacity:0;transform:translateY(10px)}
+#mkSt .cap .v{font-size:15px;color:#667;transition:opacity .35s;min-height:1.6em}
+#mkSt .dots{position:absolute;top:50%;right:12px;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}
+#mkSt .dots i{width:6px;height:6px;border-radius:50%;background:#0003;transition:all .3s}#mkSt .dots i.on{background:#a8741a;height:18px;border-radius:4px}
+#mkSt .specs{padding:70px 18px 40px;max-width:760px;margin:0 auto}
+#mkSt .specs h2{font-family:'Reem Kufi',Cairo,sans-serif;font-size:30px;text-align:center;margin:0 0 20px}
+#mkSt .sp{display:flex;justify-content:space-between;gap:12px;padding:15px 4px;border-bottom:1px solid #e6e2d8;opacity:0;transform:translateY(24px);transition:all .6s}#mkSt .sp.in{opacity:1;transform:none}
+#mkSt .sp b{color:#a8741a}#mkSt .sp span{font-weight:700;text-align:left}
+#mkSt .cta{display:flex;gap:10px;flex-wrap:wrap;padding:10px 18px 90px;max-width:760px;margin:0 auto}
+#mkSt .cta a{flex:1 1 200px;text-align:center;text-decoration:none;font-weight:800;padding:16px;border-radius:16px;background:#25D366;color:#fff}#mkSt .cta a.g{background:linear-gradient(135deg,#f6d77a,#d9a73a,#a8741a);color:#2a1c04}
+</style></head><body><div class="top"><b>ميكانيزم</b><a href="shop.html">← رجوع للمتجر</a></div><div id="list"><h1>اتفرج على المنتجات</h1><p>اختار منتج وكمّل تمرير لتشوف تفاصيله</p><div class="g" id="g"></div></div><script>
+(function(){
+let root,ids;
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+function specs(d){return String(d||'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.search(/[:：]/);return i>0&&i<40?[x.slice(0,i).trim(),x.slice(i+1).trim()]:[x,'']})}
+function build(p){
+ let im=(p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]));
+ if(im.length>12){const k=im.length/12;im=Array.from({length:12},(_,i)=>im[Math.floor(i*k)])}
+ const sp=specs(p.desc),kv=sp.filter(x=>x[1]),sec=byId(S.sections,p.sec)||{};
+ const steps=(kv.length?kv:sp).slice(0,Math.max(im.length,1));
+ root.innerHTML=`<button class="x" aria-label="إغلاق">✕</button><div class="bar"><i></i></div>
+ <section class="intro"><div class="pin"><div class="eb">${esc(sec.name||S.name)}</div><h1>${esc(p.name)}</h1><p class="sub">${p.code?'كود '+esc(p.code):'من ميكانيزم'}</p>${im[0]?`<img class="hero-i" src="${im[0]}" alt="">`:''}<div class="hint">⌄ كمّل لتحت</div></div></section>
+ ${im.length>1?`<section class="seq" style="height:${im.length*85+100}vh"><div class="stage"><div class="frames">${im.map(x=>`<img src="${x}" alt="" loading="lazy">`).join('')}</div><div class="dots">${im.map(()=>'<i></i>').join('')}</div><div class="cap"><div class="n"></div><div class="t"></div><div class="v"></div></div></div></section>`:''}
+ <section class="specs"><h2>التفاصيل</h2>${sp.map(x=>`<div class="sp"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')||'<p style="text-align:center;color:#667">اسأل عن تفاصيل المنتج على الواتساب</p>'}</section>
+ <div class="cta"><a href="${waUrl('السلام عليكم، عايز أطلب: '+p.name+(p.code?' (كود '+p.code+')':''))}" target="_blank" rel="noopener">📲 اطلب على الواتساب</a><a class="g" href="${waUrl('السلام عليكم، ده بكام؟\n'+p.name)}" target="_blank" rel="noopener">💬 اسأل عن السعر</a></div>`;
+ root.scrollTop=0;root._d={im,steps};
+ root.querySelector('.x').onclick=close;tick()}
+function tick(){if(!root||!root.classList.contains('on'))return;const H=root.clientHeight,d=root._d||{im:[],steps:[]};
+ root.querySelector('.bar i').style.width=(root.scrollTop/Math.max(1,root.scrollHeight-H)*100)+'%';
+ const intro=root.querySelector('.intro');if(intro){const p=cl(root.scrollTop/(intro.offsetHeight-H),0,1);
+  const h=root.querySelector('h1'),i=root.querySelector('.hero-i'),s=root.querySelector('.sub'),hint=root.querySelector('.hint');
+  h.style.transform=`translateY(${-p*60}px) scale(${1-p*.15})`;h.style.opacity=1-p*1.1;s.style.opacity=1-p*1.4;hint.style.opacity=1-p*3;
+  if(i)i.style.transform=`scale(${.72+p*.5}) translateY(${(1-p)*10}px) rotate(${(p-.5)*-6}deg)`}
+ const seq=root.querySelector('.seq');if(seq){const r=seq.getBoundingClientRect(),prog=cl(-r.top/(seq.offsetHeight-H),0,1),n=d.im.length,pos=prog*(n-1);
+  root.querySelectorAll('.frames img').forEach((im,k)=>{const dist=Math.abs(k-pos),o=cl(1-dist*1.7,0,1);im.style.opacity=o;im.style.transform=`scale(${1+(k-pos)*-.05+.04*o}) translateX(${(k-pos)*-26}px)`});
+  const idx=Math.round(pos),st=d.steps[Math.min(idx,d.steps.length-1)]||['',''];
+  root.querySelectorAll('.dots i').forEach((e,k)=>e.classList.toggle('on',k===idx));
+  const t=root.querySelector('.cap .t'),v=root.querySelector('.cap .v'),nn=root.querySelector('.cap .n');
+  if(root._k!==idx){root._k=idx;t.classList.add('o');setTimeout(()=>{nn.textContent=String(idx+1).padStart(2,'0')+' / '+String(n).padStart(2,'0');t.textContent=st[1]?st[0]:'';v.textContent=st[1]||st[0];t.classList.remove('o')},180)}}
+ root.querySelectorAll('.sp:not(.in)').forEach(e=>{if(e.getBoundingClientRect().top<H*.92)e.classList.add('in')})}
+function open(id){const p=byId(S.products,id);if(!p)return;if(!root){root=document.createElement('div');root.id='mkSt';document.body.appendChild(root);
+  let q=0;root.addEventListener('scroll',()=>{if(!q){q=1;requestAnimationFrame(()=>{q=0;tick()})}},{passive:true});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});window.addEventListener('resize',tick)}
+ document.getElementById('list').style.display='none';build(p);root.classList.add('on');document.documentElement.style.overflow='hidden';tick()}
+function close(){if(!root)return;root.classList.remove('on');root.innerHTML='';document.documentElement.style.overflow='';history.replaceState(null,'',location.pathname);document.getElementById('list').style.display=''}
+window.mkOpen=open;})();
+</script>
+<script>
+const SB_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',SB_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+let S={products:[],sections:[]};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byId=(a,id)=>(a||[]).find(x=>x.id===id);
+function waUrl(t){let ph=String(S.phone||'01042383986').replace(/\D/g,'');if(ph[0]==='0')ph='20'+ph.slice(1);return 'https://wa.me/'+ph+(t?'?text='+encodeURIComponent(t):'')}
+const PW=['1szsarn','8gcncur','8q3slf8','ib1jif9','ixm6cp4'];
+(async()=>{try{const r=await fetch(SB_URL+'/rest/v1/site_content?id=eq.main&select=data',{headers:{apikey:SB_KEY}});S=(await r.json())[0].data}catch(e){document.getElementById('g').innerHTML='<p>مفيش اتصال، جرّب تاني</p>';return}
+ S.products=(S.products||[]).map(p=>{const im=p.imgs&&p.imgs.length?p.imgs.slice():(p.img?[p.img]:[]);if(PW.includes(p.id))im.unshift('pw/'+p.id+'.webp?v=1');return Object.assign({},p,{imgs:im,img:im[0]})});
+ document.getElementById('g').innerHTML=S.products.map(p=>`<a href="?p=${p.id}">${p.img?`<img src="${p.img}" alt="" loading="lazy">`:''}<span>${esc(p.name)}</span></a>`).join('');
+ document.getElementById('g').onclick=e=>{const a=e.target.closest('a[href^="?p="]');if(a){e.preventDefault();history.replaceState(null,'',a.getAttribute('href'));mkOpen(new URL(a.href).searchParams.get('p'))}};
+ const q=new URLSearchParams(location.search).get('p');if(q)mkOpen(q)})();
+</script>
+</body></html>
