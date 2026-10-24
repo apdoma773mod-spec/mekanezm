@@ -137,8 +137,27 @@ async function render(inFile, job, D, info, outFile, prog) {
     /* حجم الملف تحت ٤٥ ميجا (حد التخزين): البت ريت بالدقيقة */
     const kbps = Math.max(600, Math.min(8000, Math.floor(42 * 8 * 1024 / Math.max(outDur, 1))));
     const args = ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-'];
-    const gapExpr = st.gaps.slice(0, 120).map(g => `between(t,${g[0].toFixed(3)},${g[1].toFixed(3)})`).join('+');
-    if (info.hasAudio) args.push('-i', inFile, '-filter_complex', st.gaps.length ? `[1:a]aselect='not(${gapExpr})',asetpts=N/SR/TB[a]` : '[1:a]anull[a]', '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '128k');
+    /* كل القطعات (من غير حد) في ملف فلتر عشان الصوت يفضل مظبوط مع الصورة حتى لو القطعات كتير */
+    const gapExpr = st.gaps.map(g => `between(t,${g[0].toFixed(3)},${g[1].toFixed(3)})`).join('+');
+    const fscript = path.join(tmp, 'audio.filter');
+    const base = st.gaps.length ? `[1:a]aselect='not(${gapExpr})',asetpts=N/SR/TB` : '[1:a]anull';
+    /* أصوات خفيفة مع الرسومات: «بوب» للكروت والملصقات و«ووش» لعناوين الأقسام */
+    const sfx = info.hasAudio ? await page.evaluate(() => mkzSmart._test.sfx()) : [];
+    const pops = sfx.filter(x => x.k === 'pop'), whs = sfx.filter(x => x.k !== 'pop');
+    let graph = base + ',aresample=44100,aformat=channel_layouts=stereo[m]';
+    if (sfx.length) {
+      const popF = path.join(tmp, 'pop.wav'), whF = path.join(tmp, 'whoosh.wav');
+      run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', "aevalsrc='0.7*sin(2*PI*(1400-900*t/0.09)*t)*exp(-t*38)|0.7*sin(2*PI*(1400-900*t/0.09)*t)*exp(-t*38)':s=44100:d=0.16", popF]);
+      run('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'anoisesrc=d=0.5:c=pink:a=0.6:r=44100', '-af', 'highpass=f=500,lowpass=f=7000,afade=t=in:d=0.2,afade=t=out:st=0.22:d=0.28,aformat=channel_layouts=stereo', whF]);
+      const parts = [], labels = ['[m]'];
+      const add = (L, idx, tag, vol) => { if (!L.length) return; parts.push(`[${idx}:a]volume=${vol},asplit=${L.length}${L.map((_, i) => `[${tag}${i}]`).join('')}`); L.forEach((x, i) => { const ms = Math.max(0, Math.round(x.t * 1000)); parts.push(`[${tag}${i}]adelay=${ms}|${ms}[${tag}d${i}]`); labels.push(`[${tag}d${i}]`); }); };
+      add(pops, 2, 'p', 0.45); add(whs, 3, 'w', 0.35);
+      graph += ';' + parts.join(';') + ';' + labels.join('') + `amix=inputs=${labels.length}:duration=first:normalize=0[mx]`;
+      graph += ';[mx]loudnorm=I=-14:TP=-1.5:LRA=11[a]';
+      args.push('-i', inFile, '-i', popF, '-i', whF);
+    } else { graph += ';[m]loudnorm=I=-14:TP=-1.5:LRA=11[a]'; if (info.hasAudio) args.push('-i', inFile); }
+    fs.writeFileSync(fscript, graph);
+    if (info.hasAudio) args.push('-filter_complex_script', fscript, '-map', '0:v', '-map', '[a]', '-c:a', 'aac', '-b:a', '160k');
     else args.push('-an');
     args.push('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-maxrate', kbps + 'k', '-bufsize', 2 * kbps + 'k', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart', outFile);
     const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'ignore', 'pipe'] }); let ferr = ''; ff.stderr.on('data', d => { ferr += d; });
@@ -154,7 +173,8 @@ async function render(inFile, job, D, info, outFile, prog) {
       if (Date.now() - last > 4000) { last = Date.now(); await prog(40 + Math.round(n / keep.length * 50), 'برسم الفيديو… ' + Math.round(n / keep.length * 100) + '%'); }
     }
     ff.stdin.end(); await done;
-    return { frames: keep.length, dur: outDur, kbps };
+    const stats = await page.evaluate(() => { const s = mkzSmart.state(); return { seg: s.CAP.length, ev: s.EV.filter(e => e.on).length, cut: s.GAPS.reduce((a, g) => a + g[1] - g[0], 0) }; });
+    return { frames: keep.length, dur: outDur, kbps, stats };
   } finally { await browser.close(); srv.close(); fs.rmSync(framesDir, { recursive: true, force: true }); }
 }
 
@@ -165,7 +185,8 @@ async function runJob(inFile, job, outFile, prog) {
   let D = job.D || (job.spec && job.spec.D);
   if (!D) { if (!info.hasAudio) D = { title: '', seg: [], ev: [], dur: info.dur }; else { await prog(8, 'بسحب الصوت…'); D = await analyze(inFile, job.spec || {}, prog); } }
   D.dur = D.dur || info.dur;
-  return render(inFile, job, D, info, outFile, prog);
+  const r = await render(inFile, job, D, info, outFile, prog);
+  return { ...r, D };
 }
 
 /* ---------- الطابور ---------- */
@@ -187,7 +208,8 @@ async function main() {
       const buf = fs.readFileSync(outFile);
       const { error } = await sb.storage.from('video-jobs').uploadToSignedUrl(up.path, up.token, new Blob([buf], { type: 'video/mp4' }), { contentType: 'video/mp4', upsert: true });
       if (error) throw new Error('رفع الفيديو الجاهز فشل: ' + error.message);
-      await api('done', { id: job.id, out_path: up.path });
+      const st = r.stats || {};
+      await api('done', { id: job.id, out_path: up.path, ai: { title: r.D.title, seg: r.D.seg, ev: r.D.ev, dur: r.D.dur, people: r.D.people }, note: `جاهز — ${Math.round(r.dur)} ثانية • ${st.ev || 0} رسمة/كارت • اتشال ${Math.round(st.cut || 0)} ثانية سكتات وإعادات` });
       log('✔ خلصت', (buf.length / 1048576).toFixed(1) + ' ميجا', r.frames + ' فريم');
     } catch (e) {
       log('❌', e.message);
