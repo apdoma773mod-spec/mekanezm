@@ -1688,7 +1688,7 @@ function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>
  <div style="position:relative"><input id="wPin" type="text" inputmode="numeric" placeholder="الرقم السري" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="mkpin-nofill" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc;padding-left:56px"><button type="button" onclick="(function(b){var i=document.getElementById('wPin'),on=i.style.webkitTextSecurity!=='none';i.style.webkitTextSecurity=i.style.textSecurity=on?'none':'disc';b.textContent=on?'🙈':'👁';i.focus()})(this)" style="position:absolute;left:6px;top:6px;width:44px;height:40px;padding:0;background:none;border:0;font-size:20px;box-shadow:none;color:inherit;margin:0">👁</button></div>
  <button type="button" onclick="whoGo()">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="whoStart()">رجوع</button><div id="wErr" class="werr"></div></div>`;
- setTimeout(()=>{let p=document.getElementById('wPin');if(p){p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
+ setTimeout(()=>{let p=document.getElementById('wPin');if(p){/iP(hone|ad|od)/.test(navigator.userAgent)||p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
 async function whoGo(){let u=users().find(x=>x.id===val('wUser')),p=val('wPin');if(!u||!p)return wErr.textContent='اكتب الرقم السري';
  if(await pinHash(p)!==u.pin){wErr.textContent='الرقم السري غلط';wPin.value='';return}
  lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+u.name)}
@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-27';
+const APP_VER='2026-10-23-28';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2117,7 +2117,7 @@ window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.leng
  showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
  <div style="position:relative"><input id="wPin" type="text" inputmode="numeric" placeholder="الرقم السري" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="mkpin-nofill" data-lpignore="true" style="-webkit-text-security:disc;text-security:disc;padding-left:56px"><button type="button" onclick="(function(b){var i=document.getElementById('wPin'),on=i.style.webkitTextSecurity!=='none';i.style.webkitTextSecurity=i.style.textSecurity=on?'none':'disc';b.textContent=on?'🙈':'👁';i.focus()})(this)" style="position:absolute;left:6px;top:6px;width:44px;height:40px;padding:0;background:none;border:0;font-size:20px;box-shadow:none;color:inherit;margin:0">👁</button></div><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
- let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
+ let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{/iP(hone|ad|od)/.test(navigator.userAgent)||wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
 function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل أو رقم الموبايل، وكلمة السر')}</p><input id="wEmail" type="text" placeholder="الإيميل أو رقم الموبايل" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="email"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}

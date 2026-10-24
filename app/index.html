@@ -1587,7 +1587,7 @@ function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select>
  <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off">
  <button type="button" onclick="whoGo()">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="whoStart()">رجوع</button><div id="wErr" class="werr"></div></div>`;
- setTimeout(()=>{let p=document.getElementById('wPin');if(p){p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
+ setTimeout(()=>{let p=document.getElementById('wPin');if(p){/iP(hone|ad|od)/.test(navigator.userAgent)||p.focus();p.onkeydown=e=>{if(e.key==='Enter')whoGo()}}},50)}
 async function whoGo(){let u=users().find(x=>x.id===val('wUser')),p=val('wPin');if(!u||!p)return wErr.textContent='اكتب الرقم السري';
  if(await pinHash(p)!==u.pin){wErr.textContent='الرقم السري غلط';wPin.value='';return}
  lsS('mk_user',JSON.stringify({id:u.id,day:isoToday()}));applyRole();showPage('dashboard');toast('أهلاً '+u.name)}
@@ -1961,7 +1961,7 @@ window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.leng
  showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
  <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off"><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
- let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
+ let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{/iP(hone|ad|od)/.test(navigator.userAgent)||wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
 function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيكس</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<button type="button" class="alt" style="margin-top:8px" onclick="mkInd.signup()">✨ حساب جديد — اختار مجالك</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
