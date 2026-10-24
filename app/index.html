@@ -5574,6 +5574,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
 /* mk: منع اقتراحات كروم (إيميل/باسورد) في حقول البحث والأسماء */
 (function(){
  var OK={text:1,search:1,number:1,tel:1,'':1};
+ var IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  function fix(i){
   if(i._mkF)return;i._mkF=1;
   var t=(i.getAttribute('type')||'').toLowerCase();if(!OK[t])return;
@@ -5581,7 +5582,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   if(a==='username'||a==='current-password'||a==='new-password'||a==='email')return;
   i.setAttribute('autocomplete','off');
   if(!i.name)i.name='mkf_'+Math.random().toString(36).slice(2,8);
-  if(!i.readOnly&&!i.disabled){
+  if(!IOS&&!i.readOnly&&!i.disabled){
    i.readOnly=true;
    var un=function(){i.readOnly=false;i.removeEventListener('pointerdown',un);i.removeEventListener('touchstart',un);i.removeEventListener('focus',un)};
    i.addEventListener('pointerdown',un);i.addEventListener('touchstart',un,{passive:true});i.addEventListener('focus',un);
