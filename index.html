@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-29';
+const APP_VER='2026-10-23-30';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4014,7 +4014,9 @@ function candidates(words){return (db.products||[]).map(p=>({p,s:score(words,p)}
 /* تحليل رسالة «طلب» ذكي: اسم / تليفون / عنوان / منتجات / كلام عادي (ملاحظات) */
 const PLACE=/(?:شارع|^ ?ش |عمار[ةه]|ميدان|الدور|برج| حي |مدين[ةه]|محافظ[ةه]|منطق[ةه]|قري[ةه]|مركز|بجوار|جنب|قدام|امام|ورا |وراء|ناصي[ةه]|محط[ةه]|مترو|كوبري|بلوك|غرب|شرق|شمال|جنوب|القاهر[ةه]|الجيز[ةه]|الاسكندري[ةه]|اسكندري[ةه]|الاسماعيلي[ةه]|الاسماعلي[ةه]|السويس|بورسعيد|دمياط|المنصور[ةه]|طنطا|الزقازيق|بنها|شبرا|فيصل|الهرم|اكتوبر|زايد|المعادي|حلوان|مدينه نصر|التجمع|العبور|بولاق|امباب[ةه]|المهندسين|الدقي|العجوز[ةه]|سوهاج|اسيوط|المنيا|قنا|الاقصر|اسوان|الفيوم|بني سويف|الشرقي[ةه]|المنوفي[ةه]|الغربي[ةه]|البحير[ةه]|كفر|الشروق|بدر|العاشر|السلام|المطري[ةه]|عين شمس|المرج|حدائق|الزيتون|المقطم|المنيل|السيد[ةه] زينب|الوراق|كرداس[ةه]|ابو رواش|ارض اللوا|ناهيا|البراجيل|صفط)/;
 const CHAT=/^(سلام|السلام|وعليكم|صباح|مساء|اهلا|أهلا|ازيك|إزيك|عامل|شكرا|شكراً|تسلم|مرسي|ميرسي|الله يخليك|جزاك|تمام|ماشي|اوكي|okay|ok|لو سمحت|من فضلك|يا باشا|يا هندسة|يا مهندس|حضرتك|ربنا|بارك)/i;
-function waParse(body){
+const WPC=new Map();
+function waParse(body){let k=String(body||'')+'|'+((window.db&&db.products||[]).length),h=WPC.get(k);if(h)return JSON.parse(h);let r=waParse0(body);try{if(WPC.size>400)WPC.clear();WPC.set(k,JSON.stringify(r))}catch(e){}return r}
+function waParse0(body){
  let out={name:'',phone:'',addr:'',notes:[],lines:[]},txt=String(body||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
  txt.split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(ln=>{
   let m=ln.match(/(?:\+?20|0)?1[0125]\d{8}/);
@@ -4053,7 +4055,7 @@ function renderWa(){let b=document.getElementById('waBody');if(!b)return;
  if(_sg===WA._sg&&b.querySelector('[data-wa]'))return;WA._sg=_sg;
  document.querySelectorAll('#waTabs button').forEach(x=>x.className=x.dataset.t===WA.tab?'primary':'secondary');
  if(WA.err){b.innerHTML=`<div class="card"><p style="color:var(--danger);margin-top:0">${esc(WA.err)}</p><p style="color:var(--muted);font-size:13px;margin:0">لو الرسالة فيها permission أو relation، يبقى أمر «طلبات-واتساب.sql» لسه ماتشغلش في Supabase.</p></div>`;return}
- let L=WA.list.filter(o=>WA.tab==='new'?o.status==='new':WA.tab==='done'?o.status==='done':o.status==='cancelled');
+ let L=WA.list.filter(o=>WA.tab==='new'?o.status==='new':WA.tab==='done'?o.status==='done':o.status==='cancelled').slice(0,WA.tab==='new'?40:25);   /* أحدث الطلبات بس — تحليل كل رسالة تقيل */
  if(!L.length){b.innerHTML=`<div class="card"><div class="empty">${WA.loading?'جاري التحميل...':WA.tab==='new'?'مفيش طلبات جديدة من الواتساب.':'مفيش طلبات هنا.'}</div></div>`;return}
  b.innerHTML=L.map(o=>{let P=waParse(o.body),lines=P.lines,isNew=o.status==='new',inv=o.invoice_no&&db.sales.find(s=>s.no===o.invoice_no),
   wa=o.phone?waLinkTo(o.phone,`أهلاً ${o.customer_name||''}، بخصوص طلبك على الواتساب`):'';
