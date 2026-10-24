@@ -3,7 +3,7 @@
 //   claim     → ياخد مهمة (مع روابط تحميل مؤقتة لأجزاء الفيديو)
 //   progress  → نسبة التقدم
 //   uploadurl → رابط رفع مؤقت للفيديو الجاهز
-//   done / fail → يقفل المهمة
+//   done / fail → يقفل المهمة (done بيحفظ تحليل الكلام في ai وملخص في note، والأصل بيفضل لآخر فيديوهين)
 // السر متخزن في جدول mk_vr_secret (مفيش service role برّه سوبابيز). الملفات في باكت video-jobs الخاص.
 // hello     → العامل بيثبت إنه GitHub Actions بتاع ريبو ميكانيزم (توكن OIDC موقّع من جيت هب) وياخد السر — من غير ما حد ينسخ سر بإيده
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
         if (r.error || !r.data) return json({ error: "مش قادر أفتح جزء الفيديو: " + (r.error?.message || p) }, 500);
         urls.push(r.data.signedUrl);
       }
-      return json({ job: { id: j.id, user_id: j.user_id, name: j.name, spec: j.spec, urls } });
+      return json({ job: { id: j.id, user_id: j.user_id, name: j.name, spec: j.spec, D: j.ai || undefined, urls } });   // D = تحليل الكلام من مرة قبل كده (إعادة بقالب تاني من غير ما الذكاء يسمع تاني)
     }
     if (b.action === "progress") {
       await c.from("mk_video_jobs").update({ progress: Math.max(0, Math.min(99, Number(b.progress) || 0)), note: String(b.note || "").slice(0, 120), updated_at: new Date().toISOString() }).eq("id", String(b.id));
@@ -66,8 +66,14 @@ Deno.serve(async (req) => {
     }
     if (b.action === "done") {
       const j = await c.from("mk_video_jobs").select("user_id,parts").eq("id", String(b.id)).maybeSingle();
-      await c.from("mk_video_jobs").update({ status: "done", progress: 100, note: "جاهز", out_path: String(b.out_path || ""), error: "", updated_at: new Date().toISOString() }).eq("id", String(b.id));
-      if (j.data && Array.isArray(j.data.parts) && j.data.parts.length) await c.storage.from(BUCKET).remove(j.data.parts as string[]);   // مسح الأصل بعد النجاح (توفير مساحة)
+      const upd: Record<string, unknown> = { status: "done", progress: 100, note: String(b.note || "جاهز").slice(0, 160), out_path: String(b.out_path || ""), error: "", updated_at: new Date().toISOString() };
+      if (b.ai && typeof b.ai === "object") upd.ai = b.ai;
+      await c.from("mk_video_jobs").update(upd).eq("id", String(b.id));
+      /* الأصل بيفضل لآخر فيديوهين بس (عشان «اعمله تاني بقالب تاني»)، والأقدم بيتمسح (توفير مساحة) */
+      if (j.data) {
+        const old = await c.from("mk_video_jobs").select("id,parts").eq("user_id", j.data.user_id).eq("status", "done").order("created_at", { ascending: false }).range(2, 40);
+        for (const o of old.data || []) if (Array.isArray(o.parts) && o.parts.length) { await c.storage.from(BUCKET).remove(o.parts as string[]); await c.from("mk_video_jobs").update({ parts: [] }).eq("id", o.id); }
+      }
       return json({ ok: true });
     }
     if (b.action === "fail") {
