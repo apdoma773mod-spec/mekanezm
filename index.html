@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-18';
+const APP_VER='2026-10-23-19';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2860,10 +2860,10 @@ async function loadCustom(){if(!sbx()||!window.mkT_user)return;let {data,error}=
  let c=document.getElementById('cuCount');if(c){c.textContent=n;c.style.display=n?'':'none'}renderCustom()}
 window.loadCustom=loadCustom;
 function renderCustom(){let el=document.getElementById('cuBody');if(!el)return;let L=cusAll?CUS:CUS.filter(r=>r.status==='new');
- el.innerHTML=(L.length?L.map(r=>`<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b style="font-size:17px">${esc(r.name)}</b> — <span dir="ltr">${esc(r.phone)}</span><div style="color:var(--muted);font-size:12px">${esc(new Date(r.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div><span class="badge ${r.status==='new'?'red':''}">${r.status==='new'?'جديد':r.status==='opened'?'اتفتح كأوردر':esc(r.status)}</span></div>
+ el.innerHTML=(L.length?L.map(r=>`<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b style="font-size:17px">${esc(r.name)}</b> — <span dir="ltr">${esc(r.phone)}</span><div style="color:var(--muted);font-size:12px">${esc(new Date(r.created_at).toLocaleString('ar-EG',{dateStyle:'medium',timeStyle:'short'}))}</div></div><span class="badge ${r.status==='new'?'red':''}">${r.status==='new'?'جديد':r.status==='opened'?'اتفتح كأوردر':r.status==='closed'?'اتقفل':esc(r.status)}</span></div>
   <div style="margin-top:8px;font-weight:700">${CUS_K[r.kind]||esc(r.kind)}</div>${r.summary?`<p style="margin:6px 0 0;white-space:pre-line">${esc(r.summary)}</p>`:''}${r.note?`<p style="margin:6px 0 0;white-space:pre-line">📝 ${esc(r.note)}</p>`:''}
   ${r.img?`<a href="${esc(r.img)}" target="_blank" rel="noopener"><img src="${esc(r.img)}" style="max-width:100%;max-height:220px;object-fit:contain;margin-top:10px;border-radius:12px;border:1px solid var(--border);background:#fff" loading="lazy"></a>`:''}
-  <div class="btnrow" style="margin-top:10px">${r.status==='new'?`<button class="primary" onclick="cusOpen('${r.id}')">🛠️ افتح كأوردر</button><button class="secondary" onclick="cusSkip('${r.id}')">✔ اقفل بدون أوردر</button>`:''}<a class="secondary" style="padding:10px 14px;border-radius:10px;text-decoration:none" href="https://wa.me/${esc((String(r.phone||'').replace(/\D/g,'').replace(/^0/,'20')))}" target="_blank" rel="noopener">💬 واتساب</a></div></div>`).join(''):'<div class="card"><div class="empty">مفيش طلبات تجهيز'+(cusAll?'':' جديدة')+'</div></div>')
+  <div class="btnrow" style="margin-top:10px">${r.status==='new'||r.status==='closed'?`<button class="primary" onclick="cusOpen('${r.id}')">🛠️ افتح كأوردر</button>`:''}${r.status==='new'?`<button class="secondary" onclick="cusSkip('${r.id}')">✔ اقفل بدون أوردر</button>`:''}<a class="secondary" style="padding:10px 14px;border-radius:10px;text-decoration:none" href="https://wa.me/${esc((String(r.phone||'').replace(/\D/g,'').replace(/^0/,'20')))}" target="_blank" rel="noopener">💬 واتساب</a></div></div>`).join(''):'<div class="card"><div class="empty">مفيش طلبات تجهيز'+(cusAll?'':' جديدة')+'</div></div>')
   +`<button class="secondary" style="margin-top:4px" onclick="cusToggle()">${cusAll?'اعرض الجديد بس':'اعرض كل الطلبات'}</button>`}
 window.cusToggle=()=>{cusAll=!cusAll;renderCustom()};
 window.cusOpen=function(id){let r=CUS.find(x=>x.id===id);if(!r)return;if(!window.mkWk||!mkWk.openWeb)return toast('نظام الشغل لسه ما اتحمّلش — جرّب بعد ثانية');mkWk.openWeb(r)};
