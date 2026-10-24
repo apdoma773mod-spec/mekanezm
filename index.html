@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-31';
+const APP_VER='2026-10-23-32';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -4017,6 +4017,7 @@ const CHAT=/^(سلام|السلام|وعليكم|صباح|مساء|اهلا|أه
 const WPC=new Map();
 function waParse(body){let k=String(body||'')+'|'+((window.db&&db.products||[]).length),h=WPC.get(k);if(h)return JSON.parse(h);let r=waParse0(body);try{if(WPC.size>400)WPC.clear();WPC.set(k,JSON.stringify(r))}catch(e){}return r}
 function waParse0(body){
+ let sawW=false;
  let out={name:'',phone:'',addr:'',notes:[],lines:[]},txt=String(body||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
  txt.split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(ln=>{
   let m=ln.match(/(?:\+?20|0)?1[0125]\d{8}/);
@@ -4024,14 +4025,14 @@ function waParse0(body){
   let lab=ln.match(/^(?:ال)?(?:اسم|الاسم|باسم)\s*[:\-]?\s*(.+)$/);if(lab&&!out.name){out.name=lab[1].trim();return}
   lab=ln.match(/^(?:ال)?(?:عنوان|العنوان|المنطقة|منطقة|شارع|الشارع|محافظة|العنوان بالتفصيل)\s*[:\-]?\s*(.+)$/);if(lab){out.addr=(out.addr?out.addr+' - ':'')+lab[1].trim();return}
   lab=ln.match(/^(?:انا|أنا|معاك|معاكم|اسمي)\s+([^\d\n]{2,30})$/);if(lab&&!out.name&&lab[1].split(' ').length<=3){out.name=lab[1].trim();return}
-  if(/^(?:طلب|طلبية|طلبيه|اوردر|أوردر)\s*[:\-]?$/.test(ln))return;
-  let body2=ln.replace(/^(?:طلب|طلبية|طلبيه|اوردر|أوردر)\s*[:\-]?\s*/,'');if(!body2)return;
+  if(/^(?:طلب|طلبية|طلبيه|اوردر|أوردر)\s*[:\-]?$/.test(ln)){sawW=true;return}
+  let body2=ln.replace(/^(?:طلب|طلبية|طلبيه|اوردر|أوردر)\s*[:\-]?\s*/,'');if(body2!==ln)sawW=true;if(!body2)return;
   if(CHAT.test(body2)&&body2.split(' ').length<=6){out.notes.push(ln);return}
   let pl=parseLines(body2),good=0;pl.forEach(l=>{let c=candidates(l.words);l.c=c;if(c[0]&&c[0].s>=.45)good++});
   if(!good&&body2.split(' ').length>=6&&!/\d/.test(body2)){out.notes.push(ln);return}
   if(!good&&PLACE.test(' '+VN(body2)+' ')){out.addr=(out.addr?out.addr+' - ':'')+body2;return}
   /* اسم العميل من غير كلمة «اسم»: أول سطر بعد «طلب»، كلمتين لـ ٤ ومن غير أرقام، ومش شبه أي صنف */
-  if(!good&&!out.name&&!out.lines.length&&!/\d/.test(body2)&&!(window.mkSteelWord&&mkSteelWord(body2))){let w=VN(body2).split(' ').filter(Boolean);if(w.length>=1&&w.length<=4&&!w.some(x=>STOP.has(x))){out.name=body2.replace(/\s+/g,' ').trim();return}}
+  if(!good&&!out.name&&!out.lines.length&&!/\d/.test(body2)&&sawW&&!(window.mkSteelWord&&mkSteelWord(body2))){let w=VN(body2).split(' ').filter(Boolean);if(w.length>=1&&w.length<=4&&!w.some(x=>STOP.has(x))){out.name=body2.replace(/\s+/g,' ').trim();return}}
   pl.forEach(l=>out.lines.push(l))});
  return out}
 window.waParse=waParse;window.mkWaCand=candidates;window.mkWaScore=score;window.mkWaToks=toks;
@@ -8027,7 +8028,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   /* كلمة استانلس بأي كتابة: مع «ال» (الاستانلس) وغلطات إملائية (استنالس / الاستانليس) */
  function steelHit(text){
   var ws=wordsOf(norm(text)),kw=KW.map(norm),hit='';
-  ws.some(function(w){var w2=w.replace(/^(?:وال|بال|كال|فال|لل|ال)(?=.{4,})/,'');return kw.some(function(k){if(!k)return false;if(w===k||w2===k){hit=w;return true}
+  ws.some(function(w){var w2=w.replace(/^(?:وال|بال|كال|فال|لل|ال)(?=.{4,})/,'');if(w2.length>=4&&/^ل?ست?ن?لس$/.test(w2.replace(/[اويىءئؤ]/g,''))){hit=w;return true}return kw.some(function(k){if(!k)return false;if(w===k||w2===k){hit=w;return true}
    if(k.length>=6&&w2.length>=6&&w2[0]===k[0]&&Math.abs(w2.length-k.length)<=2&&lev(w2,k)<=(k.length>=7?2:1)){hit=w;return true}return false})});
   return hit}
  window.mkSteelWord=steelHit;
@@ -11474,11 +11475,11 @@ setTimeout(function chk(){if(window.mkSB&&window.mkT_user)mkPend.count().then(()
 /* ===== 📲 مبالغ فودافون كاش الواصلة على الموبايل (الدالة sms-in بتكتبها هنا). مابتتسجلش في الحسابات غير لما انت توافق ===== */
 (function(){
 const SB=()=>window.mkSB;
-async function pending(){try{let r=await SB().from('mk_sms_inbox').select('*').eq('status','pending').order('received_at',{ascending:false}).limit(200);return r.data||[]}catch(e){return []}}
+async function pending(){try{let r=await SB().from('mk_sms_inbox').select('*').eq('status','pending').order('received_at',{ascending:false}).limit(200),z=(typeof snz==='function')?snz():{};return (r.data||[]).filter(x=>!(z[x.id]>Date.now()))}catch(e){return []}}
 async function setStatus(id,st){let r=await SB().from('mk_sms_inbox').update({status:st}).eq('id',id);if(r.error)throw r.error}
 const API=()=>window.mkT&&window.mkT.api;
 const last10=p=>String(p||'').replace(/\D/g,'').slice(-10);
-const findC=p=>{let k=last10(p);return k.length===10?(db.contacts||[]).find(c=>last10(c.phone)===k):null};
+const findC=p=>{let k=last10(p);return k.length===10?((db.contacts||[]).find(c=>last10(c.phone)===k)||(db.contacts||[]).find(c=>((c.note||'').match(/\d{10,}/g)||[]).some(n=>last10(n)===k))||null):null};
 const who=x=>{let c=findC(x.phone);return c?`<b>${esc(c.name)}</b>`:'<span style="color:var(--danger)">الرقم ده مش متسجل عندنا</span>'};
 /* أي فلوس فودافون كاش مستنية بتتسجل على الحساب بس بعد ما تأكد انت */
 async function applySms(x,c){
@@ -11500,19 +11501,147 @@ async function smsBanner(cid){try{
  box.querySelectorAll('[data-si]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.si,'ignored');box.remove()}catch(e){toast('ماتحفظتش')}});
 }catch(e){}}
 ['openContactFile','openPayment'].forEach(n=>{let f=window[n];if(typeof f!=='function')return;window[n]=function(id){let r=f.apply(this,arguments);setTimeout(()=>smsBanner(id),0);return r}});
+/* ===== شاشة الفلوس الواصلة: اختيارات حقيقية حتى لو الرقم مش متسجّل ===== */
+const SNZ_K='mk_sms_snz';
+const snz=()=>{try{return JSON.parse(localStorage.getItem(SNZ_K)||'{}')}catch(e){return {}}};
+const snzSet=(id,until)=>{try{let o=snz();o[id]=until;Object.keys(o).forEach(k=>{if(o[k]<Date.now()-864e5)delete o[k]});localStorage.setItem(SNZ_K,JSON.stringify(o))}catch(e){}};
+const PICK={};
+const phone10=p=>last10(p);
+/* الرقم يتعرف كمان لو متسجّل كرقم تاني في ملاحظات الحساب */
+const findAny=p=>{let k=last10(p);if(k.length!==10)return null;
+ return (db.contacts||[]).find(c=>last10(c.phone)===k)||(db.contacts||[]).find(c=>((c.note||'').match(/\d{10,}/g)||[]).some(n=>last10(n)===k))||null};
+const dirTxt=x=>x.direction==='out'?'📤 بعتّ':'📥 استلمت';
+function effect(x,c){
+ if(!c)return '';
+ let a=money(x.amount);
+ if(c.type==='عميل'&&x.direction!=='out')return '✅ هتتسجل <b>تحصيل '+a+'</b> من العميل <b>'+esc(c.name)+'</b> (بتتخصم من مديونيته)';
+ if(c.type==='مورد'&&x.direction==='out')return '✅ هتتسجل <b>سداد '+a+'</b> للمورد <b>'+esc(c.name)+'</b> (بتتخصم من حسابه)';
+ if(c.type==='مورد')return '⚠️ <b>'+esc(c.name)+'</b> مورد وانت <b>استلمت</b> منه فلوس — مش حالة عادية، راجع قبل ما تسجل';
+ return '⚠️ <b>'+esc(c.name)+'</b> عميل وانت <b>بعتّ</b> له فلوس — مش حالة عادية، راجع قبل ما تسجل'}
+function cardH(x){
+ let c=findAny(x.phone),when=esc(String(x.received_at||'').slice(0,16).replace('T',' ')),ph=x.phone?'<span dir="ltr" style="font-weight:700">'+esc(x.phone)+'</span>':'<span style="color:var(--muted)">من غير رقم ظاهر</span>';
+ let h='<div class="card" data-sm="'+x.id+'" style="margin-bottom:10px;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline"><b style="font-size:19px">'+dirTxt(x)+' '+money(x.amount)+'</b><small style="color:var(--muted)">'+when+'</small></div>'+
+  '<div style="font-size:13px;margin:4px 0 8px">الرقم: '+ph+(x.note?' · '+esc(x.note):'')+'</div>';
+ if(c){
+  h+='<div style="padding:8px;border-radius:10px;background:var(--tint2,#eef6f7);margin-bottom:8px">👤 <b>'+esc(c.name)+'</b> <small>('+esc(c.type)+')</small><div style="font-size:13px;margin-top:4px">'+effect(x,c)+'</div></div>'+
+   '<div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="primary" data-a="rec" data-id="'+x.id+'">✔ سجّلها على '+esc(c.name)+'</button><button type="button" class="secondary" data-a="acc" data-id="'+x.id+'">📂 افتح حسابه</button></div>'+
+   '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button type="button" class="secondary" data-a="other" data-id="'+x.id+'">🔁 لا، دي لحد تاني</button><button type="button" class="secondary" data-a="snooze" data-id="'+x.id+'">⏳ بعدين</button><button type="button" class="secondary danger" data-a="ign" data-id="'+x.id+'">🚫 مش فلوس شغل</button></div>'}
+ else{
+  h+='<div style="padding:8px;border-radius:10px;background:#fff6e5;color:#7a4b00;margin-bottom:8px;font-size:14px">الرقم ده مش متسجّل عندك. اختار هو إيه:</div>'+
+   '<div style="display:grid;gap:6px">'+
+   '<button type="button" class="secondary" style="text-align:right" data-a="alias" data-id="'+x.id+'">🔗 <b>رقم تاني لحد متسجّل</b><br><small style="color:var(--muted)">مثلًا النجار حوّل من رقم غير اللي عندي — اختاره وهتفتكر الرقم ده</small></button>'+
+   '<button type="button" class="secondary" style="text-align:right" data-a="newc" data-id="'+x.id+'">👤 <b>عميل جديد</b> بالرقم ده<br><small style="color:var(--muted)">يتعمل حساب وتتسجل الفلوس دفعة منه</small></button>'+
+   '<button type="button" class="secondary" style="text-align:right" data-a="news" data-id="'+x.id+'">🏭 <b>مورد جديد</b> بالرقم ده<br><small style="color:var(--muted)">يتعمل حساب مورد وتتسجل الفلوس</small></button>'+
+   '<button type="button" class="secondary" style="text-align:right" data-a="once" data-id="'+x.id+'">💸 <b>مرة واحدة</b> — مش هتتكرر<br><small style="color:var(--muted)">أقفلها من غير ما تتسجل على حساب (فلوس وصلت بس)</small></button>'+
+   '<div style="display:flex;gap:6px"><button type="button" class="secondary" style="flex:1" data-a="snooze" data-id="'+x.id+'">⏳ بعدين</button><button type="button" class="secondary danger" style="flex:1" data-a="ign" data-id="'+x.id+'">🚫 مش فلوس شغل</button></div></div>'}
+ return h+'<div data-pk="'+x.id+'"></div></div>'}
+function pickerH(x,mode){
+ return '<div style="margin-top:10px;padding:10px;border:1px dashed var(--border);border-radius:10px"><b>'+(mode==='other'?'دي لمين؟':'الرقم ده تبع مين؟')+'</b>'+
+  '<input data-pi="'+x.id+'" list="smsPL" placeholder="🔍 دوّر باسم العميل أو المورد" style="width:100%;margin-top:6px" autocomplete="off">'+
+  '<div data-pinfo="'+x.id+'" style="font-size:13px;margin-top:6px;color:var(--muted)">اختار الاسم من القايمة اللي بتظهر</div>'+
+  '<label style="display:flex;gap:6px;align-items:center;margin-top:6px;font-size:13px"><input type="checkbox" data-pkeep="'+x.id+'" checked> افتكر الرقم ده لنفس الحساب في المرات الجاية</label>'+
+  '<button type="button" class="primary" style="margin-top:8px;width:100%" data-a="pickok" data-id="'+x.id+'">✔ سجّلها على الحساب ده</button></div>'}
+function listH(L){return L.length?L.map(cardH).join(''):'<div class="empty">مفيش فلوس مستنية 👌</div>'}
+async function reloadList(){let L=await pending();window.__smsL=L;let b=document.getElementById('smsList');if(b)b.innerHTML=listH(L);let t=document.getElementById('smsCnt');if(t)t.textContent=L.length;window.renderDashboard&&renderDashboard()}
+async function keepPhone(c,phone){try{let k=last10(phone);if(k.length!==10||last10(c.phone)===k)return;
+ let patch=!c.phone?{phone:phone}:{note:((c.note||'')+(c.note?' — ':'')+'رقم تاني: '+phone).slice(0,300)};
+ let r=await SB().from('mk_contacts').update(patch).eq('id',c.id);if(!r.error)await API().refreshContacts([c.id])}catch(e){}}
+async function newContact(x,type){
+ let nm=prompt('اسم ال'+(type==='عميل'?'عميل':'مورد')+' الجديد:');if(!nm||!nm.trim())return;
+ let id=crypto.randomUUID(),r=await SB().from('mk_contacts').insert({id:id,name:nm.trim(),type:type,phone:x.phone||'',balance:0,note:'اتعمل من فلوس فودافون كاش'});
+ if(r.error){toast('ماتعملش الحساب: '+r.error.message);return}
+ await API().refreshContacts([id]);let c=(db.contacts||[]).find(z=>z.id===id);if(!c){toast('الحساب اتعمل بس مالقيتوش — حدّث الصفحة');return}
+ if(await applySms(x,c))reloadList()}
 window.mkSmsOpen=async function(){let L=await pending();
- openModal(`<div class="modal-head"><h2>📲 فلوس فودافون كاش الواصلة (${L.length})</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>
- <p style="font-size:13px;color:var(--muted);margin:0 0 8px">دي المبالغ اللي وصلت على الموبايل. لما تسجلها في الفاتورة أو اليومية دوس «✔ اتسجل»، ولو مش محتاجها دوس «تجاهل».</p>
- ${L.map(x=>`<div class="card" style="margin-bottom:8px;padding:10px"><b style="font-size:18px">${x.direction==='out'?'📤 بعت ':'📥 استلمت '}${money(x.amount)}</b> <small style="color:var(--muted)">${esc(String(x.received_at||'').slice(0,16).replace('T',' '))}</small>${x.phone?`<div style="font-size:13px;margin-top:4px">الرقم: ${esc(x.phone)} — ${who(x)}</div>`:''}
-  <div style="display:flex;gap:6px;margin-top:6px">${findC(x.phone)?`<button type="button" class="primary" data-acc="${x.id}">📂 افتح حسابه وسجّل</button>`:''}<button type="button" class="primary" data-ok="${x.id}">✔ اتسجل</button><button type="button" class="secondary" data-ig="${x.id}">تجاهل</button></div></div>`).join('')||'<div class="empty">مفيش مبالغ جديدة 👌</div>'}`);
- document.querySelectorAll('#modal [data-acc]').forEach(b=>b.onclick=()=>{let x=L.find(y=>y.id===b.dataset.acc),c=x&&findC(x.phone);if(!c)return;closeModal();openContactFile(c.id)});
- document.querySelectorAll('#modal [data-ok]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ok,'used');mkSmsOpen()}catch(e){toast('ماتحفظتش')}});
- document.querySelectorAll('#modal [data-ig]').forEach(b=>b.onclick=async()=>{try{await setStatus(b.dataset.ig,'ignored');mkSmsOpen()}catch(e){toast('ماتحفظتش')}})};
+ openModal('<div class="modal-head"><h2>📲 فلوس فودافون كاش (<span id="smsCnt">'+L.length+'</span>)</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>'+
+  '<p style="font-size:13px;color:var(--muted);margin:0 0 8px">فلوس وصلت أو اتبعتت من موبايلك. أنت اللي بتقرر تتسجل على مين — مفيش حاجة بتتسجل لوحدها.</p>'+
+  '<datalist id="smsPL">'+(db.contacts||[]).map(c=>'<option value="'+esc(c.name)+' — '+esc(c.type)+'" data-id="'+c.id+'">').join('')+'</datalist><div id="smsList">'+listH(L)+'</div>');
+ let m=document.getElementById('modal');
+ m.oninput=function(e){let id=e.target.dataset&&e.target.dataset.pi;if(!id)return;let opt=[...document.getElementById('smsPL').options].find(o=>o.value===e.target.value),c=opt&&(db.contacts||[]).find(z=>z.id===opt.dataset.id),x=(window.__smsL||[]).find(z=>z.id===id),inf=m.querySelector('[data-pinfo="'+id+'"]');
+  PICK[id]=c||null;if(inf)inf.innerHTML=c&&x?effect(x,c):'اختار الاسم من القايمة اللي بتظهر'};
+ window.__smsL=L;
+ m.onclick=async function(e){let b=e.target.closest('[data-a]');if(!b)return;let id=b.dataset.id,a=b.dataset.a,x=(window.__smsL||[]).find(z=>z.id===id);if(!x)return;
+  try{
+   if(a==='rec'){let c=findAny(x.phone);if(!c)return;
+    if((c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
+    b.disabled=true;if(await applySms(x,c))reloadList();else b.disabled=false}
+   else if(a==='acc'){let c=findAny(x.phone);if(c){closeModal();openContactFile(c.id)}}
+   else if(a==='other'||a==='alias'){let pk=m.querySelector('[data-pk="'+id+'"]');if(pk){pk.innerHTML=pickerH(x,a);let i=pk.querySelector('input[data-pi]');i&&i.focus()}}
+   else if(a==='pickok'){let c=PICK[id];if(!c)return toast('اختار الحساب من القايمة الأول');
+    if((c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
+    b.disabled=true;let keep=m.querySelector('[data-pkeep="'+id+'"]');
+    if(await applySms(x,c)){if(!keep||keep.checked)await keepPhone(c,x.phone);reloadList()}else b.disabled=false}
+   else if(a==='newc')await newContact(x,'عميل');
+   else if(a==='news')await newContact(x,'مورد');
+   else if(a==='once'){if(!await ask('تقفلها من غير ما تتسجل على أي حساب؟\n(الفلوس هتفضل في الموبايل بس مش في الحسابات)','اقفلها','رجوع'))return;await setStatus(id,'used');reloadList()}
+   else if(a==='snooze'){snzSet(id,Date.now()+864e5);toast('هتفكّرك بكرة');reloadList()}
+   else if(a==='ign'){await setStatus(id,'ignored');reloadList()}
+  }catch(er){toast('مشكلة: '+((er&&er.message)||er))}};
+};
 const _rt=window.renderDashboard;
 window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
  if(!L.length){if(b)b.remove();return}
  if(!b){b=document.createElement('button');b.id='mkSmsTile';b.type='button';b.onclick=()=>mkSmsOpen();b.style.cssText='margin:8px 0;width:100%;padding:12px;border-radius:14px;border:2px solid var(--danger);background:var(--card,#fff);font:inherit;font-weight:800;color:var(--danger)';host.insertAdjacentElement('afterbegin',b)}
  b.textContent='📲 فيه '+L.length+' مبلغ فودافون كاش مستني تسجيله';})};
+})();
+</script>
+<script>
+/* ===== 🤖 فهم رسائل الواتساب بالذكاء الاصطناعي: طلب؟ استفسار؟ مشكلة/قطعة مكسورة؟ استانلس؟ — وبيرشّح الأصناف ويجهّز الرد ===== */
+(function(){
+ if(!window.MK_T)return;
+ var CK='mk_wu2',C={};try{C=JSON.parse(localStorage.getItem(CK)||'{}')}catch(e){}
+ function saveC(){try{var k=Object.keys(C);if(k.length>150)k.slice(0,k.length-150).forEach(function(x){delete C[x]});localStorage.setItem(CK,JSON.stringify(C))}catch(e){}}
+ var KIND={order:['🧾','طلب أصناف','#087f8c'],inquiry:['❓','استفسار عن منتج','#1565c0'],issue:['🔧','مشكلة / قطعة مكسورة','#c0392b'],stainless:['🔩','شغل استانلس','#087f8c'],delf:['🚪','دلف / أبواب','#087f8c'],transfer:['💸','تحويل فلوس','#1e7a3c'],chat:['💬','دردشة','#667'],other:['📩','رسالة','#667']};
+ function E(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function cleanName(n){return String(n||'').replace(/\s*\(على رقمك[^)]*\)\s*/,'').trim()}
+ var Q=[],run=0;
+ function pump(){while(run<2&&Q.length){var it=Q.shift();run++;(function(it){call(it[0]).then(function(r){it[1](r)},function(){it[1](null)}).then(function(){run--;pump()})})(it)}}
+ function ask(o,force){if(!force&&C[o.id])return Promise.resolve(C[o.id]);return new Promise(function(res){Q.push([o,res]);pump()})}
+ async function call(o){var r=await window.mkSB.functions.invoke('wa-understand',{body:{text:o.body,wa_name:cleanName(o.customer_name)}});if(r.error||!r.data||r.data.error){var em=(r.data&&r.data.error)||(r.error&&r.error.message)||'x';window.__wuErr=String(em).slice(0,120);throw new Error(em)}C[o.id]=r.data;saveC();return r.data}
+ function matches(q){try{var t=window.mkWaToks?mkWaToks(q):String(q).split(/\s+/);if(!t||!t.length||!window.mkWaScore)return [];
+  return (db.products||[]).map(function(p){return {p:p,s:mkWaScore(t,p)}}).filter(function(x){return x.s>=.4}).sort(function(a,b){return b.s-a.s}).slice(0,3)}catch(e){return []}}
+ function money2(v){try{return money(v)}catch(e){return v}}
+ function chip(x){var p=x.p,z=(+p.qty||0)<=0;return '<span style="display:inline-block;margin:3px;padding:6px 10px;border-radius:10px;border:1px solid '+(z?'#e0b4b0':'var(--border)')+';background:'+(z?'#fdecea':'#fff')+';font-size:13px"><b>'+E(p.name)+'</b> · '+(+p.price?money2(p.price)+' ج':'من غير سعر')+' · <span style="color:'+(z?'#c0392b':'#1e7a3c')+'">'+(z?'مش متوفر':'متوفر '+E(p.qty))+'</span></span>'}
+ function waUrl(o,t){if(typeof waLinkTo==='function')return waLinkTo(o.phone,t);var d=String(o.phone||'').replace(/\D/g,'');if(d[0]==='0')d='20'+d.slice(1);return 'https://wa.me/'+d+'?text='+encodeURIComponent(t)}
+ function replyText(ai,M){var t=String(ai.reply_suggestion||'').trim();
+  var top=M.length&&M[0].length?M[0][0].p:null;
+  if(top&&!/متوفر|مش متوفر/.test(t)){t+=(t?'\n':'')+((+top.qty||0)>0?('متوفر عندنا: '+top.name+(+top.price?' — '+top.price+' ج':'')):('«'+top.name+'» مش متوفر حاليًا وهنوفره لحضرتك'))}
+  return t}
+ function paint(card,o,ai){
+  var host=card.querySelector('.wu');if(!host){host=document.createElement('div');host.className='wu';var msg=card.querySelector('div[style*="pre-wrap"]');if(msg)msg.insertAdjacentElement('afterend',host);else card.appendChild(host)}
+  if(!ai){host.innerHTML='<div style="margin:8px 0;padding:8px;border-radius:10px;background:#f3f5f6;font-size:13px">🤖 ماقدرتش أفهم الرسالة دي — اتعامل معاها يدوي.'+(window.__wuErr?' <small style="color:#c0392b">('+E(window.__wuErr)+')</small>':'')+' <button type="button" class="mini" data-wu="retry" style="margin:0 6px">🔄 جرّب تاني</button></div>';return}
+  var K=KIND[ai.intent]||KIND.other,qs=(ai.product_queries||[]).slice(0,3),M=qs.map(matches);
+  var h='<div style="margin:10px 0;padding:10px;border-radius:12px;border:2px solid '+K[2]+';background:#fbfdfd"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="color:'+K[2]+';font-size:16px">'+K[0]+' '+K[1]+'</b><small style="color:var(--muted)">فهم ذكي'+(ai.confidence?' · '+Math.round(ai.confidence*100)+'%':'')+'</small></div>'+
+   '<div style="margin:6px 0;line-height:1.7">'+E(ai.summary||'')+'</div>';
+  if(ai.issue&&(ai.issue.part||ai.issue.problem))h+='<div style="padding:8px;border-radius:10px;background:#fdecea;margin:6px 0;line-height:1.8">🔧 <b>القطعة:</b> '+E(ai.issue.part||ai.issue.product||'')+(ai.issue.problem?'<br>⚠️ <b>المشكلة:</b> '+E(ai.issue.problem):'')+'</div>';
+  qs.forEach(function(q,i){h+='<div style="margin:6px 0"><small style="color:var(--muted)">«'+E(q)+'»</small><div>'+(M[i].length?M[i].map(chip).join(''):'<span style="color:#7a4b00;font-size:13px">⚠️ مفيش صنف شبهه في السيستم — ممكن يبقى جديد</span>')+'</div></div>'});
+  var nonOrder=['inquiry','issue','chat','other','transfer'].indexOf(ai.intent)>-1;
+  if(ai.reply_suggestion||nonOrder){h+='<div style="margin-top:8px"><label style="font-size:13px;color:var(--muted)">الرد (عدّله براحتك)</label><textarea data-wu="reply" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:10px;font:inherit">'+E(replyText(ai,M))+'</textarea></div>'}
+  h+='<div class="btnrow" style="margin-top:8px;flex-wrap:wrap">';
+  if(ai.intent==='stainless'||ai.intent==='delf')h+='<button type="button" class="primary" data-wu="steel">🔩 جهّز القطعة</button>';
+  if(o.phone&&(ai.reply_suggestion||nonOrder))h+='<button type="button" class="primary" data-wu="send">💬 ابعت الرد على الواتساب</button>';
+  if(nonOrder||ai.intent==='stainless'||ai.intent==='delf')h+='<button type="button" class="secondary" data-wu="build">🧾 حوّلها لطلب / فاتورة</button>';
+  if(nonOrder)h+='<button type="button" class="secondary" data-wu="done">✔ تم الرد (اقفل)</button>';
+  h+='<button type="button" class="secondary" data-wu="retry">🔄 افهمها تاني</button></div>'+(ai.needs_photo?'<div style="font-size:12px;color:var(--muted);margin-top:6px">📷 صورة القطعة هتساعد — اطلبها من العميل</div>':'')+'</div>';
+  host.innerHTML=h;
+  var tw=card.querySelector('.table-wrap'),hide=nonOrder||ai.intent==='stainless'||ai.intent==='delf';
+  if(tw){if(hide&&!card.dataset.wuShow){tw.style.display='none';var inv=card.querySelector('.btnrow .primary[onclick*="waInvoice"]');if(inv)inv.style.display='none'}}
+  /* اسم العميل: ماتخدش جملة من الرسالة كاسم — الاسم الصريح بس، وإلا اسمه على الواتساب */
+  if(ai.intent==='order')setTimeout(function(){var inp=card.querySelector('input[data-f=cname]');if(!inp)return;var wn=cleanName(o.customer_name),cur=inp.value.trim(),nm=String(ai.customer_name||'').trim();
+   var want=nm||((cur&&String(o.body).indexOf(cur)>-1&&cur!==wn)?wn:'');if(want&&want!==cur){inp.value=want;inp.dispatchEvent(new Event('input',{bubbles:true}))}},500)}
+ function scan(){var b=document.getElementById('waBody');if(!b||!window.WA||!WA.list)return;
+  b.querySelectorAll('[data-wa]').forEach(function(card){if(card.dataset.wu==='1')return;var o=WA.list.find(function(x){return x.id===card.dataset.wa});if(!o||o.status!=='new'||!o.body)return;card.dataset.wu='1';
+   if(C[o.id]){paint(card,o,C[o.id]);return}
+   var host=document.createElement('div');host.className='wu';host.innerHTML='<div style="margin:8px 0;padding:8px;border-radius:10px;background:#f3f5f6;font-size:13px">🤖 بيفهم الرسالة…</div>';var msg=card.querySelector('div[style*="pre-wrap"]');if(msg)msg.insertAdjacentElement('afterend',host);
+   ask(o).then(function(ai){paint(card,o,ai)})})}
+ document.addEventListener('click',function(e){var b=e.target.closest('.wu [data-wu]');if(!b)return;var card=b.closest('[data-wa]');if(!card)return;var o=(window.WA&&WA.list||[]).find(function(x){return x.id===card.dataset.wa});if(!o)return;var a=b.dataset.wu,ai=C[o.id]||{};
+  if(a==='retry'){delete C[o.id];var h=card.querySelector('.wu');if(h)h.innerHTML='<div style="margin:8px 0;padding:8px;border-radius:10px;background:#f3f5f6;font-size:13px">🤖 بيفهم الرسالة…</div>';ask(o,true).then(function(r){paint(card,o,r)})}
+  else if(a==='send'){var t=(card.querySelector('textarea[data-wu=reply]')||{}).value||'';if(!t.trim())return toast('اكتب الرد الأول');window.open(waUrl(o,t),'_blank')}
+  else if(a==='steel'){if(window.mkWk&&mkWk.stainlessFrom)mkWk.stainlessFrom({id:o.id,customer:cleanName(o.customer_name),phone:o.phone,body:o.body});else toast('الشاشة لسه بتتحمّل، جرّب تاني')}
+  else if(a==='build'){card.dataset.wuShow='1';var tw=card.querySelector('.table-wrap');if(tw)tw.style.display='';var inv=card.querySelector('.btnrow .primary[onclick*="waInvoice"]');if(inv)inv.style.display='';b.remove();if(tw)tw.scrollIntoView({behavior:'smooth',block:'center'})}
+  else if(a==='done'){if(window.waSet)waSet(o.id,null)}
+ });
+ setInterval(function(){if(!document.hidden&&document.getElementById('waBody'))scan()},2500);
 })();
 </script>
 </body>
