@@ -79,5 +79,16 @@ const PW=['1szsarn','8gcncur','8q3slf8','ib1jif9','ixm6cp4'];
  document.getElementById('g').innerHTML=S.products.map(p=>`<a href="?p=${p.id}">${p.img?`<img src="${p.img}" alt="" loading="lazy">`:''}<span>${esc(p.name)}</span></a>`).join('');
  document.getElementById('g').onclick=e=>{const a=e.target.closest('a[href^="?p="]');if(a){e.preventDefault();history.replaceState(null,'',a.getAttribute('href'));mkOpen(new URL(a.href).searchParams.get('p'))}};
  const q=new URLSearchParams(location.search).get('p');if(q)mkOpen(q)})();
+
+/* تنقّل بين المنتجات + مشاركة + لينك المتجر + عدّاد زيارة */
+(function(){const css=document.createElement('style');css.textContent='#mkSt .nv{position:fixed;top:12px;right:12px;z-index:6;display:flex;gap:8px}#mkSt .nv button,#mkSt .nv a{width:42px;height:42px;border-radius:50%;border:0;background:#111c;color:#fff;font-size:18px;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}';document.head.appendChild(css);
+const base=window.mkOpen;let cur=null;
+function go(d){const L=S.products||[];const i=L.findIndex(p=>p.id===cur);if(i<0||!L.length)return;const n=L[(i+d+L.length)%L.length].id;history.replaceState(null,'','?p='+n);window.mkOpen(n)}
+window.mkOpen=function(id){cur=id;base(id);const r=document.getElementById('mkSt');if(!r)return;if(!r.querySelector('.nv'))r.insertAdjacentHTML('afterbegin','<div class="nv"><button data-nv="-1" aria-label="السابق">›</button><button data-nv="1" aria-label="التالي">‹</button><button data-sh aria-label="مشاركة">⤴</button><a href="shop.html#p='+id+'" aria-label="صفحة المنتج في المتجر">🛒</a></div>');
+ const cta=r.querySelector('.cta');if(cta&&!cta.querySelector('.shp'))cta.insertAdjacentHTML('beforeend','<a class="shp" style="background:#10202c;color:#f6d77a" href="shop.html#p='+id+'">🛒 صفحة المنتج في المتجر</a>')};
+document.addEventListener('click',e=>{const n=e.target.closest('[data-nv]');if(n){go(+n.dataset.nv);return}if(e.target.closest('[data-sh]')){const u=location.href,t=document.title;if(navigator.share)navigator.share({title:t,url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u)}catch(x){}}}});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')go(1);if(e.key==='ArrowRight')go(-1)});
+try{if(!sessionStorage.getItem('mkvs')){sessionStorage.setItem('mkvs','1');fetch(SB_URL+'/rest/v1/rpc/bump_visit',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_page:'story'})}).catch(()=>{})}}catch(e){}
+})();
 </script>
 </body></html>

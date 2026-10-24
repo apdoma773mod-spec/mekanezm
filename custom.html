@@ -29,7 +29,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ac)}
 .msg{color:#c0392b;font-weight:700;margin:8px 0;min-height:1.2em}
 .sum{white-space:pre-wrap;line-height:1.9;font-size:15px}
 .ov{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:flex-end;justify-content:center}.ov>div{background:#f7f5ef;width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:16px}
-.hid{display:none}
+.hid{display:none}.qk{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}.qk button{border:1px solid var(--line);background:#faf8f3;border-radius:99px;padding:3px 10px;font:700 12px Cairo;color:var(--mut);cursor:pointer}.qk button:active{background:var(--gd)}
 </style>
 </head>
 <body>
@@ -104,7 +104,10 @@ const DRAWERS={steel:drawSteel,bamboo:drawBamboo,delf:drawDelf};
 
 /* ---------- نموذج ---------- */
 const chips=(k,opts)=>`<div class="ch" data-k="${k}">${opts.map(o=>`<button type="button" data-v="${o[0]}" class="${V[k]===o[0]?'on':''}">${o[1]}</button>`).join('')}</div>`;
-const fld=(k,l,ph,extra)=>`<div class="f"><label>${l}</label><input data-i="${k}" value="${esc(V[k]||'')}" inputmode="decimal" placeholder="${ph||''}" ${extra||''}></div>`;
+const QK={t:[3,4,5],hf:[10,15,20],hb:[10,15,20],w:null,h:null};
+const QDELF={w:[40,50,60,80,90],h:[200,210,220,240]},QSTEEL={w:[60,70,80,90]};
+function qk(k){const a=(K==='delf'?QDELF[k]:K==='steel'?(QSTEEL[k]||QK[k]):QK[k]);return a?'<div class="qk">'+a.map(v=>'<button type="button" data-qk="'+k+'" data-v="'+v+'">'+v+'</button>').join('')+'</div>':''}
+const fld=(k,l,ph,extra)=>`<div class="f"><label>${l}</label><input data-i="${k}" value="${esc(V[k]||'')}" inputmode="decimal" placeholder="${ph||''}" ${extra||''}>${qk(k)}</div>`;
 function defaults(kind){return {steel:{q:1},bamboo:{kind:'طبيعي',split:'no',dv:2,q:1},delf:{type:'hinged',mat:'ألمنيوم',handle:'none',hside:'right',drill:'yes',hinge:'right',hn:'3',wheel:'yes',q:1}}[kind]}
 function formHTML(){
  if(K==='steel')return `<div class="card"><h3>🔩 مقاسات قطعة الاستانلس (حماية الباب من الرطوبة والمياه)</h3><div class="g">${fld('t','سُمك الباب (سم)','مثلاً 4')}${fld('w','عرض الباب (سم)','مثلاً 80')}${fld('hf','ارتفاع الاستانلس من الوش (سم)','مثلاً 15')}${fld('hb','ارتفاع الاستانلس من الضهر (سم)','مثلاً 15')}${fld('q','عدد القطع','1')}</div></div>`;
@@ -120,14 +123,15 @@ function formHTML(){
    <div id="hgn" class="${V.drill==='yes'?'':'hid'}" style="margin-top:8px"><div class="g">${fld('hn','عدد المفصلات في الدلفة','3')}<div class="f"><label>ناحية المفصلات</label>${chips('hinge',[['right','يمين'],['left','شمال']])}</div></div></div></div>
   <div id="whbox" class="${V.type==='slide'?'':'hid'}" style="margin-top:12px"><label>تتخلّع الدلفة لفتحة العجلة؟</label>${chips('wheel',[['yes','أيوه'],['no','لأ']])}<div class="hint">العجلة بنبيعها لوحدها وبتتركّب على الصايت.</div></div></div>`}
 function show(id){['dvbox','hsbox','hgbox','hgn','whbox'].forEach(x=>{const e=$(x);if(!e)return;const on={dvbox:V.split==='yes',hsbox:V.handle==='one',hgbox:V.type==='hinged',hgn:V.drill==='yes',whbox:V.type==='slide'}[x];e.classList.toggle('hid',!on)})}
+const DK=()=>'mk_cust_'+K;function save(){try{localStorage.setItem(DK(),JSON.stringify(V))}catch(e){}}
 function redraw(){const f=DRAWERS[K];const h=f(V);$('dr').innerHTML=h||'<div style="padding:30px;text-align:center;color:#889">اكتب المقاسات وهتظهر الرسمة هنا</div>';DRAW=h}
-function openForm(kind){K=kind;V=Object.assign({},defaults(kind));
+function openForm(kind){K=kind;V=Object.assign({},defaults(kind));try{const d=JSON.parse(localStorage.getItem('mk_cust_'+kind)||'null');if(d&&typeof d==='object')Object.assign(V,d)}catch(e){}
  $('app').innerHTML=`<h1>${KIND[kind]}</h1><p class="s">اختار المواصفات واكتب المقاسات — الرسمة بتتحدّث قدامك.</p>${formHTML()}<div class="dr" id="dr"></div>
  <div class="card"><h3>بياناتك</h3><div class="g"><div class="f"><label>اسمك</label><input id="cn" maxlength="80"></div><div class="f"><label>رقم موبايلك (واتساب)</label><input id="cp" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx"></div><div class="f full"><label>ملاحظات (اختياري)</label><textarea id="cnote" rows="2" maxlength="300"></textarea></div></div></div>
  <div class="msg" id="msg"></div><button class="cta" id="rv">راجع الطلب وأكّده</button><button class="cta l" id="bk">← اختيار منتج تاني</button>`;
  history.replaceState(null,'','?k='+kind);redraw();
- $('app').oninput=e=>{const i=e.target.dataset.i;if(i){V[i]=e.target.value;redraw()}};
- $('app').onclick=e=>{const b=e.target.closest('.ch button');if(!b)return;const k=b.parentElement.dataset.k;V[k]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show();redraw()};
+ $('app').oninput=e=>{const i=e.target.dataset.i;if(i){V[i]=e.target.value;redraw();save()}};
+ $('app').onclick=e=>{const q=e.target.closest('[data-qk]');if(q){V[q.dataset.qk]=q.dataset.v;const inp=document.querySelector('[data-i="'+q.dataset.qk+'"]');if(inp)inp.value=q.dataset.v;redraw();save();return}const b=e.target.closest('.ch button');if(!b)return;const k=b.parentElement.dataset.k;V[k]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show();redraw()};
  $('bk').onclick=home;$('rv').onclick=review}
 function home(){K=null;history.replaceState(null,'',location.pathname);$('app').innerHTML=`<h1>جهّز منتجك بمقاسك</h1><p class="s">اختار اللي عايز تجهّزه، اكتب المقاسات، وهتشوف رسمة شغلك قبل ما تأكّد.</p>
  <button class="pk" data-k="steel"><svg viewBox="0 0 112 90"><rect width="112" height="90" fill="#0f2433"/><rect x="30" y="12" width="26" height="66" fill="#c9a77a"/><path d="M27 40V80H59V44" fill="none" stroke="#6aa5c9" stroke-width="5"/><rect x="70" y="12" width="32" height="66" fill="#c9a77a"/><rect x="70" y="52" width="32" height="26" fill="#6aa5c9"/></svg><div><b>استانلس حماية الباب</b><span>من الرطوبة والمياه — حدّد سمك وعرض الباب وارتفاع الاستانلس من الوش والضهر</span></div></button>
@@ -167,8 +171,9 @@ async function send(ov){const b=$('ok'),m=$('omsg');b.disabled=true;m.textConten
   ov.remove();const ref=j.slice(0,8);try{localStorage.setItem("mk_last_order",JSON.stringify({ref,phone:ph}))}catch(e){}done(nm,summary(),ref)
  }catch(e){m.textContent='مفيش اتصال أو حصلت مشكلة — جرّب تاني';b.disabled=false}}
 function done(nm,sum,ref){$('app').innerHTML=`<h1>وصلنا طلبك ✔</h1><p class="s">هنراجع المقاسات ونكلّمك على الواتساب نأكّد السعر وميعاد التجهيز.</p><div class="card" style="text-align:center"><div style="color:#667;font-size:13px">رقم طلبك</div><div dir="ltr" style="font-size:26px;font-weight:800;color:#a8741a;letter-spacing:.08em">${esc(ref)}</div><div class="hint">احتفظ بالرقم عشان تتابع مراحل الشغل</div><a class="cta" style="display:block;text-decoration:none;margin-top:10px;font-size:15px" href="shop.html?track=${esc(ref)}">📦 تتبّع طلبك</a></div><div class="dr">${DRAW}</div><div class="card sum">${esc(sum)}</div>
- <a class="cta g2" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent('السلام عليكم، أنا '+nm+' بعتّ طلب تجهيز من الموقع:\n'+sum)}">💬 كلّمنا على الواتساب كمان</a><button class="cta l" id="hm">تجهيز منتج تاني</button><a class="cta l" style="text-align:center;text-decoration:none" href="shop.html">← رجوع للمتجر</a>`;$('hm').onclick=home;scrollTo(0,0)}
+ <a class="cta g2" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent('السلام عليكم، أنا '+nm+' بعتّ طلب تجهيز من الموقع:\n'+sum)}">💬 كلّمنا على الواتساب كمان</a><button class="cta l" id="dl">⬇️ احفظ الرسمة كصورة</button><button class="cta l" id="hm">تجهيز منتج تاني</button><a class="cta l" style="text-align:center;text-decoration:none" href="shop.html">← رجوع للمتجر</a>`;$('hm').onclick=home;$('dl').onclick=async()=>{try{const b=await svgToJpeg(DRAW),f=new File([b],'mekanezm-'+ref+'.jpg',{type:'image/jpeg'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'طلب تجهيز ميكانيزم '+ref})}else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='mekanezm-'+ref+'.jpg';a.click()}}catch(e){}};try{localStorage.removeItem('mk_cust_'+K)}catch(e){}scrollTo(0,0)}
 
+try{if(!sessionStorage.getItem('mkvc')){sessionStorage.setItem('mkvc','1');fetch(SB_URL+'/rest/v1/rpc/bump_visit',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_page:'custom'})}).catch(()=>{})}}catch(e){}
 const q=new URLSearchParams(location.search).get('k');KIND[q]?openForm(q):home();
 </script>
 </body>
