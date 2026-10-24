@@ -1,9 +1,17 @@
 {
   "permissions": {
     "allow": [
+      "Bash",
       "Bash(git push origin HEAD:main)",
-      "Bash(skillspector scan:*)"
-    ]
+      "Bash(skillspector scan:*)",
+      "Edit",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Write",
+      "mcp__Claude_Browser"
+    ],
+    "defaultMode": "acceptEdits"
   },
   "hooks": {
     "SessionStart": [
