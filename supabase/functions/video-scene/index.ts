@@ -4,7 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-const MODELS = [Deno.env.get("SCENE_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-pro-latest"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
+const MODELS = [Deno.env.get("SCENE_MODEL"), "gemini-2.5-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash-lite"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
 
 const KF = { type: "OBJECT", properties: { t: { type: "NUMBER" }, dx: { type: "NUMBER" }, dy: { type: "NUMBER" }, rot: { type: "NUMBER" }, s: { type: "NUMBER" }, o: { type: "NUMBER" } }, required: ["t"] };
 const SHAPE = { type: "OBJECT", properties: {
@@ -61,24 +61,24 @@ Deno.serve(async (req) => {
     }));
     if (!items.length) return json({ scenes: [] });
     const t0 = Date.now();
-    let last = "ماقدرتش أرسم";
+    const errs: string[] = [];
     for (const m of MODELS) {
-      const left = 140000 - (Date.now() - t0);
-      if (left < 20000) break;
+      const left = 145000 - (Date.now() - t0);
+      if (left < 15000) break;
       let r: Response;
       try {
         r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
-          method: "POST", signal: AbortSignal.timeout(Math.min(110000, left)),
+          method: "POST", signal: AbortSignal.timeout(Math.min(75000, left)),
           headers: { "x-goog-api-key": gkey, "content-type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT(items) }] }], generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.5, maxOutputTokens: 60000 } }),
+          body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT(items) }] }], generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.5, maxOutputTokens: 24000, thinkingConfig: { thinkingBudget: 512 } } }),
         });
-      } catch (e) { last = String((e as Error).name === "TimeoutError" ? "timeout" : (e as Error).message || e); continue; }
+      } catch (e) { errs.push(m + ": " + ((e as Error).name === "TimeoutError" ? "timeout" : String((e as Error).message || e))); continue; }
       const b = await r.json().catch(() => ({}));
-      if (!r.ok) { last = b?.error?.message || `Gemini ${r.status}`; continue; }
+      if (!r.ok) { errs.push(m + ": " + String(b?.error?.message || r.status).slice(0, 160)); continue; }
       const txt = b?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-      try { const d = JSON.parse(txt); return json({ scenes: Array.isArray(d.scenes) ? d.scenes : [], _model: m }); } catch { last = "الرد مش مفهوم"; }
+      try { const d = JSON.parse(txt); return json({ scenes: Array.isArray(d.scenes) ? d.scenes : [], _model: m }); } catch { errs.push(m + ": الرد مش مفهوم (" + txt.length + ")"); }
     }
-    return json({ error: last }, 502);
+    return json({ error: errs.join(" | ") || "ماقدرتش أرسم" }, 502);
   } catch (e) {
     return json({ error: String((e as Error).message || e) }, 500);
   }
