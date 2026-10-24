@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .toolbar .search{min-width:0}
 }
 </style>
-<script src="industries.js?v=4"></script>
+<script src="industries.js?v=5"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">
@@ -959,7 +959,7 @@ window.__recat={classify};
 </script>
 <script>
 (function(){
-const SB_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',SB_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const SB_URL='https://rzvncstjattlklpdtkfn.supabase.co',SB_KEY='sb_publishable_Molr1fCzsC-VbSgTFDXc5w_F1p0-Fcr';
 const sb=supabase.createClient(SB_URL,SB_KEY);window.mkSB=sb;
 const $=id=>document.getElementById(id);
 let uid=null,cloudVer=null,synced=false,pushing=false,pending=false,retryT=null,lastCloud=null;
@@ -1640,7 +1640,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-24-57';
+const APP_VER='2026-10-24-58';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2506,7 +2506,7 @@ const _raP=renderAll;renderAll=function(){_raP();let e=document.getElementById('
 if(!window.MK_T)return;
 const sbx=()=>window.mkSB;
 const isAdmin=()=>!!(window.mkT_user&&window.mkT_user.role==='admin');
-const SBURL='https://tkzfjeizvanfptnqvrmr.supabase.co';
+const SBURL='https://rzvncstjattlklpdtkfn.supabase.co';
 const uid7=()=>Math.random().toString(36).slice(2,9);
 let SITE=null;   // {data, version}
 async function loadSite(){let {data,error}=await sbx().from('site_content').select('data,version').eq('id','main').maybeSingle();if(error)throw error;SITE=data||{data:{theme:{},sections:[],products:[]},version:0};SITE.data.sections=SITE.data.sections||[];SITE.data.products=SITE.data.products||[];return SITE}

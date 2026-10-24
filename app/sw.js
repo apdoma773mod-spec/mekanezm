@@ -2,13 +2,13 @@
    السيستم (index.html): من النت الأول، ولو مفيش نت أو النت بطيء بيفتح النسخة المحفوظة.
    المكتبات والخطوط: بتتحفظ أول مرة وبعد كده بتفتح من الجهاز.
    الموقع (shop.html) والسيرفر (Supabase) مش بيعدّوا على هنا خالص. */
-const CACHE = 'mkapp-v39';
+const CACHE = 'mkapp-v40';
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 const APP = new URL('./', self.location).href;
 
 self.addEventListener('install', e => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all([APP, './manifest.webmanifest', './industries.js?v=4'].map(u => c.add(u).catch(() => {})))));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all([APP, './manifest.webmanifest', './industries.js?v=5'].map(u => c.add(u).catch(() => {})))));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
