@@ -802,6 +802,16 @@ function orderHTML(o){let L=steps(o),cur=L.map(x=>x.on).lastIndexOf(true);
  return `<div class="trkcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>طلب رقم ${esc(o.ref)}</b><small class="mut">${o.method==='ship'?'📦 شحن':o.method==='delivery'?'🛵 توصيل':'🏪 استلام من المحل'}</small></div>
   <div class="mut" style="font-size:13px;margin:4px 0 10px">${(o.items||[]).map(x=>esc(x.name)+' × '+esc(x.qty)).join('، ')}</div>
   <div class="trk">${L.map((x,i)=>`<div class="st${x.on?' on':''}${i===cur?' now':''}"><div class="dot">${x.bad?'!':x.on?'✓':i+1}</div><div><b>${esc(x.t)}</b><small>${esc([x.d,x.at].filter(Boolean).join(' • '))}</small></div></div>`).join('')}</div></div>`}
+const CKIND={steel:'🔩 استانلس حماية الباب',bamboo:'🎍 درج بامبو',delf:'🚪 دلف الدريسنج روم'};
+const CDEF=['وصلنا طلبك','بنراجع المقاسات معاك','بنجهّز الشغل','جاهز للاستلام','اتسلّم ✅'];
+function customHTML(o){let st=(o.stages&&o.stages.length)?o.stages:CDEF,i=o.stage_idx!=null?o.stage_idx:(o.status==='done'?st.length-1:o.status==='opened'?1:0);i=Math.max(0,Math.min(st.length-1,i));
+ const cancelled=o.status==='cancelled';
+ return '<div class="trkcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>تجهيز رقم '+esc(o.ref)+'</b><small class="mut">'+esc(CKIND[o.kind]||'تجهيز')+'</small></div>'
+  +'<div class="mut" style="font-size:13px;margin:4px 0 6px;white-space:pre-line">'+esc(o.summary||'')+'</div>'+(o.img?'<img style="width:100%;border-radius:12px;margin:6px 0;border:1px solid var(--line)" loading="lazy" src="'+esc(o.img)+'" alt="">':'')
+  +(o.eta?'<div style="margin:4px 0 8px"><b>ميعاد التسليم المتوقع:</b> '+esc(o.eta)+'</div>':'')
+  +(cancelled?'<div class="trk"><div class="st on now"><div class="dot">!</div><div><b>الطلب اتلغى</b><small>كلمنا على الواتساب</small></div></div></div>'
+  :'<div class="trk">'+st.map((t,k)=>'<div class="st'+(k<=i?' on':'')+(k===i?' now':'')+'"><div class="dot">'+(k<=i?'✓':k+1)+'</div><div><b>'+esc(t)+'</b></div></div>').join('')+'</div>')+'</div>'}
+async function trackCustom(r,p){try{const res=await fetch(SB_URL+'/rest/v1/rpc/track_custom',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_ref:r,p_phone:p})});const j=await res.json();return res.ok&&j&&j.orders?j.orders:[]}catch(e){return []}}
 function trackOpen(ref,ph){const l=last()||{};ref=ref!=null?ref:(l.ref||'');ph=ph!=null?ph:(l.phone||'');
  $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>📦 تتبّع طلبك</h3><p class="mut" style="margin:0">اكتب رقم الموبايل اللي طلبت بيه — ورقم الطلب لو معاك.</p>
   <label>رقم الموبايل<input id="tkPh" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx" value="${esc(ph)}"></label>
@@ -812,10 +822,10 @@ function trackOpen(ref,ph){const l=last()||{};ref=ref!=null?ref:(l.ref||'');ph=p
   if(p.replace(/\D/g,'').length<8){m.textContent='اكتب رقم الموبايل';return}b.disabled=true;m.textContent='⏳ بندوّر على طلبك…';$('tkOut').innerHTML='';
   try{const res=await fetch(SB_URL+'/rest/v1/rpc/track_order',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_ref:r,p_phone:p})});
    const j=await res.json();if(!res.ok)throw new Error((j&&j.message)||'err');
-   const L=(j&&j.orders)||[];
-   if(!L.length){m.innerHTML=`مالقيناش طلب بالبيانات دي. اتأكد من الرقم، أو <a target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أعرف طلبي وصل لفين')}">كلمنا على الواتساب</a>.`}
-   else{m.textContent='';$('tkOut').innerHTML=L.map(orderHTML).join('')+`<a class="btn g" style="display:block;text-align:center;margin-top:6px" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بخصوص طلبي رقم '+L[0].ref)}">💬 اسألنا على الواتساب</a>`;
-    try{localStorage.setItem(LK,JSON.stringify({ref:r||L[0].ref,phone:p}))}catch(e){}}}
+   const L=(j&&j.orders)||[];const CU=await trackCustom(r,p);
+   if(!L.length&&!CU.length){m.innerHTML=`مالقيناش طلب بالبيانات دي. اتأكد من الرقم، أو <a target="_blank" rel="noopener" href="${waUrl('السلام عليكم، عايز أعرف طلبي وصل لفين')}">كلمنا على الواتساب</a>.`}
+   else{m.textContent='';$('tkOut').innerHTML=CU.map(customHTML).join('')+L.map(orderHTML).join('')+`<a class="btn g" style="display:block;text-align:center;margin-top:6px" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بخصوص طلبي رقم '+(L[0]||CU[0]).ref)}">💬 اسألنا على الواتساب</a>`;
+    try{localStorage.setItem(LK,JSON.stringify({ref:r||(L[0]||CU[0]).ref,phone:p}))}catch(e){}}}
   catch(e){m.textContent=/bad_phone/.test(e.message)?'رقم الموبايل مش صحيح':/bad_ref/.test(e.message)?'رقم الطلب قصير — اكتبه كله أو سيبه فاضي':'مفيش اتصال — جرّب تاني'}
   b.disabled=false};
  if(ph)setTimeout(()=>$('tkGo').click(),50)}
