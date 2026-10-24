@@ -39,7 +39,7 @@ const sb=()=>window.mkSB||(typeof SBc==='function'?SBc():null);
 
 /* CSS صغير للشبكة */
 const st=document.createElement('style');
-st.textContent='.indG{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;max-height:46vh;overflow:auto}.indG button{border:2px solid #d5dde0;background:#fff;border-radius:14px;padding:10px 4px;font:inherit;font-size:12.5px;font-weight:700;color:#17363b;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}.indG button b{font-size:28px;line-height:1}.indG button.on{border-color:#087f8c;background:#e6f4f5}';
+st.textContent='.indG{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0;max-height:46vh;overflow:auto}#mkWho .indG button,.indG button{border:2px solid #d5dde0!important;background:#fff!important;color:#17363b!important;border-radius:14px;padding:10px 4px;margin:0!important;width:auto!important;font:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;white-space:normal;overflow-wrap:anywhere;line-height:1.3}.indG button b{font-size:28px;line-height:1}#mkWho .indG button.on,.indG button.on{border-color:#087f8c!important;background:#e6f4f5!important}';
 document.head.appendChild(st);
 
 function grid(sel){return '<div class="indG" id="indG">'+IND.map(x=>`<button type="button" data-i="${x.id}" class="${x.id===sel?'on':''}"><b>${x.icon}</b>${H(x.name)}</button>`).join('')+'</div>'}
@@ -67,7 +67,7 @@ function signup(){
    b.disabled=true;msg('جاري إنشاء الحساب…',true);
    const r=await sb().auth.signUp({email:v('sgEmail'),password:v('sgPass'),options:{data:{shop:v('sgShop'),phone:v('sgPhone'),industry:pick}}});
    if(r.error){b.disabled=false;const t=String(r.error.message||'');
-    return msg(/registered|already/i.test(t)?'الإيميل ده مسجل قبل كده — ادخل بيه':/password/i.test(t)?'كلمة السر ضعيفة — خليها ٦ حروف أو أكتر':/invalid/i.test(t)?'الإيميل مكتوب غلط':/rate|seconds/i.test(t)?'استنى دقيقة وجرّب تاني':'مشكلة في التسجيل: '+t)}
+    return msg(/registered|already/i.test(t)?'الإيميل ده مسجل قبل كده — ادخل بيه':/not allowed|disabled/i.test(t)?'التسجيل الجديد مقفول من السيرفر — لازم يتفعّل من إعدادات Supabase':/password/i.test(t)?'كلمة السر ضعيفة — خليها ٦ حروف أو أكتر':/invalid/i.test(t)?'الإيميل مكتوب غلط':/rate|seconds/i.test(t)?'استنى دقيقة وجرّب تاني':'مشكلة في التسجيل: '+t)}
    try{localStorage.setItem('mk_industry',pick)}catch(x){}
    if(r.data&&r.data.session){msg('✔ اتعمل الحساب — جاري الدخول…',true);setTimeout(()=>location.reload(),900)}
    else{b.disabled=false;msg('✔ اتعمل الحساب — افتح الإيميل واضغط رابط التأكيد، وبعدها ارجع ادخل',true)}
