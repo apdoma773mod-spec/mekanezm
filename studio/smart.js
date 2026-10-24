@@ -513,7 +513,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
  <div id="sm_out"></div>
- <div class="p" id="sm_jobsbox"><h2>☁️ فيديوهاتي (في الخلفية)</h2><div id="sm_jobs" class="mu">⏳</div></div>`;
+ <div class="p" id="sm_jobsbox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">☁️ فيديوهاتي (في الخلفية)</h2><button type="button" class="b o" id="sm_rf" style="flex:none;padding:8px 14px">🔄 تحديث</button></div><small id="sm_rt" class="mu"></small><div id="sm_jobs" class="mu" style="margin-top:8px">⏳</div></div>`;
  /* الدخول */
  token().then(t=>{const a=$s('sm_auth');if(!a)return;if(!t){a.innerHTML=loginBox();$s('sm_li').onclick=doLogin}else a.innerHTML=''}).catch(()=>{});
  $s('sm_tp').innerHTML=Object.keys(TPL).map(k=>`<button type="button" data-tp="${k}" class="b ${S.tpl===k?'':'o'}" style="display:block;text-align:right;min-height:84px;white-space:normal;line-height:1.5"><b style="font-size:16px">${TPL[k].n}</b><br><span style="font-size:12px;font-weight:500">${TPL[k].d}</span></button>`).join('');
@@ -524,7 +524,10 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
- $s('sm_go').onclick=go;$s('sm_bg').onclick=cloudSubmit;loadJobs();clearInterval(JT);JT=setInterval(()=>{if($s('sm_jobs')&&document.visibilityState==='visible'&&$s('v-smart').classList.contains('on'))loadJobs()},15000)}
+ $s('sm_go').onclick=go;$s('sm_bg').onclick=cloudSubmit;$s('sm_rf').onclick=async()=>{const b=$s('sm_rf');b.disabled=true;b.textContent='⏳';await loadJobs();b.disabled=false;b.textContent='🔄 تحديث'};loadJobs();
+ /* تحديث لوحده: كل ٥ ثواني لو فيه فيديو شغال، وأول ما ترجع للتطبيق */
+ clearInterval(JT);let tick=0;JT=setInterval(()=>{tick++;if(!$s('sm_jobs')||document.visibilityState!=='visible')return;const act=Object.values(JOBS).some(j=>/uploading|queued|working/.test(j.status));if(act||tick%3===0)loadJobs()},5000);
+ if(!window.__smVis){window.__smVis=1;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&$s('sm_jobs'))loadJobs()})}}
 function paintTpl(){document.querySelectorAll('#sm_tp [data-tp]').forEach(b=>b.classList.toggle('o',b.dataset.tp!==S.tpl))}
 /* مكان الشخص على الموبايل: بنقف على الفيديو كل ثانية ونشوف الراس فين */
 async function phonePeople(pg){if(!S.smart||!V||V.videoWidth>V.videoHeight)return;const dur=V.duration||D.dur||0,times=[];for(let t=.3;t<dur;t+=1)times.push(t);
@@ -598,7 +601,7 @@ async function loadJobs(){const el=$s('sm_jobs');if(!el)return;const c=sbk();if(
    ${j.status==='failed'?`<small style="color:#ff8a80">${esc(j.error||'')}</small><br><button class="b o" data-rt="${j.id}" style="margin-top:6px">🔁 جرّب تاني</button>`:''}
    ${j.status==='done'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="b" data-vw="${j.id}" style="flex:1">▶️ شاهد</button><button class="b o" data-sh="${j.id}" style="flex:1">📤 شارك</button><button class="b o" data-dl="${j.id}" style="flex:1">⬇️ نزّل</button></div>${Array.isArray(j.parts)&&j.parts.length?`<button class="b o" data-rr="${j.id}" style="width:100%;margin-top:6px">🔁 اعمله تاني بالقالب والاختيارات اللي فوق</button>`:''}<small class="mu">${esc(j.note&&j.note!=='جاهز'?j.note:'')}</small>`:''}
    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px"><small class="mu">${new Date(j.created_at).toLocaleString('ar-EG',{day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}</small>${j.status!=='working'?`<button class="b o" data-rm="${j.id}" style="flex:none;padding:6px 12px;color:#ff8a80">🗑️ امسح</button>`:''}</div></div>`).join(''):'مفيش فيديوهات في الخلفية لسه.';
-  JOBS=Object.fromEntries(L.map(j=>[j.id,j]))}
+  JOBS=Object.fromEntries(L.map(j=>[j.id,j]));const rt=$s('sm_rt');if(rt)rt.textContent='آخر تحديث: '+new Date().toLocaleTimeString('ar-EG',{hour:'numeric',minute:'2-digit',second:'2-digit'})}
  catch(e){const m=String(e&&e.message||e);if(/JWT|expired|token/i.test(m)){el.innerHTML='الدخول خلص وقته — سجّل دخول تاني.';const a=$s('sm_auth');if(a){a.innerHTML=loginBox();$s('sm_li').onclick=doLogin}return}el.textContent=/mk_video_jobs|relation/.test(m)?'جدول المهام مش متعمل':'❌ '+m}}
 let JOBS={};
 async function jobUrl(id,dl){const j=JOBS[id];if(!j||!j.out_path)throw new Error('الفيديو مش موجود');const r=await sbk().storage.from('video-jobs').createSignedUrl(j.out_path,3600,dl?{download:(j.name||'ميكانيزم').replace(/\.[^.]+$/,'')+'-ميكانيزم.mp4'}:undefined);if(r.error)throw r.error;return r.data.signedUrl}
