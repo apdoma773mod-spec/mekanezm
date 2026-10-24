@@ -8,10 +8,12 @@
       "NotebookEdit",
       "WebFetch",
       "WebSearch",
-      "Write",
-      "mcp__Claude_Browser"
+      "Write"
     ],
-    "defaultMode": "acceptEdits"
+    "defaultMode": "acceptEdits",
+    "deny": [
+      "mcp__Claude_Browser"
+    ]
   },
   "hooks": {
     "SessionStart": [
