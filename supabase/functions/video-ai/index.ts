@@ -1,6 +1,6 @@
 // video-ai — مونتاج ذكي لميكانيزم ستوديو: بياخد صوت جزء من الفيديو (WAV مضغوط، ١٦ كيلو مونو) ويرجّع:
 //   segments: الكلام بتوقيته (ثواني من أول الجزء) — للترجمة على الفيديو
-//   events:   حاجات تتوضّح على الشاشة: مقاس/رقم بوحدة (measure) — نموذج أو صنف (product) — نقطة مهمة (point) — سعر (price) — خطوة (step) — تحذير (warn) — قسم جديد (topic)
+//   events:   حاجات تتوضّح على الشاشة: مقاس/رقم بوحدة (measure) — نموذج أو صنف (product) — نقطة مهمة (point) — سعر (price) — خطوة (step) — تحذير (warn) — قسم جديد (topic) — رسمة متحركة (anim: scene + action)
 //   segments[].kw = أهم كلمة/كلمتين تتلوّن — segments[].cut = جملة تتشال (إعادة/تهتهة)
 //   title:    عنوان قصير للفيديو (من أول جزء بس)
 // الدخول: توكن مستخدم مسجّل في ميكانيزم (نفس حساب السيستم). المفتاح GEMINI_API_KEY من Secrets (نفس parse-invoice).
@@ -17,7 +17,7 @@ const SCHEMA = {
     title: { type: "STRING" },
     segments: { type: "ARRAY", items: { type: "OBJECT", properties: { s: { type: "NUMBER" }, e: { type: "NUMBER" }, t: { type: "STRING" }, cut: { type: "BOOLEAN" }, kw: { type: "ARRAY", items: { type: "STRING" } } }, required: ["s", "e", "t"] } },
     events: { type: "ARRAY", items: { type: "OBJECT", properties: {
-      s: { type: "NUMBER" }, e: { type: "NUMBER" }, type: { type: "STRING" }, label: { type: "STRING" }, value: { type: "STRING" }, unit: { type: "STRING" },
+      s: { type: "NUMBER" }, e: { type: "NUMBER" }, type: { type: "STRING" }, label: { type: "STRING" }, value: { type: "STRING" }, unit: { type: "STRING" }, scene: { type: "STRING" }, action: { type: "STRING" },
     }, required: ["s", "type", "label"] } },
   },
   required: ["segments", "events"],
@@ -31,6 +31,7 @@ events = الحاجات اللي محتاجة تتوضّح على الشاشة �
 - point: نقطة مهمة أو ميزة (مثلًا «قفلة هادية من غير خبط»). label قصير جدًا (٢ لـ ٥ كلمات).
 - step: لما يشرح خطوات (أولًا/تاني حاجة/بعد كده). value = رقم الخطوة، label = الخطوة في ٢ لـ ٥ كلمات.
 - warn: تحذير أو غلطة بيحذر منها (مثلًا «ماتركبش المجرى مايل»). label قصير.
+- anim: رسمة متحركة بتشرح اللي بيتقال (مهمة جدًا — طلّعها كل ما يتكلم عن طريقة شغل منتج أو مشكلة فيه، مرة كل ١٠-٢٠ ثانية تقريبًا). scene = واحد من دول بالظبط: flap_up (ضلفة بتفتح لفوق / دراع باكم / بستم / قلاب) — drawer (مجرى درج / أدراج) — hinge_door (مفصلة / ضلفة بتفتح عادي) — lock (كالون / قفل / مفتاح) — corner_basket (ميكانيزم ركنة / كرسيل) — wardrobe_lift (بانتوجراف / شماعة دريسنج بتنزل) — handle (مقبض / أكرة) — item (أي منتج تاني). action = واحد من دول: open (بيشرح إنه بيفتح أو بيشتغل) — soft (بيقفل بالراحة / من غير خبط) — break (بيتكسر / بيبوظ / ضعيف) — heavy (بيشيل وزن تقيل) — compare (بيقارن العادي اللي بيتكسر باللي عندنا). label = جملة قصيرة تتكتب تحت الرسمة (٣ لـ ٧ كلمات). s = لحظة ما بيبدأ الكلام عنها.
 - topic: لما يبدأ يتكلم في موضوع جديد جوه الفيديو. label = عنوان القسم في ٢ لـ ٤ كلمات. ماتكترش منه (مرة كل ٢٠-٤٠ ثانية بالكتير).
 في كل جملة من segments:
 - kw = من كلمة لكلمتين بالظبط زي ما مكتوبين في t، أهم كلمات في الجملة (رقم، اسم صنف، ميزة، كلمة فيها حماس). لو مفيش رجّع kw فاضية.
