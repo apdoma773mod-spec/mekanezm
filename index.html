@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-35';
+const APP_VER='2026-10-23-36';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11565,12 +11565,12 @@ window.mkSmsPoll=pending;setTimeout(function(){if(window.mkT_user)pending()},400
 window.mkSmsOpen=async function(){let L=window.__smsCache||[];
  openModal('<div class="modal-head"><h2>📲 فلوس فودافون كاش (<span id="smsCnt">'+L.length+'</span>)</h2><button class="close" onclick="closeModal()"><svg class="i"><use href="#i-x"/></svg></button></div>'+
   '<p style="font-size:13px;color:var(--muted);margin:0 0 8px">فلوس وصلت أو اتبعتت من موبايلك. أنت اللي بتقرر تتسجل على مين — مفيش حاجة بتتسجل لوحدها.</p>'+
-  '<datalist id="smsPL">'+(db.contacts||[]).map(c=>'<option value="'+esc(c.name)+' — '+esc(c.type)+'" data-id="'+c.id+'">').join('')+'</datalist><div id="smsList">'+(window.__smsCache?listH(L):'<div class="empty">⏳ بيحمّل…</div>')+'</div>');
+  partners().map(function(p){return '<button type="button" class="secondary" style="width:100%;margin-bottom:8px;text-align:right" data-pacc="'+p.id+'">🤝 <b>حساب '+esc(p.name)+'</b> — '+balTxt(p.balance)+' · دوس تفتحه</button>'}).join('')+'<datalist id="smsPL">'+(db.contacts||[]).map(c=>'<option value="'+esc(c.name)+' — '+esc(c.type)+'" data-id="'+c.id+'">').join('')+'</datalist><div id="smsList">'+(window.__smsCache?listH(L):'<div class="empty">⏳ بيحمّل…</div>')+'</div>');
  let m=document.getElementById('modal');
  m.oninput=function(e){let id=e.target.dataset&&e.target.dataset.pi;if(!id)return;let opt=[...document.getElementById('smsPL').options].find(o=>o.value===e.target.value),c=opt&&(db.contacts||[]).find(z=>z.id===opt.dataset.id),x=(window.__smsL||[]).find(z=>z.id===id),inf=m.querySelector('[data-pinfo="'+id+'"]');
   PICK[id]=c||null;if(inf)inf.innerHTML=c&&x?effect(x,c):'اختار الاسم من القايمة اللي بتظهر'};
  window.__smsL=L;
- m.onclick=async function(e){let b=e.target.closest('[data-a]');if(!b)return;let id=b.dataset.id,a=b.dataset.a,x=(window.__smsL||[]).find(z=>z.id===id);if(!x)return;
+ m.onclick=async function(e){let pb=e.target.closest('[data-pacc]');if(pb){closeModal();openContactFile(pb.dataset.pacc);return}let b=e.target.closest('[data-a]');if(!b)return;let id=b.dataset.id,a=b.dataset.a,x=(window.__smsL||[]).find(z=>z.id===id);if(!x)return;
   try{
    if(a==='rec'){let c=findAny(x.phone);if(!c)return;
     if((!isPartner(c)&&c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
