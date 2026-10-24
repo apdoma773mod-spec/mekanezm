@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-30';
+const APP_VER='2026-10-23-31';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11187,12 +11187,19 @@ function findContact(num){const k=last9(num);if(!k)return null;return (db.contac
 function box(html){let b=document.getElementById('vsBox');if(!b){b=document.createElement('div');b.id='vsBox';b.onclick=e=>{if(e.target===b)b.remove()};document.body.appendChild(b)}b.innerHTML='<div class="vs">'+html+'</div>'}
 function pickList(){return (db.contacts||[]).map(c=>`<option value="${H(c.name)}" data-id="${c.id}">`).join('')}
 window.mkTfApply=async function(id,img,phone,amount,contactId){
- try{if(!contactId){const inp=document.getElementById('tfPick'),opt=inp&&[...document.getElementById('tfPL').options].find(o=>o.value===inp.value);if(!opt)return toast('اختار عميل أو مورد الأول');contactId=opt.dataset.id}
-  await rpc('mk_add_payment',{p_contact:contactId,p_amount:+amount,p_note:'تحويل واتساب'+(phone?' من '+phone:'')});
-  await window.mkSB.from('wa_photos').update({status:'paid',handled_by:(window.mkT_user&&mkT_user.name)||'',handled_at:new Date().toISOString()}).eq('id',id);
-  await Promise.all([refreshContacts([contactId]),refreshTable('mk_payments')]);
-  document.getElementById('vsBox')?.remove();toast('✔ اتسجلت كدفعة');if(window.mkVS&&window.mkVS.waList)window.mkVS.waList()}
- catch(e){toast('مشكلة: '+(e.message||e))}};
+ const box0=document.getElementById('vsBox'),btn=box0&&box0.querySelector('.vsb .primary');
+ const say=(t,ok)=>{let m=document.getElementById('tfMsg');if(!m&&box0){m=document.createElement('div');m.id='tfMsg';m.style.cssText='margin:8px 0;padding:10px;border-radius:10px;font-weight:700;line-height:1.7';box0.appendChild(m)}if(m){m.style.background=ok?'#e8f6ec':'#fdecea';m.style.color=ok?'#1e7a3c':'#b3261e';m.textContent=t}};
+ if(btn&&btn.disabled)return;
+ try{if(!contactId){const inp=document.getElementById('tfPick'),opt=inp&&[...document.getElementById('tfPL').options].find(o=>o.value===inp.value.trim());if(!opt){say('اختار اسم العميل أو المورد من القايمة اللي بتظهر وانت بتكتب الأول');return}contactId=opt.dataset.id}
+  if(!(+amount>0)){say('المبلغ مش واضح');return}
+  if(btn){btn.disabled=true;btn.textContent='⏳ بيتسجّل…'}
+  const to=new Promise((_,rej)=>setTimeout(()=>rej(new Error('السيرفر اتأخر — اتأكد من النت وجرّب تاني (ماتسجّلش حاجة)')),30000));
+  await Promise.race([rpc('mk_add_payment',{p_contact:contactId,p_amount:+amount,p_note:'تحويل واتساب'+(phone?' من '+phone:'')}),to]);
+  try{await window.mkSB.from('wa_photos').update({status:'paid',handled_by:(window.mkT_user&&mkT_user.name)||'',handled_at:new Date().toISOString()}).eq('id',id)}catch(e){}
+  document.getElementById('vsBox')?.remove();toast('✔ اتسجلت كدفعة');
+  Promise.all([refreshContacts([contactId]),refreshTable('mk_payments')]).catch(()=>{});
+  if(window.mkVS&&window.mkVS.waList)window.mkVS.waList()}
+ catch(e){if(btn){btn.disabled=false;btn.textContent='✔ سجّلها دفعة'}say('✘ '+(e.message||e),false)}};
 window.mkTfIgnore=async function(id,fallbackOpen){document.getElementById('vsBox')?.remove();if(fallbackOpen)fallbackOpen(id)};
 async function checkTransfer(id,fallbackOpen){
  let x;try{const r=await window.mkSB.from('wa_photos').select('*').eq('id',id).single();x=r.data}catch(e){}
@@ -11204,10 +11211,10 @@ async function checkTransfer(id,fallbackOpen){
  box(`<div class="vsh"><b>💸 تحويل فلوس</b><button type="button" class="secondary" onclick="document.getElementById('vsBox').remove()">✕</button></div>
   <img class="vsph" src="${H(x.img)}"><div class="vsseen">المبلغ: <b>${M(tf.amount)}</b>${tf.sender_name?' — من: '+H(tf.sender_name):''}${tf.sender_account?' — '+H(tf.sender_account):''}</div>
   ${c?`<div class="vsm"><div class="t"><b>${H(c.name)}</b><small>${H(c.type)} — اتعرف عليه من رقمه</small></div></div>
-   <div class="vsb"><button type="button" class="primary" onclick="mkTfApply('${id}','${H(x.img)}','${H(tf.sender_account||'')}',${+tf.amount},'${c.id}')">✔ سجّلها دفعة من ${H(c.name)}</button></div>`
+   <div class="vsb"><button type="button" class="primary" onclick="mkTfApply('${id}','','${H(tf.sender_account||'')}',${+tf.amount},'${c.id}')">✔ سجّلها دفعة من ${H(c.name)}</button></div>`
    :`<div class="vsseen" style="background:#fff6e5">الرقم ده مش مسجّل عندك — اختار تحطها على حساب مين:</div>
    <div class="field full"><input id="tfPick" list="tfPL" placeholder="دوّر على عميل أو مورد..."><datalist id="tfPL">${pickList()}</datalist></div>
-   <div class="vsb"><button type="button" class="primary" onclick="mkTfApply('${id}','${H(x.img)}','${H(tf.sender_account||'')}',${+tf.amount})">✔ سجّلها دفعة</button></div>`}
+   <div class="vsb"><button type="button" class="primary" onclick="mkTfApply('${id}','','${H(tf.sender_account||'')}',${+tf.amount})">✔ سجّلها دفعة</button></div>`}
   <div class="vsb"><button type="button" class="secondary" onclick="mkTfIgnore('${id}',window.__mkVSOrigWaOpen)">دي مش تحويل — افتحها عادي</button></div>`);
 }
 if(window.mkVS&&typeof window.mkVS.waOpen==='function'){
