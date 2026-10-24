@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-16';
+const APP_VER='2026-10-23-17';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -7297,6 +7297,33 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<p style="margin:8px 0 2px"><b>رسم القطع للصنايعي (مقاسات بالسنتي)</b></p><div>'+imgs+'</div>'+(roll?'':'<p style="margin:8px 0 2px"><b>تقطيع الألواح</b></p><div>'+lay+'</div>');
  }
  /* رسمة بالمقاسات للبامبو (المقاسات اللي بتتكتب برّه برّه، لأنها هي مقاس الشاسيه الخشب اللي الدرج بيتسقط فيه): واجهة + منظر من فوق، بشكل شبه النسيج، وتقسيم بعدد فواصل حر (مش قسمة واحدة بس) */
+ /* رسمة توضيحية بنفس شكل الموقع (سلة بامبو بالضفيرة والفواصل) */
+ const bsF='font-family="Segoe UI,Tahoma,Arial,sans-serif"';
+ const bsDimH=(x1,x2,y,t)=>`<g stroke="#a8741a" stroke-width="1.4" fill="#a8741a"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><path d="M${x1} ${y}l7 -3.5v7zM${x2} ${y}l-7 -3.5v7z"/><line x1="${x1}" y1="${y-5}" x2="${x1}" y2="${y+5}"/><line x1="${x2}" y1="${y-5}" x2="${x2}" y2="${y+5}"/></g><text x="${(x1+x2)/2}" y="${y+16}" text-anchor="middle" font-size="13" font-weight="700" fill="#12202b" ${bsF}>${esc(t)}</text>`;
+ const bsDimV=(x,y1,y2,t,side)=>`<g stroke="#a8741a" stroke-width="1.4" fill="#a8741a"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><path d="M${x} ${y1}l-3.5 7h7zM${x} ${y2}l-3.5 -7h7z"/><line x1="${x-5}" y1="${y1}" x2="${x+5}" y2="${y1}"/><line x1="${x-5}" y1="${y2}" x2="${x+5}" y2="${y2}"/></g><text x="${x+(side||-1)*8}" y="${(y1+y2)/2+4}" text-anchor="${side>0?'start':'end'}" font-size="13" font-weight="700" fill="#12202b" ${bsF}>${esc(t)}</text>`;
+ const bsWrap=b=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="800" height="600" direction="ltr" style="direction:ltr"><rect width="400" height="300" fill="#fff"/><rect x="2" y="2" width="396" height="296" rx="10" fill="none" stroke="#d9a73a" stroke-width="2"/><text x="200" y="22" text-anchor="middle" font-size="13" font-weight="800" fill="#a8741a" ${bsF}>MEKANEZM — رسم توضيحي للطلب</text>${b}</svg>`;
+ function bambooSiteSvg(v){const w=num(v.w),l=num(v.l),h=num(v.h);if(!(w>0&&l>0&&h>0))return '';
+  const k=Math.min(200/(w+.28*l),165/(h+.5*l)),fw=w*k,fh=h*k,dx=l*k*.28,dy=-l*k*.5,x0=118+(200-(fw+dx))/2,yb=240,yt=yb-fh;
+  const nat=v.kind==='طبيعي',B=nat?['#d9b98a','#eed5a8','#a47c48']:['#c8a05e','#e0bf83','#8c6a30'];
+  const dv=v.split==='yes'?Math.max(1,Math.min(10,Math.round(num(v.dv)||0))):0;
+  const Fl=[x0,yt],Fr=[x0+fw,yt],Bl=[x0+dx,yt+dy],Br=[x0+fw+dx,yt+dy],P=(a,d)=>`${a[0]},${a[1]+(d||0)}`;
+  const poly=(pts,fill,sh)=>`<polygon points="${pts}" fill="${fill}" stroke="#5e4220" stroke-width="1.2" stroke-linejoin="round"/>`+(sh?`<polygon points="${pts}" fill="#2b1a05" opacity="${sh}"/>`:'');
+  const defs=`<defs><pattern id="wvB" width="14" height="9" patternUnits="userSpaceOnUse"><rect width="14" height="9" fill="${B[0]}"/><path d="M0 2.2h14M0 6.7h14" stroke="${B[1]}" stroke-width="2.6"/><path d="M0 3.9h14M0 8.4h14" stroke="${B[2]}" stroke-width=".8" opacity=".7"/><path d="M3.5 0v4.2M10.5 4.5v4.5" stroke="${B[2]}" stroke-width="2.4"/><path d="M5 0v4M12 4.5v4.5" stroke="${B[1]}" stroke-width=".8"/></pattern></defs>`;
+  const W='url(#wvB)';
+  let s=defs;
+  s+=poly(`${P(Fl)} ${P(Bl)} ${P(Bl,fh)} ${P(Fl,fh)}`,W,.3);          /* الجدار الداخلي الشمال */
+  s+=poly(`${P(Bl)} ${P(Br)} ${P(Br,fh)} ${P(Bl,fh)}`,W,.2);           /* الجدار الداخلي الخلفي */
+  s+=poly(`${P(Bl,fh)} ${P(Br,fh)} ${P(Fr,fh)} ${P(Fl,fh)}`,W,.1);     /* الأرضية */
+  for(let i=1;i<=dv;i++){const f=i/(dv+1),ax=x0+fw*f,bx=ax+dx;                      /* الفواصل */
+   s+=`<polygon points="${ax},${yt} ${bx},${yt+dy} ${bx},${yt+dy+fh} ${ax},${yt+fh}" fill="#e7d3aa" stroke="#5e4220" stroke-width="1.2"/><line x1="${ax}" y1="${yt}" x2="${bx}" y2="${yt+dy}" stroke="#a47c48" stroke-width="3"/>`}
+  s+=poly(`${P(Fr)} ${P(Br)} ${P(Br,fh)} ${P(Fr,fh)}`,W,.12);          /* الجنب اليمين من برّه */
+  s+=poly(`${P(Fl)} ${P(Fr)} ${P(Fr,fh)} ${P(Fl,fh)}`,W,0);            /* الوش */
+  const rim=(a,b)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#7a5a2a" stroke-width="7.5" stroke-linecap="round"/><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${B[1]}" stroke-width="5.8" stroke-linecap="round"/><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#8d6a38" stroke-width="5.8" stroke-dasharray="2.2 4.6"/>`;
+  s+=rim(Bl,Fl)+rim(Bl,Br)+rim(Fr,Br)+rim(Fl,Fr);                       /* الحافة المضفّرة */
+  s+=bsDimH(x0,x0+fw,yb+22,'العرض '+w+' سم')+bsDimV(x0-14,yt,yb,'الارتفاع '+h+' سم',-1);
+  s+=`<g stroke="#a8741a" stroke-width="1.4" fill="#a8741a"><line x1="${x0+fw+14}" y1="${yt+6}" x2="${x0+fw+dx+14}" y2="${yt+dy+6}"/><path d="M${x0+fw+14} ${yt+6}l-2 -7 8 3zM${x0+fw+dx+14} ${yt+dy+6}l2 7 -8 -3z"/></g><text x="${x0+fw+dx/2+30}" y="${yt+dy/2+6}" font-size="13" font-weight="700" fill="#12202b" ${bsF}>الطول ${l} سم</text>`;
+  s+=`<text x="200" y="293" text-anchor="middle" font-size="11" fill="#667" ${bsF}>${esc(v.kind||'')} — ${dv?('متقسم '+dv+' فاصل'):'بدون تقسيم'} — المقاس برّه برّه</text>`;
+  return bsWrap(s)}
  function bambooSvg(p){
   var a=num(p.a),b=num(p.b),c=num(p.c),lip=num(p.lip),dv=Math.max(0,Math.round(num(p.div))||0),q=Math.max(1,num(p.q))||1,kind2=p.kind2||'';
   if(!(a>0&&b>0))return '';
@@ -7327,6 +7354,8 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    dividers(x2,y2,W2,H2)+
    D(x2,y2+H2,x2+W2,y2+H2,cm(a),1)+D(x2,y2,x2,y2+H2,c>0?cm(c):'-',-1)+
    (lip>0?D(x2,y2,x2,y2+lp,'شفة '+cm(lip),-1):'')+'</svg>';
+  var site=c>0?bambooSiteSvg({w:a,l:c,h:b,kind:kind2,split:dv>0?'yes':'no',dv:dv}):'';
+  if(site){out+='<div style="font-size:17px;font-weight:800;text-align:center;margin-top:8px">③ شكل الدرج</div><div style="max-width:520px;margin:0 auto">'+site+'</div>'}else{
   /* ③ شكل الدرج بمنظور خفيف: جسم + واجهة بقضبان بامبو أفقية متساوية + مقبض، والأرقام على الأطراف */
   var W3=190,H3=Math.max(60,Math.min(190,W3*b/a)),dd=c>0?Math.max(24,Math.min(100,W3*c/a*0.5)):40,ddx=dd*0.87,ddy=dd*0.5,x3=145,y3=62+ddy,P=function(){return [].slice.call(arguments).map(function(v){return v.toFixed(1)}).join(' ')};
   var ns=Math.max(5,Math.min(22,Math.round(H3/13))),sl='';for(var i=0;i<ns;i++){var sy=y3+5+(H3-10)*(i+0.5)/ns,sh=(H3-10)/ns*0.72;sl+='<rect x="'+(x3+5)+'" y="'+(sy-sh/2).toFixed(1)+'" width="'+(W3-10)+'" height="'+sh.toFixed(1)+'" rx="'+(sh/2).toFixed(1)+'" fill="#d9a865" stroke="#9c6a2c" stroke-width="1.2"/>'}
@@ -7337,7 +7366,7 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
    '<polygon points="'+P(x3+W3,y3,x3+W3+ddx,y3-ddy,x3+W3+ddx,y3+H3-ddy,x3+W3,y3+H3)+'" fill="#b98545" stroke="#000" stroke-width="3"/>'+
    '<rect x="'+x3+'" y="'+y3.toFixed(1)+'" width="'+W3+'" height="'+H3.toFixed(1)+'" fill="#f0d6a4" stroke="#000" stroke-width="4"/>'+sl+
    '<rect x="'+(x3+W3*0.35).toFixed(1)+'" y="'+(y3+Math.min(18,H3*0.18)).toFixed(1)+'" width="'+(W3*0.3).toFixed(1)+'" height="9" rx="4.5" fill="#3a3a3a" stroke="#000" stroke-width="1.5"/>'+
-   D(x3,y3+H3,x3+W3,y3+H3,cm(a),1)+D(x3,y3,x3,y3+H3,cm(b),1)+(c>0?D(x3+W3,y3,x3+W3+ddx,y3-ddy,cm(c),-1):'')+'</svg>';
+   D(x3,y3+H3,x3+W3,y3+H3,cm(a),1)+D(x3,y3,x3,y3+H3,cm(b),1)+(c>0?D(x3+W3,y3,x3+W3+ddx,y3-ddy,cm(c),-1):'')+'</svg>';}
   return '<div style="page-break-inside:avoid;border-top:3px dashed #000;padding-top:6px;margin-top:8px">'+out+'</div>';
  }
  function bambooSummary(o){
