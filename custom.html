@@ -82,17 +82,23 @@ function drawBamboo(v){const w=num(v.w),l=num(v.l),h=num(v.h);if(!(w>0&&l>0&&h>0
  return svgWrap(s)}
 
 function drawDelf(v){const W=num(v.w),H=num(v.h);if(!(W>0&&H>0))return '';
- const k=Math.min(190/W,172/H),dw=W*k,dh=H*k,x0=150,y0=52,pw=Math.max(7,Math.min(14,4*k));
+ const k=Math.min(165/W,165/H),dw=W*k,dh=H*k,x0=122,y0=62,ps=Math.max(6,Math.min(12,3.5*k)),hw=Math.max(ps+3,Math.min(18,6.5*k)),tr=Math.max(8,Math.min(14,4.5*k));
+ const hL=v.handle==='both'||(v.handle==='one'&&v.hside==='left'),hR=v.handle==='both'||(v.handle==='one'&&v.hside!=='left');
+ const wl=hL?hw:ps,wr=hR?hw:ps;
  const defs=`<defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f1f5"/><stop offset=".5" stop-color="#cfdde5"/><stop offset="1" stop-color="#b9cbd6"/></linearGradient><linearGradient id="bk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2d31"/><stop offset=".5" stop-color="#4a4f55"/><stop offset="1" stop-color="#1c1e21"/></linearGradient><linearGradient id="al" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d98a1"/><stop offset=".4" stop-color="#f4f6f8"/><stop offset="1" stop-color="#7b8791"/></linearGradient></defs>`;
- let s=defs+`<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" rx="2" fill="url(#bk)" stroke="#111" stroke-width="1"/><rect x="${x0+pw}" y="${y0+pw}" width="${dw-2*pw}" height="${dh-2*pw}" fill="url(#gl)" stroke="#8d98a1" stroke-width="1.2"/><path d="M${x0+pw+8} ${y0+dh-pw-8}L${x0+pw+Math.min(60,dw*.4)} ${y0+pw+8}M${x0+pw+22} ${y0+dh-pw-8}L${x0+pw+Math.min(74,dw*.4+14)} ${y0+pw+8}" stroke="#fff" stroke-width="6" opacity=".55"/>`;
- const hs=v.handle==='both'?['L','R']:v.handle==='one'?[v.hside==='left'?'L':'R']:[];
- hs.forEach(x=>{const hx=x==='L'?x0+pw+3:x0+dw-pw-9;s+=`<rect x="${hx}" y="${y0+dh/2-26}" width="6" height="52" rx="3" fill="url(#al)" stroke="#59636c"/>`});
- if(v.type==='hinged'&&v.drill==='yes'){const n=Math.max(1,Math.min(8,Math.round(num(v.hn)||2))),hx=v.hinge==='left'?x0+pw/2:x0+dw-pw/2;for(let i=0;i<n;i++){const y=n===1?y0+dh/2:y0+22+(dh-44)*i/(n-1);s+=`<circle cx="${hx}" cy="${y}" r="${Math.min(6,pw/2-0.5)}" fill="#cfd6dc" stroke="#111" stroke-width="1.2"/><circle cx="${hx}" cy="${y}" r="1.8" fill="#111"/>`}}
- if(v.type==='slide'&&v.wheel==='yes'){[0,1].forEach(i=>{const px=i?x0+dw-pw-12:x0+pw-2,py=y0+dh*.1;
-  s+=`<rect x="${i?x0+dw-pw:x0}" y="${py-2}" width="${pw}" height="34" fill="none" stroke="#e24c3b" stroke-width="1.6" stroke-dasharray="4 3"/><rect x="${px}" y="${py}" width="14" height="30" rx="2" fill="#7b8084" stroke="#33383c"/><circle cx="${px+4}" cy="${py+6}" r="1.6" fill="#ddd"/><circle cx="${px+4}" cy="${py+24}" r="1.6" fill="#ddd"/><circle cx="${i?px+16:px-3}" cy="${py+15}" r="6" fill="#cfd6dc" stroke="#33383c" stroke-width="1.2"/>`})}
- s+=dimH(x0,x0+dw,y0+dh+22,'العرض '+W+' سم')+dimV(x0-14,y0,y0+dh,'الارتفاع '+H+' سم',-1);
+ let s=defs+`<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" rx="2" fill="url(#bk)" stroke="#111" stroke-width="1"/><rect x="${x0+wl}" y="${y0+tr}" width="${dw-wl-wr}" height="${dh-2*tr}" fill="url(#gl)" stroke="#8d98a1" stroke-width="1.2"/><path d="M${x0+wl+8} ${y0+dh-tr-8}L${x0+wl+Math.min(56,dw*.4)} ${y0+tr+8}M${x0+wl+20} ${y0+dh-tr-8}L${x0+wl+Math.min(68,dw*.4+12)} ${y0+tr+8}" stroke="#fff" stroke-width="5" opacity=".55"/>`;
+ /* المقبض: القايم نفسه بروفيل فيه شفة سحب بطول الدلفة */
+ [[hL,x0,1],[hR,x0+dw-hw,-1]].forEach(a=>{if(!a[0])return;const x=a[1];s+=`<rect x="${x}" y="${y0}" width="${hw}" height="${dh}" fill="url(#al)" stroke="#59636c" stroke-width="1"/><rect x="${a[2]>0?x+hw-4:x+1.5}" y="${y0+tr}" width="2.5" height="${dh-2*tr}" fill="#2a2d31"/><line x1="${a[2]>0?x+hw*.35:x+hw*.65}" y1="${y0+4}" x2="${a[2]>0?x+hw*.35:x+hw*.65}" y2="${y0+dh-4}" stroke="#fff" stroke-width="1.4" opacity=".8"/>`});
+ if(v.type==='hinged'&&v.drill==='yes'){const n=Math.max(1,Math.min(8,Math.round(num(v.hn)||2))),left=v.hinge==='left',hx=left?x0+wl/2:x0+dw-wr/2;for(let i=0;i<n;i++){const y=n===1?y0+dh/2:y0+tr+14+(dh-2*tr-28)*i/(n-1);s+=`<circle cx="${hx}" cy="${y}" r="${Math.min(5,Math.max(2.5,(left?wl:wr)/2-1.2))}" fill="#cfd6dc" stroke="#111" stroke-width="1.2"/><circle cx="${hx}" cy="${y}" r="1.5" fill="#111"/>`}}
+ /* العجل: في الراس (فوق) والرجل (تحت) عند الأطراف */
+ if(v.type==='slide'&&v.wheel==='yes'){const xs=[x0+dw*.1,x0+dw*.9-14];xs.forEach(x=>{
+   s+=`<rect x="${x-2}" y="${y0}" width="18" height="${tr}" fill="none" stroke="#e24c3b" stroke-width="1.5" stroke-dasharray="3 2"/><rect x="${x}" y="${y0+1}" width="14" height="${tr-2}" rx="1.5" fill="#7b8084" stroke="#33383c"/><circle cx="${x+7}" cy="${y0-5}" r="6.5" fill="#cfd6dc" stroke="#33383c" stroke-width="1.3"/><circle cx="${x+7}" cy="${y0-5}" r="2" fill="#33383c"/>
+   <rect x="${x-2}" y="${y0+dh-tr}" width="18" height="${tr}" fill="none" stroke="#e24c3b" stroke-width="1.5" stroke-dasharray="3 2"/><rect x="${x}" y="${y0+dh-tr+1}" width="14" height="${tr-2}" rx="1.5" fill="#7b8084" stroke="#33383c"/><circle cx="${x+7}" cy="${y0+dh+5}" r="6.5" fill="#cfd6dc" stroke="#33383c" stroke-width="1.3"/><circle cx="${x+7}" cy="${y0+dh+5}" r="2" fill="#33383c"/>`})}
+ /* قطاع المقبض */
+ s+=`<g transform="translate(288 ${y0+10})"><text x="46" y="-6" text-anchor="middle" font-size="11" font-weight="700" fill="#12202b" ${F}>قطاع القايم</text><rect x="22" y="10" width="34" height="46" rx="2" fill="url(#bk)" stroke="#111"/><rect x="56" y="24" width="36" height="6" fill="url(#gl)" stroke="#8d98a1"/>${(hL||hR)?`<path d="M26 22h-16v26h12" fill="none" stroke="#c9d1d8" stroke-width="6" stroke-linejoin="round"/><path d="M26 22h-16v26h12" fill="none" stroke="#59636c" stroke-width="1"/><text x="46" y="76" text-anchor="middle" font-size="10" fill="#667" ${F}>شفة سحب في البروفيل</text>`:`<text x="46" y="76" text-anchor="middle" font-size="10" fill="#667" ${F}>بدون مقبض</text>`}</g>`;
+ s+=dimH(x0,x0+dw,y0+dh+24,'العرض '+W+' سم')+dimV(x0-14,y0,y0+dh,'الارتفاع '+H+' سم',-1);
  const lab=(v.type==='hinged'?'مفصلي':'جرار')+' — إطار ألمنيوم أسود وزجاج — '+({none:'بدون مقبض',one:'مقبض من ناحية',both:'مقبض من الناحيتين'}[v.handle]||'');
- return svgWrap(s+`<text x="200" y="293" text-anchor="middle" font-size="11" fill="#667" ${F}>${esc(lab)}</text>`)}
+ return svgWrap(s+`<text x="200" y="294" text-anchor="middle" font-size="11" fill="#667" ${F}>${esc(lab)}</text>`)}
 
 const DRAWERS={steel:drawSteel,bamboo:drawBamboo,delf:drawDelf};
 
