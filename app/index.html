@@ -31,7 +31,7 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <meta name="theme-color" id="metaTheme" content="#087f8c">
-<title>MEKANIZM | نظام المخزون</title>
+<title>ميكانيكس | نظام المخزون</title>
 <style>
 :root{--blue:#087f8c;--blue2:#075e68;--gold:#d5a928;--bg:#f5f7f8;--card:#fff;--text:#18343a;--muted:#718087;--danger:#c0392b;--green:#159447;--border:#e4eaed}
 *{box-sizing:border-box}body{margin:0;background-repeat:no-repeat;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .toolbar .search{min-width:0}
 }
 </style>
-<script src="industries.js?v=2"></script>
+<script src="industries.js?v=3"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">
@@ -69,7 +69,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ميكانيزم">
+<meta name="apple-mobile-web-app-title" content="ميكانيكس">
 <style>
 #mkLogin,#mkConf{position:fixed;inset:0;z-index:99999;background:#f5f7f8;display:none;align-items:center;justify-content:center;padding:20px;font-family:Cairo,Tahoma,Arial,sans-serif;direction:rtl}
 #mkLogin.show,#mkConf.show{display:flex}
@@ -278,7 +278,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 <div id="toast" class="toast"></div>
 
 <div id="mkStat"></div>
-<div id="mkLogin"><div class="mkbox"><h2>ميكانيزم</h2><p>سجّل دخول عشان تفتح نظام المخزون</p>
+<div id="mkLogin"><div class="mkbox"><h2>ميكانيكس</h2><p>سجّل دخول عشان تفتح نظام المخزون</p>
 <input id="mkEmail" type="email" placeholder="الإيميل" autocomplete="username">
 <input id="mkPass" type="password" placeholder="كلمة السر" autocomplete="current-password">
 <button id="mkGo" type="button">دخول</button><div id="mkErr"></div></div></div>
@@ -1575,11 +1575,11 @@ function applyRole(){if(window.MK_T){if(window.mkT_applyRole)window.mkT_applyRol
 /* شاشة الدخول */
 function whoStart(){let w=document.getElementById('mkWho');if(!w)return;
  /* جهاز جديد: نستنى بيانات السيرفر الأول عشان مانعملش مدير تاني بالغلط */
- if(!users().some(u=>u.role==='admin')&&lsG('mk_cloud_ver')==null&&navigator.onLine&&typeof supabase!=='undefined'){w.innerHTML='<div class="mkbox" id="wWait"><h2>ميكانيزم</h2><p>⏳ جاري تحميل البيانات من السيرفر...</p></div>';setTimeout(()=>{if(document.getElementById('wWait'))whoStart()},8000);return}
+ if(!users().some(u=>u.role==='admin')&&lsG('mk_cloud_ver')==null&&navigator.onLine&&typeof supabase!=='undefined'){w.innerHTML='<div class="mkbox" id="wWait"><h2>ميكانيكس</h2><p>⏳ جاري تحميل البيانات من السيرفر...</p></div>';setTimeout(()=>{if(document.getElementById('wWait'))whoStart()},8000);return}
  if(!users().some(u=>u.role==='admin')){w.innerHTML=`<div class="mkbox"><h2>أهلاً بيك في ميكانيزم</h2><p>أول مرة: اعمل حساب المدير (إنت). الاسم والرقم السري ده هتدخل بيهم كل يوم.</p>
   <input id="wName" placeholder="اسم المدير" style="direction:rtl;text-align:right"><input id="wPin" type="password" inputmode="numeric" placeholder="رقم سري (4 أرقام على الأقل)"><input id="wPin2" type="password" inputmode="numeric" placeholder="اكتب الرقم السري تاني">
   <button type="button" onclick="whoSetup()">حفظ ودخول</button><div id="wErr" class="werr"></div></div>`;return}
- w.innerHTML=`<div class="mkbox"><h2>ميكانيزم</h2><p>اختار طريقة الدخول</p><button type="button" onclick="whoRole('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="whoRole('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button></div>`}
+ w.innerHTML=`<div class="mkbox"><h2>ميكانيكس</h2><p>اختار طريقة الدخول</p><button type="button" onclick="whoRole('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="whoRole('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button></div>`}
 function whoRole(role){let w=document.getElementById('mkWho'),L=users().filter(u=>u.role===role);
  if(!L.length){w.querySelector('.mkbox').insertAdjacentHTML('beforeend','<div class="werr">مفيش موظفين متسجلين لسه — المدير يضيفهم من الإعدادات.</div>');return}
  w.innerHTML=`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
@@ -1640,7 +1640,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-24-55';
+const APP_VER='2026-10-24-56';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1954,14 +1954,14 @@ function who(){return document.getElementById('mkWho')}
 function showWho(html){let w=who();if(!w)return;w.innerHTML=html;w.classList.add('show')}
 function chooser(){let s=staff();
  if(!s.length)return emailForm('أول مرة على الجهاز ده: ادخل بالإيميل وكلمة السر بتوعك (المدير).');
- showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${TEST?'🧪 نسخة تجريبية — ':''}اختار طريقة الدخول</p><button type="button" onclick="mkT_role('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="mkT_role('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button>
+ showWho(`<div class="mkbox"><h2>ميكانيكس</h2><p>${TEST?'🧪 نسخة تجريبية — ':''}اختار طريقة الدخول</p><button type="button" onclick="mkT_role('emp')" style="padding:18px;font-size:18px">👷 دخول موظف</button><button type="button" class="alt" onclick="mkT_role('admin')" style="padding:18px;font-size:18px;margin-top:10px">👔 دخول مدير</button>
  <p style="margin:14px 0 0;text-align:center"><a href="#" onclick="mkT_email();return false" style="color:#718087;font-size:13px">الدخول بالإيميل</a></p></div>`)}
 window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.length)return toast(role==='emp'?'مفيش موظفين متسجلين — المدير يضيفهم من الإعدادات':'مفيش مدير متسجل على الجهاز ده — ادخل بالإيميل');
  showWho(`<div class="mkbox"><h2>${role==='emp'?'👷 دخول موظف':'👔 دخول مدير'}</h2><p>اختار اسمك واكتب الرقم السري</p>
  <select id="wUser" style="width:100%;padding:13px;border:1px solid #d5dde0;border-radius:11px;margin-bottom:10px;font-size:16px">${L.map(u=>`<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>
  <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off"><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
-function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
+function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيكس</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<button type="button" class="alt" style="margin-top:8px" onclick="mkInd.signup()">✨ حساب جديد — اختار مجالك</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
 window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();window.mkT_showWho=showWho;

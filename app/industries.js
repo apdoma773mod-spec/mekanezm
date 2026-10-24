@@ -48,23 +48,30 @@ function bindGrid(onPick){document.querySelectorAll('#indG button').forEach(b=>b
 /* شاشة حساب جديد */
 function signup(){
  if(typeof mkT_showWho!=='function')return;let pick='';
- mkT_showWho(`<div class="mkbox"><h2>حساب جديد</h2><p>اختار مجال شغلك والسيستم يتظبط عليه</p>
+ mkT_showWho(`<div class="mkbox" style="margin:auto"><h2>حساب جديد</h2><p>اختار مجال شغلك والسيستم يتظبط عليه</p>
  <input id="sgShop" placeholder="اسم المحل"><input id="sgPhone" type="tel" inputmode="tel" placeholder="رقم الموبايل">
  <input id="sgEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="sgPass" type="password" placeholder="كلمة السر (٦ حروف أو أكتر)" autocomplete="new-password">
  <p style="margin:10px 0 0;font-weight:700">مجال المحل:</p>${grid('')}
- <button type="button" id="sgGo">إنشاء الحساب</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_email()">عندي حساب — دخول</button><div id="wErr" class="werr"></div></div>`);
+ <div id="sgMsg" style="margin:8px 0;padding:10px;border-radius:10px;font-weight:700;display:none"></div>
+ <button type="button" id="sgGo">إنشاء الحساب</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_email()">عندي حساب — دخول</button></div>`);
+ const w=document.getElementById('mkWho');if(w){w.style.overflowY='auto';w.style.alignItems='flex-start';w.scrollTop=0}
  bindGrid(i=>pick=i);
+ const msg=(t,ok)=>{const m=document.getElementById('sgMsg');m.style.display='block';m.style.background=ok?'#dff3e6':'#fbe1de';m.style.color=ok?'#1f8a4c':'#c0392b';m.textContent=t;m.scrollIntoView({block:'center',behavior:'smooth'});if(typeof toast==='function')try{toast(t)}catch(x){}};
+ const v=id=>document.getElementById(id).value.trim();
  document.getElementById('sgGo').onclick=async()=>{
-  const e=document.getElementById('wErr'),v=id=>document.getElementById(id).value.trim();
-  if(!v('sgShop')||!v('sgEmail')||v('sgPass').length<6)return e.textContent='اكتب اسم المحل والإيميل وكلمة سر ٦ حروف على الأقل';
-  if(!pick)return e.textContent='اختار مجال المحل من الأيقونات';
-  if(!sb())return e.textContent='مفيش نت — لازم نت عشان تسجّل';
-  const b=document.getElementById('sgGo');b.disabled=true;e.textContent='جاري الإنشاء…';
-  const r=await sb().auth.signUp({email:v('sgEmail'),password:v('sgPass'),options:{data:{shop:v('sgShop'),phone:v('sgPhone'),industry:pick}}});
-  if(r.error){b.disabled=false;e.textContent=/registered|already/i.test(r.error.message)?'الإيميل ده مسجل قبل كده — ادخل بيه':r.error.message;return}
-  try{localStorage.setItem('mk_industry',pick)}catch(x){}
-  if(r.data&&r.data.session){location.reload()}
-  else{e.style.color='#159447';e.textContent='✔ اتبعتلك إيميل تأكيد — افتحه وبعدها ادخل'}
+  const b=document.getElementById('sgGo');
+  try{
+   if(!v('sgShop')||!v('sgEmail')||v('sgPass').length<6)return msg('اكتب اسم المحل والإيميل وكلمة سر ٦ حروف على الأقل');
+   if(!pick)return msg('اختار مجال المحل من الأيقونات');
+   if(!sb())return msg('مفيش نت — لازم نت عشان تسجّل');
+   b.disabled=true;msg('جاري إنشاء الحساب…',true);
+   const r=await sb().auth.signUp({email:v('sgEmail'),password:v('sgPass'),options:{data:{shop:v('sgShop'),phone:v('sgPhone'),industry:pick}}});
+   if(r.error){b.disabled=false;const t=String(r.error.message||'');
+    return msg(/registered|already/i.test(t)?'الإيميل ده مسجل قبل كده — ادخل بيه':/password/i.test(t)?'كلمة السر ضعيفة — خليها ٦ حروف أو أكتر':/invalid/i.test(t)?'الإيميل مكتوب غلط':/rate|seconds/i.test(t)?'استنى دقيقة وجرّب تاني':'مشكلة في التسجيل: '+t)}
+   try{localStorage.setItem('mk_industry',pick)}catch(x){}
+   if(r.data&&r.data.session){msg('✔ اتعمل الحساب — جاري الدخول…',true);setTimeout(()=>location.reload(),900)}
+   else{b.disabled=false;msg('✔ اتعمل الحساب — افتح الإيميل واضغط رابط التأكيد، وبعدها ارجع ادخل',true)}
+  }catch(x){b.disabled=false;msg('حصلت مشكلة: '+(x&&x.message||x))}
  }
 }
 
