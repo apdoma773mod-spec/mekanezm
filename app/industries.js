@@ -47,8 +47,8 @@ function bindGrid(onPick){document.querySelectorAll('#indG button').forEach(b=>b
 
 /* شاشة حساب جديد */
 function signup(){
- if(typeof showWho!=='function')return;let pick='';
- showWho(`<div class="mkbox"><h2>حساب جديد</h2><p>اختار مجال شغلك والسيستم يتظبط عليه</p>
+ if(typeof mkT_showWho!=='function')return;let pick='';
+ mkT_showWho(`<div class="mkbox"><h2>حساب جديد</h2><p>اختار مجال شغلك والسيستم يتظبط عليه</p>
  <input id="sgShop" placeholder="اسم المحل"><input id="sgPhone" type="tel" inputmode="tel" placeholder="رقم الموبايل">
  <input id="sgEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="sgPass" type="password" placeholder="كلمة السر (٦ حروف أو أكتر)" autocomplete="new-password">
  <p style="margin:10px 0 0;font-weight:700">مجال المحل:</p>${grid('')}

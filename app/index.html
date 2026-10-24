@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .toolbar .search{min-width:0}
 }
 </style>
-<script src="industries.js?v=1"></script>
+<script src="industries.js?v=2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">
@@ -1640,7 +1640,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-24-54';
+const APP_VER='2026-10-24-55';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1964,7 +1964,7 @@ window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.leng
 function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
  <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<button type="button" class="alt" style="margin-top:8px" onclick="mkInd.signup()">✨ حساب جديد — اختار مجالك</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
-window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();
+window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();window.mkT_showWho=showWho;
 async function signIn(email,pass){let e=document.getElementById('wErr');if(!email||!pass){if(e)e.textContent='اكتب البيانات';return}
  if(!sb){if(e)e.textContent='مفيش نت — لازم نت عشان تدخل أول مرة';return}
  if(e)e.textContent='جاري الدخول…';let b=document.getElementById('wGo');if(b)b.disabled=true;
