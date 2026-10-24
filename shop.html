@@ -1096,4 +1096,22 @@ const _pmF=pubMain;pubMain=function(){_pmF();setTimeout(find,90)};setTimeout(fin
 (function(){function a(){const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.story){fl.dataset.story=1;fl.insertAdjacentHTML('beforeend','<a href="story.html">🎬 المنتجات بالتفصيل</a>')}}
 const _p=pubMain;pubMain=function(){_p();setTimeout(a,40)};setTimeout(a,700);setTimeout(a,2500)})();
 </script>
+<style>
+.mkstl{display:flex;align-items:center;justify-content:center;gap:8px;margin:18px 16px 110px;padding:14px;border-radius:16px;background:linear-gradient(135deg,#10202c,#1b3a4d);color:#f6d77a;text-decoration:none;font-weight:800;font-size:15px}
+#mkCust{display:flex;gap:14px;align-items:center;margin:0 16px 14px;padding:16px;border-radius:22px;text-decoration:none;color:#fff;background:linear-gradient(135deg,#10202c,#1b5e7b);box-shadow:0 8px 24px #0f2b3d55;border:1px solid #d9a73a88;position:relative;overflow:hidden}
+#mkCust:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 40%,#ffffff22 50%,transparent 60%);transform:translateX(-120%);animation:mkcs 4.5s infinite}
+@keyframes mkcs{60%,100%{transform:translateX(120%)}}
+#mkCust i{font-style:normal;font-size:34px;width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#f6d77a,#a8741a);display:flex;align-items:center;justify-content:center;flex:0 0 64px;box-shadow:0 6px 14px #0006}
+#mkCust b{display:block;font-size:18px;color:#f6d77a;margin-bottom:3px}#mkCust span{font-size:13px;opacity:.9;line-height:1.6}
+</style>
+<script>
+(function(){
+const _pv=pvOpen;pvOpen=function(a,b){_pv(a,b);const w=document.querySelector('#pv .pvwrap')||document.getElementById('pv');if(w&&!w.querySelector('.mkstl'))w.insertAdjacentHTML('beforeend',`<a class="mkstl" href="story.html?p=${a}">🎬 المنتج بالتفصيل</a>`)};
+function home(){const m=document.getElementById('main'),c=document.getElementById('mkFind')||document.getElementById('cats');if(!m||!c||admin||document.getElementById('mkCust'))return;
+ c.insertAdjacentHTML('beforebegin','<a id="mkCust" href="custom.html"><i>🛠️</i><div><b>تجهيز المنتجات بمقاسك</b><span>استانلس حماية الباب • درج بامبو • دلف دريسنج روم — اكتب المقاسات واشوف الرسمة واطلب</span></div></a>')}
+const _p=pubMain;pubMain=function(){_p();setTimeout(home,100)};setTimeout(home,650);setTimeout(home,2400);
+function ft(){const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.cust){fl.dataset.cust=1;fl.insertAdjacentHTML('beforeend','<a href="custom.html">🛠️ تجهيز المنتجات</a>')}}
+const _p2=pubMain;pubMain=function(){_p2();setTimeout(ft,60)};setTimeout(ft,800);setTimeout(ft,2600);
+})();
+</script>
 </body></html>

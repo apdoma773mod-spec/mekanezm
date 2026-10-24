@@ -10,7 +10,7 @@
 #mkSt .eb{font-size:13px;letter-spacing:.18em;color:#a8741a;font-weight:700;margin-bottom:10px}
 #mkSt h1{font-family:Cairo,sans-serif;font-size:clamp(34px,9vw,72px);line-height:1.15;margin:0 0 8px;max-width:900px;will-change:transform,opacity}
 #mkSt .sub{color:#667;font-size:16px;margin:0 0 18px;will-change:opacity}
-#mkSt .hero-i{width:min(86vw,520px);aspect-ratio:1;object-fit:contain;will-change:transform;mix-blend-mode:multiply}
+#mkSt .hero-i{touch-action:pan-y;cursor:grab;width:min(86vw,520px);aspect-ratio:1;object-fit:contain;will-change:transform;mix-blend-mode:multiply}
 #mkSt .hint{position:absolute;bottom:22px;color:#889;font-size:13px;animation:mkh 1.6s infinite}@keyframes mkh{50%{transform:translateY(6px)}}
 #mkSt .seq{position:relative}
 #mkSt .stage{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 45%,#fff 40%,#f3f1ec)}
@@ -51,18 +51,19 @@ function tick(){if(!root||!root.classList.contains('on'))return;const H=root.cli
  const intro=root.querySelector('.intro');if(intro){const p=cl(root.scrollTop/(intro.offsetHeight-H),0,1);
   const h=root.querySelector('h1'),i=root.querySelector('.hero-i'),s=root.querySelector('.sub'),hint=root.querySelector('.hint');
   h.style.transform=`translateY(${-p*60}px) scale(${1-p*.15})`;h.style.opacity=1-p*1.1;s.style.opacity=1-p*1.4;hint.style.opacity=1-p*3;
-  if(i)i.style.transform=`scale(${.72+p*.5}) translateY(${(1-p)*10}px) rotate(${(p-.5)*-6}deg)`}
+  if(i){root._hp=p}}
  const seq=root.querySelector('.seq');if(seq){const r=seq.getBoundingClientRect(),prog=cl(-r.top/(seq.offsetHeight-H),0,1),n=d.im.length,pos=prog*(n-1);
-  root.querySelectorAll('.frames img').forEach((im,k)=>{const dist=Math.abs(k-pos),o=cl(1-dist*1.7,0,1);im.style.opacity=o;im.style.transform=`scale(${1+(k-pos)*-.05+.04*o}) translateX(${(k-pos)*-26}px)`});
+  root.querySelectorAll('.frames img').forEach((im,k)=>{const dist=Math.abs(k-pos),o=cl(1-dist*1.7,0,1);im.style.opacity=o;im.style.transform=`perspective(1000px) rotateY(${(k-pos)*-55}deg) scale(${.92+.1*o}) translateX(${(k-pos)*-30}px)`});
   const idx=Math.round(pos),st=d.steps[Math.min(idx,d.steps.length-1)]||['',''];
   root.querySelectorAll('.dots i').forEach((e,k)=>e.classList.toggle('on',k===idx));
   const t=root.querySelector('.cap .t'),v=root.querySelector('.cap .v'),nn=root.querySelector('.cap .n');
   if(root._k!==idx){root._k=idx;t.classList.add('o');setTimeout(()=>{nn.textContent=String(idx+1).padStart(2,'0')+' / '+String(n).padStart(2,'0');t.textContent=st[1]?st[0]:'';v.textContent=st[1]||st[0];t.classList.remove('o')},180)}}
  root.querySelectorAll('.sp:not(.in)').forEach(e=>{if(e.getBoundingClientRect().top<H*.92)e.classList.add('in')})}
+function spin(){if(!root||!root.classList.contains('on'))return;const t=performance.now()/1000;root._drag=(root._drag||0)*.94;root._ry=Math.sin(t*1.1)*24+(root._drag||0)+(root._user||0);const i=root.querySelector('.hero-i');if(i&&root._hp!=null)i.style.transform=`perspective(900px) rotateY(${root._ry}deg) scale(${.72+root._hp*.5})`;requestAnimationFrame(spin)}
 function open(id){const p=byId(S.products,id);if(!p)return;if(!root){root=document.createElement('div');root.id='mkSt';document.body.appendChild(root);
-  let q=0;root.addEventListener('scroll',()=>{if(!q){q=1;requestAnimationFrame(()=>{q=0;tick()})}},{passive:true});
+  let q=0;let dx=null;root.addEventListener('pointerdown',e=>{if(e.target.closest('.hero-i'))dx=e.clientX});root.addEventListener('pointermove',e=>{if(dx!=null){root._drag=Math.max(-80,Math.min(80,(root._drag||0)+(e.clientX-dx)*.9));dx=e.clientX}});root.addEventListener('pointerup',()=>{dx=null});root.addEventListener('scroll',()=>{if(!q){q=1;requestAnimationFrame(()=>{q=0;tick()})}},{passive:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});window.addEventListener('resize',tick)}
- document.getElementById('list').style.display='none';build(p);root.classList.add('on');document.documentElement.style.overflow='hidden';tick()}
+ document.getElementById('list').style.display='none';build(p);root.classList.add('on');root._user=0;root._drag=0;requestAnimationFrame(spin);document.documentElement.style.overflow='hidden';tick()}
 function close(){if(!root)return;root.classList.remove('on');root.innerHTML='';document.documentElement.style.overflow='';history.replaceState(null,'',location.pathname);document.getElementById('list').style.display=''}
 window.mkOpen=open;})();
 </script>

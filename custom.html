@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ميكانيزم — تجهيز المنتجات بمقاسك</title>
+<meta name="description" content="جهّز استانلس حماية الباب ودرج البامبو ودلف الدريسنج روم بمقاسك واطلب أونلاين من ميكانيزم">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--gd:linear-gradient(135deg,#f6d77a,#d9a73a 45%,#a8741a);--ink:#12202b;--mut:#667;--line:#e8e1cf;--ac:#a8741a}
+*{box-sizing:border-box}body{margin:0;background:#f7f5ef;color:var(--ink);font-family:Cairo,Tahoma,sans-serif;padding-bottom:40px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top b{font-size:20px;color:var(--ac)}.top a,.top button{color:var(--mut);text-decoration:none;font:600 14px Cairo;background:none;border:0;cursor:pointer}
+.wrap{max-width:720px;margin:0 auto;padding:18px 14px}
+h1{font-size:26px;margin:6px 0 4px}p.s{color:var(--mut);margin:0 0 16px}
+.pk{display:flex;gap:14px;align-items:center;width:100%;text-align:right;background:#fff;border:1px solid var(--line);border-radius:20px;padding:12px;margin-bottom:12px;cursor:pointer;box-shadow:0 3px 14px #0001;font:inherit;color:inherit}
+.pk svg{flex:0 0 112px;width:112px;height:90px;border-radius:14px;background:#0f2433}.pk b{display:block;font-size:17px;margin-bottom:3px}.pk span{font-size:13px;color:var(--mut);line-height:1.6}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:16px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g .f{display:flex;flex-direction:column;gap:4px}.g .full{grid-column:1/-1}
+label{font-size:13px;font-weight:700}input,select,textarea{font:inherit;padding:11px;border:1.5px solid var(--line);border-radius:12px;background:#fff;width:100%;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ac)}
+.ch{display:flex;gap:8px;flex-wrap:wrap}.ch button{flex:1 1 auto;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;font:700 14px Cairo;cursor:pointer;color:var(--ink)}
+.ch button.on{background:var(--gd);border-color:#a8741a;color:#2a1c04}
+.hint{font-size:12px;color:var(--mut);margin-top:3px}
+.dr{background:#fff;border:1px solid var(--line);border-radius:18px;padding:8px;margin-bottom:12px}.dr svg{width:100%;height:auto;display:block}
+.cta{display:block;width:100%;padding:16px;border:0;border-radius:16px;background:var(--gd);color:#2a1c04;font:800 17px Cairo;cursor:pointer;box-shadow:0 6px 18px #a8741a55}
+.cta.g2{background:#25D366;color:#fff;box-shadow:none;text-decoration:none;text-align:center}.cta.l{background:#fff;color:var(--ink);border:1.5px solid var(--line);box-shadow:none;margin-top:8px}
+.msg{color:#c0392b;font-weight:700;margin:8px 0;min-height:1.2em}
+.sum{white-space:pre-wrap;line-height:1.9;font-size:15px}
+.ov{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:flex-end;justify-content:center}.ov>div{background:#f7f5ef;width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:16px}
+.hid{display:none}
+</style>
+</head>
+<body>
+<div class="top"><b>🛠️ تجهيز المنتجات</b><a href="shop.html" id="back">← المتجر</a></div>
+<div class="wrap" id="app"></div>
+<script>
+const SB_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',SB_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const $=id=>document.getElementById(id),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{v=parseFloat(String(v).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(',','.'));return isFinite(v)?v:0};
+const WA='201042383986';
+const KIND={steel:'🔩 استانلس حماية الباب',bamboo:'🎍 درج بامبو',delf:'🚪 دلف الدريسنج روم'};
+let K=null,V={},DRAW=null;
+
+/* ---------- رسم ---------- */
+const F='font-family="Segoe UI,Tahoma,Arial,sans-serif"';
+const dimH=(x1,x2,y,t)=>`<g stroke="#a8741a" stroke-width="1.4" fill="#a8741a"><line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><path d="M${x1} ${y}l7 -3.5v7zM${x2} ${y}l-7 -3.5v7z"/><line x1="${x1}" y1="${y-5}" x2="${x1}" y2="${y+5}"/><line x1="${x2}" y1="${y-5}" x2="${x2}" y2="${y+5}"/></g><text x="${(x1+x2)/2}" y="${y+16}" text-anchor="middle" font-size="13" font-weight="700" fill="#12202b" ${F}>${esc(t)}</text>`;
+const dimV=(x,y1,y2,t,side)=>`<g stroke="#a8741a" stroke-width="1.4" fill="#a8741a"><line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}"/><path d="M${x} ${y1}l-3.5 7h7zM${x} ${y2}l-3.5 -7h7z"/><line x1="${x-5}" y1="${y1}" x2="${x+5}" y2="${y1}"/><line x1="${x-5}" y1="${y2}" x2="${x+5}" y2="${y2}"/></g><text x="${x+(side||-1)*8}" y="${(y1+y2)/2+4}" text-anchor="${side>0?'start':'end'}" font-size="13" font-weight="700" fill="#12202b" ${F}>${esc(t)}</text>`;
+const svgWrap=b=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="800" height="600" direction="ltr" style="direction:ltr"><rect width="400" height="300" fill="#fff"/><rect x="2" y="2" width="396" height="296" rx="10" fill="none" stroke="#d9a73a" stroke-width="2"/><text x="200" y="22" text-anchor="middle" font-size="13" font-weight="800" fill="#a8741a" ${F}>MEKANEZM — رسم توضيحي للطلب</text>${b}</svg>`;
+
+function drawSteel(v){const t=num(v.t),W=num(v.w),hf=num(v.hf),hb=num(v.hb);if(!(t>0&&W>0&&hf>0&&hb>0))return '';
+ const m=Math.max(hf,hb),k=Math.min(165/(m*1.35),95/t),dh=185,x0=105-t*k/2,yb=250,yt=yb-dh,tw=t*k;
+ const side=`<rect x="${x0}" y="${yt}" width="${tw}" height="${dh}" fill="#c9a77a" stroke="#6b4a1f" stroke-width="1.5"/><text x="${x0+tw/2}" y="${yt+60}" text-anchor="middle" font-size="11" fill="#6b4a1f" ${F} transform="rotate(-90 ${x0+tw/2} ${yt+60})">الباب</text>
+  <path d="M${x0-4} ${yb-hf*k}V${yb+4}H${x0+tw+4}V${yb-hb*k}" fill="none" stroke="#6aa5c9" stroke-width="5" stroke-linejoin="round"/><path d="M${x0-4} ${yb-hf*k}V${yb+4}H${x0+tw+4}V${yb-hb*k}" fill="none" stroke="#e6f3fb" stroke-width="1.4"/>
+  ${dimV(x0-16,yb-hf*k,yb,hf+' سم',-1)}${dimV(x0+tw+16,yb-hb*k,yb,hb+' سم',1)}${dimH(x0,x0+tw,yb+22,t+' سم')}<text x="${x0-12}" y="${yt-8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الوش</text><text x="${x0+tw+12}" y="${yt-8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الضهر</text>`;
+ const fw=130,fx=250,fh=dh,bh=Math.max(16,Math.min(130,hf*2.2));
+ const front=`<rect x="${fx}" y="${yt}" width="${fw}" height="${fh}" fill="#c9a77a" stroke="#6b4a1f" stroke-width="1.5"/><rect x="${fx}" y="${yb-bh}" width="${fw}" height="${bh}" fill="#6aa5c9" stroke="#3a6f93"/><rect x="${fx}" y="${yb-bh}" width="${fw}" height="${bh*.35}" fill="#e6f3fb" opacity=".55"/>${dimH(fx,fx+fw,yb+22,'عرض الباب '+W+' سم')}<text x="${fx+fw/2}" y="${yt+fh/2-bh/2}" text-anchor="middle" font-size="12" fill="#6b4a1f" ${F}>منظر أمامي</text>`;
+ return svgWrap(side+front+`<text x="105" y="${yt-26}" text-anchor="middle" font-size="12" fill="#667" ${F}>قطاع جانبي</text>`)}
+
+function drawBamboo(v){const w=num(v.w),l=num(v.l),h=num(v.h);if(!(w>0&&l>0&&h>0))return '';
+ const k=Math.min(215/(w+l*.5),150/(h+l*.35)),fw=w*k,fh=h*k,dx=l*k*.5,dy=-l*k*.35,x0=100,y0=250;
+ const nat=v.kind==='طبيعي',c1=nat?'#d8b98a':'#caa56a',c2=nat?'#b58f5c':'#a98543';
+ const dv=v.split==='yes'?Math.max(1,Math.min(10,Math.round(num(v.dv)||0))):0;
+ let top=`<path d="M${x0} ${y0-fh}l${dx} ${dy}h${fw}l${-dx} ${-dy}z" fill="${c1}" stroke="#6b4a1f" stroke-width="1.4"/>`;
+ for(let i=1;i<=dv;i++){const f=i/(dv+1);top+=`<line x1="${x0+fw*f}" y1="${y0-fh}" x2="${x0+fw*f+dx}" y2="${y0-fh+dy}" stroke="#6b4a1f" stroke-width="2.2"/>`}
+ const front=`<rect x="${x0}" y="${y0-fh}" width="${fw}" height="${fh}" fill="${c2}" stroke="#6b4a1f" stroke-width="1.4"/>${Array.from({length:Math.max(1,Math.floor(fh/9))},(_,i)=>`<line x1="${x0+3}" y1="${y0-fh+5+i*9}" x2="${x0+fw-3}" y2="${y0-fh+5+i*9}" stroke="#fff" stroke-opacity="${nat?.25:.18}" stroke-width="2"/>`).join('')}`;
+ const side=`<path d="M${x0+fw} ${y0-fh}l${dx} ${dy}v${fh}l${-dx} ${-dy}z" fill="${c2}" stroke="#6b4a1f" stroke-width="1.4" opacity=".85"/>`;
+ return svgWrap(top+front+side+dimH(x0,x0+fw,y0+22,'العرض '+w+' سم')+dimV(x0-14,y0-fh,y0,'الارتفاع '+h+' سم',-1)+`<g stroke="#a8741a" stroke-width="1.4"><line x1="${x0+fw+10}" y1="${y0-fh+4}" x2="${x0+fw+dx+10}" y2="${y0-fh+dy+4}"/></g><text x="${x0+fw+dx/2+14}" y="${y0-fh+dy/2-4}" font-size="13" font-weight="700" fill="#12202b" ${F}>الطول ${l} سم</text><text x="200" y="283" text-anchor="middle" font-size="12" fill="#667" ${F}>${esc(v.kind||'')} — ${dv?('متقسم '+dv+' فاصل'):'بدون تقسيم'} — المقاس برّه برّه</text>`)}
+
+function drawDelf(v){const W=num(v.w),H=num(v.h);if(!(W>0&&H>0))return '';
+ const k=Math.min(200/W,172/H),dw=W*k,dh=H*k,x0=140,y0=52,mat=v.mat==='خشب'?['#c9a77a','#8a6a3a']:['#cfd6dc','#6f7a84'];
+ let s=`<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" rx="3" fill="${mat[0]}" stroke="${mat[1]}" stroke-width="3"/><rect x="${x0+7}" y="${y0+7}" width="${dw-14}" height="${dh-14}" fill="none" stroke="${mat[1]}" stroke-opacity=".5"/>`;
+ const hs=v.handle==='both'?['L','R']:v.handle==='one'?[v.hside==='left'?'L':'R']:[];
+ hs.forEach(x=>{const hx=x==='L'?x0+10:x0+dw-16;s+=`<rect x="${hx}" y="${y0+dh/2-24}" width="6" height="48" rx="3" fill="#a8741a" stroke="#6b4a1f"/>`});
+ if(v.type==='hinged'&&v.drill==='yes'){const n=Math.max(1,Math.min(8,Math.round(num(v.hn)||2))),hx=v.hinge==='left'?x0+14:x0+dw-14;for(let i=0;i<n;i++){const y=n===1?y0+dh/2:y0+30+(dh-60)*i/(n-1);s+=`<circle cx="${hx}" cy="${y}" r="9" fill="#fff" stroke="#12202b" stroke-width="2"/><circle cx="${hx}" cy="${y}" r="3" fill="#12202b"/>`}}
+ if(v.type==='slide'&&v.wheel==='yes'){[x0,x0+dw].forEach((x,i)=>{const nx=i?x-22:x;s+=`<rect x="${nx}" y="${y0-1}" width="22" height="26" fill="#fff" stroke="#c0392b" stroke-width="2" stroke-dasharray="4 3"/><circle cx="${i?x-11:x+11}" cy="${y0+12}" r="7" fill="#12202b"/>`});}
+ s+=dimH(x0,x0+dw,y0+dh+22,'العرض '+W+' سم')+dimV(x0-14,y0,y0+dh,'الارتفاع '+H+' سم',-1);
+ const lab=(v.type==='hinged'?'مفصلي':'جرار')+' — '+(v.mat||'')+' — '+({none:'بدون مقبض',one:'مقبض من ناحية',both:'مقبض من الناحيتين'}[v.handle]||'');
+ return svgWrap(s+`<text x="200" y="283" text-anchor="middle" font-size="12" fill="#667" ${F}>${esc(lab)}</text>`)}
+
+const DRAWERS={steel:drawSteel,bamboo:drawBamboo,delf:drawDelf};
+
+/* ---------- نموذج ---------- */
+const chips=(k,opts)=>`<div class="ch" data-k="${k}">${opts.map(o=>`<button type="button" data-v="${o[0]}" class="${V[k]===o[0]?'on':''}">${o[1]}</button>`).join('')}</div>`;
+const fld=(k,l,ph,extra)=>`<div class="f"><label>${l}</label><input data-i="${k}" value="${esc(V[k]||'')}" inputmode="decimal" placeholder="${ph||''}" ${extra||''}></div>`;
+function defaults(kind){return {steel:{q:1},bamboo:{kind:'طبيعي',split:'no',dv:2,q:1},delf:{type:'hinged',mat:'ألمنيوم',handle:'none',hside:'right',drill:'yes',hinge:'right',hn:'3',wheel:'yes',q:1}}[kind]}
+function formHTML(){
+ if(K==='steel')return `<div class="card"><h3>🔩 مقاسات قطعة الاستانلس (حماية الباب من الرطوبة والمياه)</h3><div class="g">${fld('t','سُمك الباب (سم)','مثلاً 4')}${fld('w','عرض الباب (سم)','مثلاً 80')}${fld('hf','ارتفاع الاستانلس من الوش (سم)','مثلاً 15')}${fld('hb','ارتفاع الاستانلس من الضهر (سم)','مثلاً 15')}${fld('q','عدد القطع','1')}</div></div>`;
+ if(K==='bamboo')return `<div class="card"><h3>🎍 درج البامبو</h3><label>نوع البامبو</label>${chips('kind',[['طبيعي','طبيعي'],['صناعي','صناعي']])}
+  <label style="display:block;margin-top:12px">التقسيم</label>${chips('split',[['no','بدون تقسيم'],['yes','متقسم']])}
+  <div id="dvbox" class="${V.split==='yes'?'':'hid'}" style="margin-top:10px">${fld('dv','عدد الفواصل','مثلاً 2')}</div>
+  <div class="g" style="margin-top:12px">${fld('w','العرض (سم)','')}${fld('l','الطول (سم)','')}${fld('h','الارتفاع (سم) — هو عمق الدرج','')}${fld('q','العدد','1')}</div><div class="hint">المقاس برّه برّه (مقاس الفتحة اللي الدرج هيتركّب فيها).</div></div>`;
+ return `<div class="card"><h3>🚪 دلف الدريسنج روم</h3><label>نوع الدلفة</label>${chips('type',[['hinged','مفصلي'],['slide','جرار']])}
+  <label style="display:block;margin-top:12px">خامة الدلفة</label>${chips('mat',[['ألمنيوم','قطاع ألمنيوم'],['خشب','خشب']])}
+  <div class="g" style="margin-top:12px">${fld('w','عرض الدلفة (سم)','')}${fld('h','ارتفاع الدلفة (سم)','')}${fld('q','عدد الدلف','1')}</div>
+  <label style="display:block;margin-top:12px">المقبض</label>${chips('handle',[['none','بدون مقبض'],['one','مقبض من ناحية'],['both','مقبض من الناحيتين']])}
+  <div id="hsbox" class="${V.handle==='one'?'':'hid'}" style="margin-top:8px"><label>ناحية المقبض</label>${chips('hside',[['right','يمين'],['left','شمال']])}</div>
+  <div id="hgbox" class="${V.type==='hinged'?'':'hid'}" style="margin-top:12px"><label>تتخرّم الدلفة للمفصلات؟</label>${chips('drill',[['yes','أيوه، اخرّموها'],['no','لأ']])}
+   <div id="hgn" class="${V.drill==='yes'?'':'hid'}" style="margin-top:8px"><div class="g">${fld('hn','عدد المفصلات في الدلفة','3')}<div class="f"><label>ناحية المفصلات</label>${chips('hinge',[['right','يمين'],['left','شمال']])}</div></div></div></div>
+  <div id="whbox" class="${V.type==='slide'?'':'hid'}" style="margin-top:12px"><label>تتخلّع الدلفة لفتحة العجلة؟</label>${chips('wheel',[['yes','أيوه'],['no','لأ']])}<div class="hint">العجلة بنبيعها لوحدها وبتتركّب على الصايت.</div></div></div>`}
+function show(id){['dvbox','hsbox','hgbox','hgn','whbox'].forEach(x=>{const e=$(x);if(!e)return;const on={dvbox:V.split==='yes',hsbox:V.handle==='one',hgbox:V.type==='hinged',hgn:V.drill==='yes',whbox:V.type==='slide'}[x];e.classList.toggle('hid',!on)})}
+function redraw(){const f=DRAWERS[K];const h=f(V);$('dr').innerHTML=h||'<div style="padding:30px;text-align:center;color:#889">اكتب المقاسات وهتظهر الرسمة هنا</div>';DRAW=h}
+function openForm(kind){K=kind;V=Object.assign({},defaults(kind));
+ $('app').innerHTML=`<h1>${KIND[kind]}</h1><p class="s">اختار المواصفات واكتب المقاسات — الرسمة بتتحدّث قدامك.</p>${formHTML()}<div class="dr" id="dr"></div>
+ <div class="card"><h3>بياناتك</h3><div class="g"><div class="f"><label>اسمك</label><input id="cn" maxlength="80"></div><div class="f"><label>رقم موبايلك (واتساب)</label><input id="cp" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx"></div><div class="f full"><label>ملاحظات (اختياري)</label><textarea id="cnote" rows="2" maxlength="300"></textarea></div></div></div>
+ <div class="msg" id="msg"></div><button class="cta" id="rv">راجع الطلب وأكّده</button><button class="cta l" id="bk">← اختيار منتج تاني</button>`;
+ history.replaceState(null,'','?k='+kind);redraw();
+ $('app').oninput=e=>{const i=e.target.dataset.i;if(i){V[i]=e.target.value;redraw()}};
+ $('app').onclick=e=>{const b=e.target.closest('.ch button');if(!b)return;const k=b.parentElement.dataset.k;V[k]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show();redraw()};
+ $('bk').onclick=home;$('rv').onclick=review}
+function home(){K=null;history.replaceState(null,'',location.pathname);$('app').innerHTML=`<h1>جهّز منتجك بمقاسك</h1><p class="s">اختار اللي عايز تجهّزه، اكتب المقاسات، وهتشوف رسمة شغلك قبل ما تأكّد.</p>
+ <button class="pk" data-k="steel"><svg viewBox="0 0 112 90"><rect width="112" height="90" fill="#0f2433"/><rect x="30" y="12" width="26" height="66" fill="#c9a77a"/><path d="M27 40V80H59V44" fill="none" stroke="#6aa5c9" stroke-width="5"/><rect x="70" y="12" width="32" height="66" fill="#c9a77a"/><rect x="70" y="52" width="32" height="26" fill="#6aa5c9"/></svg><div><b>استانلس حماية الباب</b><span>من الرطوبة والمياه — حدّد سمك وعرض الباب وارتفاع الاستانلس من الوش والضهر</span></div></button>
+ <button class="pk" data-k="bamboo"><svg viewBox="0 0 112 90"><rect width="112" height="90" fill="#0f2433"/><path d="M22 36l22 -14h50l-22 14z" fill="#d8b98a"/><rect x="22" y="36" width="50" height="34" fill="#b58f5c"/><path d="M72 36l22 -14v34l-22 14z" fill="#a98543"/><path d="M47 36l22 -14M60 36l22 -14" stroke="#6b4a1f" stroke-width="2"/></svg><div><b>درج بامبو</b><span>طبيعي أو صناعي — متقسم أو بدون تقسيم — بمقاس العرض والطول والارتفاع</span></div></button>
+ <button class="pk" data-k="delf"><svg viewBox="0 0 112 90"><rect width="112" height="90" fill="#0f2433"/><rect x="18" y="10" width="36" height="70" rx="2" fill="#cfd6dc" stroke="#6f7a84" stroke-width="2"/><rect x="58" y="10" width="36" height="70" rx="2" fill="#cfd6dc" stroke="#6f7a84" stroke-width="2"/><rect x="47" y="38" width="4" height="16" rx="2" fill="#a8741a"/><rect x="61" y="38" width="4" height="16" rx="2" fill="#a8741a"/><circle cx="24" cy="24" r="3" fill="#12202b"/><circle cx="24" cy="66" r="3" fill="#12202b"/></svg><div><b>دلف الدريسنج روم</b><span>مفصلي أو جرار — مقبض من ناحية أو الاتنين أو بدون — تخريم مفصلات أو فتحة للعجلة</span></div></button>`;
+ $('app').oninput=null;$('app').onclick=e=>{const b=e.target.closest('.pk');if(b)openForm(b.dataset.k)}}
+
+/* ---------- مراجعة وإرسال ---------- */
+function summary(){const q=Math.max(1,Math.round(num(V.q))||1);let L=[KIND[K]+' — عدد '+q];
+ if(K==='steel')L.push('سُمك الباب: '+V.t+' سم','عرض الباب: '+V.w+' سم','الاستانلس من الوش: '+V.hf+' سم','الاستانلس من الضهر: '+V.hb+' سم','طول الشريحة المفرودة: '+(Math.round((num(V.hf)+num(V.t)+num(V.hb))*10)/10)+' سم (حدّين ثنية)');
+ if(K==='bamboo')L.push('النوع: '+V.kind,V.split==='yes'?'متقسم — '+(Math.round(num(V.dv))||0)+' فاصل':'بدون تقسيم','العرض: '+V.w+' سم','الطول: '+V.l+' سم','الارتفاع (العمق): '+V.h+' سم','المقاس برّه برّه');
+ if(K==='delf'){L.push('النوع: '+(V.type==='hinged'?'مفصلي':'جرار'),'الخامة: '+V.mat,'العرض: '+V.w+' سم','الارتفاع: '+V.h+' سم','المقبض: '+({none:'بدون مقبض',one:'من ناحية '+(V.hside==='left'?'الشمال':'اليمين'),both:'من الناحيتين'}[V.handle]));
+  if(V.type==='hinged')L.push(V.drill==='yes'?'تخريم مفصلات: '+(Math.round(num(V.hn))||0)+' مفصلة — ناحية '+(V.hinge==='left'?'الشمال':'اليمين'):'من غير تخريم مفصلات');
+  else L.push(V.wheel==='yes'?'تتخلّع لفتحة العجلة (العجلة بتتباع لوحدها)':'من غير فتحة عجلة')}
+ return L.join('\n')}
+function validate(){const n=x=>num(V[x])>0;
+ if(K==='steel'&&!(n('t')&&n('w')&&n('hf')&&n('hb')))return 'اكتب كل المقاسات';
+ if(K==='bamboo'&&(!(n('w')&&n('l')&&n('h'))||(V.split==='yes'&&!(num(V.dv)>=1))))return 'اكتب العرض والطول والارتفاع'+(V.split==='yes'?' وعدد الفواصل':'');
+ if(K==='delf'&&(!(n('w')&&n('h'))||(V.type==='hinged'&&V.drill==='yes'&&!(num(V.hn)>=1))))return 'اكتب عرض وارتفاع الدلفة'+(V.type==='hinged'&&V.drill==='yes'?' وعدد المفصلات':'');
+ const nm=$('cn').value.trim(),ph=$('cp').value.trim();if(nm.length<2)return 'اكتب اسمك';if(ph.replace(/\D/g,'').length<8)return 'اكتب رقم موبايلك عشان نكلّمك';return ''}
+function review(){const e=validate();$('msg').textContent=e;if(e)return;
+ const ov=document.createElement('div');ov.className='ov';ov.innerHTML=`<div><h3 style="margin:0 0 8px">راجع طلبك</h3><div class="dr">${DRAW}</div><div class="card sum">${esc(summary())}\n\n👤 ${esc($('cn').value.trim())} — ${esc($('cp').value.trim())}</div><div class="msg" id="omsg"></div><button class="cta" id="ok">✔ تأكيد وإرسال الطلب</button><button class="cta l" id="no">تعديل</button></div>`;
+ document.body.appendChild(ov);$('no').onclick=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)ov.remove()};$('ok').onclick=()=>send(ov)}
+function svgToJpeg(svg){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=800;c.height=600;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,800,600);x.drawImage(im,0,0,800,600);c.toBlob(b=>b?res(b):rej(new Error('img')),'image/jpeg',.88)};im.onerror=rej;im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)})}
+async function send(ov){const b=$('ok'),m=$('omsg');b.disabled=true;m.textContent='⏳ جاري تجهيز الرسمة…';
+ const nm=$('cn').value.trim(),ph=$('cp').value.trim(),user=$('cnote').value.trim();
+ try{const blob=await svgToJpeg(DRAW);m.textContent='⏳ جاري رفع الرسمة…';
+  const path='r/'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9)+'.jpg';
+  const r=await fetch(SB_URL+'/storage/v1/object/customer-requests/'+path,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'image/jpeg','cache-control':'max-age=31536000'},body:blob});
+  if(!r.ok)throw new Error('upload');const url=SB_URL+'/storage/v1/object/public/customer-requests/'+path;
+  const spec=Object.assign({k:K},V,{q:Math.max(1,Math.round(num(V.q))||1)});
+  m.textContent='⏳ جاري الإرسال…';
+  const r2=await fetch(SB_URL+'/rest/v1/rpc/place_custom_order',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_kind:K,p_name:nm,p_phone:ph,p_spec:spec,p_summary:summary(),p_note:user,p_img:url})});
+  const t=await r2.text();let j=null;try{j=JSON.parse(t)}catch(e){}
+  if(!r2.ok||typeof j!=='string'){const em=(j&&j.message)||'';m.textContent=em==='invalid_phone'?'رقم الموبايل مش صحيح':em==='too_many_requests'?'في ضغط دلوقتي، جرّب بعد شوية':'ماتبعتش — جرّب تاني أو كلمنا على الواتساب';b.disabled=false;return}
+  ov.remove();done(nm,summary())
+ }catch(e){m.textContent='مفيش اتصال أو حصلت مشكلة — جرّب تاني';b.disabled=false}}
+function done(nm,sum){$('app').innerHTML=`<h1>وصلنا طلبك ✔</h1><p class="s">هنراجع المقاسات ونكلّمك على الواتساب نأكّد السعر وميعاد التجهيز.</p><div class="dr">${DRAW}</div><div class="card sum">${esc(sum)}</div>
+ <a class="cta g2" target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent('السلام عليكم، أنا '+nm+' بعتّ طلب تجهيز من الموقع:\n'+sum)}">💬 كلّمنا على الواتساب كمان</a><button class="cta l" id="hm">تجهيز منتج تاني</button><a class="cta l" style="text-align:center;text-decoration:none" href="shop.html">← رجوع للمتجر</a>`;$('hm').onclick=home;scrollTo(0,0)}
+
+const q=new URLSearchParams(location.search).get('k');KIND[q]?openForm(q):home();
+</script>
+</body>
+</html>
