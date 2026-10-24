@@ -1030,4 +1030,15 @@ setTimeout(add,500);setTimeout(add,2200);
 })();
 </script>
 
+<script>
+/* ميكانيزم — صورة الغلاف على خلفية بيضاء للمنتجات (pw/<id>.webp) */
+(function(){
+const PW=['1szsarn','8gcncur','8q3slf8','ib1jif9','ixm6cp4'];
+function fix(){if(typeof admin!=='undefined'&&admin)return;(S.products||[]).forEach(p=>{if(!PW.includes(p.id)||p.__pw)return;const u='pw/'+p.id+'.webp?v=1';const im=p.imgs&&p.imgs.length?p.imgs.slice():(p.img?[p.img]:[]);im.unshift(u);p.imgs=im;p.img=u;p.__pw=1})}
+const _pmW=pubMain;pubMain=function(){fix();_pmW()};
+const _dpW=drawProds;drawProds=function(){fix();_dpW()};
+const _poW=pvOpen;pvOpen=function(a,b){fix();_poW(a,b)};
+})();
+</script>
+
 </body></html>
