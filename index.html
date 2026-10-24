@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-34';
+const APP_VER='2026-10-23-35';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11486,7 +11486,8 @@ const who=x=>{let c=findC(x.phone);return c?`<b>${esc(c.name)}</b>`:'<span style
 async function applySms(x,c){
  let r=await SB().from('mk_sms_inbox').update({status:'used'}).eq('id',x.id).eq('status','pending').select('id');
  if(r.error||!(r.data||[]).length){toast('الحركة دي اتسجلت قبل كده');return false}
- try{await API().rpc('mk_add_payment',{p_contact:c.id,p_amount:Number(x.amount),p_note:(x.direction==='out'?'تحويل فودافون كاش صادر':'تحويل فودافون كاش وارد')+' — رقم '+x.phone,...(window.mkCoOn?{p_co:curCo()}:{})});
+ try{if(isPartner(c)&&x.direction!=='out')await API().rpc('mk_add_payment_rev',{p_contact:c.id,p_amount:Number(x.amount),p_note:'فلوس وصلت على محفظتي وهي تبع '+c.name+' — رقم '+(x.phone||'؟')});
+  else await API().rpc('mk_add_payment',{p_contact:c.id,p_amount:Number(x.amount),p_note:(isPartner(c)?'حوّلت على حساب '+c.name+' من محفظتي':x.direction==='out'?'تحويل فودافون كاش صادر':'تحويل فودافون كاش وارد')+' — رقم '+(x.phone||'؟'),...(window.mkCoOn?{p_co:curCo()}:{})});
   await API().refreshContacts([c.id]);await API().refreshTable('mk_payments');toast('✔ اتسجل '+money(x.amount)+' على حساب '+c.name);return true}
  catch(e){await SB().from('mk_sms_inbox').update({status:'pending'}).eq('id',x.id);toast('ماتسجلش، جرب تاني');return false}}
 /* لما تفتح حساب عميل/مورد، لو فيه فلوس وصلت على رقمه بيظهرلك تأكيد */
@@ -11503,6 +11504,9 @@ async function smsBanner(cid){try{
 }catch(e){}}
 ['openContactFile','openPayment'].forEach(n=>{let f=window[n];if(typeof f!=='function')return;window[n]=function(id){let r=f.apply(this,arguments);setTimeout(()=>smsBanner(id),0);return r}});
 /* ===== شاشة الفلوس الواصلة: اختيارات حقيقية حتى لو الرقم مش متسجّل ===== */
+const isPartner=c=>!!c&&/\[شريك\]/.test(c.note||'');
+const partners=()=>(db.contacts||[]).filter(isPartner);
+const balTxt=b=>(+b>=0?'له عندك ':'عليه ')+money(Math.abs(+b||0));
 const SNZ_K='mk_sms_snz';
 const snz=()=>{try{return JSON.parse(localStorage.getItem(SNZ_K)||'{}')}catch(e){return {}}};
 const snzSet=(id,until)=>{try{let o=snz();o[id]=until;Object.keys(o).forEach(k=>{if(o[k]<Date.now()-864e5)delete o[k]});localStorage.setItem(SNZ_K,JSON.stringify(o))}catch(e){}};
@@ -11515,6 +11519,8 @@ const dirTxt=x=>x.direction==='out'?'📤 بعتّ':'📥 استلمت';
 function effect(x,c){
  if(!c)return '';
  let a=money(x.amount);
+ if(isPartner(c)){let b=+c.balance||0,n=x.direction==='out'?b-(+x.amount):b+(+x.amount);
+  return x.direction==='out'?'🤝 انت <b>حوّلت '+a+'</b> على حساب <b>'+esc(c.name)+'</b> — بينزل من اللي ليه عندك: '+balTxt(b)+' ← <b>'+balTxt(n)+'</b>':'🤝 فلوس وصلت على محفظتك وهي <b>تبع '+esc(c.name)+'</b> — حسابه بيزيد: '+balTxt(b)+' ← <b>'+balTxt(n)+'</b>'}
  if(c.type==='عميل'&&x.direction!=='out')return '✅ هتتسجل <b>تحصيل '+a+'</b> من العميل <b>'+esc(c.name)+'</b> (بتتخصم من مديونيته)';
  if(c.type==='مورد'&&x.direction==='out')return '✅ هتتسجل <b>سداد '+a+'</b> للمورد <b>'+esc(c.name)+'</b> (بتتخصم من حسابه)';
  if(c.type==='مورد')return '⚠️ <b>'+esc(c.name)+'</b> مورد وانت <b>استلمت</b> منه فلوس — مش حالة عادية، راجع قبل ما تسجل';
@@ -11530,9 +11536,11 @@ function cardH(x){
  else{
   h+='<div style="padding:8px;border-radius:10px;background:#fff6e5;color:#7a4b00;margin-bottom:8px;font-size:14px">الرقم ده مش متسجّل عندك. اختار هو إيه:</div>'+
    '<div style="display:grid;gap:6px">'+
+   partners().map(function(p){return '<button type="button" class="primary" style="text-align:right" data-a="ptn" data-p="'+p.id+'" data-id="'+x.id+'">🤝 <b>تبع '+esc(p.name)+'</b><br><small>'+(x.direction==='out'?'حوّلتها من محفظتي على حسابه':'وصلت على محفظتي وهي بتاعته')+' — دلوقتي '+balTxt(p.balance)+'</small></button>'}).join('')+
    '<button type="button" class="secondary" style="text-align:right" data-a="alias" data-id="'+x.id+'">🔗 <b>رقم تاني لحد متسجّل</b><br><small style="color:var(--muted)">مثلًا النجار حوّل من رقم غير اللي عندي — اختاره وهتفتكر الرقم ده</small></button>'+
    '<button type="button" class="secondary" style="text-align:right" data-a="newc" data-id="'+x.id+'">👤 <b>عميل جديد</b> بالرقم ده<br><small style="color:var(--muted)">يتعمل حساب وتتسجل الفلوس دفعة منه</small></button>'+
    '<button type="button" class="secondary" style="text-align:right" data-a="news" data-id="'+x.id+'">🏭 <b>مورد جديد</b> بالرقم ده<br><small style="color:var(--muted)">يتعمل حساب مورد وتتسجل الفلوس</small></button>'+
+   '<button type="button" class="secondary" style="text-align:right" data-a="newp" data-id="'+x.id+'">🤝 <b>'+(partners().length?'حساب شريك جديد':'تبع شريك (محمد مثلًا)')+'</b><br><small style="color:var(--muted)">حساب شريك: فلوسه اللي بتعدّي على محافظك بتتحسب له، وتحويلاتك له بتنزّل منه</small></button>'+
    '<button type="button" class="secondary" style="text-align:right" data-a="once" data-id="'+x.id+'">💸 <b>مرة واحدة</b> — مش هتتكرر<br><small style="color:var(--muted)">أقفلها من غير ما تتسجل على حساب (فلوس وصلت بس)</small></button>'+
    '<div style="display:flex;gap:6px"><button type="button" class="secondary" style="flex:1" data-a="snooze" data-id="'+x.id+'">⏳ بعدين</button><button type="button" class="secondary danger" style="flex:1" data-a="ign" data-id="'+x.id+'">🚫 مش فلوس شغل</button></div></div>'}
  return h+'<div data-pk="'+x.id+'"></div></div>'}
@@ -11565,14 +11573,22 @@ window.mkSmsOpen=async function(){let L=window.__smsCache||[];
  m.onclick=async function(e){let b=e.target.closest('[data-a]');if(!b)return;let id=b.dataset.id,a=b.dataset.a,x=(window.__smsL||[]).find(z=>z.id===id);if(!x)return;
   try{
    if(a==='rec'){let c=findAny(x.phone);if(!c)return;
-    if((c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
+    if((!isPartner(c)&&c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
     b.disabled=true;if(await applySms(x,c))reloadList();else b.disabled=false}
    else if(a==='acc'){let c=findAny(x.phone);if(c){closeModal();openContactFile(c.id)}}
    else if(a==='other'||a==='alias'){let pk=m.querySelector('[data-pk="'+id+'"]');if(pk){pk.innerHTML=pickerH(x,a);let i=pk.querySelector('input[data-pi]');i&&i.focus()}}
    else if(a==='pickok'){let c=PICK[id];if(!c)return toast('اختار الحساب من القايمة الأول');
-    if((c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
+    if((!isPartner(c)&&c.type==='مورد'&&x.direction!=='out')||(c.type==='عميل'&&x.direction==='out')){if(!await ask('الحالة دي مش عادية:\n'+(c.type==='مورد'?'استلمت فلوس من مورد':'بعتّ فلوس لعميل')+'.\nتسجّلها دفعة على '+c.name+' برضه؟','سجّلها','رجوع'))return}
     b.disabled=true;let keep=m.querySelector('[data-pkeep="'+id+'"]');
     if(await applySms(x,c)){if(!keep||keep.checked)await keepPhone(c,x.phone);reloadList()}else b.disabled=false}
+   else if(a==='ptn'||a==='newp'){let c;
+    if(a==='ptn')c=(db.contacts||[]).find(z=>z.id===b.dataset.p);
+    else{let nm=prompt('اسم الشريك (مثلًا محمد):');if(!nm||!nm.trim())return;let id2=crypto.randomUUID(),r2=await SB().from('mk_contacts').insert({id:id2,name:nm.trim()+' (شريك)',type:'مورد',phone:'',balance:0,note:'[شريك] حساب شريك — فلوسه اللي بتعدّي على محافظي'});
+     if(r2.error)return toast('ماتعملش الحساب: '+r2.error.message);await API().refreshContacts([id2]);c=(db.contacts||[]).find(z=>z.id===id2)}
+    if(!c)return toast('الحساب مش لاقيه — حدّث الصفحة');
+    let tmp=document.createElement('div');tmp.innerHTML=effect(x,c);
+    if(!await ask(tmp.textContent+'\n\nتأكيد؟','سجّل','رجوع'))return;
+    b.disabled=true;if(await applySms(x,c))reloadList();else b.disabled=false}
    else if(a==='newc')await newContact(x,'عميل');
    else if(a==='news')await newContact(x,'مورد');
    else if(a==='once'){if(!await ask('تقفلها من غير ما تتسجل على أي حساب؟\n(الفلوس هتفضل في الموبايل بس مش في الحسابات)','اقفلها','رجوع'))return;await setStatus(id,'used');reloadList()}
