@@ -87,9 +87,10 @@ Deno.serve(async (req) => {
       const frames = (Array.isArray(b.frames) ? b.frames : []).slice(0, 8).filter((f: unknown) => typeof f === "string" && f.length < 900_000);
       const parts: unknown[] = [{ text: S_PROMPT(String(b.name || "").slice(0, 120)) + "\n\n=== نص الكلام ===\n" + tr }];
       frames.forEach((f: string) => parts.push({ inline_data: { mime_type: "image/jpeg", data: f } }));
-      const { txt, m } = await gemini(gkey, parts, 8192);
-      const skill = txt.replace(/^\s*```(?:markdown|md)?\s*\n/i, "").replace(/\n```\s*$/, "").trim();
-      if (!skill.startsWith("---")) return json({ error: "الرد مش مفهوم — جرّب تاني" }, 502);
+      const { txt, m } = await gemini(gkey, parts, 24000);
+      const k = txt.search(/^---[ \t]*\r?\n[ \t]*name:/m);
+      const skill = (k >= 0 ? txt.slice(k) : txt).replace(/\n```\s*$/, "").trim();
+      if (k < 0 && !skill.startsWith("---")) return json({ error: "الرد مش مفهوم (" + m + "): " + txt.slice(0, 150).replace(/\s+/g, " ") }, 502);
       return json({ skill, _model: m });
     }
     const audio = b.audio;
