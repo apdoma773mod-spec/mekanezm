@@ -73,7 +73,7 @@ async function callAI(b64, offset, first, products) {
 }
 /* رسومات الذكاء: دفعات ٦ جمل، ٣ دفعات مع بعض */
 async function sceneMap(list) {
-  const out = {}, B = []; for (let i = 0; i < list.length; i += 4) B.push(list.slice(i, i + 4));
+  const out = {}, B = []; for (let i = 0; i < list.length; i += 2) B.push(list.slice(i, i + 2));
   const run = async b => { for (let k = 0; k < 2; k++) { try {
     const r = await fetch(SB_URL + '/functions/v1/video-scene', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, 'x-vr-secret': SECRET }, body: JSON.stringify({ items: b.map((x, i) => ({ i, label: x.label, ctx: x.ctx, scene: x.scene, action: x.action })) }) });
     const j = await r.json().catch(() => ({})); if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
