@@ -55,7 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .toolbar .search{min-width:0}
 }
 </style>
-<script src="industries.js?v=5"></script>
+<script src="industries.js?v=6"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">
@@ -250,7 +250,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
  <div class="title-row"><div class="title"><h1>الإدارة والإعدادات</h1><p>تحكم كامل في بيانات النظام والنسخ الاحتياطي</p></div></div>
  <div class="grid2">
   <div class="card"><h3>بيانات الشركة</h3><div class="settings">
-   <div class="field"><label>اسم الشركة</label><input id="companyName" value="MEKANIZM | ميكانيزم"></div>
+   <div class="field"><label>اسم الشركة</label><input id="companyName" value=""></div>
    <div class="field"><label>رقم واتساب / تليفون المحل</label><input id="companyPhone" placeholder="01xxxxxxxxx"></div>
    <div class="field"><label>عنوان المحل (يظهر في الفاتورة)</label><input id="companyAddress" placeholder="الجيزة - أرض اللواء - شارع ١٠"></div>
    <button class="primary" onclick="saveSettings()">حفظ الإعدادات</button>
@@ -1640,7 +1640,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-24-58';
+const APP_VER='2026-10-24-59';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}

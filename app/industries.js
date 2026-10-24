@@ -97,6 +97,18 @@ async function seedProducts(id){
  if(rows.length)await c.from('mk_products').insert(rows)
 }
 
+
+/* تكييف السيستم على مجال المحل: الاسم والأيقونة + إخفاء أقسام ميكانيزم الخاصة لو المجال مش مطابخ */
+const ONLY_KITCHEN=['kits','waorders'];
+function adapt(shopName){
+ const c=cur();if(!c)return;
+ let css=document.getElementById('indAdapt');if(!css){css=document.createElement('style');css.id='indAdapt';document.head.appendChild(css)}
+ css.textContent=c.id==='kitchen'?'':ONLY_KITCHEN.map(p=>'[data-page="'+p+'"]').join(',')+'{display:none!important}';
+ const b=document.querySelector('.brand>div');
+ if(b&&shopName)b.innerHTML=c.icon+' '+H(shopName);
+ if(shopName){document.title=shopName;const t=document.querySelector('meta[name="apple-mobile-web-app-title"]');if(t)t.content=shopName}
+}
+
 /* بعد الدخول: لو الحساب جديد وفيه مجال في بيانات التسجيل، يتطبق مرة واحدة */
 async function after(role){
  const c=sb();if(!c)return;
@@ -107,10 +119,13 @@ async function after(role){
    if(m&&get(m)){await save(m,true);v={id:m,applied:true}}
   }
   if(v&&v.id){try{localStorage.setItem('mk_industry',v.id)}catch(e){}}
+  const co=await c.from('mk_settings').select('value').eq('key','company').maybeSingle();
+  const nm=co.data&&co.data.value&&co.data.value.name;try{if(nm)localStorage.setItem('mk_shopname',nm)}catch(e){}
+  adapt(nm);if(!window.__indObs){window.__indObs=1;const side=document.querySelector('aside');if(side)new MutationObserver(()=>adapt(localStorage.getItem('mk_shopname'))).observe(side,{childList:true,subtree:true})}
  }catch(e){console.warn('industry',e)}
 }
 
-window.mkInd={list:IND,get,cur,signup,change,after,
+window.mkInd={list:IND,get,cur,signup,change,after,adapt,
  defCat:()=>{const c=cur();return c?c.cats[0]:'إكسسوارات مطابخ'},
  cats:()=>{const c=cur();return c?c.cats:[]},
  units:d=>{const c=cur();return c?[...new Set(c.units.concat(d))]:d}};
