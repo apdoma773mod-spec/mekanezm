@@ -55,6 +55,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
 .toolbar .search{min-width:0}
 }
 </style>
+<script src="industries.js?v=1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">
@@ -256,7 +257,7 @@ html,body{width:100%;max-width:100%;overflow-x:hidden}
   </div></div>
   <div class="card"><h3>النسخ الاحتياطي</h3><p style="color:var(--muted)">احفظ نسخة من بيانات النظام على جهازك، أو استعد نسخة سابقة.</p>
    <div class="toolbar"><button class="secondary" onclick="backup()"><svg class="i"><use href="#i-download"/></svg> تصدير نسخة</button></div>
-   <button class="secondary" onclick="openRecat()">إعادة تصنيف الأصناف</button> <button class="secondary" onclick="cloudLogout()">تسجيل الخروج</button>
+   <button class="secondary" onclick="mkInd.change()">🏪 مجال المحل</button> <button class="secondary" onclick="openRecat()">إعادة تصنيف الأصناف</button> <button class="secondary" onclick="cloudLogout()">تسجيل الخروج</button>
   </div>
  </div>
 </section>
@@ -320,12 +321,12 @@ function openProduct(editId=null){
  <form onsubmit="submitProduct(event,'${p?.id||''}')"><div class="form">
  <div class="field"><label>كود المنتج</label><input id="pcode" required value="${p?.code||''}"></div>
  <div class="field"><label>اسم المنتج</label><input id="pname" required value="${p?.name||''}"></div>
- <div class="field"><label>التصنيف</label><input id="pcat" value="${p?.cat||'إكسسوارات مطابخ'}"></div>
+ <div class="field"><label>التصنيف</label><input id="pcat" list="pcatL" value="${p?.cat||(window.mkInd?mkInd.defCat():'إكسسوارات مطابخ')}"><datalist id="pcatL">${(window.mkInd?mkInd.cats():[]).map(c=>`<option value="${c}">`).join('')}</datalist></div>
  <div class="field"><label>الكمية</label><input id="pqty" type="number" min="0" step="0.01" required value="${p?.qty??0}"></div>
  <div class="field"><label>سعر الشراء</label><input id="pcost" type="number" min="0" step="0.01" value="${p?.cost??0}"></div>
  <div class="field"><label>سعر البيع</label><input id="pprice" type="number" min="0" step="0.01" value="${p?.price??0}"></div>
  <div class="field"><label>حد التنبيه</label><input id="pmin" type="number" min="0" step="1" value="${p?.min??5}"></div>
- <div class="field"><label>الوحدة</label><select id="punit">${[...new Set(['قطعة','كرتونة','متر','طقم','لفة','رول','علبة','كيس','زوج','دستة','عبوة','كيلو','لتر','لوح'].concat(p&&p.unit?[p.unit]:[]))].map(u=>`<option ${p?.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+ <div class="field"><label>الوحدة</label><select id="punit">${[...new Set((window.mkInd?mkInd.units([]):[]).concat(['قطعة','كرتونة','متر','طقم','لفة','رول','علبة','كيس','زوج','دستة','عبوة','كيلو','لتر','لوح'],p&&p.unit?[p.unit]:[]))].map(u=>`<option ${p?.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
  </div><div class="modal-foot"><button class="primary">حفظ التعديلات</button>${p?`<button type="button" class="secondary danger" onclick="closeModal();deleteProduct('${p.id}')">حذف الصنف</button>`:''}<button type="button" class="secondary" onclick="closeModal()">إلغاء</button></div></form>`)
 }
 function submitProduct(ev,id){ev.preventDefault();let x={id:id||crypto.randomUUID(),code:pcode.value.trim(),name:pname.value.trim(),cat:pcat.value.trim(),qty:+pqty.value,cost:+pcost.value,price:+pprice.value,min:+pmin.value,unit:punit.value};if(x.code&&db.products.some(p=>p.id!==x.id&&String(p.code).trim()===x.code)){toast('الكود ده مستخدم لصنف تاني. استخدم كود مختلف.');pcode.focus();return}if(id){let i=db.products.findIndex(p=>p.id===id);db.products[i]=Object.assign({},db.products[i],x)}else db.products.push(x);codeNote(x);save();closeModal();toast('تم حفظ المنتج')}
@@ -1639,7 +1640,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-16-53';
+const APP_VER='2026-10-24-54';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -1961,7 +1962,7 @@ window.mkT_role=function(role){let L=staff().filter(u=>u.role===role);if(!L.leng
  <input id="wPin" type="password" inputmode="numeric" placeholder="الرقم السري" autocomplete="off"><button type="button" id="wGo">دخول</button><button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wUser'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.focus();wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)};
 function emailForm(note){showWho(`<div class="mkbox"><h2>ميكانيزم</h2><p>${esc(note||'ادخل بالإيميل وكلمة السر')}</p><input id="wEmail" type="email" placeholder="الإيميل" autocomplete="username"><input id="wPin" type="password" placeholder="كلمة السر" autocomplete="current-password">
- <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<div id="wErr" class="werr"></div></div>`);
+ <button type="button" id="wGo">دخول</button>${staff().length?'<button type="button" class="alt" style="margin-top:8px" onclick="mkT_chooser()">رجوع</button>':''}<button type="button" class="alt" style="margin-top:8px" onclick="mkInd.signup()">✨ حساب جديد — اختار مجالك</button><div id="wErr" class="werr"></div></div>`);
  let go=()=>signIn(val('wEmail'),val('wPin'));wGo.onclick=go;setTimeout(()=>{wPin.onkeydown=e=>{if(e.key==='Enter')go()}},50)}
 window.mkT_chooser=chooser;window.mkT_email=()=>emailForm();
 async function signIn(email,pass){let e=document.getElementById('wErr');if(!email||!pass){if(e)e.textContent='اكتب البيانات';return}
@@ -1981,7 +1982,7 @@ async function enter(u){
  T.user={id:u.id,name:m.name,role:m.role,email:m.email||u.email};window.mkT_user=T.user;
  LS.set('mk_t_user',JSON.stringify(Object.assign({day:isoToday()},T.user)));wipeOtherCaches(u.id);
  let s=staff();if(!s.some(x=>x.email===T.user.email)){s.push({name:m.name,role:m.role,email:T.user.email});LS.set('mk_t_staff',JSON.stringify(s))}
- emptyDb();mkT_applyRole();showPage('dashboard');await loadAll();subscribe();await obFlush();try{loadOrders(true)}catch(e){}toast('أهلاً '+m.name)}
+ emptyDb();mkT_applyRole();showPage('dashboard');try{await mkInd.after(m.role)}catch(e){}await loadAll();subscribe();await obFlush();try{loadOrders(true)}catch(e){}toast('أهلاً '+m.name)}
 function migrateScreen(){showWho(`<div class="mkbox"><h2>🚀 النظام الجديد</h2><p>بياناتك لسه على النظام القديم. الخطوة دي بتنقل نسخة منها للجداول الجديدة — النظام القديم وبياناته مش هيتلمسوا.</p>
  <button type="button" id="wMig">نقل البيانات</button><div id="wErr" class="werr"></div></div>`);
  wMig.onclick=async()=>{wMig.disabled=true;wErr.textContent='⏳ جاري النقل… (ممكن ياخد دقيقة)';
