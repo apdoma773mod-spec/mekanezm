@@ -4,7 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-const MODELS = [Deno.env.get("SCENE_MODEL"), "gemini-2.5-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash-lite"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
+const MODELS = [Deno.env.get("SCENE_MODEL"), "gemini-3.8-flash", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-flash-latest"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
 
 const KF = { type: "OBJECT", properties: { t: { type: "NUMBER" }, dx: { type: "NUMBER" }, dy: { type: "NUMBER" }, rot: { type: "NUMBER" }, s: { type: "NUMBER" }, o: { type: "NUMBER" } }, required: ["t"] };
 const SHAPE = { type: "OBJECT", properties: {
@@ -25,8 +25,14 @@ Styling: fill, stroke, sw (stroke width). Draw back-to-front (first shape is beh
 Animation: the clip lasts about 4 seconds; kf = keyframes with t from 0 to 1. Each keyframe can set dx, dy (offset in px), rot (degrees, around ox,oy), s (scale around ox,oy), o (opacity 0..1). Values not given keep the previous keyframe value (start: dx=0, dy=0, rot=0, s=1, o=1). Set ox,oy on the shape when it rotates/scales (e.g. hinge point).
 Use motion to EXPLAIN: parts sliding or snapping into their place, an arrow or a hand pulling the handle, a door/drawer opening, screws appearing, a weak part cracking (bad ✗) versus the good one working (good ✓), a highlight pulse on the important part. Make it lively: 3–6 moving shapes, things appear in sequence (o from 0 to 1 at different t).
 Product hints: "built-in / بلت إن / gola" handle = aluminium profile set into the top edge of the door forming a finger groove (no protruding handle); "حرف L" profile = L-shaped aluminium profile fixed under the countertop above the door/drawer so fingers pull the door edge; "حرف U" / "حرف C" profile = U/C channel fixed horizontally between two drawer fronts; traditional handle = bar handle on the door fixed with two screws; "عود" = a long profile bar; gas arm "دراع باكم/قلاب" = piston arm holding an upward-opening door; drawer slide "مجرى" = telescopic rail under the drawer.
-Text: at most 2 short Arabic labels per item (max 3 words each), never on top of drawings. 8–28 shapes per item.
-Return scenes with the same i as the item.
+Text: at most 2 short Arabic labels per item (max 3 words each), never on top of drawings. 8–18 shapes per item, max 3 keyframes per shape, round numbers to integers (keep the JSON compact).
+Return ONLY JSON like this (one scene per item, same i):
+{"scenes":[{"i":0,"shapes":[
+ {"k":"rect","x":60,"y":50,"w":200,"h":160,"fill":"#EFE8DA","stroke":"#2E2A26","sw":2},
+ {"k":"rect","x":262,"y":60,"w":14,"h":150,"fill":"#C99A5B","stroke":"#2E2A26","sw":2,"ox":262,"oy":210,"kf":[{"t":0.3,"rot":0},{"t":0.8,"rot":-30}]},
+ {"k":"arrow","x":300,"y":90,"x2":340,"y2":90,"stroke":"#2E9E52","sw":5,"kf":[{"t":0,"o":0},{"t":0.4,"o":1}]},
+ {"k":"text","x":160,"y":30,"txt":"تحت الرخامة","h":18,"fill":"#2E2A26"}
+]}]}
 
 Items:
 ${items.map((x) => `- i=${x.i} | label: ${x.label} | ctx: ${x.ctx}${x.scene ? " | hint scene: " + x.scene : ""}${x.action ? " | action: " + x.action : ""}`).join("\n")}`;
@@ -62,7 +68,9 @@ Deno.serve(async (req) => {
     if (!items.length) return json({ scenes: [] });
     const t0 = Date.now();
     const errs: string[] = [];
-    for (const m of MODELS) {
+    const ok = (sc: { shapes?: unknown[] }[]) => sc.length && sc.filter((x) => Array.isArray(x.shapes) && x.shapes.length >= 6).length >= Math.ceil(items.length * 0.6);
+    const list = Array.isArray(body.models) && body.models.length ? body.models.map(String).slice(0, 4) : MODELS;
+    for (const m of list) {
       const left = 145000 - (Date.now() - t0);
       if (left < 15000) break;
       let r: Response;
@@ -70,13 +78,13 @@ Deno.serve(async (req) => {
         r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, {
           method: "POST", signal: AbortSignal.timeout(Math.min(75000, left)),
           headers: { "x-goog-api-key": gkey, "content-type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT(items) }] }], generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.5, maxOutputTokens: 24000, thinkingConfig: { thinkingBudget: 512 } } }),
+          body: JSON.stringify({ contents: [{ parts: [{ text: PROMPT(items) }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.5, maxOutputTokens: 48000 } }),
         });
       } catch (e) { errs.push(m + ": " + ((e as Error).name === "TimeoutError" ? "timeout" : String((e as Error).message || e))); continue; }
       const b = await r.json().catch(() => ({}));
       if (!r.ok) { errs.push(m + ": " + String(b?.error?.message || r.status).slice(0, 160)); continue; }
       const txt = b?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-      try { const d = JSON.parse(txt); return json({ scenes: Array.isArray(d.scenes) ? d.scenes : [], _model: m }); } catch { errs.push(m + ": الرد مش مفهوم (" + txt.length + ")"); }
+      try { const d = JSON.parse(txt), sc = Array.isArray(d.scenes) ? d.scenes : []; if (ok(sc)) return json({ scenes: sc, _model: m, _errs: errs }); errs.push(m + ": رسمة ناقصة"); } catch { errs.push(m + ": الرد مش مفهوم (" + txt.length + ")"); }
     }
     return json({ error: errs.join(" | ") || "ماقدرتش أرسم" }, 502);
   } catch (e) {
