@@ -338,14 +338,37 @@ function scLift(k,act,p){const C=SC_COL,d=(act==='soft'?1-ease(cl(p/.8)):ease(cl
  const ry=-60*k+d;scLine(-120*k,-80*k,-60*k,ry,8*k,C.metalD);scLine(120*k,-80*k,60*k,ry,8*k,C.metalD);scLine(-110*k,ry,110*k,ry,9*k,C.metal);
  for(let i=0;i<5;i++){const x=-80*k+i*40*k;scLine(x,ry,x,ry+14*k,3*k,C.line);CX.beginPath();CX.moveTo(x,ry+14*k);CX.lineTo(x-18*k,ry+34*k);CX.lineTo(x+18*k,ry+34*k);CX.closePath();CX.lineWidth=3*k;CX.strokeStyle=C.line;CX.stroke();scBox(x-15*k,ry+34*k,30*k,46*k,['#90CAF9','#F48FB1','#A5D6A7','#FFE082','#CE93D8'][i],0)}
  if(p>.6)scBadge(true,120*k,-80*k,30*k,(p-.6)/.15)}
-function scHandle(k,act,p){const C=SC_COL,pull=Math.sin(cl(p/.6)*Math.PI)*16*k;scBox(-150*k,-105*k,300*k,210*k,C.wood,4*k);scLine(-150*k,0,150*k,0,3*k,'rgba(46,42,38,.3)');
- CX.save();CX.translate(0,-50*k+pull*.3);scLine(-80*k,-8*k-pull,80*k,-8*k-pull,14*k,C.metalD);scLine(-80*k,-8*k-pull,-80*k,8*k,8*k,C.metalD);scLine(80*k,-8*k-pull,80*k,8*k,8*k,C.metalD);CX.restore();
- CX.save();CX.globalAlpha*=.8;scLine(0,-100*k,0,-150*k-pull*2,6*k,(SC_COL.good));CX.restore();if(p>.6)scBadge(true,120*k,70*k,30*k,(p-.6)/.15)}
+/* المقابض: الشكل بيتغير حسب الكلام — تقليدي بمسمارين / بلت إن (مجرى في حرف الضلفة) / حرف L تحت الرخامة / حرف U و C بين الأدراج / ألوان */
+function scHandle(k,act,p){const C=SC_COL,n=norm(SCX.label),pull=ease(cl((p-.35)/.3))*(1-ease(cl((p-.8)/.2))),BK='#2B2B2B',AL='#9DA7B1';
+ const lbl=(t,x,y,c)=>{CX.fillStyle=c||C.line;CX.font=`800 ${Math.round(20*k)}px Cairo,sans-serif`;CX.textAlign='center';CX.textBaseline='middle';CX.fillText(t,x,y)};
+ const finger=(x,y)=>{CX.save();CX.translate(x,y);CX.fillStyle='#E0AC7E';CX.strokeStyle=C.line;CX.lineWidth=3*k;CX.beginPath();if(CX.roundRect)CX.roundRect(-10*k,-30*k,20*k,46*k,10*k);else CX.rect(-10*k,-30*k,20*k,46*k);CX.fill();CX.stroke();CX.restore()};
+ const pulse=(x,y,r)=>{const q=.5+.5*Math.sin(p*16);CX.beginPath();CX.arc(x,y,(r+8*q)*k,0,7);CX.lineWidth=4*k;CX.strokeStyle=C.good;CX.stroke()};
+ if(/اسود|فضي|لون|الوان/.test(n)){/* الألوان: عود فضي وعود أسود بيظهروا ورا بعض */[[AL,'فضي',-70],[BK,'أسود',70]].forEach(([c,t,x],i)=>{const q=ease(cl((p-.1-i*.25)/.3));CX.save();CX.globalAlpha*=q;CX.translate(x*k,(1-q)*40*k);scBox(-18*k,-110*k,36*k,190*k,c,3*k);CX.restore();CX.globalAlpha=1;if(q>.5)lbl(t,x*k,105*k)});return}
+ if(/حرف\s*l\b/i.test(n)||/ L /.test(' '+SCX.label+' ')){/* حرف L: قطاع جانبي — الرخامة فوق، الـL تحتها، والصباع بيشد حرف الضلفة */
+  scBox(-150*k,-110*k,300*k,26*k,'#D9D4CC',3*k);lbl('الرخامة',-80*k,-125*k,C.metalD);scBox(-150*k,-84*k,40*k,190*k,C.body,3*k);
+  const q=ease(cl(p/.3));CX.save();CX.translate(0,(1-q)*-40*k);CX.globalAlpha*=q;CX.beginPath();CX.moveTo(-110*k,-84*k);CX.lineTo(30*k,-84*k);CX.lineTo(30*k,-40*k);CX.lineTo(18*k,-40*k);CX.lineTo(18*k,-72*k);CX.lineTo(-110*k,-72*k);CX.closePath();CX.fillStyle=BK;CX.fill();CX.restore();CX.globalAlpha=1;
+  CX.save();CX.translate(pull*70*k,0);scBox(30*k,-52*k,22*k,160*k,C.wood,3*k);CX.restore();finger(60*k+pull*70*k,-60*k);if(q>.9)pulse(24*k,-60*k,20);lbl('حرف L',-40*k,-30*k,C.line);if(p>.6)scBadge(true,120*k,70*k,30*k,(p-.6)/.15);return}
+ if(/حرف\s*[uc]\b|بين الدرج|بين الادراج|بين الضلف/i.test(n)||/ [UC] /.test(' '+SCX.label+' ')){/* U / C: مجرى بين درجين — الصباع بيدخل ويشد الدرج اللي فوق وبعدين اللي تحت */
+  scBox(-150*k,-110*k,40*k,220*k,C.body,3*k);const up=ease(cl((p-.3)/.25))*(1-ease(cl((p-.62)/.12))),dn=ease(cl((p-.7)/.2));
+  CX.save();CX.translate(up*70*k,0);scBox(-110*k,-105*k,170*k,90*k,'#F5EEDF',2*k);scBox(60*k,-105*k,20*k,90*k,C.wood,3*k);CX.restore();
+  CX.save();CX.translate(dn*70*k,0);scBox(-110*k,15*k,170*k,90*k,'#F5EEDF',2*k);scBox(60*k,15*k,20*k,90*k,C.wood,3*k);CX.restore();
+  const q=ease(cl(p/.3));CX.save();CX.globalAlpha*=q;CX.beginPath();CX.moveTo(80*k,-15*k);CX.lineTo(40*k,-15*k);CX.lineTo(40*k,15*k);CX.lineTo(80*k,15*k);CX.lineTo(80*k,7*k);CX.lineTo(48*k,7*k);CX.lineTo(48*k,-7*k);CX.lineTo(80*k,-7*k);CX.closePath();CX.fillStyle=BK;CX.fill();CX.restore();CX.globalAlpha=1;
+  finger(95*k+(p<.65?up:dn)*70*k,p<.65?-10*k:22*k);lbl(/حرف\s*c/i.test(n)||/ C /.test(' '+SCX.label+' ')?'حرف C':'حرف U',-30*k,-125*k,C.line);if(p>.85)scBadge(true,125*k,-85*k,30*k,(p-.85)/.12);return}
+ if(/بلت|بيلت|built|جولا|بروفايل|عود/.test(n)){/* بلت إن: الضلفة فيها مجرى في حرفها اللي فوق — مفيش مقبض بارز */
+  scBox(-150*k,-110*k,40*k,220*k,C.body,3*k);CX.save();CX.translate(pull*80*k,0);
+  CX.beginPath();CX.moveTo(30*k,-105*k);CX.lineTo(60*k,-105*k);CX.lineTo(60*k,110*k);CX.lineTo(30*k,110*k);CX.closePath();CX.fillStyle=C.wood;CX.fill();CX.lineWidth=3*k;CX.strokeStyle=C.line;CX.stroke();
+  const q=ease(cl(p/.3));CX.globalAlpha*=q;CX.beginPath();CX.moveTo(30*k,-105*k);CX.lineTo(60*k,-105*k);CX.lineTo(60*k,-80*k);CX.lineTo(46*k,-80*k);CX.lineTo(46*k,-92*k);CX.lineTo(30*k,-92*k);CX.closePath();CX.fillStyle=AL;CX.fill();CX.stroke();CX.restore();CX.globalAlpha=1;
+  finger(75*k+pull*80*k,-110*k);if(q>.9)pulse(50*k+pull*80*k,-92*k,18);lbl('مقبض بلت إن',-30*k,0,C.line);if(p>.6)scBadge(true,120*k,70*k,30*k,(p-.6)/.15);return}
+ /* تقليدي: مقبض بمسمارين — المسامير بتظهر وبعدين الضلفة بتتشد */
+ const pl=Math.sin(cl((p-.45)/.4)*Math.PI)*16*k;scBox(-150*k,-105*k,300*k,210*k,C.wood,4*k);
+ CX.save();CX.translate(0,-50*k);scLine(-80*k,-10*k-pl,80*k,-10*k-pl,14*k,C.metalD);scLine(-80*k,-10*k-pl,-80*k,8*k,8*k,C.metalD);scLine(80*k,-10*k-pl,80*k,8*k,8*k,C.metalD);
+ [-80,80].forEach((x,i)=>{const q=back(cl((p-.1-i*.15)/.2));if(q>0){CX.save();CX.translate(x*k,18*k);CX.scale(q,q);CX.beginPath();CX.arc(0,0,8*k,0,7);CX.fillStyle='#FFD54F';CX.fill();CX.lineWidth=2*k;CX.strokeStyle=C.line;CX.stroke();scLine(-5*k,0,5*k,0,2*k,C.line);CX.restore()}});CX.restore();
+ if(/مسمار/.test(n))lbl('بمسمارين',0,40*k,'#fff');if(p>.6)scBadge(true,120*k,70*k,30*k,(p-.6)/.15)}
 function scItem(k,act,p){const C=SC_COL;CX.save();const s=back(cl(p/.4));CX.scale(s,s);scBox(-90*k,-70*k,180*k,140*k,'#D7B98E',4*k);scLine(-90*k,-20*k,90*k,-20*k,4*k,C.line);scLine(0,-70*k,0,70*k,4*k,'rgba(46,42,38,.4)');CX.restore();
  for(let i=0;i<5;i++){const g=i/5*Math.PI*2+p*3,r=130*k;CX.fillStyle='#FFC107';CX.globalAlpha=.5+.5*Math.sin(p*12+i);CX.font=`${Math.round(30*k)}px sans-serif`;CX.fillText('✦',Math.cos(g)*r,Math.sin(g)*r*.6)}CX.globalAlpha=1;
  if(act==='break')scBadge(false,120*k,-70*k,30*k,(p-.5)/.15);else if(p>.5)scBadge(true,120*k,-70*k,30*k,(p-.5)/.15)}
 const SCF={flap_up:scFlap,drawer:scDrawer,hinge_door:scHinge,lock:scLock,corner_basket:scCorner,wardrobe_lift:scLift,handle:scHandle,item:scItem};
-function drawScene(sc,act,p,k){const f=SCF[sc]||scItem;if(sc!=='flap_up'&&(act==='install'||act==='force')){f(k,act==='force'?'heavy':'open',act==='force'?p:1);if(act==='install'){const pu=.5+.5*Math.sin(p*14);CX.beginPath();CX.arc(-20*k,10*k,(18+12*pu)*k,0,7);CX.lineWidth=5*k;CX.strokeStyle=SC_COL.good;CX.stroke();scScrew(14*k,-24*k,k,p*8)}return}f(k,act,p)}
+function drawScene(sc,act,p,k){const f=SCF[sc]||scItem;if(sc!=='flap_up'&&sc!=='handle'&&(act==='install'||act==='force')){f(k,act==='force'?'heavy':'open',act==='force'?p:1);if(act==='install'){const pu=.5+.5*Math.sin(p*14);CX.beginPath();CX.arc(-20*k,10*k,(18+12*pu)*k,0,7);CX.lineWidth=5*k;CX.strokeStyle=SC_COL.good;CX.stroke();scScrew(14*k,-24*k,k,p*8)}return}f(k,act,p)}
 /* أيقونات متحركة للنقط المهمة */
 const ICN=[[/ضمان/,'warranty'],[/اصلي|براند|اسباني|الماني|تركي|ايطالي|مستورد|جوده|اوريجينال/,'original'],[/شحن|توصيل|محافظ/,'shipping'],[/رسايل|رساله|واتساب|كلمنا|اتصل|الصفحه|تليفون|تواصل/,'contact'],[/متوفر|مقاسات|احجام|ضغط|الوان|انواع|موديلات/,'options'],[/تركيب|يتركب|بيتركب|تثبيت/,'tools']];
 const iconFor=l=>{const n=norm(l);return (ICN.find(([re])=>re.test(n))||[,'check'])[1]};
@@ -364,7 +387,7 @@ const fin=(v,d)=>Number.isFinite(+v)&&v!==null&&v!==''?+v:d;
 const kk=e=>Math.round(e.s*10)+'|'+e.label;
 /* الرسومات اللي محتاجة رسمة من الذكاء + الكلام اللي حواليها */
 function animList(){return EV.filter(e=>e.type==='anim'&&showEv(e)).map(e=>({key:kk(e),label:e.label,scene:e.scene,action:e.action,ctx:(D.seg||[]).filter(g=>g.e>e.s-2.5&&g.s<e.s+4.5).map(g=>g.t).join(' ').slice(0,380)||e.label})).slice(0,24)}
-async function sceneMap(list,headers,prog){const out={},B=[];for(let i=0;i<list.length;i+=4)B.push(list.slice(i,i+4));let done=0;
+async function sceneMap(list,headers,prog){const out={},B=[];for(let i=0;i<list.length;i+=2)B.push(list.slice(i,i+2));let done=0;
  const run=async b=>{try{const r=await fetch(MK_URL+'/functions/v1/video-scene',{method:'POST',headers:Object.assign({'Content-Type':'application/json',apikey:MK_KEY},headers),body:JSON.stringify({items:b.map((x,i)=>({i,label:x.label,ctx:x.ctx,scene:x.scene,action:x.action}))})});
    const j=await r.json().catch(()=>({}));(j.scenes||[]).forEach(sc=>{const x=b[sc.i];if(x&&dslOk(sc))out[x.key]={shapes:sc.shapes.slice(0,40)}})}catch(e){console.warn('scene',e)}done++;prog&&prog(done,B.length)};
  for(let i=0;i<B.length;i+=3)await Promise.all(B.slice(i,i+3).map(run));return out}
