@@ -7,7 +7,7 @@
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-vr-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 // الموديلات بالترتيب: لو جوجل قفل موديل (زي gemini-2.5-pro «no longer available») بنعدّي للي بعده على طول
-const MODELS = [Deno.env.get("VIDEO_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-pro-latest", "gemini-3.1-pro-preview"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
+const MODELS = [Deno.env.get("VIDEO_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-pro-latest"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
 const GONE = /no longer available|not found|is not supported|deprecated|unknown model|404/i;
 const MAX_B64 = 9_000_000;
 
