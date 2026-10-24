@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-19';
+const APP_VER='2026-10-23-20';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2853,10 +2853,14 @@ window.reqClose=async function(id){let {error}=await sbx().from('web_requests').
  let ban=document.getElementById('woBanner');
  if(ban)ban.insertAdjacentHTML('afterend','<button id="rqBanner" onclick="showPage(\'weborders\');setTimeout(()=>document.getElementById(\'rqBody\').scrollIntoView({behavior:\'smooth\'}),200)" style="display:none;width:100%;margin-bottom:14px;background:#eef6ff;color:#0b4a8b;border:1px solid #9cc3ef;border-radius:14px;padding:14px;font-size:16px;text-align:right"></button>')})();
 /* ---------- 🛠️ طلبات تجهيز من الموقع (استانلس / بامبو / دلفة بمقاسات) ---------- */
-let CUS=[],cusAll=false;
+let CUS=[],cusAll=false,cusLast=null;
 const CUS_K={steel:'🔩 استانلس',bamboo:'🎍 بامبو',delf:'🚪 دلفة'};
 async function loadCustom(){if(!sbx()||!window.mkT_user)return;let {data,error}=await sbx().from('web_custom_orders').select('*').order('created_at',{ascending:false}).limit(100);if(error)return;
  CUS=data||[];let n=CUS.filter(r=>r.status==='new').length;
+ if(cusLast!==null&&n>cusLast){let o=CUS.find(x=>x.status==='new');ding();try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+  toast('🛠️ طلب تجهيز جديد من الموقع'+(o?' — '+o.name+' ('+(CUS_K[o.kind]||'')+')':''));
+  try{if(window.Notification&&Notification.permission==='granted')new Notification('🛠️ طلب تجهيز جديد من الموقع',{body:o?o.name+' — '+(o.summary||'').slice(0,80):'',tag:'mk-custom'})}catch(e){}}
+ cusLast=n;
  let c=document.getElementById('cuCount');if(c){c.textContent=n;c.style.display=n?'':'none'}renderCustom()}
 window.loadCustom=loadCustom;
 function renderCustom(){let el=document.getElementById('cuBody');if(!el)return;let L=cusAll?CUS:CUS.filter(r=>r.status==='new');
@@ -2871,6 +2875,7 @@ window.cusSkip=async function(id){let {error}=await sbx().from('web_custom_order
 (function(){let wb=document.getElementById('woBody');
  if(wb)wb.insertAdjacentHTML('afterend','<h2 style="margin:22px 0 10px">🛠️ طلبات تجهيز من الموقع <span id="cuCount" class="badge red" style="display:none"></span></h2><p style="color:var(--muted);margin:-4px 0 10px;font-size:13px">عملاء حدّدوا مقاسات استانلس أو بامبو أو دلفة من الموقع</p><div id="cuBody"></div>')})();
 const _lo=loadOrders;loadOrders=async function(f){let r=await _lo(f);loadReqs();loadCustom();return r};
+setTimeout(loadCustom,4000);setInterval(()=>{if(!document.hidden)loadCustom()},30000);
 
 /* ---------- 🔔 تنبيه طلب جديد من الموقع ---------- */
 let lastNew=null;
