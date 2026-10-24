@@ -71,6 +71,17 @@ async function callAI(b64, offset, first, products) {
     } catch (e) { if (k >= 2) throw e; await new Promise(r => setTimeout(r, 3000 * (k + 1))); }
   }
 }
+/* رسومات الذكاء: دفعات ٦ جمل، ٣ دفعات مع بعض */
+async function sceneMap(list) {
+  const out = {}, B = []; for (let i = 0; i < list.length; i += 6) B.push(list.slice(i, i + 6));
+  const run = async b => { for (let k = 0; k < 2; k++) { try {
+    const r = await fetch(SB_URL + '/functions/v1/video-scene', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, 'x-vr-secret': SECRET }, body: JSON.stringify({ items: b.map((x, i) => ({ i, label: x.label, ctx: x.ctx, scene: x.scene, action: x.action })) }) });
+    const j = await r.json().catch(() => ({})); if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
+    (j.scenes || []).forEach(sc => { const x = b[sc.i]; if (x && Array.isArray(sc.shapes) && sc.shapes.filter(s => s && s.k).length >= 3) out[x.key] = { shapes: sc.shapes.slice(0, 40) }; }); return;
+  } catch (e) { log('video-scene:', e.message); } } };
+  for (let i = 0; i < B.length; i += 3) await Promise.all(B.slice(i, i + 3).map(run));
+  return out;
+}
 async function analyze(file, spec, prog) {
   const f32 = pcm16k(file), pts = splitPoints(f32, 40), jobs = [];
   for (let i = 0; i < pts.length - 1; i++) jobs.push({ i, a: pts[i], b: pts[i + 1] });
@@ -135,6 +146,18 @@ async function render(inFile, job, D, info, outFile, prog) {
       }, { total, FPS });
       log('مكان الشخص:', found < 0 ? 'ماقدرتش أحمّل الكشف — تقدير' : found + ' عينة'); peopleFound = found;
     }
+    /* رسومات متحركة مخصوصة لكل جملة (video-scene) — مرة واحدة وبتتحفظ مع التحليل */
+    let dslN = null;
+    if (!(D.dsl && Object.keys(D.dsl).length)) {
+      const list = await page.evaluate(() => mkzSmart._test.animList());
+      if (list.length) {
+        await prog(38, 'برسم الرسومات المتحركة…');
+        const map = await sceneMap(list);
+        dslN = Object.keys(map).length;
+        if (dslN) { D.dsl = map; await page.evaluate(m => { mkzSmart._test.setDsl(m); mkzSmart._test.build(); }, map); }
+        log('رسومات الذكاء:', dslN + ' من ' + list.length);
+      }
+    }
     let st = await page.evaluate(() => { const s = mkzSmart.state(); return { gaps: s.GAPS, dur: window.__im.duration }; });
     /* فيديو طويل بعد القص: ٧٢٠ عشان الملف يفضل تحت حد التخزين وبجودة كويسة */
     { const cut = st.gaps.reduce((a, g) => a + (Math.min(g[1], st.dur) - g[0]), 0);
@@ -182,7 +205,7 @@ async function render(inFile, job, D, info, outFile, prog) {
     }
     ff.stdin.end(); await done;
     const stats = await page.evaluate(() => { const s = mkzSmart.state(); return { seg: s.CAP.length, ev: s.EV.filter(e => e.on).length, cut: s.GAPS.reduce((a, g) => a + g[1] - g[0], 0) }; });
-    return { frames: keep.length, dur: outDur, kbps, stats: { ...stats, people: peopleFound } };
+    return { frames: keep.length, dur: outDur, kbps, stats: { ...stats, people: peopleFound, dsl: dslN } };
   } finally { await browser.close(); srv.close(); fs.rmSync(framesDir, { recursive: true, force: true }); }
 }
 
@@ -219,7 +242,7 @@ async function main() {
       const { error } = await sb.storage.from('video-jobs').uploadToSignedUrl(up.path, up.token, new Blob([buf], { type: 'video/mp4' }), { contentType: 'video/mp4', upsert: true });
       if (error) throw new Error('رفع الفيديو الجاهز فشل: ' + error.message);
       const st = r.stats || {};
-      await api('done', { id: job.id, out_path: up.path, ai: { title: r.D.title, seg: r.D.seg, ev: r.D.ev, dur: r.D.dur, people: r.D.people, vad: r.D.vad, ch: r.D.ch }, note: `جاهز — ${Math.round(r.dur)} ثانية • ${st.ev || 0} رسمة/كارت • اتشال ${Math.round(st.cut || 0)} ثانية سكتات وإعادات${st.people == null ? '' : st.people < 0 ? ' • مكانك: تقدير' : ' • مكانك: اتحدد'}` });
+      await api('done', { id: job.id, out_path: up.path, ai: { title: r.D.title, seg: r.D.seg, ev: r.D.ev, dur: r.D.dur, people: r.D.people, vad: r.D.vad, ch: r.D.ch, dsl: r.D.dsl }, note: `جاهز — ${Math.round(r.dur)} ثانية • ${st.ev || 0} رسمة/كارت • اتشال ${Math.round(st.cut || 0)} ثانية سكتات وإعادات${st.people == null ? '' : st.people < 0 ? ' • مكانك: تقدير' : ' • مكانك: اتحدد'}${st.dsl ? ' • ' + st.dsl + ' رسمة مخصوصة' : ''}` });
       log('✔ خلصت', (buf.length / 1048576).toFixed(1) + ' ميجا', r.frames + ' فريم');
     } catch (e) {
       log('❌', e.message);
