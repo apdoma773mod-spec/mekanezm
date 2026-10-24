@@ -29,9 +29,9 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ac)}
 .msg{color:#c0392b;font-weight:700;margin:8px 0;min-height:1.2em}
 .sum{white-space:pre-wrap;line-height:1.9;font-size:15px}
 .ov{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:flex-end;justify-content:center}.ov>div{background:#f7f5ef;width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:16px}
-.hid{display:none}.qk{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}.qk button{border:1px solid var(--line);background:#faf8f3;border-radius:99px;padding:3px 10px;font:700 12px Cairo;color:var(--mut);cursor:pointer}.qk button:active{background:var(--gd)}
+.hid{display:none}.stp{display:flex;gap:6px;margin:0 0 12px}.stp span{flex:1;text-align:center;font-size:12px;font-weight:700;padding:7px 4px;border-radius:99px;background:#fff;border:1px solid var(--line);color:var(--mut)}.stp span.on{background:var(--gd);color:#2a1c04;border-color:#a8741a}.wn{margin:-4px 0 10px}.wn div{background:#fff7e0;border:1px solid #f0d28a;border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:6px;font-weight:700}.wn button{margin-right:8px;border:1px solid #a8741a;background:#fff;border-radius:99px;padding:2px 10px;font:700 12px Cairo;cursor:pointer}.cc{display:flex;gap:8px;margin-top:10px}.cc a{flex:1;text-align:center;text-decoration:none;font-weight:800;padding:13px;border-radius:14px;background:#10202c;color:#f6d77a;font-size:14px}.qk{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}.qk button{border:1px solid var(--line);background:#faf8f3;border-radius:99px;padding:3px 10px;font:700 12px Cairo;color:var(--mut);cursor:pointer}.qk button:active{background:var(--gd)}
 </style>
-</head>
+<link rel="canonical" href="https://apdoma773mod-spec.github.io/mekanezm/custom.html"><meta property="og:title" content="تجهيز المنتجات بمقاسك | ميكانيزم"><meta property="og:image" content="https://apdoma773mod-spec.github.io/mekanezm/og.jpg"><meta name="theme-color" content="#10202c"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Service","name":"تجهيز المنتجات بمقاسك","provider":{"@type":"HardwareStore","name":"ميكانيزم","address":{"@type":"PostalAddress","addressLocality":"أرض اللواء","addressRegion":"الجيزة","addressCountry":"EG"}},"areaServed":"EG","description":"استانلس حماية الباب ودرج بامبو ودلف دريسنج روم بمقاسك"}</script></head>
 <body>
 <div class="top"><b>🛠️ تجهيز المنتجات</b><a href="shop.html" id="back">← المتجر</a></div>
 <div class="wrap" id="app"></div>
@@ -100,6 +100,8 @@ function drawDelf(v){const W=num(v.w),H=num(v.h);if(!(W>0&&H>0))return '';
  const lab=(v.type==='hinged'?'مفصلي':'جرار')+' — إطار ألمنيوم أسود وزجاج — '+({none:'بدون مقبض',one:'مقبض من ناحية',both:'مقبض من الناحيتين'}[v.handle]||'');
  return svgWrap(s+`<text x="200" y="294" text-anchor="middle" font-size="11" fill="#667" ${F}>${esc(lab)}</text>`)}
 
+const GUIDE={steel:'قيس سُمك الباب من الوش للضهر، وعرضه من حافة لحافة. بعدين حدّد ارتفاع الاستانلس اللي عايزه من تحت لفوق على الوش، وعلى الضهر. كل المقاسات بالسنتيمتر.',bamboo:'قيس الفتحة اللي الدرج هيتركّب فيها من برّه لبرّه: العرض، الطول (من الوش للضهر)، والارتفاع (هو عمق الدرج). لو عايزه متقسم حدّد عدد الفواصل.',delf:'قيس عرض الدلفة من حافة لحافة وارتفاعها من فوق لتحت بالسنتيمتر. للمفصلي اختار تتخرّم ولا لأ وعدد المفصلات (هنقترحلك عدد حسب الارتفاع). للجرار اختار فتحة العجلة لو محتاجها.'};
+const STEPS='<div class="stp"><span class="on">١ المقاسات</span><span>٢ بياناتك</span><span>٣ تأكيد</span></div>';
 const DRAWERS={steel:drawSteel,bamboo:drawBamboo,delf:drawDelf};
 
 /* ---------- نموذج ---------- */
@@ -124,14 +126,21 @@ function formHTML(){
   <div id="whbox" class="${V.type==='slide'?'':'hid'}" style="margin-top:12px"><label>تتخلّع الدلفة لفتحة العجلة؟</label>${chips('wheel',[['yes','أيوه'],['no','لأ']])}<div class="hint">العجلة بنبيعها لوحدها وبتتركّب على الصايت.</div></div></div>`}
 function show(id){['dvbox','hsbox','hgbox','hgn','whbox'].forEach(x=>{const e=$(x);if(!e)return;const on={dvbox:V.split==='yes',hsbox:V.handle==='one',hgbox:V.type==='hinged',hgn:V.drill==='yes',whbox:V.type==='slide'}[x];e.classList.toggle('hid',!on)})}
 const DK=()=>'mk_cust_'+K;function save(){try{localStorage.setItem(DK(),JSON.stringify(V))}catch(e){}}
-function redraw(){const f=DRAWERS[K];const h=f(V);$('dr').innerHTML=h||'<div style="padding:30px;text-align:center;color:#889">اكتب المقاسات وهتظهر الرسمة هنا</div>';DRAW=h}
+function hn0(h){return h<=90?2:h<=160?3:h<=220?4:5}
+function warns(){const W=[],t=num(V.t),w=num(V.w),h=num(V.h),hf=num(V.hf),hb=num(V.hb),l=num(V.l);
+ if(K==='steel'){if(t>12)W.push('سُمك الباب '+t+' سم كبير — اتأكد إنه بالسنتيمتر');if(w>150)W.push('عرض الباب '+w+' سم — اتأكد من المقاس');if(w&&hf&&hf>w)W.push('ارتفاع الوش أكبر من عرض الباب — اتأكد');}
+ if(K==='bamboo'){[['العرض',w],['الطول',l],['الارتفاع',h]].forEach(a=>{if(a[1]>150)W.push(a[0]+' '+a[1]+' سم كبير على درج بامبو — اتأكد');if(a[1]>0&&a[1]<5)W.push(a[0]+' '+a[1]+' سم صغير جداً — اتأكد إنه بالسنتيمتر')});if(V.split==='yes'&&w&&num(V.dv)>Math.floor(w/12))W.push('عدد الفواصل كتير على العرض ده')}
+ if(K==='delf'){if(V.type==='hinged'&&w>70)W.push('الدلفة المفصلية بعرض '+w+' سم تقيلة — الأفضل تقسيمها لدلفتين');if(h>260)W.push('ارتفاع '+h+' سم — اتأكد من المقاس');if(w&&w<20)W.push('عرض صغير جداً — اتأكد');
+  if(V.type==='hinged'&&V.drill==='yes'&&h>0){const s=hn0(h);if(Math.round(num(V.hn))!==s)W.push('مقترح لارتفاع '+h+' سم: '+s+' مفصلات <button type="button" data-hn="'+s+'">اعتمد</button>')}}
+ const e=document.getElementById('wn');if(e)e.innerHTML=W.map(x=>'<div>⚠️ '+x+'</div>').join('')}
+function redraw(){const f=DRAWERS[K];const h=f(V);$('dr').innerHTML=h||'<div style="padding:30px;text-align:center;color:#889">اكتب المقاسات وهتظهر الرسمة هنا</div>';DRAW=h;warns()}
 function openForm(kind){K=kind;V=Object.assign({},defaults(kind));try{const d=JSON.parse(localStorage.getItem('mk_cust_'+kind)||'null');if(d&&typeof d==='object')Object.assign(V,d)}catch(e){}
- $('app').innerHTML=`<h1>${KIND[kind]}</h1><p class="s">اختار المواصفات واكتب المقاسات — الرسمة بتتحدّث قدامك.</p>${formHTML()}<div class="dr" id="dr"></div>
+ $('app').innerHTML=`<h1>${KIND[kind]}</h1><p class="s">اختار المواصفات واكتب المقاسات — الرسمة بتتحدّث قدامك.</p>${STEPS}<details class="card"><summary style="font-weight:800;cursor:pointer">📏 إزاي أقيس؟</summary><p style="margin:8px 0 0;line-height:1.8">${GUIDE[kind]}</p></details>${formHTML()}<div class="dr" id="dr"></div><div id="wn" class="wn"></div>
  <div class="card"><h3>بياناتك</h3><div class="g"><div class="f"><label>اسمك</label><input id="cn" maxlength="80"></div><div class="f"><label>رقم موبايلك (واتساب)</label><input id="cp" type="tel" inputmode="tel" maxlength="20" placeholder="01xxxxxxxxx"></div><div class="f full"><label>ملاحظات (اختياري)</label><textarea id="cnote" rows="2" maxlength="300"></textarea></div></div></div>
- <div class="msg" id="msg"></div><button class="cta" id="rv">راجع الطلب وأكّده</button><button class="cta l" id="bk">← اختيار منتج تاني</button>`;
+ <div class="msg" id="msg"></div><button class="cta" id="rv">راجع الطلب وأكّده</button><button class="cta l" id="bk">← اختيار منتج تاني</button><div class="cc"><a target="_blank" rel="noopener" href="https://wa.me/${WA}?text=${encodeURIComponent('السلام عليكم، عندي سؤال عن تجهيز '+KIND[kind])}">💬 عندي سؤال</a><a href="tel:01042383986">📞 اتصل بنا</a></div>`;
  history.replaceState(null,'','?k='+kind);redraw();
  $('app').oninput=e=>{const i=e.target.dataset.i;if(i){V[i]=e.target.value;redraw();save()}};
- $('app').onclick=e=>{const q=e.target.closest('[data-qk]');if(q){V[q.dataset.qk]=q.dataset.v;const inp=document.querySelector('[data-i="'+q.dataset.qk+'"]');if(inp)inp.value=q.dataset.v;redraw();save();return}const b=e.target.closest('.ch button');if(!b)return;const k=b.parentElement.dataset.k;V[k]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show();redraw()};
+ $('app').onclick=e=>{const hb2=e.target.closest('[data-hn]');if(hb2){V.hn=hb2.dataset.hn;const i=document.querySelector('[data-i="hn"]');if(i)i.value=V.hn;redraw();save();return}const q=e.target.closest('[data-qk]');if(q){V[q.dataset.qk]=q.dataset.v;const inp=document.querySelector('[data-i="'+q.dataset.qk+'"]');if(inp)inp.value=q.dataset.v;redraw();save();return}const b=e.target.closest('.ch button');if(!b)return;const k=b.parentElement.dataset.k;V[k]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show();redraw()};
  $('bk').onclick=home;$('rv').onclick=review}
 function home(){K=null;history.replaceState(null,'',location.pathname);$('app').innerHTML=`<h1>جهّز منتجك بمقاسك</h1><p class="s">اختار اللي عايز تجهّزه، اكتب المقاسات، وهتشوف رسمة شغلك قبل ما تأكّد.</p>
  <button class="pk" data-k="steel"><svg viewBox="0 0 112 90"><rect width="112" height="90" fill="#0f2433"/><rect x="30" y="12" width="26" height="66" fill="#c9a77a"/><path d="M27 40V80H59V44" fill="none" stroke="#6aa5c9" stroke-width="5"/><rect x="70" y="12" width="32" height="66" fill="#c9a77a"/><rect x="70" y="52" width="32" height="26" fill="#6aa5c9"/></svg><div><b>استانلس حماية الباب</b><span>من الرطوبة والمياه — حدّد سمك وعرض الباب وارتفاع الاستانلس من الوش والضهر</span></div></button>

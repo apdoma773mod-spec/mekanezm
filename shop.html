@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ميكانيزم | Mechanism</title>
 <meta name="description" content="ميكانيزم | Mechanism: إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. مفصلات ومجر ومقابض وجرار. اطلب من الموقع أو على الواتساب.">
-<meta name="theme-color" content="#0f1a14">
+<meta name="theme-color" content="#0f1a14"><link rel="manifest" href="shop.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ميكانيزم"><link rel="preconnect" href="https://tkzfjeizvanfptnqvrmr.supabase.co" crossorigin><link rel="canonical" href="https://apdoma773mod-spec.github.io/mekanezm/shop.html">
 <meta property="og:type" content="website"><meta property="og:locale" content="ar_EG"><meta property="og:site_name" content="ميكانيزم | Mechanism">
 <meta property="og:title" content="ميكانيزم | Mechanism"><meta property="og:description" content="إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. اطلب الآن من الموقع أو على الواتساب.">
 <meta property="og:image" content="https://apdoma773mod-spec.github.io/mekanezm/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -1214,6 +1214,95 @@ document.addEventListener('click',e=>{
 function all(){how();addSort();recent();revSection()}
 const _pmZ=pubMain;pubMain=function(){_pmZ();setTimeout(all,260)};setTimeout(all,900);setTimeout(all,2800);
 document.addEventListener('change',e=>{if(e.target.id==='mkSort')drawProds()});
+})();
+</script>
+<style>
+/* دفعة ٢: شريط أقسام لاصق، بحث لحظي، حفظ السلة، إرسال الطلب كله، تراجع، فتات خبز، ثبّت الموقع، تقدّم التمرير، طباعة */
+#mkProg{position:fixed;top:0;left:0;right:0;height:3px;z-index:6000;background:transparent;pointer-events:none}#mkProg i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f6d77a,#a8741a)}
+#mkStick{position:sticky;z-index:30;background:#fffe;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin:0 -0px 10px;padding:8px 12px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+#mkStick::-webkit-scrollbar{display:none}
+#mkStick button{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:7px 14px;font:700 13px Cairo,sans-serif;color:var(--fg);white-space:nowrap}
+#mkStick button.on{background:var(--accent);border-color:var(--accent);color:#2a1c04}
+#mkSug{position:fixed;z-index:3500;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px #0003;max-height:55vh;overflow:auto;display:none}
+#mkSug div{display:flex;gap:10px;align-items:center;padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0ece2}#mkSug div:last-child{border:0}#mkSug div:hover{background:#faf6ea}
+#mkSug img{width:44px;height:44px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line)}#mkSug b{font-size:13px;line-height:1.4}#mkSug mark{background:#f6d77a66;color:inherit}
+#mkToast{position:fixed;bottom:96px;left:50%;transform:translate(-50%,20px);background:#10202c;color:#fff;padding:10px 14px;border-radius:14px;z-index:5500;display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:all .3s;font-weight:700;font-size:14px;max-width:92vw}
+#mkToast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}#mkToast button{background:none;border:0;color:#f6d77a;font:800 14px Cairo,sans-serif;text-decoration:underline}
+.mkbc{font-size:12.5px;color:var(--mut);margin:6px 0 2px;display:flex;gap:6px;flex-wrap:wrap}.mkbc a{color:var(--accent);text-decoration:none;font-weight:700;cursor:pointer}
+.mkcall{display:flex;gap:8px;margin:8px 0}.mkcall a{flex:1;text-align:center;text-decoration:none;font-weight:800;padding:12px;border-radius:14px;background:#10202c;color:#f6d77a;font-size:14px}
+#mkInst{display:none;position:fixed;bottom:84px;right:14px;z-index:900;background:#10202c;color:#f6d77a;border:0;border-radius:99px;padding:10px 16px;font:800 13px Cairo,sans-serif;box-shadow:0 6px 18px #0005}
+.mkskip{position:absolute;right:8px;top:-60px;background:#10202c;color:#fff;padding:10px 14px;border-radius:0 0 10px 10px;z-index:9000;text-decoration:none;font-weight:700}.mkskip:focus{top:0}
+.mkbump{animation:mkbp .35s}@keyframes mkbp{40%{transform:scale(1.25)}}
+@media print{#mkStick,#mkProg,#mkToast,#mkInst,#wa,nav#nav,.pvtop,.pvbar,#pvbar,.mkstl,.mkcall,.pvacts,footer,#ft{display:none!important}#pv{position:static!important;overflow:visible!important;height:auto!important}body{background:#fff!important}}
+</style>
+<script>
+(function(){
+const $q=s=>document.querySelector(s);
+/* ===== ١) تخطّي للمحتوى + وصول ===== */
+if(!$q('.mkskip')){document.body.insertAdjacentHTML('afterbegin','<a class="mkskip" href="#prods0">تخطّي للمنتجات</a>')}
+/* ===== ٢) شريط تقدّم التمرير ===== */
+document.body.insertAdjacentHTML('beforeend','<div id="mkProg"><i></i></div>');
+addEventListener('scroll',()=>{const h=document.documentElement,m=h.scrollHeight-innerHeight;$q('#mkProg i').style.width=(m>0?scrollY/m*100:0)+'%'},{passive:true});
+/* ===== ٣) Toast مع تراجع + اهتزاز خفيف ===== */
+document.body.insertAdjacentHTML('beforeend','<div id="mkToast" role="status"><span></span><button type="button" hidden></button></div>');
+let tt;function toast(msg,undo){const t=$q('#mkToast');t.querySelector('span').textContent=msg;const b=t.querySelector('button');if(undo){b.hidden=false;b.textContent='تراجع';b.onclick=()=>{undo();t.classList.remove('on')}}else b.hidden=true;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3500)}
+/* ===== ٤) حفظ السلة بين الزيارات ===== */
+const CK='mk_cart';
+function saveCart(){try{localStorage.setItem(CK,JSON.stringify(cart))}catch(e){}}
+function restoreCart(){try{const c=JSON.parse(localStorage.getItem(CK)||'{}');let n=0;Object.keys(c).forEach(id=>{if(byId(S.products,id)&&c[id]>0){cart[id]=c[id];n++}});if(n)cartUI()}catch(e){}}
+const _cu=cartUI;cartUI=function(){_cu();saveCart()};
+setTimeout(restoreCart,1200);
+/* ===== ٥) إضافة للطلب: تراجع + اهتزاز ===== */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a="ad"]');if(!b)return;const id=b.dataset.id,p=byId(S.products,id);
+ setTimeout(()=>{try{navigator.vibrate&&navigator.vibrate(18)}catch(x){}const ct=$q('#ct');if(ct){ct.classList.remove('mkbump');void ct.offsetWidth;ct.classList.add('mkbump')}
+  toast('✔ اتضاف للطلب: '+(p?p.name.slice(0,32):''),()=>{cart[id]=(cart[id]||1)-1;if(cart[id]<=0)delete cart[id];cartUI()})},20)},true);
+/* ===== ٦) إرسال الطلب كله على واتساب ===== */
+const _co=cartOpen;cartOpen=function(){_co();const row=$q('#modal .mc .row');if(!row||!Object.keys(cart).length||$q('#mkSendAll'))return;
+ row.insertAdjacentHTML('afterbegin','<button class="btn g" id="mkSendAll" type="button">💬 ابعت الطلب كله واتساب</button>');
+ $q('#mkSendAll').onclick=()=>{const nm=(($q('#cn')||{}).value||'').trim();const L=Object.keys(cart).map(id=>byId(S.products,id)).filter(Boolean).map(p=>'• '+p.name+(p.code?' (كود '+p.code+')':'')+' × '+cart[p.id]);
+  window.open(waUrl('السلام عليكم، عايز أطلب:\n'+L.join('\n')+(nm?'\nالاسم: '+nm:'')),'_blank','noopener')}};
+/* ===== ٧) شريط أقسام لاصق + تتبّع القسم الحالي ===== */
+function stick(){const m=$q('#main'),pr=$q('#prods');if(!m||!pr||admin||$q('#mkStick'))return;
+ const secs=(S.sections||[]).filter(s=>S.products.some(p=>p.sec===s.id));if(secs.length<2)return;
+ const topH=(($q('nav#nav')||{}).offsetHeight)||0;
+ pr.insertAdjacentHTML('beforebegin','<div id="mkStick" style="top:0">'+secs.map(s=>'<button type="button" data-sk="'+s.id+'">'+esc(s.name)+'</button>').join('')+'</div>');
+ const bar=$q('#mkStick');
+ bar.onclick=e=>{const b=e.target.closest('[data-sk]');if(!b)return;const t=document.getElementById('s-'+b.dataset.sk);if(t)scrollTo({top:t.getBoundingClientRect().top+scrollY-bar.offsetHeight-8,behavior:'smooth'})};
+ const io='IntersectionObserver' in window?new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){const id=en.target.id.slice(2);bar.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.sk===id));const on=bar.querySelector('.on');if(on)on.scrollIntoView({inline:'center',block:'nearest'})}})},{rootMargin:'-30% 0px -60% 0px'}):null;
+ if(io)document.querySelectorAll('#prods section[id^=s-]').forEach(s=>io.observe(s))}
+/* ===== ٨) بحث لحظي بالاقتراحات ===== */
+document.body.insertAdjacentHTML('beforeend','<div id="mkSug" role="listbox"></div>');
+function hl(t,q){const i=t.toLowerCase().indexOf(q);return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length))}
+document.addEventListener('input',e=>{if(e.target.id!=='q')return;const inp=e.target,v=inp.value.trim().toLowerCase(),box=$q('#mkSug');
+ if(v.length<2){box.style.display='none';return}
+ const L=S.products.filter(p=>(p.name+' '+(p.code||'')).toLowerCase().includes(v)).slice(0,6);if(!L.length){box.style.display='none';return}
+ const r=inp.getBoundingClientRect();box.style.cssText='display:block;top:'+(r.bottom+4)+'px;left:'+r.left+'px;width:'+r.width+'px';
+ box.innerHTML=L.map(p=>{const im=(p.imgs&&p.imgs[0])||p.img||'';return `<div role="option" data-sug="${p.id}">${im?`<img src="${im}" alt="" loading="lazy">`:''}<b>${hl(p.name,v)}</b></div>`}).join('')});
+document.addEventListener('click',e=>{const s=e.target.closest('[data-sug]');if(s){$q('#mkSug').style.display='none';pvOpen(s.dataset.sug);return}if(!e.target.closest('#q'))$q('#mkSug').style.display='none'});
+addEventListener('scroll',()=>{$q('#mkSug').style.display='none'},{passive:true});
+/* ===== ٩) صفحة المنتج: فتات خبز + اتصال + نصيحة لو سكت ===== */
+let idle;const _pvY=pvOpen;pvOpen=function(a,b){_pvY(a,b);const p=byId(S.products,a);if(!p)return;const sec=byId(S.sections,p.sec)||{};
+ const meta=$q('#pv .pvmeta');if(meta&&!$q('#pv .mkbc'))meta.insertAdjacentHTML('beforebegin','<div class="mkbc"><a data-pv="x">الرئيسية</a><span>›</span>'+(sec.name?'<a data-pv="x">'+esc(sec.name)+'</a><span>›</span>':'')+'<span>'+esc(p.name.slice(0,40))+'</span></div>');
+ const ph=(typeof PH2==='function'?PH2():[])[0];const acts=$q('#pv .pvacts');if(ph&&acts&&!$q('#pv .mkcall'))acts.insertAdjacentHTML('afterend','<div class="mkcall"><a href="tel:'+esc(String(ph).replace(/\s/g,''))+'">📞 اتصل بنا</a><a href="#" onclick="window.print();return false">🖨️ اطبع الورقة</a></div>');
+ ld2(p,sec);clearTimeout(idle);idle=setTimeout(()=>{if($q('#pv')&&$q('#pv').offsetParent!==null)toast('محتاج مساعدة في الاختيار؟ كلّمنا على الواتساب',null)},45000)};
+function ld2(p,sec){let s=document.getElementById('mk-ld-b');if(!s){s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld-b';document.head.appendChild(s)}
+ s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[{'@type':'ListItem',position:1,name:'الرئيسية',item:location.origin+location.pathname},{'@type':'ListItem',position:2,name:sec.name||'المنتجات',item:location.origin+location.pathname+'#cats'},{'@type':'ListItem',position:3,name:p.name,item:location.href}]})}
+addEventListener('popstate',()=>{clearTimeout(idle);const s=document.getElementById('mk-ld-b');if(s&&!/#p=/.test(location.hash))s.remove()});
+/* ===== ١٠) FAQPage JSON-LD ===== */
+function faqLD(){if(document.getElementById('mk-ld-f')||!document.getElementById('mkFaq'))return;const Q=[...document.querySelectorAll('#mkFaq details')].map(d=>({'@type':'Question',name:d.querySelector('summary').textContent.replace(/[+−]\s*$/,'').trim(),acceptedAnswer:{'@type':'Answer',text:d.querySelector('p').textContent}}));if(!Q.length)return;const s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld-f';s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'FAQPage',mainEntity:Q});document.head.appendChild(s)}
+/* ===== ١١) مشاركة المفضلة واتساب ===== */
+function favShare(){const f=$q('#mkChips');if(!f||f.querySelector('[data-favsh]')||!fav||!fav.size)return;f.insertAdjacentHTML('afterbegin','<button type="button" data-favsh>♥ ابعت مفضلتي</button>')}
+document.addEventListener('click',e=>{if(!e.target.closest('[data-favsh]'))return;const L=[...fav].map(id=>byId(S.products,id)).filter(Boolean).map(p=>'• '+p.name+' — '+location.href.split('#')[0]+'#p='+p.id);if(!L.length)return;window.open(waUrl('المنتجات اللي عجبتني من ميكانيزم:\n'+L.join('\n')),'_blank','noopener')});
+/* ===== ١٢) ثبّت الموقع (PWA) ===== */
+let dp=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;const b=$q('#mkInst');if(b)b.style.display='block'});
+document.body.insertAdjacentHTML('beforeend','<button id="mkInst" type="button">⬇️ ثبّت التطبيق</button>');
+$q('#mkInst').onclick=async()=>{if(!dp)return;dp.prompt();try{await dp.userChoice}catch(e){}dp=null;$q('#mkInst').style.display='none'};
+addEventListener('appinstalled',()=>{const b=$q('#mkInst');if(b)b.style.display='none'});
+/* iOS: تلميح مرة واحدة */
+try{const ios=/iphone|ipad/i.test(navigator.userAgent),sa=navigator.standalone;if(ios&&!sa&&!localStorage.getItem('mk_ioshint')){setTimeout(()=>{toast('📲 ثبّت الموقع: اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية»',null);localStorage.setItem('mk_ioshint','1')},9000)}}catch(e){}
+/* ===== تشغيل ===== */
+function all(){stick();faqLD();favShare()}
+const _pmY=pubMain;pubMain=function(){_pmY();setTimeout(all,320)};setTimeout(all,1100);setTimeout(all,3000);
 })();
 </script>
 </body></html>

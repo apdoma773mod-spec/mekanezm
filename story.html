@@ -29,7 +29,7 @@
 #mkSt .sp b{color:#a8741a}#mkSt .sp span{font-weight:700;text-align:left}
 #mkSt .cta{display:flex;gap:10px;flex-wrap:wrap;padding:10px 18px 90px;max-width:760px;margin:0 auto}
 #mkSt .cta a{flex:1 1 200px;text-align:center;text-decoration:none;font-weight:800;padding:16px;border-radius:16px;background:#25D366;color:#fff}#mkSt .cta a.g{background:linear-gradient(135deg,#f6d77a,#d9a73a,#a8741a);color:#2a1c04}
-</style></head><body><div class="top"><b>ميكانيزم</b><a href="shop.html">← رجوع للمتجر</a></div><div id="list"><h1>اتفرج على المنتجات</h1><p>اختار منتج وكمّل تمرير لتشوف تفاصيله</p><div class="g" id="g"></div></div><script>
+</style><link rel="canonical" href="https://apdoma773mod-spec.github.io/mekanezm/story.html"><meta name="theme-color" content="#ffffff"></head><body><div class="top"><b>ميكانيزم</b><a href="shop.html">← رجوع للمتجر</a></div><div id="list"><h1>اتفرج على المنتجات</h1><p>اختار منتج وكمّل تمرير لتشوف تفاصيله</p><div class="g" id="g"></div></div><script>
 (function(){
 let root,ids;
 const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -89,6 +89,16 @@ window.mkOpen=function(id){cur=id;base(id);const r=document.getElementById('mkSt
 document.addEventListener('click',e=>{const n=e.target.closest('[data-nv]');if(n){go(+n.dataset.nv);return}if(e.target.closest('[data-sh]')){const u=location.href,t=document.title;if(navigator.share)navigator.share({title:t,url:u}).catch(()=>{});else{try{navigator.clipboard.writeText(u)}catch(x){}}}});
 document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')go(1);if(e.key==='ArrowRight')go(-1)});
 try{if(!sessionStorage.getItem('mkvs')){sessionStorage.setItem('mkvs','1');fetch(SB_URL+'/rest/v1/rpc/bump_visit',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({p_page:'story'})}).catch(()=>{})}}catch(e){}
+})();
+
+/* منتجات مشابهة في آخر القصة + تحميل مسبق للمنتج اللي بعده */
+(function(){const css=document.createElement('style');css.textContent='#mkSt .rel{padding:10px 18px 30px;max-width:760px;margin:0 auto}#mkSt .rel h2{font-size:22px;margin:0 0 12px;text-align:center}#mkSt .rel .rw{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}#mkSt .rel .rw a{flex:0 0 130px;text-decoration:none;color:#111;background:#faf8f3;border:1px solid #eee4d0;border-radius:16px;padding:8px;text-align:center;font-size:12px;font-weight:700;line-height:1.5}#mkSt .rel img{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:10px;mix-blend-mode:multiply}';document.head.appendChild(css);
+const prev=window.mkOpen;
+window.mkOpen=function(id){prev(id);const r=document.getElementById('mkSt');if(!r)return;const p=(S.products||[]).find(x=>x.id===id);if(!p)return;
+ const rel=(S.products||[]).filter(x=>x.sec===p.sec&&x.id!==id).slice(0,8);const cta=r.querySelector('.cta');
+ if(rel.length&&cta&&!r.querySelector('.rel'))cta.insertAdjacentHTML('afterend','<section class="rel"><h2>منتجات مشابهة</h2><div class="rw">'+rel.map(x=>'<a href="?p='+x.id+'" data-rl="'+x.id+'">'+(x.img?'<img loading="lazy" src="'+x.img+'" alt="">':'')+esc(x.name).slice(0,40)+'</a>').join('')+'</div></section>');
+ const L=S.products||[],i=L.findIndex(x=>x.id===id),n=L[(i+1)%L.length];if(n&&n.imgs)n.imgs.slice(0,3).forEach(u=>{const im=new Image();im.src=u})};
+document.addEventListener('click',e=>{const a=e.target.closest('[data-rl]');if(a){e.preventDefault();history.replaceState(null,'','?p='+a.dataset.rl);window.mkOpen(a.dataset.rl)}});
 })();
 </script>
 </body></html>
