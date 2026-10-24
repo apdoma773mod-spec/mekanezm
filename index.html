@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-21';
+const APP_VER='2026-10-23-22';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -6658,10 +6658,10 @@ new MutationObserver(inject).observe(document.documentElement,{childList:true,su
   b.querySelectorAll('[data-s]').forEach(function(x){x.onclick=function(){F.stage=x.dataset.s;viewOrders()}});
   var c=b.querySelector('#wkClr');if(c)c.onclick=function(){F.stage='';viewOrders()};
   b.querySelectorAll('[data-id]').forEach(function(x){x.onclick=function(){viewOrder(x.dataset.id)}});
-  b.querySelectorAll('[data-sk]').forEach(function(x){x.onclick=async function(){var o=ORD.find(function(z){return z.id===x.dataset.sk});if(!o)return;o.sysOk=true;try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}});
-  b.querySelectorAll('[data-sx]').forEach(function(x){x.onclick=async function(){var o=ORD.find(function(z){return z.id===x.dataset.sx});if(!o)return;
+  b.querySelectorAll('[data-sk]').forEach(function(x){x.onclick=async function(){var L=ORD.filter(function(z){return z.id===x.dataset.sk});if(!L.length)return;L.forEach(function(o){o.sysOk=true});try{await saveOrd();viewOrders()}catch(e){errAlert(e)}}});
+  b.querySelectorAll('[data-sx]').forEach(function(x){x.onclick=async function(){var o=ORD.find(function(z){return z.id===x.dataset.sx});if(!o)return;var dups=ORD.filter(function(z){return z.id===o.id});
    if(!(await ask('تحوّل '+ordNo(o)+' لنظام الدلفة؟\nالمراحل هتبدأ من «'+stages('دلفة')[0]+'» (تاريخ المراحل القديمة بيفضل محفوظ).','حوّله','لأ')))return;
-   o.type='دلفة';o.stage=0;o.sysOk=true;(o.hist=o.hist||[]).push({n:stages('دلفة')[0],at:new Date().toISOString(),by:who(),note:'اتنقل من نظام الجرار'});try{await saveOrd();toast('✔ اتنقل لنظام الدلفة');viewOrders()}catch(e){errAlert(e)}}});
+   dups.forEach(function(o){o.type='دلفة';o.stage=0;o.sysOk=true;(o.hist=o.hist||[]).push({n:stages('دلفة')[0],at:new Date().toISOString(),by:who(),note:'اتنقل من نظام الجرار'})});try{await saveOrd();toast('✔ اتنقل لنظام الدلفة');viewOrders()}catch(e){errAlert(e)}}});
  }
  function viewOrder(id){
   var o=ORD.find(function(x){return x.id===id});if(!o)return viewOrders();
