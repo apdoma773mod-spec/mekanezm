@@ -505,7 +505,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
  <button class="b" id="sm_bg" style="width:100%;min-height:56px;font-size:18px">☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)</button>
- <p class="mu" style="margin:4px 0 10px">بيرفع الفيديو، وبعدها السيرفر هو اللي بيسمع ويعمل المونتاج ويطلّعه جاهز — تلاقيه تحت في «فيديوهاتي». بياخد من دقيقتين لـ ٢٠ دقيقة على حسب طول الفيديو (لحد ١٠ دقايق).</p>
+ <p class="mu" style="margin:4px 0 10px">بيرفع الفيديو، وبعدها السيرفر هو اللي بيسمع ويعمل المونتاج ويطلّعه جاهز — تلاقيه تحت في «فيديوهاتي». بياخد من دقيقتين لـ ٢٠ دقيقة على حسب طول الفيديو (لحد ١٠ دقايق). سيب الشاشة مفتوحة لحد ما الرفع يخلص — ولو وقف اختار نفس الفيديو تاني وهيكمّل. 💡 صوّر بـ 1080p بدل 4K: الفيديو بيبقى أصغر ٣ مرات والرفع أسرع بكتير.</p>
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
@@ -569,13 +569,17 @@ async function cloudSubmit(){if(busy)return;if(!F)return say('اختار الف�
  pg.textContent='⏳ بجهّز الرفع…';b.textContent='⏳ بجهّز…';pg.scrollIntoView({behavior:'smooth',block:'center'});
  try{const tok=await withTO(token(),20000,'الدخول اتأخر — اتأكد من النت');if(!tok){const a=$s('sm_auth');a.innerHTML=loginBox();$s('sm_li').onclick=doLogin;a.scrollIntoView({behavior:'smooth'});throw new Error('سجّل دخول بحساب ميكانيزم الأول')}
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}
-  const c=sbk(),ses=(await c.auth.getSession()).data.session,uid=ses&&ses.user&&ses.user.id;if(!uid)throw new Error('سجّل دخول تاني بحساب ميكانيزم');step='تجهيز الطلب';const id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));
+  const c=sbk(),ses=(await c.auth.getSession()).data.session,uid=ses&&ses.user&&ses.user.id;if(!uid)throw new Error('سجّل دخول تاني بحساب ميكانيزم');step='تجهيز الطلب';let id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));
+  /* لو نفس الفيديو اترفع قبل كده ووقف في النص: نكمّل من مكان ما وقف */
+  let resume=false;try{const o=await withTO(c.from('mk_video_jobs').select('id,spec').eq('status','uploading').order('created_at',{ascending:false}).limit(5),20000,'السيرفر مابيردش');const m=(o.data||[]).find(x=>x.spec&&+x.spec.srcSize===F.size);if(m){id=m.id;resume=true}}catch(e){}
   pg.textContent='⏳ بجهّز الطلب…';
   const P=prods().slice(0,40),slim=[];for(const p of P)slim.push({id:p.id,nm:p.nm,pr:p.pr,img:await slimImg(p.img,220)});
   const spec={S:Object.assign({},S),brand:brand(),products:slim,src:F.name,srcSize:F.size};
-  step='تسجيل الطلب';let ins=await withTO(c.from('mk_video_jobs').insert({id,user_id:uid,name:(F.name||'فيديو').slice(0,80),status:'uploading',spec}),30000,'السيرفر مابيردش');if(ins.error)throw new Error(/mk_video_jobs|relation/.test(ins.error.message||'')?'جدول المهام مش متعمل — كلمني':ins.error.message);
-  step='رفع الفيديو';const n=Math.ceil(F.size/PART),paths=[];
-  for(let i=0;i<n;i++){const path=`${uid}/${id}/p${String(i+1).padStart(3,'0')}`,blob=F.slice(i*PART,Math.min(F.size,(i+1)*PART));
+  step='تسجيل الطلب';let ins=resume?await withTO(c.from('mk_video_jobs').update({spec}).eq('id',id),30000,'السيرفر مابيردش'):await withTO(c.from('mk_video_jobs').insert({id,user_id:uid,name:(F.name||'فيديو').slice(0,80),status:'uploading',spec}),30000,'السيرفر مابيردش');if(ins.error)throw new Error(/mk_video_jobs|relation/.test(ins.error.message||'')?'جدول المهام مش متعمل — كلمني':ins.error.message);
+  step='رفع الفيديو';const n=Math.ceil(F.size/PART),paths=[];let have={};
+  if(resume){try{const L=await withTO(c.storage.from('video-jobs').list(`${uid}/${id}`,{limit:1000}),20000,'السيرفر مابيردش');(L.data||[]).forEach(o=>{have[o.name]=o.metadata&&+o.metadata.size})}catch(e){}if(Object.keys(have).length)say('⬆️ هكمّل الرفع من مكان ما وقف')}
+  for(let i=0;i<n;i++){const nm=`p${String(i+1).padStart(3,'0')}`,path=`${uid}/${id}/${nm}`,blob=F.slice(i*PART,Math.min(F.size,(i+1)*PART));
+   if(have[nm]===blob.size){paths.push(path);continue}
    for(let k=0;;k++){pg.textContent=`⬆️ برفع الفيديو… ${i+1} من ${n} (${Math.round((i*PART)/F.size*100)}%) — سيب الشاشة مفتوحة لحد ما يخلص الرفع`;
     const r=await c.storage.from('video-jobs').upload(path,blob,{upsert:true,contentType:'application/octet-stream'});if(!r.error)break;if(k>=3)throw new Error('الرفع وقف: '+(r.error.message||r.error));await new Promise(r=>setTimeout(r,2500*(k+1)))}
    paths.push(path)}
@@ -590,6 +594,7 @@ async function loadJobs(){const el=$s('sm_jobs');if(!el)return;const c=sbk();if(
   const r=await c.from('mk_video_jobs').select('id,name,status,progress,note,error,out_path,created_at,attempts,parts').order('created_at',{ascending:false}).limit(15);if(r.error)throw r.error;
   const L=r.data||[];el.innerHTML=L.length?L.map(j=>`<div class="p" style="margin:0 0 8px;padding:10px"><div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap"><b>${esc(j.name)}</b><span>${JST[j.status]||j.status}</span></div>
    ${j.status==='working'||j.status==='queued'?`<div style="height:8px;background:var(--ln);border-radius:6px;margin:6px 0;overflow:hidden"><div style="height:100%;width:${Math.max(3,j.progress||0)}%;background:var(--g)"></div></div><small>${esc(j.note||'')} ${j.progress?j.progress+'%':''}</small>`:''}
+   ${j.status==='uploading'?`<small class="mu">لو الرفع وقف (الشاشة قفلت أو الصفحة اتقفلت): اختار نفس الفيديو فوق ودوس «☁️ اعمله في الخلفية» — هيكمّل من مكان ما وقف.</small>`:''}
    ${j.status==='failed'?`<small style="color:#ff8a80">${esc(j.error||'')}</small><br><button class="b o" data-rt="${j.id}" style="margin-top:6px">🔁 جرّب تاني</button>`:''}
    ${j.status==='done'?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="b" data-vw="${j.id}" style="flex:1">▶️ شاهد</button><button class="b o" data-sh="${j.id}" style="flex:1">📤 شارك</button><button class="b o" data-dl="${j.id}" style="flex:1">⬇️ نزّل</button></div>${Array.isArray(j.parts)&&j.parts.length?`<button class="b o" data-rr="${j.id}" style="width:100%;margin-top:6px">🔁 اعمله تاني بالقالب والاختيارات اللي فوق</button>`:''}<small class="mu">${esc(j.note&&j.note!=='جاهز'?j.note:'')}</small>`:''}
    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:6px"><small class="mu">${new Date(j.created_at).toLocaleString('ar-EG',{day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}</small>${j.status!=='working'?`<button class="b o" data-rm="${j.id}" style="flex:none;padding:6px 12px;color:#ff8a80">🗑️ امسح</button>`:''}</div></div>`).join(''):'مفيش فيديوهات في الخلفية لسه.';
