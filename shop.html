@@ -1058,4 +1058,37 @@ const _o=pvOpen;pvOpen=function(a,b){_o(a,b);f()};
 document.addEventListener('click',()=>setTimeout(f,60));})();
 </script>
 
+<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* هوية ميكانيزم: خط عناوين مميز، ذهبي، فواصل، ومساعد اختيار */
+:root{--gd:linear-gradient(135deg,#f6d77a,#d9a73a 45%,#a8741a)}
+h1,h2,.sh h2,.mkp>h2,.tile,.hero h1{font-family:'Reem Kufi',Cairo,Tahoma,sans-serif}
+.hero h1{background:linear-gradient(100deg,#fff 20%,#f6d77a 45%,#fff 70%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:mkgs 6s linear infinite}
+@keyframes mkgs{to{background-position:-220% 0}}
+.sh:before,.sh:after{background:linear-gradient(90deg,transparent,#d9a73a,transparent)!important;opacity:1!important;height:1.5px!important}
+.sh h2:before,.sh h2:after{content:"◆";color:#d9a73a;font-size:11px;margin:0 8px;vertical-align:middle}
+.top .btn:not(.g),.hero .btn:not(.g),.pri,.pvpbtn{background:var(--gd)!important;border-color:#a8741a!important;color:#2a1c04!important;font-weight:800;box-shadow:0 4px 14px #a8741a55}
+.top{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.card h3{font-family:Cairo,sans-serif}
+#mkFind{margin:22px 16px;background:linear-gradient(145deg,#10202c,#0b1620);border-radius:22px;padding:18px 14px;color:#fff;box-shadow:0 8px 28px #0003;border:1px solid #d9a73a55}
+#mkFind h2{margin:0 0 4px;font-size:20px;color:#f6d77a;background:none!important;padding:0!important;display:block!important;border:0!important;text-align:right}.reqbtn{background:var(--gd)!important;color:#2a1c04!important;border:0!important}.reqbtn small{color:#2a1c04cc!important}#mkFind p{margin:0 0 12px;font-size:13px;opacity:.8}
+#mkFind .o{display:flex;gap:8px;flex-wrap:wrap}
+#mkFind .o button,#mkFind .r a,#mkFind .r button{border:1.5px solid #d9a73a88;background:#ffffff0f;color:#fff;border-radius:14px;padding:11px 14px;font:700 14px Cairo,sans-serif;text-decoration:none;flex:1 1 auto;text-align:center}
+#mkFind .o button.on{background:var(--gd);color:#2a1c04;border-color:#f6d77a}
+#mkFind .r{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+#mkFind .r button{background:#d9a73a22}#mkFind .r a.w{background:#25D366;border-color:#25D366}
+</style>
+<script>
+(function(){
+const SP=[['🍽️ مطبخ',/مطبخ|مفصل|مجر|بلوم|اوكر|مقبض|جزام/],['👗 دريسنج روم',/دريسنج|جرار|دلف|مجر|مقبض|اوكر/],['🚪 دولاب / غرفة نوم',/دولاب|جرار|مفصل|مقبض|اوكر|جزام/]];
+function find(){const m=document.getElementById('main'),c=document.getElementById('cats');if(!m||!c||admin||document.getElementById('mkFind'))return;
+ c.insertAdjacentHTML('beforebegin',`<section id="mkFind"><h2>مساعد الاختيار</h2><p>قولنا بتجهّز إيه ونرشّحلك الأقسام المناسبة</p><div class="o">${SP.map((s,i)=>`<button data-fi="${i}">${s[0]}</button>`).join('')}</div><div class="r" id="mkFr"></div></section>`)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-fi]');if(!b)return;const i=+b.dataset.fi,s=SP[i];
+ document.querySelectorAll('#mkFind .o button').forEach(x=>x.classList.toggle('on',x===b));
+ const secs=(S.sections||[]).filter(x=>s[1].test(x.name)&&S.products.some(p=>p.sec===x.id));
+ document.getElementById('mkFr').innerHTML=secs.map(x=>`<button data-a="cat" data-id="${x.id}">${esc(x.name)}</button>`).join('')+`<a class="w" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بجهّز '+s[0].replace(/^\S+\s/,'')+' ومحتاج مساعدة في اختيار الإكسسوارات')}">💬 مش متأكد؟ كلّمنا</a>`});
+const _pmF=pubMain;pubMain=function(){_pmF();setTimeout(find,90)};setTimeout(find,600);setTimeout(find,2300);
+})();
+</script>
+
 </body></html>
