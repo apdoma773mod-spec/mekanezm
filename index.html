@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-24';
+const APP_VER='2026-10-23-25';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -2886,7 +2886,7 @@ setTimeout(loadCustom,4000);setInterval(()=>{if(!document.hidden)loadCustom()},3
   if(window.mkWaCnt)L.push(['💬 صورة واتساب',window.mkWaCnt,()=>window.mkWaList&&window.mkWaList()]);
   return L}
  let lastSig=null;
- window.mkBar=function(){let ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&ae.id!=='mkNbX')return;
+ window.mkBar=function(){if(1)return;let ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&ae.id!=='mkNbX')return;
   let L=items(),el=document.getElementById('mkNb'),sig=window.mkT_user?L.map(x=>x[0]+x[1]).join('|'):'';
   if(sig===lastSig)return;lastSig=sig;
   if(!L.length||!window.mkT_user){if(el)el.style.display='none';document.body.classList.remove('hasNb');return}
