@@ -364,7 +364,7 @@ const fin=(v,d)=>Number.isFinite(+v)&&v!==null&&v!==''?+v:d;
 const kk=e=>Math.round(e.s*10)+'|'+e.label;
 /* الرسومات اللي محتاجة رسمة من الذكاء + الكلام اللي حواليها */
 function animList(){return EV.filter(e=>e.type==='anim'&&showEv(e)).map(e=>({key:kk(e),label:e.label,scene:e.scene,action:e.action,ctx:(D.seg||[]).filter(g=>g.e>e.s-2.5&&g.s<e.s+4.5).map(g=>g.t).join(' ').slice(0,380)||e.label})).slice(0,24)}
-async function sceneMap(list,headers,prog){const out={},B=[];for(let i=0;i<list.length;i+=6)B.push(list.slice(i,i+6));let done=0;
+async function sceneMap(list,headers,prog){const out={},B=[];for(let i=0;i<list.length;i+=4)B.push(list.slice(i,i+4));let done=0;
  const run=async b=>{try{const r=await fetch(MK_URL+'/functions/v1/video-scene',{method:'POST',headers:Object.assign({'Content-Type':'application/json',apikey:MK_KEY},headers),body:JSON.stringify({items:b.map((x,i)=>({i,label:x.label,ctx:x.ctx,scene:x.scene,action:x.action}))})});
    const j=await r.json().catch(()=>({}));(j.scenes||[]).forEach(sc=>{const x=b[sc.i];if(x&&dslOk(sc))out[x.key]={shapes:sc.shapes.slice(0,40)}})}catch(e){console.warn('scene',e)}done++;prog&&prog(done,B.length)};
  for(let i=0;i<B.length;i+=3)await Promise.all(B.slice(i,i+3).map(run));return out}
