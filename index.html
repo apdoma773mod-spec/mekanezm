@@ -1742,7 +1742,7 @@ const _oim=openInvoiceModal;openInvoiceModal=function(id){_oim(id);let r=db.sale
 })();
 
 /* ===== تحديث تلقائي: أيقونة الآيفون بتحتفظ بالنسخة القديمة، فبنشيّك على السيرفر ===== */
-const APP_VER='2026-10-23-36';
+const APP_VER='2026-10-23-37';
 
 /* ===== من غير نت: الـ Service Worker بيحفظ نسخة من السيستم والمكتبات على الجهاز ===== */
 if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.warn('sw',e))})}
@@ -11598,7 +11598,9 @@ window.mkSmsOpen=async function(){let L=window.__smsCache||[];
  reloadList();
 };
 const _rt=window.renderDashboard;
-window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);pending().then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
+function partnerTile(){let host=document.getElementById('mkToday');if(!host)return;let P=partners(),old=document.querySelectorAll('.mkPtnTile');old.forEach(e=>e.remove());
+ P.slice(0,2).forEach(p=>{let b=document.createElement('button');b.type='button';b.className='mkPtnTile';b.onclick=()=>openContactFile(p.id);b.style.cssText='margin:8px 0;width:100%;padding:12px;border-radius:14px;border:2px solid #087f8c;background:var(--card,#fff);font:inherit;font-weight:800;color:#087f8c;text-align:right';b.textContent='🤝 حساب '+p.name+' — '+balTxt(p.balance);host.insertAdjacentElement('afterbegin',b)})}
+window.renderDashboard=function(){_rt&&_rt.apply(this,arguments);try{partnerTile()}catch(e){}pending().then(L=>{let host=document.getElementById('mkToday');if(!host)return;let b=document.getElementById('mkSmsTile');
  if(!L.length){if(b)b.remove();return}
  if(!b){b=document.createElement('button');b.id='mkSmsTile';b.type='button';b.onclick=()=>mkSmsOpen();b.style.cssText='margin:8px 0;width:100%;padding:12px;border-radius:14px;border:2px solid var(--danger);background:var(--card,#fff);font:inherit;font-weight:800;color:var(--danger)';host.insertAdjacentElement('afterbegin',b)}
  b.textContent='📲 فيه '+L.length+' مبلغ فودافون كاش مستني تسجيله';})};
