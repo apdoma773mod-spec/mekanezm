@@ -669,52 +669,52 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-vw],
   if(b.dataset.sh){say('⏳ بجهّز الملف للمشاركة…');const u=await jobUrl(b.dataset.sh),bl=await (await fetch(u)).blob(),f=new File([bl],'ميكانيزم.mp4',{type:'video/mp4'});if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f]});else{const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='ميكانيزم.mp4';a.click()}}}
  catch(err){say('❌ '+(err.message||err))}});
 
-/* ---------- 🧠 سكيل من فيديو: فيديو عن كلود → كلامه → SKILL.md ---------- */
-let KF=null,KT='';
-async function sklCall(body,tok){const r=await fetch(MK_URL+'/functions/v1/video-skill',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok,apikey:MK_KEY},body:JSON.stringify(body)});
- const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
-/* ٦ فريمات من الفيديو (اللينكات وأسماء الأدوات بتبان على الشاشة) */
-function sklFrames(file){return new Promise(res=>{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=URL.createObjectURL(file);const out=[];
- const fin=()=>{URL.revokeObjectURL(v.src);res(out)};v.onerror=fin;
- v.onloadedmetadata=async()=>{const d=v.duration||0;if(!d)return fin();const c=document.createElement('canvas'),k=Math.min(1,720/Math.max(v.videoWidth,v.videoHeight,1));c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);
-  for(let i=0;i<6;i++){const t=d*(i+.5)/6;await new Promise(r=>{const done=()=>{v.removeEventListener('seeked',done);r()};v.addEventListener('seeked',done);v.currentTime=t;setTimeout(done,2500)});
-   try{c.getContext('2d').drawImage(v,0,0,c.width,c.height);out.push(c.toDataURL('image/jpeg',.6).split(',')[1])}catch(e){}}fin()};
- setTimeout(fin,60000)})}
-async function sklGo(){if(busy)return;if(!KF)return say('اختار الفيديو الأول');const b=$s('sk_go'),pg=$s('sk_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';
- try{const tok=await token();if(!tok)throw new Error('LOGIN');
-  const f32=await pcmFromFile(KF,m=>pg.textContent=m),pts=splitPoints(f32,40),n=pts.length-1,tr=new Array(n);let done=0;
-  pg.textContent='🧠 بسمع الكلام… 0 من '+n;
-  const run=async i=>{for(let k=0;;k++){try{tr[i]=(await sklCall({mode:'transcribe',audio:wav64(f32.subarray(pts[i],pts[i+1])),mime:'audio/wav'},tok)).text||'';break}catch(e){if(k>=2||/LOGIN|دخول/.test(e.message))throw e;await new Promise(r=>setTimeout(r,2500*(k+1)))}}done++;pg.textContent='🧠 بسمع الكلام… '+done+' من '+n};
-  for(let i=0;i<n;i+=3)await Promise.all([i,i+1,i+2].filter(x=>x<n).map(run));
-  const text=tr.join('\n').trim();if(text.length<20)throw new Error('مالقيتش كلام في الفيديو — اتأكد إن الصوت واضح');
-  pg.textContent='🖼️ بقرا اللي على الشاشة…';const fr=await sklFrames(KF);
-  pg.textContent='✍️ بكتب السكيل…';const r=await sklCall({mode:'skill',transcript:text,frames:fr,name:KF.name},tok);
-  KT=text;$s('sk_out').style.display='';$s('sk_md').value=r.skill;$s('sk_tr').value=text;pg.textContent='✔ السكيل جاهز — راجعه وانسخه';$s('sk_out').scrollIntoView({behavior:'smooth'})}
- catch(e){if(e.message==='LOGIN'){pg.textContent='';const a=$s('sk_auth');a.innerHTML=loginBox();$s('sm_li').onclick=async()=>{await doLogin();a.innerHTML=''};a.scrollIntoView({behavior:'smooth'});say('سجّل دخول بحساب ميكانيزم الأول')}else{pg.textContent='❌ '+(e.message||e);say('❌ '+(e.message||e))}}
- finally{busy=false;b.disabled=false;b.textContent='🧠 اكتب السكيل'}}
+/* ---------- 🧠 سكيل من لينك: لينك فيديو → السيرفر ينزّله ويسمعه (طابور mk_skill_jobs + عامل skill-link) → SKILL.md ---------- */
+let SJT=0,SJ={};
+const SJST={queued:'⏳ مستني دوره',working:'⚙️ شغال',done:'✅ جاهز',failed:'❌ فشل'};
+const fileName=md=>((String(md).match(/^name:\s*(.+)$/m)||[])[1]||'skill').trim().replace(/[^\w-]+/g,'-')+'-SKILL.md';
+async function sklSend(){const ta=$s('sk_u'),b=$s('sk_go'),pg=$s('sk_pg');const urls=(ta.value.match(/https?:\/\/[^\s]+/g)||[]).slice(0,10);if(!urls.length)return say('الصق لينك الفيديو الأول');
+ b.disabled=true;b.textContent='⏳ ببعت…';
+ try{const tok=await token();if(!tok)throw new Error('LOGIN');const c=sbk(),r=await c.from('mk_skill_jobs').insert(urls.map(u=>({url:u,status:'queued',note:'مستني دوره'})));if(r.error)throw r.error;
+  ta.value='';pg.textContent='✅ اللينك اتبعت — تقدر تقفل الموبايل. السكيل هيظهر تحت لما يخلص (دقيقة أو اتنين تقريبًا).';sklJobs()}
+ catch(e){if(e.message==='LOGIN'){const a=$s('sk_auth');a.innerHTML=loginBox();$s('sm_li').onclick=async()=>{await doLogin();a.innerHTML=''};a.scrollIntoView({behavior:'smooth'});say('سجّل دخول بحساب ميكانيزم الأول')}else{pg.textContent='❌ '+(e.message||e);say('❌ '+(e.message||e))}}
+ finally{b.disabled=false;b.textContent='🧠 ابعت اللينك'}}
+async function sklJobs(){const el=$s('sk_jobs');if(!el)return;const c=sbk();if(!c)return;
+ try{if(!(await token())){el.textContent='سجّل دخول بحساب ميكانيزم عشان تشوف السكيلات.';return}
+  const r=await c.from('mk_skill_jobs').select('id,url,status,note,error,skill,created_at').order('created_at',{ascending:false}).limit(20);if(r.error)throw r.error;
+  const L=r.data||[];SJ=Object.fromEntries(L.map(j=>[j.id,j]));
+  const open=new Set([...el.querySelectorAll('details[open]')].map(d=>d.dataset.id));
+  el.innerHTML=L.length?L.map(j=>`<div class="p" style="margin:0 0 8px;padding:10px"><div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap"><b dir="ltr" style="font-size:12px;word-break:break-all;flex:1">${esc(j.url)}</b><span>${SJST[j.status]||j.status}</span></div>
+   ${j.status==='working'||j.status==='queued'?`<small class="mu">${esc(j.note||'')}</small>`:''}
+   ${j.status==='failed'?`<small style="color:#ff8a80">${esc(j.error||'')}</small>`:''}
+   ${j.status==='done'?`<details data-id="${j.id}" ${open.has(j.id)?'open':''} style="margin-top:6px"><summary style="cursor:pointer;font-weight:700">📄 افتح السكيل</summary><textarea readonly dir="auto" style="width:100%;min-height:45vh;font-family:monospace;font-size:13px;margin-top:6px">${esc(j.skill)}</textarea>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="b" data-sc="${j.id}" style="flex:1">📋 انسخ</button><button class="b o" data-sd="${j.id}" style="flex:1">⬇️ نزّل</button><button class="b o" data-ss="${j.id}" style="flex:1">📤 شارك</button></div></details>`:''}
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><small class="mu">${new Date(j.created_at).toLocaleString('ar-EG',{day:'numeric',month:'numeric',hour:'numeric',minute:'2-digit'})}</small><button class="b o" data-sx="${j.id}" style="flex:none;padding:6px 12px;color:#ff8a80">🗑️ امسح</button></div></div>`).join(''):'مفيش لينكات لسه.'}
+ catch(e){el.textContent=/mk_skill_jobs|relation/.test(String(e&&e.message))?'جدول السكيلات مش متعمل':'❌ '+(e&&e.message||e)}}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-sc],[data-sd],[data-ss],[data-sx]');if(!b||!$s('sk_jobs')||!$s('sk_jobs').contains(b))return;
+ const id=b.dataset.sc||b.dataset.sd||b.dataset.ss||b.dataset.sx,j=SJ[id];if(!j)return;
+ try{if(b.dataset.sc){try{await navigator.clipboard.writeText(j.skill)}catch(x){const t=b.closest('details').querySelector('textarea');t.select();document.execCommand('copy')}say('✔ اتنسخ')}
+  if(b.dataset.sd){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([j.skill],{type:'text/markdown'}));a.download=fileName(j.skill);a.click()}
+  if(b.dataset.ss){if(navigator.share)await navigator.share({title:fileName(j.skill),text:j.skill});else{await navigator.clipboard.writeText(j.skill);say('✔ اتنسخ')}}
+  if(b.dataset.sx){if(!confirm('تمسح ده؟'))return;const d=await sbk().from('mk_skill_jobs').delete().eq('id',id);if(d.error)throw d.error;sklJobs()}}
+ catch(err){if(!/abort|cancel/i.test(String(err&&err.name)))say('❌ '+(err.message||err))}});
 function sklPaint(){const s=$s('v-skl');if(!s)return;
- s.innerHTML=`<h1>🧠 سكيل من فيديو</h1><p class="mu">ارفع فيديو بيشرح إزاي تستخدم كلود أو أدوات معاه (نزّله من الفيسبوك الأول). بسمع الكلام، بقرا اللي على الشاشة، وبكتب لك سكيل جاهز: الفيديو بيتكلم على إيه، الأدوات إيه، واللينكات.</p>
+ s.innerHTML=`<h1>🧠 سكيل من لينك</h1><p class="mu">الصق لينك فيديو (فيسبوك أو يوتيوب…) بيشرح إزاي تستخدم كلود أو أدوات معاه. السيرفر بينزّله ويسمع الكلام ويقرا اللي على الشاشة، ويكتب لك سكيل جاهز: الفيديو بيتكلم على إيه، الأدوات إيه، واللينكات. الفيديو لازم يكون عام (مش خاص).</p>
  <div id="sk_auth"></div>
- <div class="p"><h2>١) الفيديو</h2><label class="b o" style="display:block;text-align:center;cursor:pointer;min-height:56px;line-height:56px">📂 اختار الفيديو<input type="file" id="sk_f" accept="video/*,audio/*" style="display:none"></label><small id="sk_fi" class="mu"></small>
- <button class="b" id="sk_go" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">🧠 اكتب السكيل</button><p id="sk_pg" class="mu"></p><p class="mu">الصوت بيتسمع بنفس مدة الفيديو تقريبًا — سيب الشاشة مفتوحة.</p></div>
- <div id="sk_out" style="display:none"><div class="p"><h2>٢) السكيل (SKILL.md)</h2><textarea id="sk_md" dir="auto" style="width:100%;min-height:50vh;font-family:monospace;font-size:13px"></textarea>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="b" id="sk_cp" style="flex:1">📋 انسخ</button><button class="b o" id="sk_dl" style="flex:1">⬇️ نزّل SKILL.md</button><button class="b o" id="sk_sh" style="flex:1">📤 شارك</button></div></div>
-  <div class="p"><h2>الكلام اللي اتسمع</h2><textarea id="sk_tr" dir="auto" style="width:100%;min-height:25vh;font-size:13px"></textarea></div></div>`;
+ <div class="p"><h2>الصق اللينك</h2><textarea id="sk_u" dir="ltr" rows="3" placeholder="https://www.facebook.com/…  (تقدر تلزق أكتر من لينك)" style="width:100%"></textarea>
+ <button class="b" id="sk_go" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">🧠 ابعت اللينك</button><p id="sk_pg" class="mu"></p></div>
+ <div class="p"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">📚 السكيلات بتاعتي</h2><button class="b o" id="sk_rf" style="flex:none;padding:8px 14px">🔄 تحديث</button></div><div id="sk_jobs" class="mu" style="margin-top:8px">⏳</div></div>`;
  token().then(t=>{const a=$s('sk_auth');if(a&&!t){a.innerHTML=loginBox();$s('sm_li').onclick=async()=>{await doLogin();a.innerHTML=''}}}).catch(()=>{});
- $s('sk_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;KF=f;$s('sk_fi').textContent='✔ '+f.name+' — '+(f.size/1048576).toFixed(0)+' ميجا'};
- $s('sk_go').onclick=sklGo;
- $s('sk_cp').onclick=async()=>{const t=$s('sk_md').value;try{await navigator.clipboard.writeText(t);say('✔ اتنسخ')}catch(e){$s('sk_md').select();document.execCommand('copy');say('✔ اتنسخ')}};
- const file=()=>{const m=($s('sk_md').value.match(/^name:\s*(.+)$/m)||[])[1];return (m||'skill').trim().replace(/[^\w-]+/g,'-')+'-SKILL.md'};
- $s('sk_dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$s('sk_md').value],{type:'text/markdown'}));a.download=file();a.click()};
- $s('sk_sh').onclick=async()=>{const t=$s('sk_md').value;try{if(navigator.share)await navigator.share({title:file(),text:t});else{await navigator.clipboard.writeText(t);say('✔ اتنسخ')}}catch(e){}}}
+ $s('sk_go').onclick=sklSend;$s('sk_rf').onclick=sklJobs;sklJobs();
+ clearInterval(SJT);SJT=setInterval(()=>{if(!$s('sk_jobs')||document.visibilityState!=='visible')return;if(Object.values(SJ).some(j=>/queued|working/.test(j.status)))sklJobs()},6000)}
 
 /* ---------- التركيب في الستوديو ---------- */
 function mount(){if($s('v-smart'))return;const s=document.createElement('section');s.className='v';s.id='v-smart';const ref=$s('v-vid');(ref&&ref.parentNode||document.body).insertBefore(s,ref||null);
  const btn=`<button data-go="smart"><svg class="i"><use href="#i-vid"/></svg>🎬 مونتاج ذكي</button>`,rail=$s('rail');if(rail){const first=rail.querySelector('[data-go="vid"]');first?first.insertAdjacentHTML('beforebegin',btn):rail.insertAdjacentHTML('beforeend',btn)}
  const tiles=$s('tiles');if(tiles)tiles.insertAdjacentHTML('afterbegin',`<button class="tile" data-go="smart"><span class="ic">🎬</span>مونتاج ذكي</button>`);
  const s2=document.createElement('section');s2.className='v';s2.id='v-skl';s.parentNode.insertBefore(s2,s);
- const b2=`<button data-go="skl"><svg class="i"><use href="#i-ai"/></svg>🧠 سكيل من فيديو</button>`;if(rail){const f=rail.querySelector('[data-go="smart"]');f?f.insertAdjacentHTML('beforebegin',b2):rail.insertAdjacentHTML('beforeend',b2)}
- if(tiles)tiles.insertAdjacentHTML('afterbegin',`<button class="tile" data-go="skl"><span class="ic">🧠</span>سكيل من فيديو</button>`);
+ const b2=`<button data-go="skl"><svg class="i"><use href="#i-ai"/></svg>🧠 سكيل من لينك</button>`;if(rail){const f=rail.querySelector('[data-go="smart"]');f?f.insertAdjacentHTML('beforebegin',b2):rail.insertAdjacentHTML('beforeend',b2)}
+ if(tiles)tiles.insertAdjacentHTML('afterbegin',`<button class="tile" data-go="skl"><span class="ic">🧠</span>سكيل من لينك</button>`);
  let sp=false;document.addEventListener('click',e=>{const b=e.target.closest('[data-go="skl"]');if(!b)return;if(!sp){sklPaint();sp=true}setTimeout(()=>{document.querySelectorAll('.v').forEach(x=>x.classList.toggle('on',x.id==='v-skl'));document.querySelectorAll('#rail button').forEach(x=>x.classList.toggle('on',x.dataset.go==='skl'));scrollTo(0,0)},0)});
  let painted=false;document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;if(b.dataset.go==='smart'){if(!painted){paint();painted=true}setTimeout(()=>{document.querySelectorAll('.v').forEach(x=>x.classList.toggle('on',x.id==='v-smart'));document.querySelectorAll('#rail button').forEach(x=>x.classList.toggle('on',x.dataset.go==='smart'))},0)}else if(V&&!V.paused)V.pause()})}
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */

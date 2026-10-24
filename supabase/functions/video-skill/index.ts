@@ -31,7 +31,16 @@ description: <جملة أو جملتين بالإنجليزي: السكيل ده
 
 قواعد: ماتضيفش معلومة مش في الفيديو (غير الاسم الرسمي واللينك الرسمي المتأكد منه). لو الكلام مش واضح في نقطة قول كده. العربي بالعامية المصرية البسيطة، والمصطلحات التقنية بالإنجليزي. رجّع محتوى الملف بس من غير \`\`\` حواليه ومن غير مقدمة.${name ? `\nاسم ملف الفيديو (يمكن يساعد في العنوان): ${name}` : ""}`;
 
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+async function workerOk(req: Request) {   // العامل السحابي بيدخل بالسر بدل توكن مستخدم
+  const sec = req.headers.get("x-vr-secret") || "";
+  if (!sec) return false;
+  const c = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const r = await c.from("mk_vr_secret").select("secret").limit(1).maybeSingle();
+  return !!(r.data && String(r.data.secret) === sec);
+}
 async function authed(req: Request) {
+  if (await workerOk(req)) return true;
   const auth = req.headers.get("authorization") || "", url = Deno.env.get("SUPABASE_URL"), key = req.headers.get("apikey") || Deno.env.get("SUPABASE_ANON_KEY") || "";
   if (!auth.startsWith("Bearer ") || !url) return false;
   const r = await fetch(`${url}/auth/v1/user`, { headers: { Authorization: auth, apikey: key } }).catch(() => null);

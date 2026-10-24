@@ -1,0 +1,49 @@
+# سكيل من لينك (ميكانيزم ستوديو): عامل صاحي بيبص على طابور اللينكات كل ١٥ ثانية، ينزّل الفيديو بـ yt-dlp ويكتب السكيل.
+# بياخد السر من سوبابيز بتوكن OIDC زي عامل المونتاج. الجدول كل ساعة بيصحّي عامل جديد (بيستنى اللي قبله يخلص).
+name: Skill from link
+on:
+  schedule:
+    - cron: "30 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: skill-link
+  cancel-in-progress: false
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  skill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      SB_URL: https://tkzfjeizvanfptnqvrmr.supabase.co
+      SB_KEY: sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: شغال على طول
+        run: |
+          oidc=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=mekanizm-vr" | jq -r '.value // empty' || true)
+          hi=$(curl -s -X POST "$SB_URL/functions/v1/vr-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"action\":\"hello\",\"oidc\":\"$oidc\"}" || true)
+          VR_SECRET=$(echo "$hi" | jq -r '.secret // empty' 2>/dev/null || true)
+          [ -z "$VR_SECRET" ] && { echo "::error::ماقدرتش آخد سر العامل"; exit 1; }
+          echo "::add-mask::$VR_SECRET"
+          export VR_SECRET
+          end=$(( $(date +%s) + 320*60 )); ready=0
+          while [ "$(date +%s)" -lt "$end" ]; do
+            n=$(curl -s -m 20 -X POST "$SB_URL/functions/v1/skill-worker" -H "Content-Type: application/json" -H "apikey: $SB_KEY" -d "{\"secret\":\"$VR_SECRET\",\"action\":\"peek\"}" | jq -r '.n // 0' 2>/dev/null || true)
+            case "$n" in ''|*[!0-9]*) n=0;; esac
+            if [ "$n" != "0" ]; then
+              echo "::group::لينك جديد ($n)"
+              if [ "$ready" = "0" ]; then
+                sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && python3 -m pip install -q -U yt-dlp && ready=1
+              else
+                python3 -m pip install -q -U yt-dlp || true
+              fi
+              [ "$ready" = "1" ] && node studio/worker/skill.mjs || echo "::warning::التجهيز فشل — هيحاول تاني"
+              echo "::endgroup::"
+            fi
+            sleep 15
+          done
