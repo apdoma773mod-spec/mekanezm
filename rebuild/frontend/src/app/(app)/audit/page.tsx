@@ -1,35 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AUDIT_ACTIONS, type AuditAction, type AuditEntry } from '@mk/shared';
+import { AUDIT_ACTIONS, type AuditAction } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
-import { SelectField, TextField } from '@/components/ui/field';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState, ErrorState, LoadingState } from '@/components/ui/states';
+import { TableState } from '@/components/ui/states';
 import { errorMessage } from '@/lib/api';
 import { AUDIT_LABELS, formatDateTime } from '@/lib/format';
 import { useAudit } from '@/lib/queries';
-
-function Diff({ entry }: { entry: AuditEntry }) {
-  if (entry.before === null && entry.after === null) return null;
-  return (
-    <details className="mt-2">
-      <summary className="cursor-pointer text-sm font-bold text-primary">التفاصيل</summary>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        {entry.before !== null && (
-          <pre dir="ltr" className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">
-            {JSON.stringify(entry.before, null, 2)}
-          </pre>
-        )}
-        {entry.after !== null && (
-          <pre dir="ltr" className="overflow-x-auto rounded-lg bg-primary/10 p-3 text-xs">
-            {JSON.stringify(entry.after, null, 2)}
-          </pre>
-        )}
-      </div>
-    </details>
-  );
-}
 
 function AuditScreen() {
   const [action, setAction] = useState<'' | AuditAction>('');
@@ -38,6 +16,7 @@ function AuditScreen() {
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -47,74 +26,80 @@ function AuditScreen() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const audit = useAudit({
-    action: action || undefined,
-    from: from || undefined,
-    to: to || undefined,
-    q: search || undefined,
-    page,
-    pageSize: 50,
-  });
+  const audit = useAudit({ action: action || undefined, from: from || undefined, to: to || undefined, q: search || undefined, page, pageSize: 50 });
+  const items = audit.data?.items ?? [];
 
   return (
     <>
       <PageHeader title="سجل العمليات" subtitle="كل تعديل اتعمل في السيستم ومين عمله" />
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <TextField label="بحث" placeholder="اسم المستخدم" value={q} onChange={(e) => setQ(e.target.value)} />
-        <SelectField
-          label="العملية"
-          options={[{ value: '', label: 'الكل' }, ...AUDIT_ACTIONS.map((a) => ({ value: a, label: AUDIT_LABELS[a] ?? a }))]}
+      <div className="toolbar">
+        <input className="search" placeholder="اسم المستخدم..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <select
+          className="search"
+          style={{ maxWidth: 200 }}
           value={action}
           onChange={(e) => {
             setAction(e.target.value as '' | AuditAction);
             setPage(1);
           }}
-        />
-        <TextField
-          label="من يوم"
-          type="date"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setPage(1);
-          }}
-        />
-        <TextField
-          label="لحد يوم"
-          type="date"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            setPage(1);
-          }}
-        />
+        >
+          <option value="">كل العمليات</option>
+          {AUDIT_ACTIONS.map((a) => (
+            <option key={a} value={a}>
+              {AUDIT_LABELS[a] ?? a}
+            </option>
+          ))}
+        </select>
+        <input type="date" className="search" style={{ maxWidth: 170 }} value={from} onChange={(e) => (setFrom(e.target.value), setPage(1))} aria-label="من يوم" />
+        <input type="date" className="search" style={{ maxWidth: 170 }} value={to} onChange={(e) => (setTo(e.target.value), setPage(1))} aria-label="لحد يوم" />
       </div>
-
-      {audit.isPending ? (
-        <LoadingState />
-      ) : audit.isError ? (
-        <ErrorState message={errorMessage(audit.error)} onRetry={() => audit.refetch()} />
-      ) : audit.data.items.length === 0 ? (
-        <EmptyState title="مفيش عمليات" hint="غيّر الفلتر أو التاريخ" />
-      ) : (
-        <>
-          <ul className={`space-y-2 ${audit.isFetching ? 'opacity-70' : ''}`}>
-            {audit.data.items.map((e) => (
-              <li key={e.id} className="rounded-xl border border-border bg-surface p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-bold">
-                    {AUDIT_LABELS[e.action] ?? e.action}
-                    <span className="font-normal text-subtle"> · {e.user?.name ?? 'مستخدم محذوف'}</span>
-                  </p>
-                  <time className="text-sm text-subtle">{formatDateTime(e.createdAt)}</time>
-                </div>
-                <Diff entry={e} />
-              </li>
-            ))}
-          </ul>
-          <Pagination page={audit.data.page} pageSize={audit.data.pageSize} total={audit.data.total} onPage={setPage} />
-        </>
-      )}
+      <div className="card">
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>الوقت</th>
+                <th>العملية</th>
+                <th>مين</th>
+                <th>التفاصيل</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TableState
+                cols={4}
+                loading={audit.isPending}
+                error={audit.isError ? errorMessage(audit.error) : null}
+                empty={!items.length}
+                onRetry={() => audit.refetch()}
+              >
+                {items.map((e) => (
+                  <tr key={e.id}>
+                    <td>{formatDateTime(e.createdAt)}</td>
+                    <td>{AUDIT_LABELS[e.action] ?? e.action}</td>
+                    <td>{e.user?.name ?? '—'}</td>
+                    <td>
+                      {e.before !== null || e.after !== null ? (
+                        openId === e.id ? (
+                          <pre dir="ltr" style={{ margin: 0, fontSize: 11, whiteSpace: 'pre-wrap', maxWidth: 420 }}>
+                            {JSON.stringify({ before: e.before, after: e.after }, null, 1)}
+                          </pre>
+                        ) : (
+                          <button type="button" className="secondary" onClick={() => setOpenId(e.id)}>
+                            اعرض
+                          </button>
+                        )
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </TableState>
+            </tbody>
+          </table>
+        </div>
+        {audit.data && <Pagination page={audit.data.page} pageSize={audit.data.pageSize} total={audit.data.total} onPage={setPage} />}
+      </div>
     </>
   );
 }

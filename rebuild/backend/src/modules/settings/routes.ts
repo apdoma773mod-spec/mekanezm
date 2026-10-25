@@ -9,7 +9,8 @@ export default async function settingsRoutes(app: FastifyInstance) {
 
   app.get('/', { preHandler: app.authenticate }, async () => ({ settings: await service.getAll() }));
 
-  app.put('/:key', { preHandler: app.requireAdmin }, async (request) => {
+  // The theme carries the logo and background image inline, so it needs a bigger body than other routes.
+  app.put('/:key', { preHandler: app.requireAdmin, bodyLimit: 8 * 1024 * 1024 }, async (request) => {
     const { key } = parse(settingKeyParam, request.params);
     const value = await service.set(key, request.body, actorOf(request));
     return { key, value };

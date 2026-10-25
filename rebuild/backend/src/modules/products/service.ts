@@ -76,21 +76,24 @@ export class ProductsService {
         SELECT id FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
       lowIds = rows.map((r) => r.id);
     }
-    const q = query.q?.trim();
+    // Like the old search: every typed word must appear in the name, code, barcode or category.
+    const words = (query.q ?? '').trim().split(/\s+/).filter(Boolean);
     const where: Prisma.ProductWhereInput = {
       deletedAt: null,
       ...(query.category ? { category: query.category } : {}),
       ...(query.company ? { company: query.company } : {}),
       ...(lowIds ? { id: { in: lowIds } } : {}),
       ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
-      ...(q
+      ...(words.length
         ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { code: { startsWith: q.toUpperCase() } },
-              { barcode: q },
-              { category: { contains: q, mode: 'insensitive' } },
-            ],
+            AND: words.map((w) => ({
+              OR: [
+                { name: { contains: w, mode: 'insensitive' as const } },
+                { code: { startsWith: w.toUpperCase() } },
+                { barcode: w },
+                { category: { contains: w, mode: 'insensitive' as const } },
+              ],
+            })),
           }
         : {}),
     };

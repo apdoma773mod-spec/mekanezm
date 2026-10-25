@@ -1,40 +1,23 @@
 import type { ReactNode } from 'react';
 
-export function Spinner({ className = 'h-8 w-8' }: { className?: string }) {
+export function Loading({ label = '⏳ جاري التحميل…' }: { label?: string }) {
   return (
-    <span
-      role="status"
-      aria-label="جاري التحميل"
-      className={`inline-block animate-spin rounded-full border-[3px] border-current border-t-transparent ${className}`}
-    />
-  );
-}
-
-export function LoadingState({ label = 'جاري التحميل…' }: { label?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 py-16 text-subtle">
-      <Spinner />
-      <p>{label}</p>
+    <div className="empty" role="status">
+      {label}
     </div>
   );
 }
 
-export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-14 text-center">
-      <p className="text-lg font-bold">{title}</p>
-      {hint && <p className="text-subtle">{hint}</p>}
-      {action && <div className="mt-3">{action}</div>}
-    </div>
-  );
+export function Empty({ children }: { children: ReactNode }) {
+  return <div className="empty">{children}</div>;
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="flex flex-col items-center gap-3 rounded-xl bg-danger/10 px-4 py-10 text-center text-danger">
-      <p className="font-bold">{message}</p>
+    <div role="alert" className="empty" style={{ color: 'var(--danger)' }}>
+      <p style={{ margin: '0 0 10px', fontWeight: 700 }}>{message}</p>
       {onRetry && (
-        <button onClick={onRetry} className="min-h-11 rounded-xl bg-danger px-5 font-bold text-white">
+        <button type="button" className="secondary" onClick={onRetry}>
           جرّب تاني
         </button>
       )}
@@ -45,8 +28,36 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 export function FormError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl bg-danger/10 px-4 py-3 text-sm font-bold text-danger">
+    <div role="alert" className="form-error">
       {message}
-    </p>
+    </div>
   );
+}
+
+/** Table body states in one place: loading, error, empty, or the rows. */
+export function TableState({
+  cols,
+  loading,
+  error,
+  empty,
+  onRetry,
+  children,
+}: {
+  cols: number;
+  loading: boolean;
+  error: string | null;
+  empty: boolean;
+  onRetry?: () => void;
+  children: ReactNode;
+}) {
+  if (loading || error || empty) {
+    return (
+      <tr>
+        <td colSpan={cols}>
+          {loading ? <Loading /> : error ? <ErrorBox message={error} onRetry={onRetry} /> : <Empty>لا توجد بيانات.</Empty>}
+        </td>
+      </tr>
+    );
+  }
+  return <>{children}</>;
 }

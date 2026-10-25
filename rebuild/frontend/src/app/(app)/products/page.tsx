@@ -1,0 +1,133 @@
+'use client';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { Icon } from '@/components/icon';
+import { useModal } from '@/components/modals/modal-host';
+import { Pagination } from '@/components/ui/pagination';
+import { TableState } from '@/components/ui/states';
+import { errorMessage } from '@/lib/api';
+import { money, qtyText } from '@/lib/format';
+import { useProducts } from '@/lib/trade-queries';
+
+type StockFilter = 'all' | 'low' | 'out';
+
+function ProductsScreen() {
+  const { open } = useModal();
+  const params = useSearchParams();
+  const [q, setQ] = useState('');
+  const [search, setSearch] = useState('');
+  const [stock, setStock] = useState<StockFilter>((params.get('stock') as StockFilter) || 'all');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(q.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const products = useProducts({ q: search || undefined, stock, page, pageSize: 50 });
+  const items = products.data?.items ?? [];
+
+  return (
+    <>
+      <PageHeader
+        title="المنتجات والمخزون"
+        subtitle="أضف الأصناف وتابع الكميات والأسعار"
+        action={
+          <div className="btnrow">
+            <button type="button" className="primary" onClick={() => open({ kind: 'product' })}>
+              <Icon name="plus" /> منتج جديد
+            </button>
+          </div>
+        }
+      />
+      <div className="toolbar">
+        <input className="search" placeholder="ابحث باسم المنتج أو الكود..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <select
+          className="search"
+          style={{ maxWidth: 180 }}
+          value={stock}
+          onChange={(e) => {
+            setStock(e.target.value as StockFilter);
+            setPage(1);
+          }}
+        >
+          <option value="all">كل المخزون</option>
+          <option value="low">منخفض</option>
+          <option value="out">نفد</option>
+        </select>
+      </div>
+      {products.data && <div className="count-line">{products.data.total.toLocaleString('ar-EG')} صنف</div>}
+      <div className="card">
+        <div className="table-wrap">
+          <table className="table" style={{ opacity: products.isFetching && !products.isPending ? 0.7 : 1 }}>
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>المنتج</th>
+                <th>التصنيف</th>
+                <th>الكمية</th>
+                <th>سعر الشراء</th>
+                <th>سعر البيع</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TableState
+                cols={7}
+                loading={products.isPending}
+                error={products.isError ? errorMessage(products.error) : null}
+                empty={!items.length}
+                onRetry={() => products.refetch()}
+              >
+                {items.map((p) => (
+                  <tr key={p.id} className="prow" onClick={() => open({ kind: 'product', id: p.id })}>
+                    <td>{p.code}</td>
+                    <td>
+                      <span className="pico">
+                        <Icon name="box" />
+                      </span>
+                      <b>{p.name}</b>
+                    </td>
+                    <td>{p.category}</td>
+                    <td>
+                      {qtyText(p.qty)} {p.unit}
+                    </td>
+                    <td>{money(p.cost)}</td>
+                    <td>{money(p.price)}</td>
+                    <td>
+                      {p.qty <= 0 ? (
+                        <span className="badge red">نفد</span>
+                      ) : p.qty <= p.minQty ? (
+                        <span className="badge red">منخفض</span>
+                      ) : (
+                        <span className="badge green">متوفر</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </TableState>
+            </tbody>
+          </table>
+        </div>
+        {products.data && (
+          <Pagination page={products.data.page} pageSize={products.data.pageSize} total={products.data.total} onPage={setPage} />
+        )}
+      </div>
+    </>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <AdminOnly>
+      <Suspense>
+        <ProductsScreen />
+      </Suspense>
+    </AdminOnly>
+  );
+}

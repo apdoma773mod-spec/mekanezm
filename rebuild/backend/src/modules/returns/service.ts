@@ -46,6 +46,7 @@ export class ReturnsService {
     const q = query.q?.trim();
     const where: Prisma.ReturnWhereInput = {
       ...(query.kind ? { kind: query.kind } : {}),
+      ...(query.contactId ? { contactId: query.contactId } : {}),
       ...(query.company ? { company: query.company } : {}),
       ...(query.from || query.to ? { date: dayRange(query.from, query.to) } : {}),
       ...(q

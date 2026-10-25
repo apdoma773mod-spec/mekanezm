@@ -1,5 +1,12 @@
 import type { Company, Prisma, PrismaClient } from '@prisma/client';
-import { PAY_METHODS, type CashMove, type CashQuery, type CashSummary, type TodaySummary } from '@mk/shared';
+import {
+  PAY_METHODS,
+  type CashMove,
+  type CashQuery,
+  type CashSummary,
+  type Overview,
+  type TodaySummary,
+} from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { dateToDay, dayRange, todayYmd } from '../../lib/dates.js';
 import { ZERO, money, num, sum } from '../../lib/money.js';
@@ -126,6 +133,35 @@ export class CashService {
         sum([v(purchases._sum.paid), v(payOut._sum.amount), v(saleRet._sum.total), v(exp._sum.amount)]),
       ),
     );
+  }
+
+  async overview(actor: Actor): Promise<Overview> {
+    const [count, stock, sales, purchases, saleRet, purRet, expenses, receivables, cashBalance] = await Promise.all([
+      this.prisma.product.count({ where: { deletedAt: null } }),
+      isAdmin(actor)
+        ? this.prisma.$queryRaw<{ v: Prisma.Decimal | null }[]>`
+            SELECT sum(qty * cost) AS v FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0`
+        : Promise.resolve(null),
+      this.prisma.invoice.aggregate({ where: { kind: 'SALE', status: 'ACTIVE' }, _sum: { total: true } }),
+      this.prisma.invoice.aggregate({ where: { kind: 'PURCHASE', status: 'ACTIVE' }, _sum: { total: true } }),
+      this.prisma.return.aggregate({ where: { kind: 'SALE' }, _sum: { total: true } }),
+      this.prisma.return.aggregate({ where: { kind: 'PURCHASE' }, _sum: { total: true } }),
+      this.prisma.expense.aggregate({ where: { deletedAt: null }, _sum: { amount: true } }),
+      this.prisma.contact.aggregate({ where: { type: 'CUSTOMER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
+      this.balance(),
+    ]);
+    const n = (d: Prisma.Decimal | null | undefined) => num(d ?? ZERO);
+    return {
+      productsCount: count,
+      ...(stock ? { stockValue: num(money(stock[0]?.v ?? ZERO)) } : {}),
+      salesTotal: num(money((sales._sum.total ?? ZERO).minus(saleRet._sum.total ?? ZERO))),
+      purchasesTotal: num(money((purchases._sum.total ?? ZERO).minus(purRet._sum.total ?? ZERO))),
+      expensesTotal: n(expenses._sum.amount),
+      saleReturns: n(saleRet._sum.total),
+      purchaseReturns: n(purRet._sum.total),
+      cashBalance: num(cashBalance),
+      receivables: n(receivables._sum.balance),
+    };
   }
 
   async today(actor: Actor): Promise<TodaySummary> {

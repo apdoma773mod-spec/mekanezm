@@ -4,9 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { changePasswordInput } from '@mk/shared';
 import { PageHeader } from '@/components/app-shell';
-import { Button } from '@/components/ui/button';
-import { TextField } from '@/components/ui/field';
-import { FormError, LoadingState } from '@/components/ui/states';
+import { Input } from '@/components/ui/field';
+import { FormError, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { formatDateTime, ROLE_LABELS } from '@/lib/format';
 import { serverErrors, validate, type FieldErrors } from '@/lib/form';
@@ -23,7 +22,7 @@ export default function AccountPage() {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
 
-  if (!me.data) return <LoadingState />;
+  if (!me.data) return <Loading />;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -42,74 +41,65 @@ export default function AccountPage() {
 
   return (
     <>
-      <PageHeader title="حسابي" />
-      <div className="grid max-w-3xl gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <dl className="space-y-2">
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">الاسم</dt>
-              <dd className="font-bold">{me.data.name}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">الموبايل</dt>
-              <dd className="font-bold" dir="ltr">
-                {me.data.phone}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">الصلاحية</dt>
-              <dd className="font-bold">{ROLE_LABELS[me.data.role]}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">آخر دخول</dt>
-              <dd className="font-bold">{formatDateTime(me.data.lastLoginAt)}</dd>
-            </div>
-          </dl>
-          <Button
-            variant="secondary"
-            block
-            className="mt-5"
-            loading={logout.isPending}
+      <PageHeader title="حسابي" subtitle={`${me.data.name} — ${ROLE_LABELS[me.data.role]}`} />
+      <div className="grid2">
+        <div className="card" style={{ lineHeight: 2 }}>
+          <h3>بياناتي</h3>
+          <div>
+            الاسم: <b>{me.data.name}</b>
+          </div>
+          <div>
+            الموبايل: <b dir="ltr">{me.data.phone}</b>
+          </div>
+          <div>
+            الصلاحية: <b>{ROLE_LABELS[me.data.role]}</b>
+          </div>
+          <div>
+            آخر دخول: <b>{formatDateTime(me.data.lastLoginAt)}</b>
+          </div>
+          <button
+            type="button"
+            className="secondary danger"
+            style={{ marginTop: 12, width: '100%' }}
+            disabled={logout.isPending}
             onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })}
           >
-            تسجيل خروج
-          </Button>
-        </section>
-
-        <form onSubmit={submit} noValidate className="space-y-4 rounded-xl border border-border bg-surface p-5">
-          <h2 className="text-lg font-bold">تغيير كلمة السر</h2>
-          <TextField
-            label="كلمة السر الحالية"
-            type="password"
-            autoComplete="current-password"
-            dir="ltr"
-            value={form.currentPassword}
-            error={errors.currentPassword}
-            onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
-          />
-          <TextField
-            label="كلمة السر الجديدة"
-            type="password"
-            autoComplete="new-password"
-            dir="ltr"
-            hint="٨ حروف على الأقل"
-            value={form.newPassword}
-            error={errors.newPassword}
-            onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
-          />
-          <TextField
-            label="اكتبها تاني"
-            type="password"
-            autoComplete="new-password"
-            dir="ltr"
-            value={form.confirm}
-            error={errors.confirm}
-            onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-          />
-          <FormError message={errors._} />
-          <Button type="submit" block loading={change.isPending}>
-            حفظ
-          </Button>
+            تسجيل الخروج
+          </button>
+        </div>
+        <form className="card" onSubmit={submit} noValidate>
+          <h3>تغيير كلمة السر</h3>
+          <div className="settings">
+            <Input
+              label="كلمة السر الحالية"
+              type="password"
+              autoComplete="current-password"
+              value={form.currentPassword}
+              onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
+              error={errors.currentPassword}
+            />
+            <Input
+              label="كلمة السر الجديدة"
+              type="password"
+              autoComplete="new-password"
+              hint="٨ حروف على الأقل"
+              value={form.newPassword}
+              onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
+              error={errors.newPassword}
+            />
+            <Input
+              label="اكتبها تاني"
+              type="password"
+              autoComplete="new-password"
+              value={form.confirm}
+              onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+              error={errors.confirm}
+            />
+            <FormError message={errors._} />
+            <button className="primary" disabled={change.isPending}>
+              حفظ
+            </button>
+          </div>
         </form>
       </div>
     </>

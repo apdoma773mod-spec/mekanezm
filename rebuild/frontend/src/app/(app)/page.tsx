@@ -2,65 +2,184 @@
 
 import Link from 'next/link';
 import { PageHeader } from '@/components/app-shell';
-import { ErrorState, LoadingState } from '@/components/ui/states';
+import { Icon } from '@/components/icon';
+import { useModal } from '@/components/modals/modal-host';
+import { ErrorBox, Loading } from '@/components/ui/states';
+import { useIsAdmin } from '@/components/use-role';
 import { errorMessage } from '@/lib/api';
-import { formatDateTime, ROLE_LABELS } from '@/lib/format';
-import { useHealth, useMe, useSettings } from '@/lib/queries';
+import { money } from '@/lib/format';
+import { useInvoices, useOverview, useToday } from '@/lib/trade-queries';
 
-export default function HomePage() {
-  const me = useMe();
-  const settings = useSettings();
-  const health = useHealth();
+function RecentOps() {
+  const { open } = useModal();
+  const sales = useInvoices({ kind: 'SALE', pageSize: 8 });
+  const purchases = useInvoices({ kind: 'PURCHASE', pageSize: 8 });
+  if (sales.isPending || purchases.isPending) return <Loading />;
+  if (sales.isError) return <ErrorBox message={errorMessage(sales.error)} onRetry={() => sales.refetch()} />;
+  const all = [...(sales.data?.items ?? []), ...(purchases.data?.items ?? [])]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 8);
+  if (!all.length) return <div className="empty">لسه مفيش عمليات مسجلة.</div>;
+  return (
+    <div className="table-wrap">
+      <table className="table" style={{ minWidth: 360 }}>
+        <thead>
+          <tr>
+            <th>النوع</th>
+            <th>البيان</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {all.map((x) => (
+            <tr key={x.id} className="prow" onClick={() => open({ kind: 'invoice', id: x.id })}>
+              <td>
+                <span className={`badge ${x.kind === 'SALE' ? 'green' : ''}`}>{x.kind === 'SALE' ? 'بيع' : 'شراء'}</span>
+              </td>
+              <td>
+                {x.no} — {x.person || (x.kind === 'SALE' ? 'عميل نقدي' : '—')}
+                {x.itemCount > 1 && <span className="badge"> {x.itemCount} صنف</span>}
+              </td>
+              <td>{money(x.total)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-  if (settings.isPending || !me.data) return <LoadingState />;
-  if (settings.isError) {
-    return <ErrorState message={errorMessage(settings.error)} onRetry={() => settings.refetch()} />;
-  }
-
-  const { store } = settings.data;
-  const isAdmin = me.data.role === 'ADMIN';
+export default function DashboardPage() {
+  const { open } = useModal();
+  const admin = useIsAdmin();
+  const overview = useOverview();
+  const today = useToday();
+  const o = overview.data;
 
   return (
     <>
-      <PageHeader title={`أهلًا ${me.data.name}`} subtitle={`${store.name} · ${ROLE_LABELS[me.data.role]}`} />
+      <PageHeader
+        title="لوحة التحكم"
+        subtitle="إدارة مخزون ميكانيزم من مكان واحد"
+        action={
+          <button type="button" className="primary" onClick={() => open({ kind: 'quick' })}>
+            <Icon name="plus" /> إضافة عملية
+          </button>
+        }
+      />
+      {overview.isError ? (
+        <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />
+      ) : (
+        <div className="stats">
+          <div className="stat">
+            <div className="ic">
+              <Icon name="box" />
+            </div>
+            <small>عدد المنتجات</small>
+            <strong>{o ? o.productsCount.toLocaleString('ar-EG') : '…'}</strong>
+          </div>
+          <div className="stat">
+            <div className="ic">
+              <Icon name="wallet" />
+            </div>
+            <small>قيمة المخزون</small>
+            <strong>{o ? (o.stockValue !== undefined ? money(o.stockValue) : '—') : '…'}</strong>
+          </div>
+          <div className="stat">
+            <div className="ic">
+              <Icon name="up" />
+            </div>
+            <small>إجمالي المبيعات</small>
+            <strong>{o ? money(o.salesTotal) : '…'}</strong>
+          </div>
+          <div className="stat">
+            <div className="ic">
+              <Icon name="down" />
+            </div>
+            <small>إجمالي المشتريات</small>
+            <strong>{o ? money(o.purchasesTotal) : '…'}</strong>
+          </div>
+        </div>
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <h2 className="mb-3 text-lg font-bold">بيانات المحل</h2>
-          <dl className="space-y-2">
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">الاسم</dt>
-              <dd className="font-bold">{store.name}</dd>
+      {today.data && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <h3>النهاردة</h3>
+          <div className="cstats" style={{ margin: 0 }}>
+            <div>
+              <small>مبيعات ({today.data.sales.count.toLocaleString('ar-EG')} فاتورة)</small>
+              <b>{money(today.data.sales.total)}</b>
             </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">التليفونات</dt>
-              <dd className="font-bold" dir="ltr">
-                {store.phones.length ? store.phones.join(' · ') : '—'}
-              </dd>
+            <div>
+              <small>الخزنة النهاردة</small>
+              <b>{money(today.data.cashNet)}</b>
             </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-subtle">العنوان</dt>
-              <dd className="font-bold">{store.address || '—'}</dd>
+            <div>
+              <small>مصروفات</small>
+              <b>{money(today.data.expenses)}</b>
             </div>
-          </dl>
-          {isAdmin && (
-            <Link href="/settings" className="mt-4 inline-block font-bold text-primary">
-              تعديل البيانات ←
-            </Link>
-          )}
-        </section>
+            {today.data.profit !== undefined && (
+              <div>
+                <small>ربح المبيعات</small>
+                <b>{money(today.data.profit)}</b>
+              </div>
+            )}
+            <div>
+              <small>مستحقات عند العملاء</small>
+              <b>{money(today.data.receivables)}</b>
+            </div>
+            {admin && (
+              <Link href="/products?stock=low" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10 }}>
+                  <small style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>أصناف تحت حد التنبيه</small>
+                  <b style={{ color: today.data.lowStockCount ? 'var(--danger)' : 'inherit' }}>
+                    {today.data.lowStockCount.toLocaleString('ar-EG')}
+                  </b>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
-        <section className="rounded-xl border border-border bg-surface p-5">
-          <h2 className="mb-3 text-lg font-bold">حالة السيستم</h2>
-          <p className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className={`h-3 w-3 rounded-full ${health.isError ? 'bg-danger' : health.data ? 'bg-success' : 'bg-warning'}`}
-            />
-            {health.isError ? 'السيرفر مش بيرد' : health.data ? 'السيرفر شغال' : 'جاري الفحص…'}
-          </p>
-          <p className="mt-3 text-subtle">آخر دخول ليك: {formatDateTime(me.data.lastLoginAt)}</p>
-        </section>
+      <div className="grid2">
+        <div className="card">
+          <h3>آخر العمليات</h3>
+          <RecentOps />
+        </div>
+        <div className="card">
+          <h3>اختصارات</h3>
+          <div className="quick">
+            {admin && (
+              <button type="button" onClick={() => open({ kind: 'product' })}>
+                <b>
+                  <Icon name="plus" /> منتج جديد
+                </b>
+                <small>إضافة صنف للمخزون</small>
+              </button>
+            )}
+            <button type="button" onClick={() => open({ kind: 'transaction', type: 'SALE' })}>
+              <b>
+                <Icon name="up" /> فاتورة بيع
+              </b>
+              <small>تسجيل مبيعات</small>
+            </button>
+            <button type="button" onClick={() => open({ kind: 'transaction', type: 'PURCHASE' })}>
+              <b>
+                <Icon name="down" /> فاتورة شراء
+              </b>
+              <small>تسجيل مشتريات</small>
+            </button>
+            {admin && (
+              <button type="button" onClick={() => open({ kind: 'return', type: 'SALE' })}>
+                <b>
+                  <Icon name="return" /> مرتجع
+                </b>
+                <small>بيع أو شراء</small>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

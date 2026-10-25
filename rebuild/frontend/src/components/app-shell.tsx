@@ -1,141 +1,199 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import type { PublicUser, ThemeSettings } from '@mk/shared';
+import type { ThemeSettings } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
-import { hexToRgbChannels, ROLE_LABELS } from '@/lib/format';
-import { useLogout, useMe, useSettings } from '@/lib/queries';
-import { ErrorState, LoadingState } from './ui/states';
+import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
+import { useMe, useSettings } from '@/lib/queries';
+import { Icon, type IconName } from './icon';
+import { ModalHost, useModal } from './modals/modal-host';
+import { ErrorBox, Loading } from './ui/states';
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  short?: string;
+  icon: IconName | string;
   adminOnly?: boolean;
+  staffOnly?: boolean;
+  mobile?: boolean;
 }
 
-export const NAV: NavItem[] = [
-  { href: '/', label: 'الرئيسية', icon: '🏠' },
-  { href: '/users', label: 'المستخدمين', icon: '👥', adminOnly: true },
-  { href: '/audit', label: 'سجل العمليات', icon: '📜', adminOnly: true },
-  { href: '/settings', label: 'الإعدادات', icon: '⚙️', adminOnly: true },
-  { href: '/account', label: 'حسابي', icon: '👤' },
+/** Same groups, names, order and icons as the old sidebar. */
+const MAIN: NavItem[] = [
+  { href: '/', label: 'لوحة التحكم', short: 'الرئيسية', icon: 'grid', mobile: true },
+  { href: '/products', label: 'المنتجات والمخزون', short: 'المخزون', icon: 'box', adminOnly: true, mobile: true },
+  { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
+  { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
+  { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
+  { href: '/contacts', label: 'العملاء والموردون', icon: 'users', adminOnly: true },
+  { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
+];
+const SYSTEM: NavItem[] = [
+  { href: '/theme', label: 'المظهر والتخصيص', icon: 'palette', adminOnly: true },
+  { href: '/settings', label: 'الإدارة والإعدادات', short: 'الإدارة', icon: 'gear', adminOnly: true, mobile: true },
+  { href: '/account', label: 'حسابي', icon: '👤', staffOnly: true, mobile: true },
 ];
 
-function useApplyTheme(theme: ThemeSettings | undefined) {
-  useEffect(() => {
-    if (!theme) return;
-    const root = document.documentElement;
-    root.style.setProperty('--primary', hexToRgbChannels(theme.primary));
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () =>
-      root.classList.toggle('dark', theme.mode === 'dark' || (theme.mode === 'system' && media.matches));
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
-  }, [theme]);
+function NavIcon({ icon }: { icon: NavItem['icon'] }) {
+  return icon.length <= 2 ? <span style={{ fontSize: 18 }}>{icon}</span> : <Icon name={icon as IconName} />;
 }
 
 const isActive = (pathname: string, href: string) =>
   href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 
-function Sidebar({ user, items, storeName }: { user: PublicUser; items: NavItem[]; storeName: string }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const logout = useLogout();
+/** Same variables the old applyTheme() set, from the saved theme. */
+function useApplyTheme(T: ThemeSettings | undefined) {
+  useEffect(() => {
+    if (!T) return;
+    const r = document.documentElement.style;
+    r.setProperty('--topgap', `${T.topGap}px`);
+    r.setProperty('--blue', T.primary);
+    r.setProperty('--blue2', darken(T.primary, 0.75));
+    r.setProperty('--gold', T.accent);
+    r.setProperty('--bg', T.bg);
+    r.setProperty('--text', T.text);
+    r.setProperty('--tint', mix(T.primary, 0.12));
+    r.setProperty('--tint2', mix(T.primary, 0.06));
+    r.setProperty('--tintb', mix(T.primary, 0.25));
+    r.setProperty('--ring', rgba(T.primary, 0.12));
+    r.setProperty('--onblue', textOn(T.primary));
+    r.setProperty('--onaccent', textOn(T.accent));
+    r.setProperty('--font', fontStack(T.font));
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', T.primary);
+  }, [T]);
+}
+
+/** Background image in its own fixed layer, as the old system did for iPhone scrolling speed. */
+function BackgroundLayer({ T }: { T: ThemeSettings }) {
+  if (!T.bgImg) return null;
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-l border-border bg-surface p-4 lg:flex">
-      <p className="mb-6 truncate px-2 text-2xl font-bold text-primary">{storeName}</p>
-      <nav className="flex flex-1 flex-col gap-1">
-        {items.map((i) => (
-          <Link
-            key={i.href}
-            href={i.href}
-            className={`flex min-h-12 items-center gap-3 rounded-xl px-3 font-bold ${isActive(pathname, i.href) ? 'bg-primary text-on-primary' : 'hover:bg-muted'}`}
-          >
-            <span aria-hidden>{i.icon}</span>
-            {i.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="border-t border-border pt-4">
-        <p className="truncate px-2 font-bold">{user.name}</p>
-        <p className="mb-3 px-2 text-sm text-subtle">{ROLE_LABELS[user.role]}</p>
-        <button
-          onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })}
-          disabled={logout.isPending}
-          className="min-h-11 w-full rounded-xl bg-muted font-bold hover:bg-border"
-        >
-          تسجيل خروج
-        </button>
-      </div>
-    </aside>
+    <>
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: -2,
+          pointerEvents: 'none',
+          backgroundImage: `url(${T.bgImg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', background: T.bg, opacity: 1 - T.bgClarity / 100 }} />
+    </>
   );
 }
 
-function BottomNav({ items }: { items: NavItem[] }) {
+function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const me = useMe();
+  const settings = useSettings();
+  const { open } = useModal();
+  const T = settings.data?.theme;
+  useApplyTheme(T);
+
+  if (me.isPending) return <Loading />;
+  if (me.isError) return <ErrorBox message={errorMessage(me.error)} onRetry={() => me.refetch()} />;
+
+  const admin = me.data.role === 'ADMIN';
+  const allowed = (i: NavItem) => (!i.adminOnly || admin) && (!i.staffOnly || !admin);
+  const main = MAIN.filter(allowed);
+  const system = SYSTEM.filter(allowed);
+  const mobile = [...main, ...system].filter((i) => i.mobile);
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
-      {items.map((i) => (
-        <Link
-          key={i.href}
-          href={i.href}
-          className={`flex min-h-16 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-bold ${isActive(pathname, i.href) ? 'text-primary' : 'text-subtle'}`}
-        >
-          <span aria-hidden className="text-xl">
-            {i.icon}
-          </span>
-          {i.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="app">
+      {T && <BackgroundLayer T={T} />}
+      <header className="top">
+        <div className="brand">
+          {T?.logoHeader && T.logo && <img src={T.logo} alt="" />}
+          <div>
+            ميكانيزم <span>| MEKANIZM</span>
+          </div>
+        </div>
+        <div className="top-actions">
+          <button type="button" className="icon-btn" onClick={() => open({ kind: 'quick' })} title="إضافة" aria-label="إضافة">
+            <Icon name="plus" />
+          </button>
+          {admin ? (
+            <>
+              <Link className="icon-btn" href="/theme" title="المظهر" aria-label="المظهر">
+                <Icon name="palette" />
+              </Link>
+              <Link className="icon-btn" href="/settings" title="الإدارة" aria-label="الإدارة">
+                <Icon name="gear" />
+              </Link>
+            </>
+          ) : (
+            <Link className="icon-btn" href="/account" title="حسابي" aria-label="حسابي">
+              👤
+            </Link>
+          )}
+        </div>
+      </header>
+      <div className="layout">
+        <aside>
+          <div className="nav-title">الرئيسية</div>
+          <nav className="nav">
+            {main.map((i) => (
+              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
+                <NavIcon icon={i.icon} /> <span>{i.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="nav-title">النظام</div>
+          <nav className="nav">
+            {system.map((i) => (
+              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
+                <NavIcon icon={i.icon} /> <span>{i.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </aside>
+        <main>{children}</main>
+      </div>
+      <button type="button" className="fab" onClick={() => open({ kind: 'quick' })} aria-label="إضافة عملية">
+        <Icon name="plus" />
+      </button>
+      <nav className="mobile-nav">
+        {mobile.map((i) => (
+          <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
+            <NavIcon icon={i.icon} />
+            <span>{i.short ?? i.label}</span>
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const me = useMe();
-  const settings = useSettings();
-  useApplyTheme(settings.data?.theme);
-
-  if (me.isPending) return <LoadingState />;
-  if (me.isError) {
-    return (
-      <div className="p-4">
-        <ErrorState message={errorMessage(me.error)} onRetry={() => me.refetch()} />
-      </div>
-    );
-  }
-
-  const items = NAV.filter((i) => !i.adminOnly || me.data.role === 'ADMIN');
   return (
-    <div className="flex min-h-dvh">
-      <Sidebar user={me.data} items={items} storeName={settings.data?.store.name ?? 'ميكانيزم'} />
-      <main className="min-w-0 flex-1 px-4 pb-28 pt-5 lg:px-8 lg:pb-10">{children}</main>
-      <BottomNav items={items} />
-    </div>
+    <ModalHost>
+      <Shell>{children}</Shell>
+    </ModalHost>
   );
 }
 
 /** Client-side guard for admin screens; the API refuses staff anyway. */
 export function AdminOnly({ children }: { children: ReactNode }) {
   const me = useMe();
-  if (me.data && me.data.role !== 'ADMIN') {
-    return <ErrorState message="الشاشة دي للمدير بس" />;
-  }
+  if (me.data && me.data.role !== 'ADMIN') return <ErrorBox message="الشاشة دي للمدير بس" />;
   return <>{children}</>;
 }
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {subtitle && <p className="text-subtle">{subtitle}</p>}
+    <div className="title-row">
+      <div className="title">
+        <h1>{title}</h1>
+        {subtitle && <p>{subtitle}</p>}
       </div>
       {action}
-    </header>
+    </div>
   );
 }

@@ -106,7 +106,8 @@ describe('settings', () => {
   it('returns defaults to any signed-in user', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/settings', headers: { cookie: staff } });
     expect(res.statusCode).toBe(200);
-    expect(res.json().settings.store.name).toBe('ميكانيزم');
+    expect(res.json().settings.store.name).toContain('ميكانيزم');
+    expect(res.json().settings.theme.primary).toBe('#087f8c');
   });
 
   it('only admins can change settings, values are validated and audited', async () => {

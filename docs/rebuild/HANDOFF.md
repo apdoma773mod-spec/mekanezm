@@ -1,0 +1,30 @@
+# Rebuild handoff (read this first)
+
+Branch: `tajroba-rebuild`. Code: `rebuild/` (npm workspaces: `shared`, `backend`, `frontend`). Plan: `docs/rebuild/02-architecture.md`.
+
+## The owner (عبده)
+- Egyptian Arabic, weak with computers and English, usually on his iPhone away from the PC. Short replies, no jargon.
+- **Hard requirement: the new system must be an exact copy of the old one** (`index.html`): same screens, names, order, fields, wording, colors, flows and permissions, but built properly. Before building any screen, read how the old one does it (grep `index.html`, never read it whole; skip the `SEED` and `MK_LOGO` lines).
+- He approved all phases up front and doesn't want to be asked for approvals. Never merge to `main` and never touch the live system (`index.html`, Supabase). Commit and push to `tajroba-rebuild` after each chunk.
+
+## Done
+- Phase 1: auth (JWT cookie + rotating refresh), users and roles (ADMIN/STAFF), first-run setup screen (the owner created his own admin account), settings (store + full old theme: colors, font, logo, background, invoice colors), audit log.
+- Phase 2: products (P0001 codes never reused, stock moves, adjust, stock filter all/low/out), contacts (opening balance, statement, «💯 صفّر الحساب»), sale/purchase invoices (MK-/SH- numbering, edit and void reverse stock and balance, purchase can't be voided after its goods sold, void keeps paid money as customer credit), payments (cancel), returns (cash or against the account), expenses, cash drawer (moves, balance, overview), dashboard (old stats + «النهاردة»).
+- Frontend restyled with the old CSS (no Tailwind): header, right sidebar groups, mobile bottom bar, gold + button, the old modals (quick, product, transaction, invoice view, return, contact, contact file, payment, expense), A4 invoice and 80mm receipt printing (Code128 barcode), statement print, WhatsApp link.
+- 37 backend integration tests pass (`TEST_DATABASE_URL=postgresql://mk:mk_dev_pw@localhost:54329/mekanizm_test?schema=public npx vitest run` in `rebuild/backend`).
+
+## How to run for testing (no Docker or Postgres installed on this PC)
+- Test Postgres: `C:\mk-pgtest\start.mjs` (embedded-postgres, port 54329, UTF8). Start it with `$env:TEMP="C:\mk-pgtest\tmp"; cd C:\mk-pgtest; node start.mjs` in the background. It must stay on an ASCII path because the Arabic Windows username breaks Postgres.
+- Backend: `npm run dev -w backend` (from `rebuild/`, reads `backend/.env`). Stop it before `prisma generate`/`migrate dev`, or the Prisma engine DLL is locked (EPERM).
+- Frontend: `npm run build -w frontend`, then `npx next start -p 3100 -H 0.0.0.0` in `rebuild/frontend`. Port 3000 belongs to another app on this PC, so don't use it.
+- Phone access: `C:\mk-pgtest\cloudflared.exe tunnel --no-autoupdate --url http://localhost:3100` (logs to `C:\mk-pgtest\tunnel.log`; the trycloudflare link changes every restart, so send him the new one).
+- The dev database holds the owner's real account (he set the password himself). Never wipe the `User` table again.
+
+## Next (in this order, each as a commit on the branch)
+1. Phase 3: daybook (اليومية), day closing, stock counts (الجرد), reports center (التقارير, ~25 reports, see `mkReports` in index.html), debts and reminders, reorder suggestions. Add «التقارير» to the sidebar and the mobile bar like the old one.
+2. Phase 4: quotes, kits, samples, gifts/grades, shipping, wanted list, staff and attendance.
+3. Phase 5: Hydrolek section (field orders, van, partners, vehicles, inter-company) under «الشركات».
+4. Phase 6: work systems (sliding doors/rails, stainless steel, bamboo, forf + drawings).
+5. Phase 7: WhatsApp and printer bridge endpoints, AI invoice reader, SMS inbox, social inbox, backups, import from file.
+
+Before each screen, grep the old one in `index.html` and copy its layout and wording. After each phase: typecheck all three packages, run the tests, build the frontend, restart the servers, check through the tunnel, commit and push, then send him a 2-line Arabic summary plus the link.

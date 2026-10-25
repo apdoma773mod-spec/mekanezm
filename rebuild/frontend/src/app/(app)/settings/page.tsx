@@ -1,143 +1,116 @@
 'use client';
 
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { storeSettings, themeSettings, type StoreSettings, type ThemeSettings } from '@mk/shared';
+import { storeSettings, type StoreSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
-import { Button } from '@/components/ui/button';
-import { SelectField, TextField } from '@/components/ui/field';
-import { ErrorState, FormError, LoadingState } from '@/components/ui/states';
+import { Input } from '@/components/ui/field';
+import { ErrorBox, FormError, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { serverErrors, validate, type FieldErrors } from '@/lib/form';
-import { useSaveSetting, useSettings } from '@/lib/queries';
+import { useLogout, useSaveSetting, useSettings } from '@/lib/queries';
 
-/** Multi-value fields use "/" as the separator, the same as the old system. */
+/** Multi-value fields use "/" as the separator, as in the old system. */
 const splitPhones = (v: string) =>
   v
     .split(/[\/،,]/)
     .map((p) => p.trim())
     .filter(Boolean);
 
-function phonesError(errors: FieldErrors): string | undefined {
-  const key = Object.keys(errors).find((k) => k.startsWith('phones'));
-  return key ? errors[key] : undefined;
-}
-
-function StoreForm({ initial }: { initial: StoreSettings }) {
+function CompanyForm({ initial }: { initial: StoreSettings }) {
   const save = useSaveSetting('store');
   const toast = useToast();
-  const [form, setForm] = useState({ ...initial, phones: initial.phones.join(' / ') });
+  const [f, setF] = useState({ ...initial, phones: initial.phones.join(' / ') });
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const v = validate(storeSettings, { ...form, phones: splitPhones(form.phones) });
+    const v = validate(storeSettings, { ...f, phones: splitPhones(f.phones) });
     if (!v.ok) return setErrors(v.errors);
     setErrors({});
     save.mutate(v.data, {
       onSuccess: (saved) => {
-        setForm({ ...saved, phones: saved.phones.join(' / ') });
-        toast('اتحفظت بيانات المحل');
+        setF({ ...saved, phones: saved.phones.join(' / ') });
+        toast('تم حفظ الإعدادات');
       },
       onError: (err) => setErrors(serverErrors(err)),
     });
   };
+  const phoneError = Object.entries(errors).find(([k]) => k.startsWith('phones'))?.[1];
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4 rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-lg font-bold">بيانات المحل</h2>
-      <TextField label="اسم المحل" value={form.name} error={errors.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <TextField
-        label="التليفونات"
-        hint="افصل بين الأرقام بـ /"
-        inputMode="tel"
-        dir="ltr"
-        value={form.phones}
-        error={phonesError(errors)}
-        onChange={(e) => setForm({ ...form, phones: e.target.value })}
-      />
-      <TextField label="العنوان" value={form.address} error={errors.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-      <TextField
-        label="كلام آخر الفاتورة"
-        value={form.invoiceFooter}
-        error={errors.invoiceFooter}
-        onChange={(e) => setForm({ ...form, invoiceFooter: e.target.value })}
-      />
-      <FormError message={errors._} />
-      <Button type="submit" block loading={save.isPending}>
-        حفظ
-      </Button>
-    </form>
-  );
-}
-
-function ThemeForm({ initial }: { initial: ThemeSettings }) {
-  const save = useSaveSetting('theme');
-  const toast = useToast();
-  const [form, setForm] = useState(initial);
-  const [errors, setErrors] = useState<FieldErrors>({});
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const v = validate(themeSettings, form);
-    if (!v.ok) return setErrors(v.errors);
-    setErrors({});
-    save.mutate(v.data, {
-      onSuccess: () => toast('اتحفظ المظهر'),
-      onError: (err) => setErrors(serverErrors(err)),
-    });
-  };
-
-  return (
-    <form onSubmit={submit} noValidate className="space-y-4 rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-lg font-bold">المظهر</h2>
-      <div className="space-y-1.5">
-        <label htmlFor="primary" className="block text-sm font-bold">
-          اللون الأساسي
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            id="primary"
-            type="color"
-            value={form.primary}
-            onChange={(e) => setForm({ ...form, primary: e.target.value })}
-            className="h-12 w-16 cursor-pointer rounded-xl border border-border bg-surface"
-          />
-          <span dir="ltr" className="font-bold">
-            {form.primary}
-          </span>
-        </div>
-        {errors.primary && <p className="text-sm text-danger">{errors.primary}</p>}
+    <form className="card" onSubmit={submit} noValidate>
+      <h3>بيانات الشركة</h3>
+      <div className="settings">
+        <Input label="اسم الشركة" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} error={errors.name} />
+        <Input
+          label="رقم واتساب / تليفون المحل"
+          hint="لو أكتر من رقم افصل بينهم بـ /"
+          placeholder="01xxxxxxxxx"
+          dir="ltr"
+          inputMode="tel"
+          value={f.phones}
+          onChange={(e) => setF({ ...f, phones: e.target.value })}
+          error={phoneError}
+        />
+        <Input
+          label="عنوان المحل (يظهر في الفاتورة)"
+          placeholder="الجيزة - أرض اللواء - شارع ١٠"
+          value={f.address}
+          onChange={(e) => setF({ ...f, address: e.target.value })}
+          error={errors.address}
+        />
+        <Input
+          label="كلام آخر الفاتورة"
+          placeholder="شكراً لتعاملكم معنا"
+          value={f.invoiceFooter}
+          onChange={(e) => setF({ ...f, invoiceFooter: e.target.value })}
+          error={errors.invoiceFooter}
+        />
+        <FormError message={errors._} />
+        <button className="primary" disabled={save.isPending}>
+          حفظ الإعدادات
+        </button>
       </div>
-      <SelectField
-        label="الوضع"
-        options={[
-          { value: 'system', label: 'زي الموبايل' },
-          { value: 'light', label: 'فاتح' },
-          { value: 'dark', label: 'غامق' },
-        ]}
-        value={form.mode}
-        error={errors.mode}
-        onChange={(e) => setForm({ ...form, mode: e.target.value as ThemeSettings['mode'] })}
-      />
-      <FormError message={errors._} />
-      <Button type="submit" block loading={save.isPending}>
-        حفظ
-      </Button>
     </form>
   );
 }
 
 function SettingsScreen() {
   const settings = useSettings();
-  if (settings.isPending) return <LoadingState />;
-  if (settings.isError) return <ErrorState message={errorMessage(settings.error)} onRetry={() => settings.refetch()} />;
+  const logout = useLogout();
+  const router = useRouter();
+  if (settings.isPending) return <Loading />;
+  if (settings.isError) return <ErrorBox message={errorMessage(settings.error)} onRetry={() => settings.refetch()} />;
   return (
     <>
-      <PageHeader title="الإعدادات" />
-      <div className="grid max-w-4xl gap-4 lg:grid-cols-2">
-        <StoreForm initial={settings.data.store} />
-        <ThemeForm initial={settings.data.theme} />
+      <PageHeader title="الإدارة والإعدادات" subtitle="تحكم كامل في بيانات النظام والمستخدمين" />
+      <div className="grid2">
+        <CompanyForm initial={settings.data.store} />
+        <div className="card">
+          <h3>المستخدمين والأمان</h3>
+          <div className="settings">
+            <Link className="secondary" href="/users">
+              👥 المستخدمين والصلاحيات
+            </Link>
+            <Link className="secondary" href="/audit">
+              📜 سجل العمليات (مين عمل إيه)
+            </Link>
+            <Link className="secondary" href="/account">
+              🔑 حسابي وتغيير كلمة السر
+            </Link>
+            <button
+              type="button"
+              className="secondary danger"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })}
+            >
+              تسجيل الخروج
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );

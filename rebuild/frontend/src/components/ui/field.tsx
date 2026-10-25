@@ -1,76 +1,66 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 
-const control =
-  'block min-h-12 w-full rounded-xl border bg-surface px-4 text-base outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30';
-
-interface FieldShellProps {
-  label: string;
+interface ShellProps {
+  label: ReactNode;
   error?: string;
   hint?: string;
-  children: (id: string, describedBy: string | undefined) => ReactNode;
+  full?: boolean;
+  children: (id: string) => ReactNode;
 }
 
-function FieldShell({ label, error, hint, children }: FieldShellProps) {
+function Shell({ label, error, hint, full, children }: ShellProps) {
   const id = useId();
-  const msgId = `${id}-msg`;
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-bold">
-        {label}
-      </label>
-      {children(id, error || hint ? msgId : undefined)}
-      {error ? (
-        <p id={msgId} className="text-sm text-danger">
-          {error}
-        </p>
-      ) : hint ? (
-        <p id={msgId} className="text-sm text-subtle">
-          {hint}
-        </p>
-      ) : null}
+    <div className={`field${full ? ' full' : ''}`}>
+      <label htmlFor={id}>{label}</label>
+      {children(id)}
+      {error ? <span className="err">{error}</span> : hint ? <span className="hint">{hint}</span> : null}
     </div>
   );
 }
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  error?: string;
-  hint?: string;
-}
+type InputProps = InputHTMLAttributes<HTMLInputElement> & { label: ReactNode; error?: string; hint?: string; full?: boolean };
 
-export function TextField({ label, error, hint, className = '', ...rest }: InputProps) {
+export function Input({ label, error, hint, full, className = '', ...rest }: InputProps) {
   return (
-    <FieldShell label={label} error={error} hint={hint}>
-      {(id, describedBy) => (
-        <input
-          id={id}
-          aria-invalid={!!error}
-          aria-describedby={describedBy}
-          className={`${control} ${error ? 'border-danger' : 'border-border'} ${className}`}
-          {...rest}
-        />
-      )}
-    </FieldShell>
+    <Shell label={label} error={error} hint={hint} full={full}>
+      {(id) => <input id={id} aria-invalid={!!error} className={`${error ? 'bad ' : ''}${className}`} {...rest} />}
+    </Shell>
   );
 }
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label: string;
-  error?: string;
-  options: { value: string; label: string }[];
+/** Numeric field like the old system: text keyboard with decimal pad, Arabic digits converted while typing. */
+export function NumberInput(props: InputProps) {
+  return (
+    <Input
+      {...props}
+      type="text"
+      inputMode="decimal"
+      dir="ltr"
+      onChange={(e) => {
+        e.target.value = e.target.value
+          .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+          .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+          .replace(/[٫,،]/g, '.')
+          .replace(/[^0-9.\-]/g, '');
+        props.onChange?.(e);
+      }}
+    />
+  );
 }
 
-export function SelectField({ label, error, options, className = '', ...rest }: SelectProps) {
+type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
+  label: ReactNode;
+  error?: string;
+  full?: boolean;
+  options: { value: string; label: string }[];
+};
+
+export function Select({ label, error, full, options, className = '', ...rest }: SelectProps) {
   return (
-    <FieldShell label={label} error={error}>
-      {(id, describedBy) => (
-        <select
-          id={id}
-          aria-invalid={!!error}
-          aria-describedby={describedBy}
-          className={`${control} ${error ? 'border-danger' : 'border-border'} ${className}`}
-          {...rest}
-        >
+    <Shell label={label} error={error} full={full}>
+      {(id) => (
+        <select id={id} aria-invalid={!!error} className={`${error ? 'bad ' : ''}${className}`} {...rest}>
           {options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -78,6 +68,16 @@ export function SelectField({ label, error, options, className = '', ...rest }: 
           ))}
         </select>
       )}
-    </FieldShell>
+    </Shell>
+  );
+}
+
+type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & { label: ReactNode; error?: string; full?: boolean };
+
+export function Textarea({ label, error, full, ...rest }: TextareaProps) {
+  return (
+    <Shell label={label} error={error} full={full}>
+      {(id) => <textarea id={id} aria-invalid={!!error} rows={3} {...rest} />}
+    </Shell>
   );
 }

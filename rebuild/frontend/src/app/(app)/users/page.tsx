@@ -1,31 +1,18 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import {
-  createUserInput,
-  resetPasswordInput,
-  updateUserInput,
-  type PublicUser,
-  type Role,
-} from '@mk/shared';
+import { createUserInput, resetPasswordInput, updateUserInput, type PublicUser, type Role } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
-import { Button } from '@/components/ui/button';
-import { SelectField, TextField } from '@/components/ui/field';
+import { Icon } from '@/components/icon';
+import { Input, Select } from '@/components/ui/field';
+import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
-import { Sheet } from '@/components/ui/sheet';
-import { EmptyState, ErrorState, FormError, LoadingState } from '@/components/ui/states';
+import { FormError, TableState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { formatDateTime, ROLE_LABELS } from '@/lib/format';
 import { serverErrors, validate, type FieldErrors } from '@/lib/form';
-import {
-  useCreateUser,
-  useDeactivateUser,
-  useMe,
-  useResetPassword,
-  useUpdateUser,
-  useUsers,
-} from '@/lib/queries';
+import { useCreateUser, useDeactivateUser, useMe, useResetPassword, useUpdateUser, useUsers } from '@/lib/queries';
 
 const ROLE_OPTIONS = [
   { value: 'STAFF', label: ROLE_LABELS.STAFF },
@@ -37,12 +24,11 @@ type Mode = { kind: 'create' } | { kind: 'edit'; user: PublicUser } | { kind: 'r
 function CreateForm({ onDone }: { onDone: () => void }) {
   const create = useCreateUser();
   const toast = useToast();
-  const [form, setForm] = useState({ name: '', phone: '', email: '', role: 'STAFF' as Role, password: '' });
+  const [f, setF] = useState({ name: '', phone: '', email: '', role: 'STAFF' as Role, password: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
-
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const v = validate(createUserInput, form);
+    const v = validate(createUserInput, f);
     if (!v.ok) return setErrors(v.errors);
     create.mutate(v.data, {
       onSuccess: (u) => {
@@ -52,18 +38,33 @@ function CreateForm({ onDone }: { onDone: () => void }) {
       onError: (err) => setErrors(serverErrors(err)),
     });
   };
-
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <TextField label="الاسم" value={form.name} error={errors.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <TextField label="الموبايل" inputMode="tel" dir="ltr" value={form.phone} error={errors.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-      <TextField label="الإيميل (اختياري)" type="email" dir="ltr" value={form.email} error={errors.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      <SelectField label="الصلاحية" options={ROLE_OPTIONS} value={form.role} error={errors.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })} />
-      <TextField label="كلمة السر" type="password" autoComplete="new-password" dir="ltr" hint="٨ حروف على الأقل" value={form.password} error={errors.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-      <FormError message={errors._} />
-      <Button type="submit" block loading={create.isPending}>
-        إضافة
-      </Button>
+    <form onSubmit={submit} noValidate>
+      <div className="form">
+        <Input label="الاسم" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} error={errors.name} />
+        <Input label="الموبايل" type="tel" dir="ltr" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} error={errors.phone} />
+        <Input label="الإيميل (اختياري)" type="email" dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} error={errors.email} />
+        <Select label="الصلاحية" options={ROLE_OPTIONS} value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Role })} />
+        <Input
+          label="كلمة السر"
+          type="password"
+          autoComplete="new-password"
+          hint="٨ حروف على الأقل"
+          value={f.password}
+          onChange={(e) => setF({ ...f, password: e.target.value })}
+          error={errors.password}
+          full
+        />
+        <FormError message={errors._} />
+      </div>
+      <div className="modal-foot">
+        <button className="primary" disabled={create.isPending}>
+          إضافة
+        </button>
+        <button type="button" className="secondary" onClick={onDone}>
+          إلغاء
+        </button>
+      </div>
     </form>
   );
 }
@@ -72,13 +73,13 @@ function EditForm({ user, isSelf, onDone }: { user: PublicUser; isSelf: boolean;
   const update = useUpdateUser();
   const deactivate = useDeactivateUser();
   const toast = useToast();
-  const [form, setForm] = useState({ name: user.name, phone: user.phone, email: user.email ?? '', role: user.role });
+  const [f, setF] = useState({ name: user.name, phone: user.phone, email: user.email ?? '', role: user.role });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [confirmOff, setConfirmOff] = useState(false);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const v = validate(updateUserInput, form);
+    const v = validate(updateUserInput, f);
     if (!v.ok) return setErrors(v.errors);
     update.mutate(
       { id: user.id, input: v.data },
@@ -91,46 +92,45 @@ function EditForm({ user, isSelf, onDone }: { user: PublicUser; isSelf: boolean;
       },
     );
   };
-
   const toggleActive = () => {
-    const done = { onSuccess: onDone, onError: (err: unknown) => setErrors(serverErrors(err)) };
-    if (user.active) deactivate.mutate(user.id, done);
-    else update.mutate({ id: user.id, input: { active: true } }, done);
+    const cb = { onSuccess: onDone, onError: (err: unknown) => setErrors(serverErrors(err)) };
+    if (user.active) deactivate.mutate(user.id, cb);
+    else update.mutate({ id: user.id, input: { active: true } }, cb);
   };
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <TextField label="الاسم" value={form.name} error={errors.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-      <TextField label="الموبايل" inputMode="tel" dir="ltr" value={form.phone} error={errors.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-      <TextField label="الإيميل (اختياري)" type="email" dir="ltr" value={form.email} error={errors.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      <SelectField
-        label="الصلاحية"
-        options={ROLE_OPTIONS}
-        value={form.role}
-        disabled={isSelf}
-        error={errors.role}
-        onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-      />
-      <FormError message={errors._} />
-      <Button type="submit" block loading={update.isPending}>
-        حفظ
-      </Button>
-      {!isSelf &&
-        (confirmOff || !user.active ? (
-          <Button
-            type="button"
-            variant={user.active ? 'danger' : 'secondary'}
-            block
-            loading={deactivate.isPending}
-            onClick={toggleActive}
-          >
-            {user.active ? 'متأكد؟ إيقاف الحساب' : 'تفعيل الحساب تاني'}
-          </Button>
-        ) : (
-          <Button type="button" variant="ghost" block className="text-danger" onClick={() => setConfirmOff(true)}>
-            إيقاف الحساب
-          </Button>
-        ))}
+    <form onSubmit={submit} noValidate>
+      <div className="form">
+        <Input label="الاسم" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} error={errors.name} />
+        <Input label="الموبايل" type="tel" dir="ltr" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} error={errors.phone} />
+        <Input label="الإيميل (اختياري)" type="email" dir="ltr" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} error={errors.email} />
+        <Select
+          label="الصلاحية"
+          options={ROLE_OPTIONS}
+          value={f.role}
+          disabled={isSelf}
+          onChange={(e) => setF({ ...f, role: e.target.value as Role })}
+        />
+        <FormError message={errors._} />
+      </div>
+      <div className="modal-foot">
+        <button className="primary" disabled={update.isPending}>
+          حفظ
+        </button>
+        {!isSelf &&
+          (confirmOff || !user.active ? (
+            <button type="button" className="secondary danger" disabled={deactivate.isPending} onClick={toggleActive}>
+              {user.active ? 'متأكد؟ إيقاف الحساب' : 'تفعيل الحساب تاني'}
+            </button>
+          ) : (
+            <button type="button" className="secondary danger" onClick={() => setConfirmOff(true)}>
+              إيقاف الحساب
+            </button>
+          ))}
+        <button type="button" className="secondary" onClick={onDone}>
+          إلغاء
+        </button>
+      </div>
     </form>
   );
 }
@@ -140,7 +140,6 @@ function ResetForm({ user, onDone }: { user: PublicUser; onDone: () => void }) {
   const toast = useToast();
   const [newPassword, setNewPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
-
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const v = validate(resetPasswordInput, { newPassword });
@@ -156,23 +155,26 @@ function ResetForm({ user, onDone }: { user: PublicUser; onDone: () => void }) {
       },
     );
   };
-
   return (
-    <form onSubmit={submit} noValidate className="space-y-4">
-      <p className="text-subtle">هيتسجّل خروجه من كل الأجهزة، وتديله كلمة السر الجديدة بنفسك.</p>
-      <TextField
-        label="كلمة السر الجديدة"
-        type="password"
-        autoComplete="new-password"
-        dir="ltr"
-        value={newPassword}
-        error={errors.newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-      />
-      <FormError message={errors._} />
-      <Button type="submit" block loading={reset.isPending}>
-        تغيير
-      </Button>
+    <form onSubmit={submit} noValidate>
+      <p style={{ color: 'var(--muted)', marginTop: 0 }}>هيتسجّل خروجه من كل الأجهزة، وإنت تديله كلمة السر الجديدة.</p>
+      <div className="form">
+        <Input
+          label="كلمة السر الجديدة"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          error={errors.newPassword}
+          full
+        />
+        <FormError message={errors._} />
+      </div>
+      <div className="modal-foot">
+        <button className="primary" disabled={reset.isPending}>
+          تغيير
+        </button>
+      </div>
     </form>
   );
 }
@@ -181,7 +183,6 @@ function UsersScreen() {
   const me = useMe();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
-  const [role, setRole] = useState<'' | Role>('');
   const [page, setPage] = useState(1);
   const [mode, setMode] = useState<Mode>(null);
 
@@ -193,73 +194,90 @@ function UsersScreen() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const users = useUsers({ q: search || undefined, role: role || undefined, page, pageSize: 30 });
-  const close = () => setMode(null);
+  const users = useUsers({ q: search || undefined, page, pageSize: 50 });
+  const items = users.data?.items ?? [];
+  const done = () => setMode(null);
 
   return (
     <>
-      <PageHeader title="المستخدمين" subtitle="مين يقدر يدخل السيستم" action={<Button onClick={() => setMode({ kind: 'create' })}>+ مستخدم جديد</Button>} />
-
-      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_200px]">
-        <TextField label="بحث" placeholder="اسم أو موبايل" value={q} onChange={(e) => setQ(e.target.value)} />
-        <SelectField
-          label="الصلاحية"
-          options={[{ value: '', label: 'الكل' }, ...ROLE_OPTIONS]}
-          value={role}
-          onChange={(e) => {
-            setRole(e.target.value as '' | Role);
-            setPage(1);
-          }}
-        />
+      <PageHeader
+        title="المستخدمين"
+        subtitle="مين يقدر يدخل السيستم وصلاحيته"
+        action={
+          <button type="button" className="primary" onClick={() => setMode({ kind: 'create' })}>
+            <Icon name="plus" /> مستخدم جديد
+          </button>
+        }
+      />
+      <div className="toolbar">
+        <input className="search" placeholder="ابحث بالاسم أو الموبايل..." value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      <div className="card">
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>الموبايل</th>
+                <th>الصلاحية</th>
+                <th>آخر دخول</th>
+                <th>الحالة</th>
+                <th>إجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TableState
+                cols={6}
+                loading={users.isPending}
+                error={users.isError ? errorMessage(users.error) : null}
+                empty={!items.length}
+                onRetry={() => users.refetch()}
+              >
+                {items.map((u) => (
+                  <tr key={u.id} style={{ opacity: u.active ? 1 : 0.6 }}>
+                    <td>
+                      <b>{u.name}</b>
+                    </td>
+                    <td dir="ltr" style={{ textAlign: 'right' }}>
+                      {u.phone}
+                    </td>
+                    <td>
+                      <span className={`badge ${u.role === 'ADMIN' ? '' : 'green'}`}>{ROLE_LABELS[u.role]}</span>
+                    </td>
+                    <td>{formatDateTime(u.lastLoginAt)}</td>
+                    <td>{u.active ? <span className="badge green">شغال</span> : <span className="badge red">موقوف</span>}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <button type="button" className="secondary" onClick={() => setMode({ kind: 'edit', user: u })}>
+                        تعديل
+                      </button>{' '}
+                      <button type="button" className="secondary" onClick={() => setMode({ kind: 'reset', user: u })}>
+                        كلمة السر
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </TableState>
+            </tbody>
+          </table>
+        </div>
+        {users.data && <Pagination page={users.data.page} pageSize={users.data.pageSize} total={users.data.total} onPage={setPage} />}
       </div>
 
-      {users.isPending ? (
-        <LoadingState />
-      ) : users.isError ? (
-        <ErrorState message={errorMessage(users.error)} onRetry={() => users.refetch()} />
-      ) : users.data.items.length === 0 ? (
-        <EmptyState title="مفيش مستخدمين" hint={search || role ? 'جرّب بحث تاني' : undefined} />
-      ) : (
-        <>
-          <ul className={`grid gap-3 md:grid-cols-2 xl:grid-cols-3 ${users.isFetching ? 'opacity-70' : ''}`}>
-            {users.data.items.map((u) => (
-              <li key={u.id} className={`rounded-xl border border-border bg-surface p-4 ${u.active ? '' : 'opacity-60'}`}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="truncate text-lg font-bold">{u.name}</p>
-                  <span className={`rounded-lg px-2 py-0.5 text-sm font-bold ${u.role === 'ADMIN' ? 'bg-primary/15 text-primary' : 'bg-muted'}`}>
-                    {ROLE_LABELS[u.role]}
-                  </span>
-                </div>
-                <p dir="ltr" className="text-end text-subtle">
-                  {u.phone}
-                </p>
-                <p className="text-sm text-subtle">
-                  {u.active ? `آخر دخول: ${formatDateTime(u.lastLoginAt)}` : 'موقوف'}
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <Button variant="secondary" className="flex-1" onClick={() => setMode({ kind: 'edit', user: u })}>
-                    تعديل
-                  </Button>
-                  <Button variant="secondary" className="flex-1" onClick={() => setMode({ kind: 'reset', user: u })}>
-                    كلمة السر
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <Pagination page={users.data.page} pageSize={users.data.pageSize} total={users.data.total} onPage={setPage} />
-        </>
+      {mode?.kind === 'create' && (
+        <Modal title="مستخدم جديد" onClose={done}>
+          <CreateForm onDone={done} />
+        </Modal>
       )}
-
-      <Sheet open={mode?.kind === 'create'} title="مستخدم جديد" onClose={close}>
-        {mode?.kind === 'create' && <CreateForm onDone={close} />}
-      </Sheet>
-      <Sheet open={mode?.kind === 'edit'} title="تعديل مستخدم" onClose={close}>
-        {mode?.kind === 'edit' && <EditForm key={mode.user.id} user={mode.user} isSelf={mode.user.id === me.data?.id} onDone={close} />}
-      </Sheet>
-      <Sheet open={mode?.kind === 'reset'} title={mode?.kind === 'reset' ? `كلمة سر ${mode.user.name}` : ''} onClose={close}>
-        {mode?.kind === 'reset' && <ResetForm user={mode.user} onDone={close} />}
-      </Sheet>
+      {mode?.kind === 'edit' && (
+        <Modal title={`تعديل ${mode.user.name}`} onClose={done}>
+          <EditForm user={mode.user} isSelf={mode.user.id === me.data?.id} onDone={done} />
+        </Modal>
+      )}
+      {mode?.kind === 'reset' && (
+        <Modal title={`كلمة سر ${mode.user.name}`} onClose={done}>
+          <ResetForm user={mode.user} onDone={done} />
+        </Modal>
+      )}
     </>
   );
 }

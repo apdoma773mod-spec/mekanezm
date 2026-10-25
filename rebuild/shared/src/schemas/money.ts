@@ -69,6 +69,7 @@ export type ReturnInput = z.infer<typeof returnInput>;
 
 export const listReturnsQuery = paginationQuery.extend({
   kind: z.enum(RETURN_KINDS).optional(),
+  contactId: z.string().max(64).optional(),
   company: z.enum(COMPANIES).optional(),
   from: isoDateSchema.optional(),
   to: isoDateSchema.optional(),
@@ -172,6 +173,21 @@ export interface CashSummary {
 }
 
 // ---------- dashboard ----------
+
+/** The old system's all-time figures (dashboard, cash and returns screens). */
+export interface Overview {
+  productsCount: number;
+  /** Only for admins: quantity × cost over all products. */
+  stockValue?: number;
+  /** Sales minus sale returns, purchases minus purchase returns. */
+  salesTotal: number;
+  purchasesTotal: number;
+  expensesTotal: number;
+  saleReturns: number;
+  purchaseReturns: number;
+  cashBalance: number;
+  receivables: number;
+}
 
 export interface TodaySummary {
   date: string;

@@ -11,5 +11,9 @@ export default async function cashRoutes(app: FastifyInstance) {
     summary: await service.summary(parse(cashQuery, request.query)),
   }));
 
+  app.get('/overview', { preHandler: app.authenticate }, async (request) => ({
+    overview: await service.overview(actorOf(request)),
+  }));
+
   app.get('/today', { preHandler: app.authenticate }, async (request) => ({ today: await service.today(actorOf(request)) }));
 }
