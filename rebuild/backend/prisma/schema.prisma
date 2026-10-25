@@ -44,6 +44,7 @@ enum AuditAction {
   DAYBOOK_DELIVER
   DAY_CLOSE
   STOCK_COUNT
+  DEBT_REMIND
 }
 
 enum Company {

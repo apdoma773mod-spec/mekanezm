@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { PageHeader } from '@/components/app-shell';
+import { DashboardBanners, DashboardCharts } from '@/components/dashboard-extras';
 import { Icon } from '@/components/icon';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
@@ -67,6 +68,7 @@ export default function DashboardPage() {
           </button>
         }
       />
+      {admin && <DashboardBanners />}
       {overview.isError ? (
         <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />
       ) : (
@@ -209,6 +211,7 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+      {admin && <DashboardCharts />}
     </>
   );
 }

@@ -21,6 +21,7 @@ import daybookRoutes from './modules/daybook/routes.js';
 import closingRoutes from './modules/closing/routes.js';
 import countsRoutes from './modules/counts/routes.js';
 import reportsRoutes from './modules/reports/routes.js';
+import insightsRoutes from './modules/insights/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -66,6 +67,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(closingRoutes, { prefix: '/closings' });
       await api.register(countsRoutes, { prefix: '/counts' });
       await api.register(reportsRoutes, { prefix: '/reports' });
+      await api.register(insightsRoutes, { prefix: '/insights' });
     },
     { prefix: '/api/v1' },
   );

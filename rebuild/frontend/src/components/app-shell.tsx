@@ -31,6 +31,8 @@ const MAIN: NavItem[] = [
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
   { href: '/contacts', label: 'العملاء والموردون', icon: 'users', adminOnly: true },
+  { href: '/debts', label: 'الديون والتذكير', icon: '💰', adminOnly: true },
+  { href: '/reorder', label: 'اقتراحات الطلب', icon: '📦', adminOnly: true },
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
 ];

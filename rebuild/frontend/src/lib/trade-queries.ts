@@ -15,6 +15,9 @@ import type {
   DaybookPostResult,
   DaybookUpdateInput,
   DaySummary,
+  DashboardCharts,
+  DebtsDto,
+  ReorderSuggestion,
   ReportHeadline,
   ReportId,
   ReportPeriods,
@@ -329,6 +332,30 @@ export const useReportPeriods = () =>
   useQuery({
     queryKey: ['reports', 'periods'],
     queryFn: ({ signal }) => api.get<{ periods: ReportPeriods }>('/reports/periods', undefined, signal).then((r) => r.periods),
+  });
+
+// ---------- debts / reorder / charts ----------
+
+export const useDebts = () =>
+  useQuery({ queryKey: ['reports', 'debts'], queryFn: ({ signal }) => api.get<DebtsDto>('/insights/debts', undefined, signal) });
+
+export const useRemind = () => useTradeMutation((id: string) => api.post<{ ok: true }>(`/insights/debts/${id}/remind`));
+
+export const useSaveDebtTemplate = () => useTradeMutation((text: string) => api.put<{ ok: true }>('/insights/debts/template', { text }));
+
+export const useReorder = (days: number) =>
+  useQuery<ReorderSuggestion[]>({
+    queryKey: ['reports', 'reorder', days],
+    queryFn: ({ signal }) => api.get<{ suggestions: ReorderSuggestion[] }>('/insights/reorder', { days }, signal).then((r) => r.suggestions),
+    placeholderData: keepPreviousData,
+  });
+
+export const useCharts = (top: number, stag: number, enabled = true) =>
+  useQuery<DashboardCharts>({
+    queryKey: ['reports', 'charts', top, stag],
+    queryFn: ({ signal }) => api.get<{ charts: DashboardCharts }>('/insights/charts', { top, stag }, signal).then((r) => r.charts),
+    placeholderData: keepPreviousData,
+    enabled,
   });
 
 export const useToday = () =>

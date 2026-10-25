@@ -77,6 +77,14 @@ export const AUDIT_LABELS: Record<string, string> = {
   EXPENSE_CREATE: 'مصروف',
   EXPENSE_UPDATE: 'تعديل مصروف',
   EXPENSE_DELETE: 'حذف مصروف',
+  DAYBOOK_ADD: 'سطر في اليومية',
+  DAYBOOK_UPDATE: 'تعديل سطر في اليومية',
+  DAYBOOK_DELETE: 'حذف سطر من اليومية',
+  DAYBOOK_POST: 'تصفية اليومية',
+  DAYBOOK_DELIVER: 'تسليم باقي للعميل',
+  DAY_CLOSE: 'تقفيل اليومية',
+  STOCK_COUNT: 'جرد',
+  DEBT_REMIND: 'تذكير عميل بالدين',
 };
 
 const hx = (h: string) => [0, 2, 4].map((i) => parseInt(h.replace('#', '').slice(i, i + 2), 16)) as [number, number, number];

@@ -84,5 +84,6 @@ export const AUDIT_ACTIONS = [
   'DAYBOOK_DELIVER',
   'DAY_CLOSE',
   'STOCK_COUNT',
+  'DEBT_REMIND',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

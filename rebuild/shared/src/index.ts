@@ -12,3 +12,4 @@ export * from './schemas/invoices.js';
 export * from './schemas/money.js';
 export * from './schemas/daybook.js';
 export * from './schemas/reports.js';
+export * from './schemas/insights.js';
