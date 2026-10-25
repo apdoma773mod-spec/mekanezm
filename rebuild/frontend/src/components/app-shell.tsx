@@ -25,12 +25,17 @@ interface NavItem {
 const MAIN: NavItem[] = [
   { href: '/', label: 'لوحة التحكم', short: 'الرئيسية', icon: 'grid', mobile: true },
   { href: '/products', label: 'المنتجات والمخزون', short: 'المخزون', icon: 'box', adminOnly: true, mobile: true },
+  { href: '/count', label: 'الجرد', icon: '🧮', adminOnly: true },
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
+  { href: '/daybook', label: 'يومية المحل', icon: '📒' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
   { href: '/contacts', label: 'العملاء والموردون', icon: 'users', adminOnly: true },
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
+  { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
 ];
+/** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
+const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/settings', '/account'];
 const SYSTEM: NavItem[] = [
   { href: '/theme', label: 'المظهر والتخصيص', icon: 'palette', adminOnly: true },
   { href: '/settings', label: 'الإدارة والإعدادات', short: 'الإدارة', icon: 'gear', adminOnly: true, mobile: true },
@@ -103,7 +108,9 @@ function Shell({ children }: { children: ReactNode }) {
   const allowed = (i: NavItem) => (!i.adminOnly || admin) && (!i.staffOnly || !admin);
   const main = MAIN.filter(allowed);
   const system = SYSTEM.filter(allowed);
-  const mobile = [...main, ...system].filter((i) => i.mobile);
+  const mobile = [...main, ...system]
+    .filter((i) => i.mobile)
+    .sort((a, b) => MOBILE_ORDER.indexOf(a.href) - MOBILE_ORDER.indexOf(b.href));
 
   return (
     <div className="app">

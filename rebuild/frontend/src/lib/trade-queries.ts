@@ -5,7 +5,18 @@ import type {
   AdjustStockInput,
   CashQuery,
   CashSummary,
+  ClosingDto,
+  ClosingInput,
   ContactDto,
+  DaybookAddInput,
+  DaybookDay,
+  DaybookEntryDto,
+  DaybookPay,
+  DaybookPostResult,
+  DaybookUpdateInput,
+  DaySummary,
+  StockCountDto,
+  StockCountInput,
   ContactInput,
   ContactStatement,
   ExpenseDto,
@@ -43,7 +54,7 @@ type Q<T> = Partial<T>;
  * so all trade data is refreshed together instead of guessing which lists are affected.
  */
 export function invalidateTrade(qc: QueryClient) {
-  for (const key of ['products', 'product', 'contacts', 'contact', 'statement', 'invoices', 'invoice', 'payments', 'returns', 'expenses', 'cash', 'today', 'moves']) {
+  for (const key of ['products', 'product', 'contacts', 'contact', 'statement', 'invoices', 'invoice', 'payments', 'returns', 'expenses', 'cash', 'today', 'moves', 'daybook', 'closing', 'closings', 'counts', 'reports']) {
     void qc.invalidateQueries({ queryKey: [key] });
   }
 }
@@ -237,6 +248,61 @@ export const useOverview = () =>
     queryKey: ['cash', 'overview'],
     queryFn: ({ signal }) => api.get<{ overview: Overview }>('/cash/overview', undefined, signal).then((r) => r.overview),
   });
+
+// ---------- daybook / closing / stock count ----------
+
+export const useDaybook = (day: string) =>
+  useQuery({
+    queryKey: ['daybook', day],
+    queryFn: ({ signal }) => api.get<DaybookDay>('/daybook', { day }, signal),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+
+export const useDaybookAdd = () =>
+  useTradeMutation((input: DaybookAddInput) => api.post<{ entry: DaybookEntryDto }>('/daybook', input).then((r) => r.entry));
+
+export const useDaybookUpdate = () =>
+  useTradeMutation(({ id, input }: { id: string; input: DaybookUpdateInput }) =>
+    api.patch<{ entry: DaybookEntryDto }>(`/daybook/${id}`, input).then((r) => r.entry),
+  );
+
+export const useDaybookDelete = () => useTradeMutation((id: string) => api.delete<{ ok: true }>(`/daybook/${id}`));
+
+export const useDaybookSetPay = () =>
+  useTradeMutation(({ id, pay }: { id: string; pay: DaybookPay }) =>
+    api.post<{ entry: DaybookEntryDto }>(`/daybook/${id}/pay`, { pay }).then((r) => r.entry),
+  );
+
+export const useDaybookDeliver = () =>
+  useTradeMutation((id: string) => api.post<{ entry: DaybookEntryDto }>(`/daybook/${id}/deliver`).then((r) => r.entry));
+
+export const useDaybookPost = () =>
+  useTradeMutation((input: { day: string; person?: string }) => api.post<DaybookPostResult>('/daybook/post', input));
+
+export const useDaySummary = (day: string) =>
+  useQuery({
+    queryKey: ['closing', day],
+    queryFn: ({ signal }) => api.get<{ summary: DaySummary }>('/closings/summary', { day }, signal).then((r) => r.summary),
+  });
+
+export const useSaveClosing = () =>
+  useTradeMutation((input: ClosingInput) => api.post<{ closing: ClosingDto }>('/closings', input).then((r) => r.closing));
+
+export const useClosings = () =>
+  useQuery({
+    queryKey: ['closings'],
+    queryFn: ({ signal }) => api.get<Paginated<ClosingDto>>('/closings', { pageSize: 40 }, signal),
+  });
+
+export const useCounts = () =>
+  useQuery({
+    queryKey: ['counts'],
+    queryFn: ({ signal }) => api.get<Paginated<StockCountDto>>('/counts', { pageSize: 30 }, signal),
+  });
+
+export const useCreateCount = () =>
+  useTradeMutation((input: StockCountInput) => api.post<{ count: StockCountDto }>('/counts', input).then((r) => r.count));
 
 export const useToday = () =>
   useQuery({

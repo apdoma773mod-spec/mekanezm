@@ -820,3 +820,55 @@ svg.i {
     inset: 0 auto auto 0;
   }
 }
+
+/* ---------- 📒 يومية المحل (copied from the old system) ---------- */
+#daybook .dbent{position:sticky;top:0;z-index:5;background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 4px 16px #0001}
+#daybook .dbrow1{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#daybook .dbrow1 .who{flex:1;min-width:160px;position:relative}
+#daybook .dbrow1 .who input{width:100%;font-size:16px;padding:11px;border:1px solid var(--border);border-radius:12px}
+.dbpays{display:flex;gap:6px;flex-wrap:wrap}
+.dbpays button{padding:9px 12px;border-radius:12px;border:1px solid var(--border);background:#fff;color:var(--text,#18343a);font-size:14px}
+.dbpays button.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+#daybook .dbsr{display:flex;gap:6px;margin-top:10px}
+#daybook .dbsr input{flex:1;min-width:0;font-size:17px;padding:13px;border:2px solid var(--blue);border-radius:12px}
+#daybook .dbsr button{flex:none;width:52px;font-size:22px;padding:0;border-radius:12px}
+#dbBox{display:none;max-height:50vh;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:4px;background:#fff;box-shadow:0 8px 24px #0002}
+#dbBox div{padding:13px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:16px}
+.dbg{background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+.dbg.done{opacity:.75}
+.dbgh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--tint2,#eef6f7)}
+.dbgh b{font-size:17px}.dbgh small{display:block;color:var(--muted);font-size:12px}
+.dbl{display:grid;grid-template-columns:minmax(0,2.2fr) 54px 74px 84px 86px 64px;gap:6px;align-items:center;padding:9px 12px;border-top:1px solid var(--border);cursor:pointer;font-size:14px}
+.dbl.hd{cursor:default;font-size:12px;color:var(--muted);background:#fafcfc}
+.dbl .st{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-4px}
+.dbl.pay{background:#f3fbf6}
+.dbbadge{display:inline-block;border-radius:8px;padding:1px 7px;font-size:12px;background:#eef1f2}
+.dbbadge.credit{background:#fdecea;color:#b3261e}.dbbadge.insta{background:#efe9fb;color:#5b3aa6}.dbbadge.transfer{background:#e8f1fd;color:#1d5fb3}.dbbadge.cash{background:#e6f6ec;color:#1e7a3c}
+.dbfoot{position:sticky;bottom:0;background:var(--card,#fff);border:1px solid var(--border);border-radius:16px;padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;box-shadow:0 -4px 16px #0001;margin-top:8px}
+.dbfoot .t{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}.dbfoot .t b{font-size:15px}
+@media(max-width:900px){
+ .dbl{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+ .dbl.hd{display:none}
+ .dbl>.c-q,.dbl>.c-p,.dbl>.c-pay,.dbl>.c-ow{display:none}
+ .dbl>.c-t{text-align:left}
+ .dbl .mob{display:block!important;grid-column:1/-1;font-size:13px;color:var(--muted)}
+}
+.dbl .mob{display:none}
+#lcBox{position:fixed;inset:0;z-index:100002;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px}
+#lcBox .lc{background:var(--card,#fff);border-radius:18px;width:min(440px,100%);max-height:92vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 12px 40px #0005}
+#lcBox .lch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:4px}
+#lcBox .lch b{font-size:19px;line-height:1.4;display:block}#lcBox .lch small{color:var(--muted);font-size:13px}
+#lcBox label{font-size:13px;color:var(--muted);margin-top:4px}
+#lcBox .lcq{display:flex;gap:8px}#lcBox .lcq button{width:60px;height:56px;font-size:28px;border-radius:14px;background:var(--tint2,#eef6f7);color:var(--text,#18343a);flex:none}
+#lcBox .lcq input{flex:1;min-width:0;text-align:center;font-size:24px;font-weight:800;padding:8px;border:2px solid var(--border);border-radius:14px}
+#lcBox #lcPr{font-size:22px;font-weight:700;padding:12px;border:2px solid var(--border);border-radius:14px;text-align:center}
+#lcBox .lct{font-size:18px;text-align:center;margin-top:6px}#lcBox .lct b{font-size:24px;color:var(--blue)}
+#lcBox .lcw{color:var(--danger,#c0392b);font-weight:700;text-align:center;min-height:0}
+#lcBox .lcf{display:flex;flex-direction:column;gap:8px;margin-top:6px}#lcBox .lcf button{padding:14px;font-size:17px;border-radius:14px}
+/* ---------- 🧮 الجرد + 🔒 تقفيل اليومية ---------- */
+.cnt-row{display:grid;grid-template-columns:minmax(0,1fr) 70px 90px 70px;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border)}
+.cnt-row input{width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;text-align:center}
+.cnt-row.hit{background:var(--tint2)}
+.cnt-foot{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;z-index:2}
+.cl-t td:last-child{text-align:left;font-weight:700}
+@media(max-width:900px){.cnt-row{grid-template-columns:minmax(0,1fr) 54px 76px 54px}}

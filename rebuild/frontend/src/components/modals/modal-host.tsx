@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { InvoiceKind, ReturnKind } from '@mk/shared';
+import type { InvoiceKind, ReturnKind, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
 import { ProductModal } from './product-modal';
 import { TransactionModal } from './transaction-modal';
@@ -11,6 +11,8 @@ import { ContactModal } from './contact-modal';
 import { ContactFile } from './contact-file';
 import { PaymentModal } from './payment-modal';
 import { ExpenseModal } from './expense-modal';
+import { ClosingHistory, ClosingModal } from './closing-modal';
+import { CountResult } from './count-result';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
@@ -22,7 +24,10 @@ export type ModalSpec =
   | { kind: 'contact'; id?: string }
   | { kind: 'contactFile'; id: string }
   | { kind: 'payment'; contactId: string }
-  | { kind: 'expense'; id?: string };
+  | { kind: 'expense'; id?: string }
+  | { kind: 'closing'; day?: string }
+  | { kind: 'closingHistory' }
+  | { kind: 'countResult'; count: StockCountDto };
 
 interface Ctx {
   open: (m: ModalSpec) => void;
@@ -66,6 +71,15 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'expense':
         content = <ExpenseModal key={spec.id ?? 'new'} id={spec.id} />;
+        break;
+      case 'closing':
+        content = <ClosingModal day={spec.day} />;
+        break;
+      case 'closingHistory':
+        content = <ClosingHistory />;
+        break;
+      case 'countResult':
+        content = <CountResult count={spec.count} />;
         break;
     }
   }

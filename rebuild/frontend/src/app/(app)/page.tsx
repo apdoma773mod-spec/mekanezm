@@ -149,6 +149,26 @@ export default function DashboardPage() {
         </div>
         <div className="card">
           <h3>اختصارات</h3>
+          <Link
+            href="/daybook"
+            style={{
+              width: '100%',
+              marginBottom: 14,
+              background: 'var(--blue)',
+              color: 'var(--onblue)',
+              borderRadius: 16,
+              padding: 16,
+              fontSize: 18,
+              fontWeight: 800,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              textDecoration: 'none',
+              boxSizing: 'border-box',
+            }}
+          >
+            📒 يومية المحل — اكتب بيعة بسرعة <span>←</span>
+          </Link>
           <div className="quick">
             {admin && (
               <button type="button" onClick={() => open({ kind: 'product' })}>
@@ -179,6 +199,14 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+          <button
+            type="button"
+            className="secondary"
+            style={{ width: '100%', marginTop: 14, padding: 16, fontSize: 17, fontWeight: 800 }}
+            onClick={() => open({ kind: 'closing' })}
+          >
+            🔒 تقفيل اليومية
+          </button>
         </div>
       </div>
     </>
