@@ -189,6 +189,8 @@ export interface FieldLine {
   dm?: string;
   dd?: string;
   h?: { st: LineState; by: string; at: string }[];
+  /** Listing only: what Mekanizm's store has of it now (null for new items). */
+  ms?: number;
 }
 
 export const fieldOrderInput = z.object({

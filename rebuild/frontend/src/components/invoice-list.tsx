@@ -5,6 +5,7 @@ import type { InvoiceKind } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
 import { arDate, money } from '@/lib/format';
 import { useInvoices } from '@/lib/trade-queries';
+import { useCompany } from './company';
 import { PageHeader } from './app-shell';
 import { Icon } from './icon';
 import { useModal } from './modals/modal-host';
@@ -38,6 +39,7 @@ export function InvoiceListScreen({ kind }: { kind: InvoiceKind }) {
   const [search, setSearch] = useState('');
   const [voided, setVoided] = useState(false);
   const [page, setPage] = useState(1);
+  const { co } = useCompany();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,7 +49,7 @@ export function InvoiceListScreen({ kind }: { kind: InvoiceKind }) {
     return () => clearTimeout(timer);
   }, [q]);
 
-  const list = useInvoices({ kind, q: search || undefined, status: voided ? 'VOID' : 'ACTIVE', page, pageSize: 50 });
+  const list = useInvoices({ kind, company: co, q: search || undefined, status: voided ? 'VOID' : 'ACTIVE', page, pageSize: 50 });
   const items = list.data?.items ?? [];
   const pageTotal = items.reduce((s, x) => s + x.total, 0);
   const pageRem = items.reduce((s, x) => s + x.remaining, 0);

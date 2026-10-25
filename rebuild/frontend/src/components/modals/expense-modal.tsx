@@ -10,6 +10,7 @@ import { Modal } from '../ui/modal';
 import { FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { useCompany } from '../company';
 
 export function ExpenseModal({ id }: { id?: string }) {
   const { close } = useModal();
@@ -31,6 +32,7 @@ function ExpenseForm({ expense: x }: { expense?: ExpenseDto }) {
   const toast = useToast();
   const cats = useExpenseCategories();
   const create = useCreateExpense();
+  const { co } = useCompany();
   const update = useUpdateExpense();
   const remove = useDeleteExpense();
   const [confirm, setConfirm] = useState(false);
@@ -50,7 +52,7 @@ function ExpenseForm({ expense: x }: { expense?: ExpenseDto }) {
     setErrors({});
     try {
       if (x) await update.mutateAsync({ id: x.id, input: v.data });
-      else await create.mutateAsync(v.data);
+      else await create.mutateAsync({ ...v.data, company: co });
       toast('تم تسجيل المصروف');
       close();
     } catch (err) {

@@ -45,9 +45,25 @@ function orderNo(): string {
 export class FieldService {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** Each requested line also carries `ms`: what Mekanizm's store (plus Hydrolek's goods off the van) has of it now. */
   async list(): Promise<FieldOrderDto[]> {
-    const rows = await this.prisma.fieldOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 500 });
-    return rows.map(toFieldDto);
+    const rows = (await this.prisma.fieldOrder.findMany({ orderBy: { createdAt: 'desc' }, take: 500 })).map(toFieldDto);
+    const pids = [...new Set(rows.flatMap((o) => o.lines.filter((l) => l.pid && l.r > 0).map((l) => l.pid)))];
+    if (!pids.length) return rows;
+    const own = await this.prisma.product.findMany({ where: { id: { in: pids } }, select: { id: true, name: true, company: true, qty: true } });
+    const names = [...new Set(own.map((p) => p.name.trim()))];
+    const twins = await this.prisma.product.findMany({ where: { name: { in: names }, deletedAt: null }, select: { id: true, name: true, company: true, qty: true } });
+    const van = await this.prisma.vanStock.groupBy({ by: ['productId'], _sum: { qty: true } });
+    const onVan = new Map(van.map((v) => [v.productId, num(v._sum.qty)]));
+    const ms = new Map<string, number>();
+    for (const p of own) {
+      const same = twins.filter((t) => t.name.trim() === p.name.trim());
+      const mk = same.find((t) => t.company === 'MK');
+      const hy = same.find((t) => t.company === 'HY');
+      ms.set(p.id, r2((mk ? num(mk.qty) : 0) + (hy ? Math.max(0, num(hy.qty) - (onVan.get(hy.id) ?? 0)) : 0)));
+    }
+    for (const o of rows) for (const l of o.lines) if (l.pid && ms.has(l.pid)) l.ms = ms.get(l.pid);
+    return rows;
   }
 
   private async get(tx: Prisma.TransactionClient, id: string) {

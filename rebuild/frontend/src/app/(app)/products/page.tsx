@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { useCompany } from '@/components/company';
 import { Icon } from '@/components/icon';
 import { useModal } from '@/components/modals/modal-host';
 import { Pagination } from '@/components/ui/pagination';
@@ -29,7 +30,8 @@ function ProductsScreen() {
     return () => clearTimeout(t);
   }, [q]);
 
-  const products = useProducts({ q: search || undefined, stock, page, pageSize: 50 });
+  const { co } = useCompany();
+  const products = useProducts({ q: search || undefined, stock, company: co, page, pageSize: 50 });
   const items = products.data?.items ?? [];
 
   return (

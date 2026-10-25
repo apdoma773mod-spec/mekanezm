@@ -16,6 +16,7 @@ import {
   useUpdateProduct,
 } from '@/lib/trade-queries';
 import { useAlts } from '@/lib/phase4-queries';
+import { useCompany } from '../company';
 import { Icon } from '../icon';
 import { Input, NumberInput, Select } from '../ui/field';
 import { Modal } from '../ui/modal';
@@ -163,6 +164,7 @@ function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof u
   const update = useUpdateProduct();
   const adjust = useAdjustStock();
   const remove = useDeleteProduct();
+  const { co } = useCompany();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
@@ -187,7 +189,7 @@ function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof u
       if (!p) {
         const v = validate(productInput, { ...f, code: f.code || undefined });
         if (!v.ok) return setErrors(v.errors);
-        await create.mutateAsync(v.data);
+        await create.mutateAsync({ ...v.data, company: co });
       } else {
         const v = validate(updateProductInput, fields);
         if (!v.ok) return setErrors(v.errors);

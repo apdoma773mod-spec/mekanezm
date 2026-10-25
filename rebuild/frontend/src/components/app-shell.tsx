@@ -45,7 +45,9 @@ const MAIN: NavItem[] = [
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
 ];
 /** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
-const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/settings', '/account'];
+const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/hy', '/settings', '/account'];
+/** «الشركات» at the bottom of the sidebar, as the old one. */
+const COMPANIES: NavItem[] = [{ href: '/hy', label: 'هيدرولك', icon: '🏢', mobile: true }];
 const SYSTEM: NavItem[] = [
   { href: '/theme', label: 'المظهر والتخصيص', icon: 'palette', adminOnly: true },
   { href: '/settings', label: 'الإدارة والإعدادات', short: 'الإدارة', icon: 'gear', adminOnly: true, mobile: true },
@@ -118,7 +120,7 @@ function Shell({ children }: { children: ReactNode }) {
   const allowed = (i: NavItem) => (!i.adminOnly || admin) && (!i.staffOnly || !admin);
   const main = MAIN.filter(allowed);
   const system = SYSTEM.filter(allowed);
-  const mobile = [...main, ...system]
+  const mobile = [...main, ...system, ...COMPANIES]
     .filter((i) => i.mobile)
     .sort((a, b) => MOBILE_ORDER.indexOf(a.href) - MOBILE_ORDER.indexOf(b.href));
 
@@ -166,6 +168,16 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="nav-title">النظام</div>
           <nav className="nav">
             {system.map((i) => (
+              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
+                <NavIcon icon={i.icon} /> <span>{i.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="nav-title" style={{ marginTop: 16 }}>
+            الشركات
+          </div>
+          <nav className="nav">
+            {COMPANIES.map((i) => (
               <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
                 <NavIcon icon={i.icon} /> <span>{i.label}</span>
               </Link>

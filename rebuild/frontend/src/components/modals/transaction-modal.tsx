@@ -6,6 +6,7 @@ import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
 import { useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
+import { useCompany } from '../company';
 import {
   lookupProduct,
   useContacts,
@@ -87,6 +88,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const create = useCreateInvoice();
   const update = useUpdateInvoice();
   const saveQuote = useSaveQuote();
+  const { co } = useCompany();
   const converted = useQuoteConverted();
   const src = invoice ?? quote;
 
@@ -229,7 +231,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     try {
       const saved = invoice
         ? await update.mutateAsync({ id: invoice.id, input: { ...body, company: invoice.company, payMethod: invoice.payMethod, discount: invoice.discount } })
-        : await create.mutateAsync({ ...body, kind: type, company: 'MK', discount: 0, payMethod: 'CASH' });
+        : await create.mutateAsync({ ...body, kind: type, company: co, discount: 0, payMethod: 'CASH' });
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
       toast(invoice ? 'تم حفظ التعديل' : isSale ? 'تم تسجيل البيع' : 'تم تسجيل الشراء');
       open({ kind: 'invoice', id: saved.id });
