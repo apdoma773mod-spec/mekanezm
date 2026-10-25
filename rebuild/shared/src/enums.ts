@@ -49,6 +49,9 @@ export const STOCK_REASONS = [
   'INVOICE_VOID',
   'DAYBOOK',
   'COUNT',
+  'GIFT',
+  'GRADE',
+  'SAMPLE',
 ] as const;
 export type StockReason = (typeof STOCK_REASONS)[number];
 
@@ -85,5 +88,20 @@ export const AUDIT_ACTIONS = [
   'DAY_CLOSE',
   'STOCK_COUNT',
   'DEBT_REMIND',
+  'QUOTE_SAVE',
+  'QUOTE_DELETE',
+  'SHIP_SAVE',
+  'SHIP_DELETE',
+  'GIFT_CREATE',
+  'GRADE_MOVE',
+  'PRODUCT_ALTS',
+  'STAFF_SAVE',
+  'ATTENDANCE_SAVE',
+  'STAFF_MOVE',
+  'STAFF_POINTS',
+  'KIT_SAVE',
+  'KIT_DELETE',
+  'SAMPLE_SAVE',
+  'WANTED_SAVE',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

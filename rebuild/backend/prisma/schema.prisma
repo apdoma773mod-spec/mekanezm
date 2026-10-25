@@ -45,6 +45,21 @@ enum AuditAction {
   DAY_CLOSE
   STOCK_COUNT
   DEBT_REMIND
+  QUOTE_SAVE
+  QUOTE_DELETE
+  SHIP_SAVE
+  SHIP_DELETE
+  GIFT_CREATE
+  GRADE_MOVE
+  PRODUCT_ALTS
+  STAFF_SAVE
+  ATTENDANCE_SAVE
+  STAFF_MOVE
+  STAFF_POINTS
+  KIT_SAVE
+  KIT_DELETE
+  SAMPLE_SAVE
+  WANTED_SAVE
 }
 
 enum Company {
@@ -99,6 +114,9 @@ enum StockReason {
   INVOICE_VOID
   DAYBOOK
   COUNT
+  GIFT
+  GRADE
+  SAMPLE
 }
 
 enum DaybookKind {
@@ -449,4 +467,226 @@ model StockCount {
   createdById String?
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+// ---------- Phase 4: quotes, shipping, gifts, staff, kits, samples, wanted ----------
+
+/// «عرض سعر»: doesn't touch stock or reports; can be turned into a sale invoice.
+model Quote {
+  id          String   @id @default(cuid())
+  no          String   @unique
+  date        DateTime @db.Date
+  person      String   @default("")
+  phone       String   @default("")
+  address     String   @default("")
+  note        String   @default("")
+  shipping    Decimal  @default(0) @db.Decimal(14, 2)
+  total       Decimal  @default(0) @db.Decimal(14, 2)
+  /// [{ productId, name, unit, qty, price, total }]
+  items       Json
+  /// open | converted
+  status      String   @default("open")
+  invoiceId   String?
+  invoiceNo   String   @default("")
+  createdById String?
+  createdBy   String   @default("")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([createdAt])
+}
+
+enum ShipKind {
+  SHIP
+  DELIVERY
+}
+
+/// «الشحن والتوصيل»: one parcel from label printing until the money is collected.
+model Shipment {
+  id          String    @id @default(cuid())
+  no          String    @unique
+  kind        ShipKind  @default(SHIP)
+  /// new | printed | handed | out | delivered | paid | returned | cancelled
+  status      String    @default("new")
+  invoiceId   String?
+  invoiceNo   String    @default("")
+  name        String
+  phone       String    @default("")
+  phone2      String    @default("")
+  gov         String    @default("")
+  area        String    @default("")
+  address     String    @default("")
+  carrier     String    @default("")
+  tracking    String    @default("")
+  driver      String    @default("")
+  driverPhone String    @default("")
+  cod         Decimal   @default(0) @db.Decimal(14, 2)
+  fee         Decimal   @default(0) @db.Decimal(14, 2)
+  pieces      Int       @default(1)
+  content     String    @default("")
+  note        String    @default("")
+  /// [{ s: status, at: ISO time, by: name }]
+  log         Json      @default("[]")
+  closedAt    DateTime? @db.Timestamptz(3)
+  createdById String?
+  createdBy   String    @default("")
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+  @@index([invoiceId])
+}
+
+/// «🎁 هدية»: stock given away to a craftsman or engineer, valued at sale price and cost.
+model Gift {
+  id          String   @id @default(cuid())
+  productId   String
+  productName String
+  qty         Decimal  @db.Decimal(14, 3)
+  price       Decimal  @db.Decimal(14, 2)
+  cost        Decimal  @db.Decimal(14, 2)
+  toName      String
+  toPhone     String   @default("")
+  toKind      String   @default("صنايعي")
+  note        String   @default("")
+  createdById String?
+  createdBy   String   @default("")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([toName])
+  @@index([createdAt])
+}
+
+/// «👷 العمالة»: an employee's file; `userId` links the system account that punches in with the QR.
+model Staff {
+  id         String       @id @default(cuid())
+  name       String
+  job        String       @default("")
+  phone      String       @default("")
+  nid        String       @default("")
+  address    String       @default("")
+  /// month | week | day
+  payType    String       @default("month")
+  salary     Decimal      @default(0) @db.Decimal(14, 2)
+  shiftStart String       @default("10:00")
+  shiftEnd   String       @default("22:00")
+  /// 0 = Sunday … 6 = Saturday, -1 = none
+  offDay     Int          @default(5)
+  startDate  DateTime     @db.Date
+  userId     String?      @unique
+  note       String       @default("")
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime     @updatedAt @db.Timestamptz(3)
+  attendance Attendance[]
+  moves      StaffMove[]
+  points     StaffPoint[]
+}
+
+model Attendance {
+  id        String    @id @default(cuid())
+  staffId   String
+  day       DateTime  @db.Date
+  inAt      DateTime? @db.Timestamptz(3)
+  outAt     DateTime? @db.Timestamptz(3)
+  lateMin   Int       @default(0)
+  /// qr | manual
+  method    String    @default("qr")
+  note      String    @default("")
+  byName    String    @default("")
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, day])
+  @@index([day])
+}
+
+/// advance | bonus | deduct | pay — advances and pay also create an expense.
+model StaffMove {
+  id          String   @id @default(cuid())
+  staffId     String
+  kind        String
+  amount      Decimal  @db.Decimal(14, 2)
+  /// YYYY-MM the move counts for
+  month       String
+  note        String   @default("")
+  expenseId   String?
+  createdById String?
+  byName      String   @default("")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  staff       Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, month])
+}
+
+/// Hand-given points and redemptions; attendance points are computed, not stored.
+model StaffPoint {
+  id          String   @id @default(cuid())
+  staffId     String
+  pts         Int
+  why         String   @default("")
+  month       String
+  redeem      Boolean  @default(false)
+  createdById String?
+  byName      String   @default("")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  staff       Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+}
+
+/// The rotating QR code on the attendance screen (valid for a short time).
+model PunchCode {
+  code      String   @id
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+/// «🧩 الأطقم والتركيبات»: components bought apart and sold together.
+model Kit {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  barcode   String   @unique
+  name      String
+  /// what the kit is counted in, e.g. «دلفة»
+  param     String   @default("")
+  def       Decimal  @default(1) @db.Decimal(14, 3)
+  /// fixed sale price for the whole kit; null = sum of components
+  sp        Decimal? @db.Decimal(14, 2)
+  /// [{ label, mode: fixed|param|len, qty, per, ulen, opt, products: [id] }]
+  slots     Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+/// «🧪 العينات»: out | returned | sold | lost. Stock leaves only when sold (invoice) or lost.
+model Sample {
+  id          String    @id @default(cuid())
+  productId   String?
+  productName String
+  qty         Decimal   @db.Decimal(14, 3)
+  customer    String    @default("")
+  date        DateTime  @db.Date
+  givenBy     String    @default("")
+  status      String    @default("out")
+  invoiceId   String?
+  resolvedAt  DateTime? @db.Timestamptz(3)
+  createdById String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status])
+}
+
+/// «🔎 مطلوب ومش عندنا»: things customers asked for that the shop doesn't have.
+model WantedItem {
+  id        String   @id @default(cuid())
+  descr     String
+  thumb     String?
+  source    String   @default("المحل")
+  phone     String   @default("")
+  byName    String   @default("")
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([done])
 }

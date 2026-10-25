@@ -22,6 +22,13 @@ import closingRoutes from './modules/closing/routes.js';
 import countsRoutes from './modules/counts/routes.js';
 import reportsRoutes from './modules/reports/routes.js';
 import insightsRoutes from './modules/insights/routes.js';
+import quotesRoutes from './modules/quotes/routes.js';
+import shippingRoutes from './modules/shipping/routes.js';
+import giftsRoutes from './modules/gifts/routes.js';
+import staffRoutes from './modules/staff/routes.js';
+import kitsRoutes from './modules/kits/routes.js';
+import samplesRoutes from './modules/samples/routes.js';
+import wantedRoutes from './modules/wanted/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -68,6 +75,13 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(countsRoutes, { prefix: '/counts' });
       await api.register(reportsRoutes, { prefix: '/reports' });
       await api.register(insightsRoutes, { prefix: '/insights' });
+      await api.register(quotesRoutes, { prefix: '/quotes' });
+      await api.register(shippingRoutes, { prefix: '/shipments' });
+      await api.register(giftsRoutes, { prefix: '/stock-extras' });
+      await api.register(staffRoutes, { prefix: '/staff' });
+      await api.register(kitsRoutes, { prefix: '/kits' });
+      await api.register(samplesRoutes, { prefix: '/samples' });
+      await api.register(wantedRoutes, { prefix: '/wanted' });
     },
     { prefix: '/api/v1' },
   );

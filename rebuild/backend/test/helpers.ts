@@ -24,7 +24,8 @@ export async function createTestApp(): Promise<{ app: FastifyInstance; prisma: P
 export async function resetDb(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
     `TRUNCATE "AuditLog", "RefreshToken", "Setting", "User", "Counter", "Product", "StockMove", "Contact",
-      "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount"
+      "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount",
+      "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem"
       RESTART IDENTITY CASCADE`,
   );
 }

@@ -4,12 +4,18 @@ export const COUNTER = {
   product: 'product',
   sale: 'invoice.SALE',
   purchase: 'invoice.PURCHASE',
+  quote: 'quote',
+  shipment: 'shipment',
+  kit: 'kit',
 } as const;
 
 const PREFIX: Record<string, string> = {
   [COUNTER.product]: 'P',
   [COUNTER.sale]: 'MK-',
   [COUNTER.purchase]: 'SH-',
+  [COUNTER.quote]: 'QT-',
+  [COUNTER.shipment]: 'SP-',
+  [COUNTER.kit]: 'K',
 };
 
 /** Next number in a sequence. Must run inside the caller's transaction so a rollback doesn't burn a number. */

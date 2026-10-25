@@ -13,3 +13,4 @@ export * from './schemas/money.js';
 export * from './schemas/daybook.js';
 export * from './schemas/reports.js';
 export * from './schemas/insights.js';
+export * from './schemas/phase4.js';
