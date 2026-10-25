@@ -49,7 +49,8 @@ export const useIcCancel = () => useHyWrite((ref: string) => api.delete(`/hy/ic/
 export const useIcAccount = () => useQuery({ queryKey: ['hy', 'account'], queryFn: ({ signal }) => api.get<{ account: IcAccount }>('/hy/account', undefined, signal).then((r) => r.account) });
 export const useIcSettle = () => useHyWrite((v: { dir: 'h2m' | 'm2h'; amount: number; note: string }) => api.post('/hy/account/settle', v));
 
-export const usePartners = () => useQuery({ queryKey: ['hy', 'partners'], queryFn: ({ signal }) => api.get<{ board: PartnersBoard }>('/hy/partners', undefined, signal).then((r) => r.board) });
+export const usePartners = (enabled = true) =>
+  useQuery({ queryKey: ['hy', 'partners'], queryFn: ({ signal }) => api.get<{ board: PartnersBoard }>('/hy/partners', undefined, signal).then((r) => r.board), enabled });
 export const useSavePartner = () =>
   useHyWrite(({ id, input }: { id?: string; input: { name: string; phone: string; share: number; note: string } }) => (id ? api.put(`/hy/partners/${id}`, input) : api.post('/hy/partners', input)));
 export const useDeletePartner = () => useHyWrite((id: string) => api.delete(`/hy/partners/${id}`));
