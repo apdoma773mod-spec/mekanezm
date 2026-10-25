@@ -37,6 +37,13 @@ enum AuditAction {
   EXPENSE_CREATE
   EXPENSE_UPDATE
   EXPENSE_DELETE
+  DAYBOOK_ADD
+  DAYBOOK_UPDATE
+  DAYBOOK_DELETE
+  DAYBOOK_POST
+  DAYBOOK_DELIVER
+  DAY_CLOSE
+  STOCK_COUNT
 }
 
 enum Company {
@@ -89,6 +96,20 @@ enum StockReason {
   ADJUST
   INVOICE_EDIT
   INVOICE_VOID
+  DAYBOOK
+  COUNT
+}
+
+enum DaybookKind {
+  ITEM
+  PAY
+}
+
+enum DaybookPay {
+  CASH
+  INSTAPAY
+  TRANSFER
+  CREDIT
 }
 
 model User {
@@ -113,6 +134,9 @@ model User {
   paymentsOff  Payment[]      @relation("PaymentCancelledBy")
   returns      Return[]
   expenses     Expense[]
+  daybook      DaybookEntry[]
+  closings     DayClosing[]
+  counts       StockCount[]
 }
 
 model RefreshToken {
@@ -164,25 +188,26 @@ model Counter {
 }
 
 model Product {
-  id        String        @id @default(cuid())
+  id        String         @id @default(cuid())
   /// Never reused, even after the product is deleted (soft delete keeps the row).
-  code      String        @unique
+  code      String         @unique
   name      String
-  barcode   String?       @unique
-  category  String        @default("")
-  unit      String        @default("قطعة")
-  price     Decimal       @default(0) @db.Decimal(14, 2)
-  cost      Decimal       @default(0) @db.Decimal(14, 2)
-  qty       Decimal       @default(0) @db.Decimal(14, 3)
-  minQty    Decimal       @default(0) @db.Decimal(14, 3)
-  company   Company       @default(MK)
-  note      String        @default("")
-  deletedAt DateTime?     @db.Timestamptz(3)
-  createdAt DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+  barcode   String?        @unique
+  category  String         @default("")
+  unit      String         @default("قطعة")
+  price     Decimal        @default(0) @db.Decimal(14, 2)
+  cost      Decimal        @default(0) @db.Decimal(14, 2)
+  qty       Decimal        @default(0) @db.Decimal(14, 3)
+  minQty    Decimal        @default(0) @db.Decimal(14, 3)
+  company   Company        @default(MK)
+  note      String         @default("")
+  deletedAt DateTime?      @db.Timestamptz(3)
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @db.Timestamptz(3)
   moves     StockMove[]
   items     InvoiceItem[]
   returns   Return[]
+  daybook   DaybookEntry[]
 
   @@index([name])
   @@index([category])
@@ -230,39 +255,44 @@ model Contact {
 }
 
 model Invoice {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   kind        InvoiceKind
   no          String
-  status      InvoiceStatus @default(ACTIVE)
-  company     Company       @default(MK)
+  status      InvoiceStatus  @default(ACTIVE)
+  company     Company        @default(MK)
   /// Business day in Cairo time.
-  date        DateTime      @db.Date
+  date        DateTime       @db.Date
   contactId   String?
-  person      String        @default("")
-  phone       String        @default("")
-  address     String        @default("")
-  note        String        @default("")
-  subtotal    Decimal       @db.Decimal(14, 2)
-  discount    Decimal       @default(0) @db.Decimal(14, 2)
-  shipping    Decimal       @default(0) @db.Decimal(14, 2)
-  total       Decimal       @db.Decimal(14, 2)
-  paid        Decimal       @db.Decimal(14, 2)
-  remaining   Decimal       @db.Decimal(14, 2)
-  payMethod   PayMethod     @default(CASH)
+  person      String         @default("")
+  phone       String         @default("")
+  address     String         @default("")
+  note        String         @default("")
+  subtotal    Decimal        @db.Decimal(14, 2)
+  discount    Decimal        @default(0) @db.Decimal(14, 2)
+  shipping    Decimal        @default(0) @db.Decimal(14, 2)
+  total       Decimal        @db.Decimal(14, 2)
+  paid        Decimal        @db.Decimal(14, 2)
+  remaining   Decimal        @db.Decimal(14, 2)
+  payMethod   PayMethod      @default(CASH)
+  /// When one invoice was paid with several methods (the daybook): { "CASH": 100, "INSTAPAY": 50 }.
+  paidSplit   Json?
+  /// "" for invoices typed in directly, "DAYBOOK" when made by settling the daybook.
+  source      String         @default("")
   createdById String?
   updatedById String?
   voidedById  String?
-  voidedAt    DateTime?     @db.Timestamptz(3)
+  voidedAt    DateTime?      @db.Timestamptz(3)
   voidReason  String?
-  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
-  contact     Contact?      @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  createdBy   User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy   User?         @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  voidedBy    User?         @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @db.Timestamptz(3)
+  contact     Contact?       @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  createdBy   User?          @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?          @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  voidedBy    User?          @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
   items       InvoiceItem[]
   payments    Payment[]
   returns     Return[]
+  daybook     DaybookEntry[]
 
   @@unique([kind, no])
   @@index([kind, date])
@@ -357,4 +387,65 @@ model Expense {
 
   @@index([date])
   @@index([category])
+}
+
+/// «يومية المحل»: quick sales written as they happen, settled later into one sale invoice per customer.
+model DaybookEntry {
+  id          String      @id @default(cuid())
+  day         DateTime    @db.Date
+  kind        DaybookKind @default(ITEM)
+  productId   String?
+  name        String
+  qty         Decimal     @db.Decimal(14, 3)
+  /// Unit price for an item, the amount for a payment.
+  price       Decimal     @db.Decimal(14, 2)
+  /// Pieces sold but not handed over yet («باقي له»); they stay in stock until delivered.
+  owed        Decimal     @default(0) @db.Decimal(14, 3)
+  person      String      @default("")
+  pay         DaybookPay  @default(CASH)
+  note        String      @default("")
+  /// Quantity this line has taken out of stock so far (qty − undelivered owed).
+  stockOut    Decimal     @default(0) @db.Decimal(14, 3)
+  createdById String?
+  deliveredAt DateTime?   @db.Timestamptz(3)
+  postedAt    DateTime?   @db.Timestamptz(3)
+  invoiceId   String?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
+  product     Product?    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  invoice     Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([day])
+  @@index([invoiceId])
+}
+
+/// «🔒 تقفيل اليومية»: the day's figures frozen at closing time plus the cash actually counted.
+model DayClosing {
+  id           String   @id @default(cuid())
+  day          DateTime @db.Date
+  data         Json
+  cashExpected Decimal  @db.Decimal(14, 2)
+  cashActual   Decimal? @db.Decimal(14, 2)
+  cashDiff     Decimal? @db.Decimal(14, 2)
+  note         String   @default("")
+  createdById  String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  createdBy    User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([day])
+}
+
+/// «🧮 الجرد»: one saved count (JR-0001…) with every counted line and the shortage/excess value.
+model StockCount {
+  id          String   @id @default(cuid())
+  no          String   @unique
+  note        String   @default("")
+  items       Json
+  itemCount   Int
+  shortValue  Decimal  @db.Decimal(14, 2)
+  excessValue Decimal  @db.Decimal(14, 2)
+  createdById String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
 }

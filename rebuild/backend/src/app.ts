@@ -17,6 +17,9 @@ import paymentsRoutes from './modules/payments/routes.js';
 import returnsRoutes from './modules/returns/routes.js';
 import expensesRoutes from './modules/expenses/routes.js';
 import cashRoutes from './modules/cash/routes.js';
+import daybookRoutes from './modules/daybook/routes.js';
+import closingRoutes from './modules/closing/routes.js';
+import countsRoutes from './modules/counts/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -58,6 +61,9 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(returnsRoutes, { prefix: '/returns' });
       await api.register(expensesRoutes, { prefix: '/expenses' });
       await api.register(cashRoutes, { prefix: '/cash' });
+      await api.register(daybookRoutes, { prefix: '/daybook' });
+      await api.register(closingRoutes, { prefix: '/closings' });
+      await api.register(countsRoutes, { prefix: '/counts' });
     },
     { prefix: '/api/v1' },
   );

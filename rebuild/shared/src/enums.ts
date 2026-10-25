@@ -47,6 +47,8 @@ export const STOCK_REASONS = [
   'ADJUST',
   'INVOICE_EDIT',
   'INVOICE_VOID',
+  'DAYBOOK',
+  'COUNT',
 ] as const;
 export type StockReason = (typeof STOCK_REASONS)[number];
 
@@ -75,5 +77,12 @@ export const AUDIT_ACTIONS = [
   'EXPENSE_CREATE',
   'EXPENSE_UPDATE',
   'EXPENSE_DELETE',
+  'DAYBOOK_ADD',
+  'DAYBOOK_UPDATE',
+  'DAYBOOK_DELETE',
+  'DAYBOOK_POST',
+  'DAYBOOK_DELIVER',
+  'DAY_CLOSE',
+  'STOCK_COUNT',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

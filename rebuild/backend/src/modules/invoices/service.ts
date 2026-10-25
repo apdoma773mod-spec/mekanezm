@@ -1,5 +1,6 @@
-import type { Contact, Invoice, InvoiceItem, Prisma, PrismaClient, Product } from '@prisma/client';
+import { Prisma, type Contact, type Invoice, type InvoiceItem, type PrismaClient, type Product } from '@prisma/client';
 import type {
+  PayMethod,
   InvoiceDto,
   InvoiceInput,
   InvoiceListItem,
@@ -158,13 +159,17 @@ async function prepareLines(
   return out;
 }
 
-/** Writes the lines and moves stock. A sale snapshots the product cost; a purchase records its price as cost. */
+/**
+ * Writes the lines and moves stock. A sale snapshots the product cost; a purchase records its price as cost.
+ * `skipStock` is for the daybook, whose lines already took their goods out of stock.
+ */
 async function writeLines(
   tx: Prisma.TransactionClient,
   invoice: Invoice,
   lines: PreparedLine[],
   reason: 'SALE' | 'PURCHASE' | 'INVOICE_EDIT',
   actor: Actor,
+  skipStock = false,
 ) {
   const sale = invoice.kind === 'SALE';
   for (const [position, l] of lines.entries()) {
@@ -181,14 +186,16 @@ async function writeLines(
         position,
       },
     });
-    await moveStock(tx, {
-      productId: l.product.id,
-      change: sale ? l.qty.negated() : l.qty,
-      reason,
-      refType: 'Invoice',
-      refId: invoice.id,
-      userId: actor.id,
-    });
+    if (!skipStock) {
+      await moveStock(tx, {
+        productId: l.product.id,
+        change: sale ? l.qty.negated() : l.qty,
+        reason,
+        refType: 'Invoice',
+        refId: invoice.id,
+        userId: actor.id,
+      });
+    }
     if (!sale && !l.price.isZero() && !l.product.cost.equals(l.price)) {
       // Latest purchase price becomes the product cost, as in the old system.
       await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price } });
@@ -258,6 +265,71 @@ function settle(total: Prisma.Decimal, paidIn: number | undefined, contact: Cont
   return { paid, remaining };
 }
 
+export interface CreateOptions {
+  /** The goods already left stock (daybook lines). */
+  skipStock?: boolean;
+  /** Paid with several methods at once. */
+  paidSplit?: Partial<Record<PayMethod, number>>;
+  source?: string;
+  /** A sale to nobody in particular («يومية»): never creates a contact for the name. */
+  noContact?: boolean;
+}
+
+/** Creates an invoice inside the caller's transaction; returns its id. */
+export async function createInvoiceInTx(
+  tx: Prisma.TransactionClient,
+  input: InvoiceInput,
+  actor: Actor,
+  opts: CreateOptions = {},
+): Promise<string> {
+  const lines = await prepareLines(tx, input.kind, input.company, input.items, actor);
+  const totals = computeTotals(lines, input.discount, input.shipping);
+  const contact = opts.noContact ? null : await resolveContact(tx, input.kind, input, actor);
+  const { paid, remaining } = settle(totals.total, input.paid, contact);
+  if (remaining.isNegative()) {
+    throw badRequest('المدفوع أكبر من إجمالي الفاتورة', [{ path: 'paid', message: 'المدفوع أكبر من الإجمالي' }]);
+  }
+  const no = await nextNumber(tx, input.kind === 'SALE' ? COUNTER.sale : COUNTER.purchase);
+  const invoice = await tx.invoice.create({
+    data: {
+      kind: input.kind,
+      no,
+      company: input.company,
+      date: dayToDate(input.date ?? todayYmd()),
+      contactId: contact?.id ?? null,
+      person: contact?.name ?? input.person,
+      phone: input.phone || contact?.phone || '',
+      address: input.address || contact?.address || '',
+      note: input.note,
+      ...totals,
+      paid,
+      remaining,
+      payMethod: input.payMethod,
+      ...(opts.paidSplit ? { paidSplit: opts.paidSplit } : {}),
+      source: opts.source ?? '',
+      createdById: actor.id,
+    },
+  });
+  await writeLines(tx, invoice, lines, input.kind, actor, opts.skipStock);
+  if (contact) await changeBalance(tx, contact.id, remaining);
+  await writeAudit(tx, {
+    userId: actor.id,
+    action: 'INVOICE_CREATE',
+    entity: 'Invoice',
+    entityId: invoice.id,
+    after: { no, kind: input.kind, total: num(totals.total), paid: num(paid), person: invoice.person, source: opts.source },
+    ip: actor.ip,
+  });
+  return invoice.id;
+}
+
+/** Daybook lines still waiting to be handed over: their pieces never left stock. */
+async function pendingOwed(tx: Prisma.TransactionClient, invoiceId: string) {
+  return tx.daybookEntry.findMany({
+    where: { invoiceId, kind: 'ITEM', owed: { gt: 0 }, deliveredAt: null, productId: { not: null } },
+  });
+}
+
 export class InvoicesService {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -314,45 +386,7 @@ export class InvoicesService {
   }
 
   async create(input: InvoiceInput, actor: Actor): Promise<InvoiceDto> {
-    const id = await withTx(this.prisma, async (tx) => {
-      const lines = await prepareLines(tx, input.kind, input.company, input.items, actor);
-      const totals = computeTotals(lines, input.discount, input.shipping);
-      const contact = await resolveContact(tx, input.kind, input, actor);
-      const { paid, remaining } = settle(totals.total, input.paid, contact);
-      if (remaining.isNegative()) {
-        throw badRequest('المدفوع أكبر من إجمالي الفاتورة', [{ path: 'paid', message: 'المدفوع أكبر من الإجمالي' }]);
-      }
-      const no = await nextNumber(tx, input.kind === 'SALE' ? COUNTER.sale : COUNTER.purchase);
-      const invoice = await tx.invoice.create({
-        data: {
-          kind: input.kind,
-          no,
-          company: input.company,
-          date: dayToDate(input.date ?? todayYmd()),
-          contactId: contact?.id ?? null,
-          person: contact?.name ?? input.person,
-          phone: input.phone || contact?.phone || '',
-          address: input.address || contact?.address || '',
-          note: input.note,
-          ...totals,
-          paid,
-          remaining,
-          payMethod: input.payMethod,
-          createdById: actor.id,
-        },
-      });
-      await writeLines(tx, invoice, lines, input.kind, actor);
-      if (contact) await changeBalance(tx, contact.id, remaining);
-      await writeAudit(tx, {
-        userId: actor.id,
-        action: 'INVOICE_CREATE',
-        entity: 'Invoice',
-        entityId: invoice.id,
-        after: { no, kind: input.kind, total: num(totals.total), paid: num(paid), person: invoice.person },
-        ip: actor.ip,
-      });
-      return invoice.id;
-    });
+    const id = await withTx(this.prisma, (tx) => createInvoiceInTx(tx, input, actor));
     return toInvoiceDto(await this.load(id), isAdmin(actor));
   }
 
@@ -362,6 +396,9 @@ export class InvoicesService {
       const before = await tx.invoice.findUnique({ where: { id }, include: INCLUDE });
       if (!before) throw notFound('الفاتورة دي مش موجودة');
       if (before.status === 'VOID') throw badRequest('الفاتورة دي ملغية، مينفعش تتعدل');
+      if ((await pendingOwed(tx, id)).length) {
+        throw badRequest('الفاتورة دي فيها «باقي للعميل» لسه ماتسلّمش — سلّمه من اليومية الأول وبعدين عدّل');
+      }
 
       const lines = await prepareLines(tx, before.kind, input.company, input.items, actor);
       const kept = new Set(lines.map((l) => l.product.id));
@@ -394,6 +431,8 @@ export class InvoicesService {
           paid,
           remaining,
           payMethod: input.payMethod,
+          // An edit re-states the paid amount with one method, so a daybook split no longer applies.
+          paidSplit: Prisma.DbNull,
           updatedById: actor.id,
         },
       });
@@ -425,6 +464,22 @@ export class InvoicesService {
       const items = await tx.invoiceItem.findMany({ where: { invoiceId: id }, select: { productId: true } });
       await assertNotSoldSince(tx, inv, items.flatMap((i) => (i.productId ? [i.productId] : [])));
       await reverseInvoice(tx, inv, 'INVOICE_VOID', actor);
+      // Undelivered daybook pieces never left stock, so reversing the full line over-counted them.
+      for (const e of await pendingOwed(tx, id)) {
+        await moveStock(tx, {
+          productId: e.productId!,
+          change: e.owed.negated(),
+          reason: 'INVOICE_VOID',
+          refType: 'Invoice',
+          refId: id,
+          note: 'باقي للعميل اتلغى مع الفاتورة',
+          userId: actor.id,
+        });
+        await tx.daybookEntry.update({
+          where: { id: e.id },
+          data: { deliveredAt: new Date(), note: `${e.note} (اتلغى مع الفاتورة)`.trim() },
+        });
+      }
 
       const keepPaidAsCredit = !!inv.contactId && inv.paid.greaterThan(0);
       if (keepPaidAsCredit && inv.contactId) {

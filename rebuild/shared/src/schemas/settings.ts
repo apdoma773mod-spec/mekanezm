@@ -23,6 +23,12 @@ export const storeSettings = z.object({
     .max(5),
   address: optionalText(200),
   invoiceFooter: optionalText(300),
+  /** «رقم واتساب المالك»: the day closing is sent here. */
+  ownerPhone: z
+    .string()
+    .transform(normalizePhone)
+    .refine((v) => v === '' || EG_MOBILE_RE.test(v), { message: 'رقم موبايل مش صحيح' })
+    .default(''),
 });
 export type StoreSettings = z.infer<typeof storeSettings>;
 
@@ -96,6 +102,6 @@ export const DEFAULT_THEME: ThemeSettings = {
 };
 
 export const DEFAULT_SETTINGS: SettingsMap = {
-  store: { name: 'MEKANIZM | ميكانيزم', phones: [], address: 'الجيزة - أرض اللواء - شارع ١٠', invoiceFooter: '' },
+  store: { name: 'MEKANIZM | ميكانيزم', phones: [], address: 'الجيزة - أرض اللواء - شارع ١٠', invoiceFooter: '', ownerPhone: '' },
   theme: DEFAULT_THEME,
 };

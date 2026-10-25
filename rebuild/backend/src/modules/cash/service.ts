@@ -1,4 +1,4 @@
-import type { Company, Prisma, PrismaClient } from '@prisma/client';
+import type { Company, PayMethod, Prisma, PrismaClient } from '@prisma/client';
 import {
   PAY_METHODS,
   type CashMove,
@@ -12,6 +12,15 @@ import { dateToDay, dayRange, todayYmd } from '../../lib/dates.js';
 import { ZERO, money, num, sum } from '../../lib/money.js';
 
 const KIND_LABEL = { SALE: 'بيع', PURCHASE: 'شراء' } as const;
+
+/** How an invoice's paid amount divides between methods: its daybook split, or all in its one method. */
+export function splitOf(i: { paid: Prisma.Decimal; payMethod: PayMethod; paidSplit: Prisma.JsonValue }): [PayMethod, number][] {
+  const s = i.paidSplit as Partial<Record<PayMethod, number>> | null;
+  if (s && typeof s === 'object') {
+    return (Object.entries(s) as [PayMethod, number][]).filter(([, v]) => Number(v) > 0).map(([m, v]) => [m, Number(v)]);
+  }
+  return [[i.payMethod, num(i.paid)]];
+}
 
 export class CashService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -29,7 +38,7 @@ export class CashService {
     const [invoices, payments, returns, expenses] = await Promise.all([
       this.prisma.invoice.findMany({
         where: { status: 'ACTIVE', paid: { gt: 0 }, date, ...co },
-        select: { id: true, kind: true, no: true, person: true, paid: true, payMethod: true, date: true, createdAt: true },
+        select: { id: true, kind: true, no: true, person: true, paid: true, payMethod: true, paidSplit: true, date: true, createdAt: true },
       }),
       this.prisma.payment.findMany({
         where: { cancelledAt: null, affectsCash: true, date, ...co },
@@ -46,16 +55,18 @@ export class CashService {
     ]);
 
     const moves: CashMove[] = [
-      ...invoices.map((i) => ({
-        kind: i.kind,
-        id: `inv-${i.id}`,
-        refId: i.id,
-        date: dateToDay(i.date),
-        at: i.createdAt.toISOString(),
-        label: `${KIND_LABEL[i.kind]} ${i.no}${i.person ? ` — ${i.person}` : ''}`,
-        method: i.payMethod,
-        amount: num(i.kind === 'SALE' ? i.paid : i.paid.negated()),
-      })),
+      ...invoices.flatMap((i) =>
+        splitOf(i).map(([method, amount]) => ({
+          kind: i.kind,
+          id: `inv-${i.id}-${method}`,
+          refId: i.id,
+          date: dateToDay(i.date),
+          at: i.createdAt.toISOString(),
+          label: `${KIND_LABEL[i.kind]} ${i.no}${i.person ? ` — ${i.person}` : ''}`,
+          method,
+          amount: i.kind === 'SALE' ? amount : -amount,
+        })),
+      ),
       ...payments.map((p) => ({
         kind: p.direction === 'IN' ? ('PAYMENT_IN' as const) : ('PAYMENT_OUT' as const),
         id: `pay-${p.id}`,
