@@ -15,6 +15,10 @@ import type {
   DaybookPostResult,
   DaybookUpdateInput,
   DaySummary,
+  ReportHeadline,
+  ReportId,
+  ReportPeriods,
+  ReportResult,
   StockCountDto,
   StockCountInput,
   ContactInput,
@@ -303,6 +307,29 @@ export const useCounts = () =>
 
 export const useCreateCount = () =>
   useTradeMutation((input: StockCountInput) => api.post<{ count: StockCountDto }>('/counts', input).then((r) => r.count));
+
+// ---------- reports ----------
+
+export const useReport = (id: ReportId | null, from?: string, to?: string) =>
+  useQuery<ReportResult>({
+    queryKey: ['reports', id, from, to],
+    queryFn: ({ signal }) => api.get<{ report: ReportResult }>(`/reports/${id}`, { from, to }, signal).then((r) => r.report),
+    enabled: !!id,
+    placeholderData: keepPreviousData,
+  });
+
+export const useReportHeadline = (from?: string, to?: string) =>
+  useQuery<ReportHeadline>({
+    queryKey: ['reports', 'headline', from, to],
+    queryFn: ({ signal }) => api.get<{ headline: ReportHeadline }>('/reports/headline', { from, to }, signal).then((r) => r.headline),
+    placeholderData: keepPreviousData,
+  });
+
+export const useReportPeriods = () =>
+  useQuery({
+    queryKey: ['reports', 'periods'],
+    queryFn: ({ signal }) => api.get<{ periods: ReportPeriods }>('/reports/periods', undefined, signal).then((r) => r.periods),
+  });
 
 export const useToday = () =>
   useQuery({

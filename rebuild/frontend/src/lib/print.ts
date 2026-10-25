@@ -131,6 +131,30 @@ ${st.from ? `<p>رصيد أول المدة: <b>${money(st.opening)}</b></p>` : '
 <p style="color:#718087;font-size:12px">اتطبع ${esc(new Date().toLocaleString('ar-EG'))}</p></body></html>`;
 }
 
+/** A report as an A4 page (landscape when it has many columns), like the old mkPrintA4. */
+export function reportHtml(
+  r: { title: string; range: string; sum: [string, string][]; head: string[]; rows: string[][] },
+  s: SettingsMap,
+): string {
+  const T = s.theme;
+  const H = T.invSync ? T.primary : T.invHeader;
+  const HT = textOn(H);
+  const land = r.head.length > 6;
+  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(r.title)}</title>${FONT_LINKS}
+<style>@page{size:A4${land ? ' landscape' : ''};margin:10mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:${fontStack(T.font)};color:#18343a}
+h1{margin:0;font-size:22px}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}th{background:${H};color:${HT};padding:7px;text-align:right}td{padding:6px 7px;border-bottom:1px solid #e4eaed}
+.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:4px solid ${H};padding-bottom:8px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}.stats div{border:1px solid #e4eaed;border-radius:8px;padding:6px 8px}.stats small{display:block;color:#718087;font-size:11px}</style></head><body>
+<div class="head"><div><h1>${esc(s.store.name)}</h1></div><div style="text-align:left"><b style="font-size:18px">${esc(r.title)}</b><div>${esc(r.range)}</div></div></div>
+<div class="stats">${r.sum
+    .slice(0, 8)
+    .map(([l, v]) => `<div><small>${esc(l)}</small><b>${esc(v)}</b></div>`)
+    .join('')}</div>
+<table><thead><tr>${r.head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${r.rows
+    .map((row) => `<tr>${row.map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`)
+    .join('')}</tbody></table>
+<p style="color:#718087;font-size:11px">اتطبع ${esc(new Date().toLocaleString('ar-EG'))}</p></body></html>`;
+}
+
 /** WhatsApp message the old system sent with the invoice. */
 export function whatsappLink(inv: InvoiceDto, s: SettingsMap): string | null {
   const digits = inv.phone.replace(/\D/g, '');
