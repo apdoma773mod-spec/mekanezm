@@ -25,11 +25,8 @@ rebuild/
    ```bash
    docker compose up -d --build
    ```
-4. Create the first admin account (from `SEED_ADMIN_*` in `.env`):
-   ```bash
-   docker compose exec backend node dist/seed.js
-   ```
-5. Open `http://localhost:3100`. From phones on the shop Wi-Fi, open `http://<shop-pc-ip>:3100` (find the IP with `ipconfig`).
+4. Open `http://localhost:3100`. On a fresh install it shows the **first-run setup** screen where the owner creates their own admin account (name, phone, password). The screen closes for good once any account exists. To create the admin from `.env` instead, fill `SEED_ADMIN_*` and run `docker compose exec backend node dist/seed.js`.
+5. From phones on the shop Wi-Fi, open `http://<shop-pc-ip>:3100` (find the IP with `ipconfig`).
 
 Optional access from outside the shop: create a Cloudflare Tunnel, put its token in `CLOUDFLARE_TUNNEL_TOKEN`, set `COOKIE_SECURE=true` and `TRUST_PROXY=true`, then `docker compose --profile tunnel up -d`.
 
@@ -46,7 +43,7 @@ npm install
 cp .env.example backend/.env      # then edit DATABASE_URL, JWT_SECRET, SEED_* (NODE_ENV=development for pretty logs)
 npm run build -w shared
 npm run db:migrate                # applies prisma/migrations, generates the client
-npm run db:seed                   # creates the first admin (and the optional demo staff account)
+npm run db:seed                   # default settings (+ admin/staff only if SEED_* are filled)
 npm run dev:backend               # http://localhost:4000
 npm run dev:frontend              # http://localhost:3100
 ```
@@ -79,7 +76,7 @@ TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/mekanizm_test npm test
 | `COOKIE_SECURE` | backend | `true` only when served over https |
 | `TRUST_PROXY` | backend | `true` behind the tunnel / a reverse proxy |
 | `LOGIN_RATE_LIMIT_MAX` | backend | Login attempts per IP per 15 minutes, default 10 |
-| `SEED_ADMIN_NAME`, `SEED_ADMIN_PHONE`, `SEED_ADMIN_PASSWORD` | seed | First admin account (created only if that phone doesn't exist) |
+| `SEED_ADMIN_NAME`, `SEED_ADMIN_PHONE`, `SEED_ADMIN_PASSWORD` | seed | Optional: admin account created by the seed instead of the setup screen |
 | `SEED_STAFF_NAME`, `SEED_STAFF_PHONE`, `SEED_STAFF_PASSWORD` | seed | Optional demo staff account |
 | `BACKEND_URL` | frontend (build time) | Where `/api/*` is forwarded, `http://backend:4000` inside compose |
 | `CLOUDFLARE_TUNNEL_TOKEN` | tunnel | Optional remote access |
@@ -92,6 +89,8 @@ All routes are under `/api/v1`. Errors always look like `{ "error": { "code", "m
 | Method | Path | Who | Purpose |
 |---|---|---|---|
 | GET | `/health` | anyone | Server + database check |
+| GET | `/auth/setup` | anyone | `{ needsSetup }`: true while no account exists |
+| POST | `/auth/setup` | anyone, once | Creates the owner admin account and signs in (refused after that) |
 | POST | `/auth/login` | anyone | `{ login: phone or email, password }` → sets session cookies |
 | POST | `/auth/refresh` | cookie | Rotates the refresh token |
 | POST | `/auth/logout` | cookie | Ends the session on this device |

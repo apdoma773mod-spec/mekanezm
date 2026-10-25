@@ -5,14 +5,17 @@ import { hashPassword } from './lib/password.js';
 
 const phone = z.string().transform(normalizePhone).refine((v) => EG_MOBILE_RE.test(v), 'invalid phone');
 
+/** Empty values in .env count as "not set". */
+const optional = <S extends z.ZodTypeAny>(s: S) => z.preprocess((v) => (v === '' ? undefined : v), s.optional());
+
 const env = z
   .object({
-    SEED_ADMIN_NAME: z.string().min(2),
-    SEED_ADMIN_PHONE: phone,
-    SEED_ADMIN_PASSWORD: z.string().min(8),
-    SEED_STAFF_NAME: z.string().min(2).optional(),
-    SEED_STAFF_PHONE: phone.optional(),
-    SEED_STAFF_PASSWORD: z.string().min(8).optional(),
+    SEED_ADMIN_NAME: optional(z.string().min(2)),
+    SEED_ADMIN_PHONE: optional(phone),
+    SEED_ADMIN_PASSWORD: optional(z.string().min(8)),
+    SEED_STAFF_NAME: optional(z.string().min(2)),
+    SEED_STAFF_PHONE: optional(phone),
+    SEED_STAFF_PASSWORD: optional(z.string().min(8)),
   })
   .parse(process.env);
 
@@ -29,7 +32,10 @@ async function ensureUser(name: string, phoneNo: string, password: string, role:
 }
 
 async function main() {
-  await ensureUser(env.SEED_ADMIN_NAME, env.SEED_ADMIN_PHONE, env.SEED_ADMIN_PASSWORD, 'ADMIN');
+  // Without SEED_ADMIN_* the owner creates the first admin from the /setup screen.
+  if (env.SEED_ADMIN_NAME && env.SEED_ADMIN_PHONE && env.SEED_ADMIN_PASSWORD) {
+    await ensureUser(env.SEED_ADMIN_NAME, env.SEED_ADMIN_PHONE, env.SEED_ADMIN_PASSWORD, 'ADMIN');
+  }
   if (env.SEED_STAFF_NAME && env.SEED_STAFF_PHONE && env.SEED_STAFF_PASSWORD) {
     await ensureUser(env.SEED_STAFF_NAME, env.SEED_STAFF_PHONE, env.SEED_STAFF_PASSWORD, 'STAFF');
   }

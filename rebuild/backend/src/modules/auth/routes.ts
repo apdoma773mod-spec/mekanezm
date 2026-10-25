@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { changePasswordInput, loginInput } from '@mk/shared';
+import { changePasswordInput, loginInput, setupInput } from '@mk/shared';
 import { ACCESS_COOKIE, REFRESH_COOKIE, currentUser } from '../../plugins/auth.js';
 import { toPublicUser } from '../../lib/serialize.js';
 import { unauthorized } from '../../lib/errors.js';
@@ -45,6 +45,18 @@ export default async function authRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const input = parse(loginInput, request.body);
       return startSession(reply, await service.login(input, client(request)));
+    },
+  );
+
+  app.get('/setup', async () => ({ needsSetup: await service.needsSetup() }));
+
+  app.post(
+    '/setup',
+    { config: { rateLimit: { max: app.config.LOGIN_RATE_LIMIT_MAX, timeWindow: '15 minutes' } } },
+    async (request, reply) => {
+      const input = parse(setupInput, request.body);
+      const result = await startSession(reply, await service.setup(input, client(request)));
+      return reply.status(201).send(result);
     },
   );
 

@@ -11,7 +11,7 @@ export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const hasSession = req.cookies.has('mk_rt');
 
-  if (pathname === '/login') return NextResponse.next();
+  if (pathname === '/login' || pathname === '/setup') return NextResponse.next();
 
   if (!hasSession) {
     const url = req.nextUrl.clone();

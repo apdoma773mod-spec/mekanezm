@@ -1,13 +1,13 @@
 'use client';
 
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loginInput } from '@mk/shared';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/field';
 import { FormError } from '@/components/ui/states';
 import { serverErrors, validate, type FieldErrors } from '@/lib/form';
-import { useLogin } from '@/lib/queries';
+import { useLogin, useSetupStatus } from '@/lib/queries';
 
 /** Only same-site relative paths are allowed as a post-login destination. */
 function safeNext(next: string | null): string {
@@ -18,8 +18,13 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const loginMutation = useLogin();
+  const setupStatus = useSetupStatus();
   const [form, setForm] = useState({ login: '', password: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
+
+  useEffect(() => {
+    if (setupStatus.data === true) router.replace('/setup');
+  }, [setupStatus.data, router]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

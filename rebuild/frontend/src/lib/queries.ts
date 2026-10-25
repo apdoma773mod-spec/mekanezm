@@ -12,6 +12,7 @@ import type {
   PublicUser,
   SettingKey,
   SettingsMap,
+  SetupInput,
   UpdateUserInput,
 } from '@mk/shared';
 import { api } from './api';
@@ -38,6 +39,24 @@ export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: LoginInput) => api.post<UserRes>('/auth/login', input).then((r) => r.user),
+    onSuccess: (user) => {
+      qc.clear();
+      qc.setQueryData(keys.me, user);
+    },
+  });
+}
+
+export function useSetupStatus() {
+  return useQuery({
+    queryKey: ['setup'],
+    queryFn: ({ signal }) => api.get<{ needsSetup: boolean }>('/auth/setup', undefined, signal).then((r) => r.needsSetup),
+  });
+}
+
+export function useSetup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SetupInput) => api.post<UserRes>('/auth/setup', input).then((r) => r.user),
     onSuccess: (user) => {
       qc.clear();
       qc.setQueryData(keys.me, user);

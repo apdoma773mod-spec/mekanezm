@@ -1,9 +1,16 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PrismaClient, User } from '@prisma/client';
-import { EG_MOBILE_RE, normalizePhone, type ChangePasswordInput, type LoginInput } from '@mk/shared';
+import {
+  EG_MOBILE_RE,
+  normalizePhone,
+  type ChangePasswordInput,
+  type LoginInput,
+  type SetupInput,
+} from '@mk/shared';
 import { writeAudit } from '../../lib/audit.js';
-import { AppError, unauthorized } from '../../lib/errors.js';
+import { AppError, conflict, unauthorized } from '../../lib/errors.js';
 import { burnPasswordCheck, hashPassword, verifyPassword } from '../../lib/password.js';
+import { toPublicUser } from '../../lib/serialize.js';
 import { withTx } from '../../lib/tx.js';
 
 export interface ClientInfo {
@@ -141,6 +148,50 @@ export class AuthService {
         ip,
       });
     });
+  }
+
+  async needsSetup(): Promise<boolean> {
+    return (await this.prisma.user.count()) === 0;
+  }
+
+  /** Creates the owner's admin account on a fresh install. Refused once any account exists. */
+  async setup(input: SetupInput, client: ClientInfo): Promise<IssuedSession> {
+    const passwordHash = await hashPassword(input.password);
+    const refreshToken = newToken();
+    const refreshExpiresAt = this.refreshExpiry();
+    const user = await withTx(this.prisma, async (tx) => {
+      if ((await tx.user.count()) > 0) throw conflict('السيستم متجهّز خلاص، سجّل دخول بحسابك');
+      const created = await tx.user.create({
+        data: {
+          name: input.name,
+          phone: input.phone,
+          email: input.email ?? null,
+          role: 'ADMIN',
+          passwordHash,
+          lastLoginAt: new Date(),
+        },
+      });
+      await tx.refreshToken.create({
+        data: {
+          userId: created.id,
+          tokenHash: sha256(refreshToken),
+          familyId: randomUUID(),
+          expiresAt: refreshExpiresAt,
+          ip: client.ip,
+          userAgent: client.userAgent,
+        },
+      });
+      await writeAudit(tx, {
+        userId: created.id,
+        action: 'USER_CREATE',
+        entity: 'User',
+        entityId: created.id,
+        after: toPublicUser(created),
+        ip: client.ip,
+      });
+      return created;
+    });
+    return { user, refreshToken, refreshExpiresAt };
   }
 
   async me(userId: string): Promise<User> {
