@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { productInput, updateProductInput } from '@mk/shared';
+import { productInput, updateProductInput, type ProductDto } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
 import { formatDateTime, money, qtyText } from '@/lib/format';
 import { serverErrors, validate, type FieldErrors } from '@/lib/form';
@@ -12,8 +12,10 @@ import {
   useDeleteProduct,
   useProduct,
   useProductMoves,
+  useProducts,
   useUpdateProduct,
 } from '@/lib/trade-queries';
+import { useAlts } from '@/lib/phase4-queries';
 import { Icon } from '../icon';
 import { Input, NumberInput, Select } from '../ui/field';
 import { Modal } from '../ui/modal';
@@ -31,6 +33,11 @@ const REASON_LABELS: Record<string, string> = {
   ADJUST: 'تعديل',
   INVOICE_EDIT: 'تعديل فاتورة',
   INVOICE_VOID: 'إلغاء فاتورة',
+  DAYBOOK: 'يومية المحل',
+  COUNT: 'جرد',
+  GIFT: 'هدية',
+  GRADE: 'درجة تانية',
+  SAMPLE: 'عينة',
 };
 
 function Moves({ id }: { id: string }) {
@@ -97,6 +104,55 @@ export function ProductModal({ id }: { id?: string }) {
     );
   }
   return <ProductForm product={id ? existing.data : undefined} />;
+}
+
+/** «🎁 هدية» «⚠️ مخربش؟ درجة تانية» «🔁 بدائل» and the alternatives line under them. */
+function ExtraButtons({ product: p }: { product: ProductDto }) {
+  const { open } = useModal();
+  const alts = useAlts();
+  const ids = alts.data?.[p.id] ?? [];
+  const list = useProducts({ pageSize: 200 }, ids.length > 0).data?.items.filter((x) => ids.includes(x.id)) ?? [];
+  return (
+    <>
+      <div className="btnrow" style={{ marginTop: 12 }}>
+        <button type="button" className="secondary" onClick={() => open({ kind: 'gift', productId: p.id })}>
+          🎁 هدية
+        </button>
+        <button type="button" className="secondary" onClick={() => open({ kind: 'grade', productId: p.id })}>
+          ⚠️ مخربش؟ درجة تانية
+        </button>
+        <button type="button" className="secondary" onClick={() => open({ kind: 'alts', productId: p.id })}>
+          🔁 بدائل
+        </button>
+      </div>
+      {list.length > 0 && (
+        <div style={{ marginTop: 8, fontSize: 13 }}>
+          <b>🔁 البدائل{p.qty <= 0 ? ' (الصنف ده خلصان)' : ''}:</b>{' '}
+          {list.map((a) => (
+            <a
+              key={a.id}
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                open({ kind: 'product', id: a.id });
+              }}
+              style={{
+                display: 'inline-block',
+                margin: 3,
+                padding: '3px 10px',
+                borderRadius: 99,
+                background: a.qty > 0 ? '#e3f4f5' : '#f3f3f3',
+                color: a.qty > 0 ? '#087f8c' : '#999',
+                textDecoration: 'none',
+              }}
+            >
+              {a.name} ({a.qty > 0 ? qtyText(a.qty) : 'خلص'})
+            </a>
+          ))}
+        </div>
+      )}
+    </>
+  );
 }
 
 function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof useProduct>['data']> }) {
@@ -217,6 +273,7 @@ function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof u
           </button>
         </div>
       </form>
+      {p && <ExtraButtons product={p} />}
       {p && (
         <>
           <h3 style={{ margin: '18px 0 8px' }}>حركة الصنف</h3>

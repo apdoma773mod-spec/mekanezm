@@ -39,6 +39,15 @@ function ProductsScreen() {
         subtitle="أضف الأصناف وتابع الكميات والأسعار"
         action={
           <div className="btnrow">
+            <button type="button" className="secondary" onClick={() => open({ kind: 'gifts' })}>
+              🎁 الهدايا
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'wanted' })}>
+              🔎 مطلوب ومش عندنا
+            </button>
+            <a className="secondary" href="/count" style={{ textDecoration: 'none' }}>
+              🧮 جرد
+            </a>
             <button type="button" className="primary" onClick={() => open({ kind: 'product' })}>
               <Icon name="plus" /> منتج جديد
             </button>

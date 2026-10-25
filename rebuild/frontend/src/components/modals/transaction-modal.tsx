@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto } from '@mk/shared';
+import { normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
+import { useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
 import {
   lookupProduct,
   useContacts,
@@ -42,12 +43,19 @@ interface Props {
   editId?: string;
   person?: string;
   contactId?: string;
+  /** «📝 عرض سعر»: the same window saves a quote instead (new, or editing quoteId). */
+  asQuote?: boolean;
+  quoteId?: string;
+  /** «🧾 تحويل لفاتورة بيع»: a sale prefilled from this quote, which is marked converted after saving. */
+  fromQuote?: string;
 }
 
 export function TransactionModal(props: Props) {
   const { close } = useModal();
   const existing = useInvoice(props.editId ?? null);
-  if (props.editId && existing.isPending) {
+  const qid = props.quoteId ?? props.fromQuote ?? null;
+  const quote = useQuote(qid);
+  if ((props.editId && existing.isPending) || (qid && quote.isPending)) {
     return (
       <Modal title="تعديل الفاتورة" onClose={close}>
         <Loading />
@@ -61,20 +69,30 @@ export function TransactionModal(props: Props) {
       </Modal>
     );
   }
-  return <TransactionForm {...props} invoice={props.editId ? existing.data : undefined} />;
+  if (qid && quote.isError) {
+    return (
+      <Modal title="عرض سعر" onClose={close}>
+        <ErrorBox message={errorMessage(quote.error)} onRetry={() => quote.refetch()} />
+      </Modal>
+    );
+  }
+  return <TransactionForm {...props} invoice={props.editId ? existing.data : undefined} quote={qid ? quote.data : undefined} />;
 }
 
 /** «تسجيل فاتورة بيع / شراء» — same fields and flow as the old openTransaction window. */
-function TransactionForm({ type, person: presetPerson, invoice }: Props & { invoice?: InvoiceDto }) {
+function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, fromQuote }: Props & { invoice?: InvoiceDto; quote?: QuoteDto }) {
   const { open, close } = useModal();
   const toast = useToast();
   const isSale = type === 'SALE';
   const create = useCreateInvoice();
   const update = useUpdateInvoice();
+  const saveQuote = useSaveQuote();
+  const converted = useQuoteConverted();
+  const src = invoice ?? quote;
 
   const [lines, setLines] = useState<Line[]>(() =>
-    invoice
-      ? invoice.items.map((it) => ({
+    src
+      ? src.items.map((it) => ({
           key: newKey(),
           productId: it.productId ?? undefined,
           name: it.name,
@@ -87,13 +105,13 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
   );
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [person, setPerson] = useState(invoice?.person ?? presetPerson ?? '');
-  const [phone, setPhone] = useState(invoice?.phone ?? '');
-  const [address, setAddress] = useState(invoice?.address ?? '');
-  const [shipping, setShipping] = useState(invoice && invoice.shipping ? String(invoice.shipping) : '');
+  const [person, setPerson] = useState(src?.person ?? presetPerson ?? '');
+  const [phone, setPhone] = useState(src?.phone ?? '');
+  const [address, setAddress] = useState(src?.address ?? '');
+  const [shipping, setShipping] = useState(src && src.shipping ? String(src.shipping) : '');
   const [paid, setPaid] = useState(invoice ? String(invoice.paid) : '');
   const [paidTouched, setPaidTouched] = useState(!!invoice);
-  const [note, setNote] = useState(invoice?.note ?? '');
+  const [note, setNote] = useState(src?.note ?? '');
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -169,6 +187,28 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
     e.preventDefault();
     setErrors({});
     if (!lines.length) return toast('أضف صنف واحد على الأقل', 'bad');
+    if (asQuote) {
+      try {
+        const q = await saveQuote.mutateAsync({
+          id: quote?.id,
+          input: {
+            person: person.trim(),
+            phone,
+            address,
+            note,
+            shipping: toNum(shipping),
+            items: lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: toNum(l.qty), price: toNum(l.price) })),
+          },
+        });
+        toast('تم حفظ عرض السعر');
+        open({ kind: 'quoteView', id: q.id });
+      } catch (err) {
+        const fe = serverErrors(err);
+        setErrors(fe);
+        toast(fe._ ?? errorMessage(err), 'bad');
+      }
+      return;
+    }
     if (paidValue > total + 0.001) return toast('المدفوع أكبر من إجمالي الفاتورة', 'bad');
     if (total - paidValue > 0.001 && !person.trim()) {
       return toast(isSale ? 'اكتب اسم العميل عشان نسجل الباقي عليه' : 'اكتب اسم المورد عشان نسجل الباقي ليه', 'bad');
@@ -190,6 +230,7 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
       const saved = invoice
         ? await update.mutateAsync({ id: invoice.id, input: { ...body, company: invoice.company, payMethod: invoice.payMethod, discount: invoice.discount } })
         : await create.mutateAsync({ ...body, kind: type, company: 'MK', discount: 0, payMethod: 'CASH' });
+      if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
       toast(invoice ? 'تم حفظ التعديل' : isSale ? 'تم تسجيل البيع' : 'تم تسجيل الشراء');
       open({ kind: 'invoice', id: saved.id });
     } catch (err) {
@@ -199,14 +240,22 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
     }
   };
 
-  const busy = create.isPending || update.isPending;
+  const busy = create.isPending || update.isPending || saveQuote.isPending;
+  const title = asQuote
+    ? quote
+      ? `تعديل عرض سعر ${quote.no}`
+      : '📝 عرض سعر جديد'
+    : fromQuote && quote
+      ? `فاتورة بيع من عرض السعر ${quote.no}`
+      : invoice
+        ? `تعديل فاتورة ${invoice.no}`
+        : isSale
+          ? 'تسجيل فاتورة بيع'
+          : 'تسجيل فاتورة شراء';
   const showBox = debounced.replace(/\s+/g, '').length >= 2 && search.trim() !== '';
 
   return (
-    <Modal
-      title={invoice ? `تعديل فاتورة ${invoice.no}` : isSale ? 'تسجيل فاتورة بيع' : 'تسجيل فاتورة شراء'}
-      onClose={close}
-    >
+    <Modal title={title} onClose={close}>
       <form onSubmit={submit} noValidate>
         <div className="form">
           <div className="field full">
@@ -320,6 +369,11 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
               إجمالي الفاتورة: <b>{money(total)}</b>
             </span>
           </div>
+          {asQuote && (
+            <div className="field full" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, fontSize: 13 }}>
+              📝 عرض السعر مش بيخصم من المخزون ومش بيدخل في المبيعات أو التقارير. تقدر تحوّله لفاتورة بيع بعدين بضغطة.
+            </div>
+          )}
 
           <Input
             label={isSale ? 'العميل' : 'المورد'}
@@ -342,22 +396,32 @@ function TransactionForm({ type, person: presetPerson, invoice }: Props & { invo
           {isSale && (
             <Input label="عنوان العميل (اختياري)" value={address} onChange={(e) => setAddress(e.target.value)} full />
           )}
-          <NumberInput
-            label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
-            value={paidTouched ? paid : total ? String(total) : ''}
-            onChange={(e) => {
-              setPaidTouched(true);
-              setPaid(e.target.value);
-            }}
-            error={errors.paid}
+          {!asQuote && (
+            <>
+              <NumberInput
+                label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
+                value={paidTouched ? paid : total ? String(total) : ''}
+                onChange={(e) => {
+                  setPaidTouched(true);
+                  setPaid(e.target.value);
+                }}
+                error={errors.paid}
+              />
+              <Input label={isSale ? 'المتبقي على العميل' : 'المتبقي للمورد'} readOnly value={String(remaining)} dir="ltr" />
+            </>
+          )}
+          <Input
+            label="البيان"
+            placeholder={asQuote ? 'مثلاً: العرض ساري لمدة أسبوع' : 'ملاحظات اختيارية'}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            full
           />
-          <Input label={isSale ? 'المتبقي على العميل' : 'المتبقي للمورد'} readOnly value={String(remaining)} dir="ltr" />
-          <Input label="البيان" placeholder="ملاحظات اختيارية" value={note} onChange={(e) => setNote(e.target.value)} full />
           <FormError message={errors._} />
         </div>
         <div className="modal-foot">
           <button className="primary" disabled={busy}>
-            {busy ? '⏳ بيحفظ…' : 'حفظ العملية'}
+            {busy ? '⏳ بيحفظ…' : asQuote ? 'حفظ عرض السعر' : 'حفظ العملية'}
           </button>
           <button type="button" className="secondary" onClick={close}>
             إلغاء

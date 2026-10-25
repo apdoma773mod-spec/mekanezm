@@ -6,6 +6,8 @@ import { arDate, formatDateTime, money, qtyText } from '@/lib/format';
 import { invoiceA4Html, printHtml, receiptHtml, whatsappLink } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useInvoice, useVoidInvoice } from '@/lib/trade-queries';
+import { useShipments } from '@/lib/phase4-queries';
+import { kindIc, stLabel, useShipActions } from './shipment-modals';
 import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
@@ -22,6 +24,8 @@ export function InvoiceView({ id }: { id: string }) {
   const voidInv = useVoidInvoice();
   const [voiding, setVoiding] = useState(false);
   const [reason, setReason] = useState('');
+  const ships = useShipments({ tab: 'all', invoiceId: id }, inv.data?.kind === 'SALE');
+  const { label } = useShipActions();
 
   if (inv.isPending) {
     return (
@@ -127,6 +131,29 @@ export function InvoiceView({ id }: { id: string }) {
           اتعدلت آخر مرة: {formatDateTime(r.updatedAt)} — {r.updatedBy.name}
         </p>
       )}
+
+      {isSale && !voided && (() => {
+        const s = ships.data?.items[0];
+        return s ? (
+          <div className="shinv">
+            🚚 {kindIc(s.kind)} <b>{s.no}</b> — <span className={`badge st-${s.status}`}>{stLabel(s.status, s.kind)}</span>
+            <div className="btnrow" style={{ marginTop: 8 }}>
+              <button type="button" className="primary" style={{ flex: 1 }} onClick={() => label(s)}>
+                🖨️ اطبع ملصق الشحن
+              </button>
+              <a className="secondary" href="/shipping" style={{ textDecoration: 'none' }} onClick={close}>
+                المتابعة
+              </a>
+            </div>
+          </div>
+        ) : (
+          <div className="btnrow" style={{ marginTop: 8 }}>
+            <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'shipEdit', invoiceId: r.id })}>
+              🚚 شحن / توصيل للفاتورة دي
+            </button>
+          </div>
+        );
+      })()}
 
       <div className="btnrow" style={{ marginTop: 14 }}>
         <button

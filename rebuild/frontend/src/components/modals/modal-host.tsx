@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { InvoiceKind, ReturnKind, StockCountDto } from '@mk/shared';
+import type { InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
 import { ProductModal } from './product-modal';
 import { TransactionModal } from './transaction-modal';
@@ -13,12 +13,21 @@ import { PaymentModal } from './payment-modal';
 import { ExpenseModal } from './expense-modal';
 import { ClosingHistory, ClosingModal } from './closing-modal';
 import { CountResult } from './count-result';
+import { QuoteView } from './quote-view';
+import { ShipmentEdit, ShipPaid, ShipWho } from './shipment-modals';
+import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
   | { kind: 'quick' }
   | { kind: 'product'; id?: string }
-  | { kind: 'transaction'; type: InvoiceKind; editId?: string; person?: string; contactId?: string }
+  | { kind: 'transaction'; type: InvoiceKind; editId?: string; person?: string; contactId?: string; fromQuote?: string }
+  | { kind: 'quote'; id?: string }
+  | { kind: 'quoteView'; id: string }
+  | { kind: 'shipEdit'; id?: string; invoiceId?: string }
+  | { kind: 'shipWho'; s: ShipmentDto; next: ShipStatus }
+  | { kind: 'shipPaid'; s: ShipmentDto }
+  | Phase4Spec
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
   | { kind: 'contact'; id?: string }
@@ -52,7 +61,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <ProductModal key={spec.id ?? 'new'} id={spec.id} />;
         break;
       case 'transaction':
-        content = <TransactionModal key={`${spec.type}-${spec.editId ?? 'new'}`} {...spec} />;
+        content = <TransactionModal key={`${spec.type}-${spec.editId ?? spec.fromQuote ?? 'new'}`} {...spec} />;
         break;
       case 'invoice':
         content = <InvoiceView key={spec.id} id={spec.id} />;
@@ -78,9 +87,26 @@ export function ModalHost({ children }: { children: ReactNode }) {
       case 'closingHistory':
         content = <ClosingHistory />;
         break;
+      case 'quote':
+        content = <TransactionModal key={`q-${spec.id ?? 'new'}`} type="SALE" asQuote quoteId={spec.id} />;
+        break;
+      case 'quoteView':
+        content = <QuoteView key={spec.id} id={spec.id} />;
+        break;
+      case 'shipEdit':
+        content = <ShipmentEdit key={spec.id ?? spec.invoiceId ?? 'new'} id={spec.id} invoiceId={spec.invoiceId} />;
+        break;
+      case 'shipWho':
+        content = <ShipWho s={spec.s} next={spec.next} />;
+        break;
+      case 'shipPaid':
+        content = <ShipPaid s={spec.s} />;
+        break;
       case 'countResult':
         content = <CountResult count={spec.count} />;
         break;
+      default:
+        content = <Phase4Modal spec={spec} />;
     }
   }
 

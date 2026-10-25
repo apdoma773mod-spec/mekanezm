@@ -19,6 +19,7 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { useSampleCount } from '@/lib/phase4-queries';
 
 const sum = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100;
 
@@ -38,6 +39,7 @@ export function ContactFile({ id }: { id: string }) {
   const remove = useDeleteContact();
   const [confirmZero, setConfirmZero] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const samplesOut = useSampleCount(contact.data?.type === 'CUSTOMER' ? contact.data.name : null).data ?? 0;
 
   useEffect(() => {
     if (!wantStatement || !statement.data || !settings.data) return;
@@ -82,6 +84,11 @@ export function ContactFile({ id }: { id: string }) {
 
   return (
     <Modal title={`ملف ${isC ? 'العميل' : 'المورد'}: ${c.name}`} onClose={close} wide>
+      {samplesOut > 0 && (
+        <div style={{ background: '#fff7e0', border: '1px solid #f0d58a', borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: 14 }}>
+          🧪 عنده {samplesOut} عينة خارجة دلوقتي
+        </div>
+      )}
       <div className="card" style={{ background: 'var(--tint2)', border: 0, lineHeight: 2 }}>
         <div>
           التليفون: <b dir="ltr">{c.phone || '—'}</b>

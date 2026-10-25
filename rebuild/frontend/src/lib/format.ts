@@ -85,6 +85,21 @@ export const AUDIT_LABELS: Record<string, string> = {
   DAY_CLOSE: 'تقفيل اليومية',
   STOCK_COUNT: 'جرد',
   DEBT_REMIND: 'تذكير عميل بالدين',
+  QUOTE_SAVE: 'عرض سعر',
+  QUOTE_DELETE: 'حذف عرض سعر',
+  SHIP_SAVE: 'شحنة',
+  SHIP_DELETE: 'حذف شحنة',
+  GIFT_CREATE: 'هدية',
+  GRADE_MOVE: 'نقل لدرجة تانية',
+  PRODUCT_ALTS: 'بدائل صنف',
+  STAFF_SAVE: 'ملف موظف',
+  ATTENDANCE_SAVE: 'حضور / انصراف',
+  STAFF_MOVE: 'سلفة / مرتب / مكافأة',
+  STAFF_POINTS: 'نقاط موظف',
+  KIT_SAVE: 'طقم',
+  KIT_DELETE: 'حذف طقم',
+  SAMPLE_SAVE: 'عينة',
+  WANTED_SAVE: 'مطلوب ومش عندنا',
 };
 
 const hx = (h: string) => [0, 2, 4].map((i) => parseInt(h.replace('#', '').slice(i, i + 2), 16)) as [number, number, number];

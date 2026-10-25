@@ -32,6 +32,10 @@ export function QuickModal() {
           </b>
           <small>فاتورة مشتريات</small>
         </button>
+        <button type="button" onClick={() => open({ kind: 'quote' })}>
+          <b>📝 عرض سعر</b>
+          <small>مش بيخصم من المخزون</small>
+        </button>
         {admin && (
           <>
             <button type="button" onClick={() => open({ kind: 'return', type: 'SALE' })}>

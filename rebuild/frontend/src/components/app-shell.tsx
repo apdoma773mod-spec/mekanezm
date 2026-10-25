@@ -10,6 +10,7 @@ import { useMe, useSettings } from '@/lib/queries';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
+import { PunchCatcher } from './punch-catcher';
 
 interface NavItem {
   href: string;
@@ -19,6 +20,8 @@ interface NavItem {
   adminOnly?: boolean;
   staffOnly?: boolean;
   mobile?: boolean;
+  /** The old sidebar named some screens differently for staff (e.g. «حضوري»). */
+  staffLabel?: string;
 }
 
 /** Same groups, names, order and icons as the old sidebar. */
@@ -29,12 +32,17 @@ const MAIN: NavItem[] = [
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
   { href: '/daybook', label: 'يومية المحل', icon: '📒' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
+  { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
   { href: '/contacts', label: 'العملاء والموردون', icon: 'users', adminOnly: true },
   { href: '/debts', label: 'الديون والتذكير', icon: '💰', adminOnly: true },
   { href: '/reorder', label: 'اقتراحات الطلب', icon: '📦', adminOnly: true },
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
+  { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
+  { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
+  { href: '/samples', label: 'العينات', icon: '🧪' },
+  { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
 ];
 /** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
 const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/settings', '/account'];
@@ -117,6 +125,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app">
       {T && <BackgroundLayer T={T} />}
+      <PunchCatcher />
       <header className="top">
         <div className="brand">
           {T?.logoHeader && T.logo && <img src={T.logo} alt="" />}
@@ -150,7 +159,7 @@ function Shell({ children }: { children: ReactNode }) {
           <nav className="nav">
             {main.map((i) => (
               <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
-                <NavIcon icon={i.icon} /> <span>{i.label}</span>
+                <NavIcon icon={i.icon} /> <span>{!admin && i.staffLabel ? i.staffLabel : i.label}</span>
               </Link>
             ))}
           </nav>
