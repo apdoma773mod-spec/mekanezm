@@ -1,5 +1,12 @@
 import type { FastifyInstance } from 'fastify';
-import { contactInput, idParam, listContactsQuery, statementQuery, updateContactInput } from '@mk/shared';
+import {
+  contactInput,
+  idParam,
+  listContactsQuery,
+  statementQuery,
+  updateContactInput,
+  zeroAccountInput,
+} from '@mk/shared';
 import { actorOf } from '../../lib/actor.js';
 import { parse } from '../../lib/validate.js';
 import { ContactsService } from './service.js';
@@ -29,6 +36,11 @@ export default async function contactsRoutes(app: FastifyInstance) {
   app.patch('/:id', { preHandler: app.requireAdmin }, async (request) => {
     const { id } = parse(idParam, request.params);
     return { contact: await service.update(id, parse(updateContactInput, request.body), actorOf(request)) };
+  });
+
+  app.post('/:id/zero', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(idParam, request.params);
+    return { contact: await service.zero(id, parse(zeroAccountInput, request.body ?? {}), actorOf(request)) };
   });
 
   app.delete('/:id', { preHandler: app.requireAdmin }, async (request) => {

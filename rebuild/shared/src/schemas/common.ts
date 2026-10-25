@@ -33,6 +33,17 @@ export const moneySchema = z.preprocess(
     .refine((n) => Math.round(n * 100) === Number((n * 100).toFixed(6)), 'المبلغ بحد أقصى قرشين بعد العلامة'),
 );
 
+/** Money that may be negative, e.g. an opening balance in the contact's favour. */
+export const signedMoneySchema = z.preprocess(
+  toNumber,
+  z
+    .number({ invalid_type_error: 'اكتب رقم صحيح' })
+    .finite('اكتب رقم صحيح')
+    .min(-100_000_000, 'المبلغ كبير جدًا')
+    .max(100_000_000, 'المبلغ كبير جدًا')
+    .refine((n) => Math.round(n * 100) === Number((n * 100).toFixed(6)), 'المبلغ بحد أقصى قرشين بعد العلامة'),
+);
+
 /** Quantity: up to 3 decimals so meters and kilos work. */
 export const qtySchema = z.preprocess(
   toNumber,

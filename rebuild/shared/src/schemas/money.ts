@@ -166,6 +166,8 @@ export interface CashSummary {
   to: string;
   byMethod: Record<(typeof PAY_METHODS)[number], { in: number; out: number; net: number }>;
   totals: { in: number; out: number; net: number };
+  /** What should be in the drawer now: every money movement since the start. */
+  balance: number;
   moves: CashMove[];
 }
 

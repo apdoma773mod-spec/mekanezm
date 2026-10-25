@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CONTACT_TYPES, PAY_METHODS } from '../enums.js';
 import { normalizePhone } from '../digits.js';
-import { isoDateSchema, paginationQuery } from './common.js';
+import { isoDateSchema, paginationQuery, signedMoneySchema } from './common.js';
 
 /** Contacts often have landlines or partial numbers, so only digits and length are checked. */
 export const contactPhoneSchema = z
@@ -15,11 +15,13 @@ export const contactInput = z.object({
   phone: contactPhoneSchema.default(''),
   address: z.string().trim().max(300).default(''),
   note: z.string().trim().max(1000).default(''),
+  /** Customer: what they already owe. Supplier: what we already owe them. Only on create. */
+  openingBalance: signedMoneySchema.default(0),
 });
 export type ContactInput = z.infer<typeof contactInput>;
 
 export const updateContactInput = contactInput
-  .omit({ type: true })
+  .omit({ type: true, openingBalance: true })
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: 'مفيش تعديل' });
 export type UpdateContactInput = z.infer<typeof updateContactInput>;
@@ -33,6 +35,12 @@ export const listContactsQuery = paginationQuery.extend({
   sort: z.enum(['name', 'balance', 'recent']).default('name'),
 });
 export type ListContactsQuery = z.infer<typeof listContactsQuery>;
+
+export const zeroAccountInput = z.object({
+  /** True: money actually changed hands (counts in the drawer). False: a book-only settlement. */
+  cash: z.boolean().default(true),
+});
+export type ZeroAccountInput = z.infer<typeof zeroAccountInput>;
 
 export const statementQuery = z.object({
   from: isoDateSchema.optional(),
@@ -48,6 +56,7 @@ export interface ContactDto {
   note: string;
   /** Customer: what they owe us. Supplier: what we owe them. */
   balance: number;
+  openingBalance: number;
   createdAt: string;
 }
 

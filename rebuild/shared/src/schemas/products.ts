@@ -48,10 +48,8 @@ export type AdjustStockInput = z.infer<typeof adjustStockInput>;
 export const listProductsQuery = paginationQuery.extend({
   category: z.string().trim().max(80).optional(),
   company: z.enum(COMPANIES).optional(),
-  lowStock: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .optional(),
+  /** low = still in stock but at or under the alert level; out = nothing left. */
+  stock: z.enum(['all', 'low', 'out']).default('all'),
   sort: z.enum(['name', 'code', 'qty', 'updated']).default('name'),
 });
 export type ListProductsQuery = z.infer<typeof listProductsQuery>;

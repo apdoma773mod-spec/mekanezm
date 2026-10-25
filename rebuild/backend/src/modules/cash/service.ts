@@ -1,4 +1,4 @@
-import type { Company, PrismaClient } from '@prisma/client';
+import type { Company, Prisma, PrismaClient } from '@prisma/client';
 import { PAY_METHODS, type CashMove, type CashQuery, type CashSummary, type TodaySummary } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { dateToDay, dayRange, todayYmd } from '../../lib/dates.js';
@@ -25,7 +25,7 @@ export class CashService {
         select: { id: true, kind: true, no: true, person: true, paid: true, payMethod: true, date: true, createdAt: true },
       }),
       this.prisma.payment.findMany({
-        where: { cancelledAt: null, date, ...co },
+        where: { cancelledAt: null, affectsCash: true, date, ...co },
         select: { id: true, direction: true, amount: true, method: true, date: true, createdAt: true, note: true, contact: { select: { name: true } } },
       }),
       this.prisma.return.findMany({
@@ -98,7 +98,34 @@ export class CashService {
       tout += b.out;
     }
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    return { from, to, byMethod, totals: { in: r2(tin), out: r2(tout), net: r2(tin - tout) }, moves };
+    return {
+      from,
+      to,
+      byMethod,
+      totals: { in: r2(tin), out: r2(tout), net: r2(tin - tout) },
+      balance: num(await this.balance(query.company as Company | undefined)),
+      moves,
+    };
+  }
+
+  /** All money in minus all money out since the start, with database sums (no rows loaded). */
+  async balance(company?: Company) {
+    const co = company ? { company } : {};
+    const [sales, purchases, payIn, payOut, saleRet, purRet, exp] = await Promise.all([
+      this.prisma.invoice.aggregate({ where: { kind: 'SALE', status: 'ACTIVE', ...co }, _sum: { paid: true } }),
+      this.prisma.invoice.aggregate({ where: { kind: 'PURCHASE', status: 'ACTIVE', ...co }, _sum: { paid: true } }),
+      this.prisma.payment.aggregate({ where: { direction: 'IN', cancelledAt: null, affectsCash: true, ...co }, _sum: { amount: true } }),
+      this.prisma.payment.aggregate({ where: { direction: 'OUT', cancelledAt: null, affectsCash: true, ...co }, _sum: { amount: true } }),
+      this.prisma.return.aggregate({ where: { kind: 'SALE', settlement: 'CASH', ...co }, _sum: { total: true } }),
+      this.prisma.return.aggregate({ where: { kind: 'PURCHASE', settlement: 'CASH', ...co }, _sum: { total: true } }),
+      this.prisma.expense.aggregate({ where: { deletedAt: null, ...co }, _sum: { amount: true } }),
+    ]);
+    const v = (d: Prisma.Decimal | null) => d ?? ZERO;
+    return money(
+      sum([v(sales._sum.paid), v(payIn._sum.amount), v(purRet._sum.total)]).minus(
+        sum([v(purchases._sum.paid), v(payOut._sum.amount), v(saleRet._sum.total), v(exp._sum.amount)]),
+      ),
+    );
   }
 
   async today(actor: Actor): Promise<TodaySummary> {

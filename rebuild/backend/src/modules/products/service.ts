@@ -70,9 +70,10 @@ export class ProductsService {
 
   async list(query: ListProductsQuery, actor: Actor): Promise<Paginated<ProductDto>> {
     let lowIds: string[] | undefined;
-    if (query.lowStock) {
+    if (query.stock === 'low') {
+      // Prisma can't compare two columns, so the "at or under its own alert level" ids come from SQL.
       const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Product" WHERE "deletedAt" IS NULL AND qty <= "minQty"`;
+        SELECT id FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
       lowIds = rows.map((r) => r.id);
     }
     const q = query.q?.trim();
@@ -81,6 +82,7 @@ export class ProductsService {
       ...(query.category ? { category: query.category } : {}),
       ...(query.company ? { company: query.company } : {}),
       ...(lowIds ? { id: { in: lowIds } } : {}),
+      ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
       ...(q
         ? {
             OR: [

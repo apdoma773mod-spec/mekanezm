@@ -208,20 +208,22 @@ model StockMove {
 }
 
 model Contact {
-  id        String      @id @default(cuid())
-  type      ContactType
-  name      String
-  phone     String      @default("")
-  address   String      @default("")
-  note      String      @default("")
+  id             String      @id @default(cuid())
+  type           ContactType
+  name           String
+  phone          String      @default("")
+  address        String      @default("")
+  note           String      @default("")
   /// Customer: what they owe us. Supplier: what we owe them. Kept in step with every invoice, payment and return.
-  balance   Decimal     @default(0) @db.Decimal(14, 2)
-  deletedAt DateTime?   @db.Timestamptz(3)
-  createdAt DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime    @updatedAt @db.Timestamptz(3)
-  invoices  Invoice[]
-  payments  Payment[]
-  returns   Return[]
+  balance        Decimal     @default(0) @db.Decimal(14, 2)
+  /// Balance carried over when the contact was added; the first line of the statement.
+  openingBalance Decimal     @default(0) @db.Decimal(14, 2)
+  deletedAt      DateTime?   @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @db.Timestamptz(3)
+  invoices       Invoice[]
+  payments       Payment[]
+  returns        Return[]
 
   @@index([type, name])
   @@index([phone])
@@ -297,6 +299,8 @@ model Payment {
   company       Company          @default(MK)
   date          DateTime         @db.Date
   note          String           @default("")
+  /// False for book-only settlements (e.g. zeroing an account without money changing hands).
+  affectsCash   Boolean          @default(true)
   createdById   String?
   cancelledById String?
   cancelledAt   DateTime?        @db.Timestamptz(3)

@@ -210,6 +210,37 @@ describe('payments, returns, statement and cash', () => {
     expect((await call(staff, 'GET', '/cash/summary')).statusCode).toBe(403);
   });
 
+  it('opening balance starts the statement; zeroing the account settles it in one payment', async () => {
+    const res = await call(admin, 'POST', '/contacts', { type: 'CUSTOMER', name: 'قديم', openingBalance: 300 });
+    const id = res.json().contact.id;
+    expect(res.json().contact.balance).toBe(300);
+    const st = (await call(admin, 'GET', `/contacts/${id}/statement`)).json().statement;
+    expect(st.lines[0]).toMatchObject({ kind: 'OPENING', debit: 300, balance: 300 });
+
+    const z = await call(admin, 'POST', `/contacts/${id}/zero`, {});
+    expect(z.json().contact.balance).toBe(0);
+    const cash = (await call(admin, 'GET', '/cash/summary')).json().summary;
+    expect(cash.totals.in).toBe(300);
+    expect(cash.balance).toBe(300);
+
+    const credit = await call(admin, 'POST', '/contacts', { type: 'CUSTOMER', name: 'ليه رصيد', openingBalance: -50 });
+    await call(admin, 'POST', `/contacts/${credit.json().contact.id}/zero`, { cash: false });
+    const after = (await call(admin, 'GET', '/cash/summary')).json().summary;
+    expect(after.balance).toBe(300);
+    expect((await call(admin, 'POST', `/contacts/${id}/zero`, {})).statusCode).toBe(400);
+  });
+
+  it('filters products by stock state', async () => {
+    await product('خلص', 10, 5, 0);
+    const low = await product('قليل', 10, 5, 2);
+    await call(admin, 'PATCH', `/products/${low.id}`, { minQty: 5 });
+    await product('كتير', 10, 5, 50);
+    const names = async (stock: string) =>
+      (await call(admin, 'GET', `/products?stock=${stock}`)).json().items.map((p: { name: string }) => p.name);
+    expect(await names('out')).toEqual(['خلص']);
+    expect(await names('low')).toEqual(['قليل']);
+  });
+
   it('contacts with a balance cannot be deleted and names stay unique per type', async () => {
     const p = await product('مفصلة', 50, 30, 10);
     await call(staff, 'POST', '/invoices', { kind: 'SALE', person: 'هاني', paid: 0, items: [{ productId: p.id, qty: 1, price: 50 }] });

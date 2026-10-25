@@ -7,10 +7,11 @@ import type {
   Paginated,
   StatementLine,
   UpdateContactInput,
+  ZeroAccountInput,
 } from '@mk/shared';
 import type { Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
-import { dateToDay } from '../../lib/dates.js';
+import { dateToDay, dayToDate, todayYmd } from '../../lib/dates.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { D, ZERO, money, num } from '../../lib/money.js';
 import { withTx } from '../../lib/tx.js';
@@ -24,6 +25,7 @@ export function toContactDto(c: Contact): ContactDto {
     address: c.address,
     note: c.note,
     balance: num(c.balance),
+    openingBalance: num(c.openingBalance),
     createdAt: c.createdAt.toISOString(),
   };
 }
@@ -113,7 +115,8 @@ export class ContactsService {
       if (await findByName(tx, input.type, input.name)) {
         throw conflict(`فيه ${TYPE_LABEL[input.type]} بنفس الاسم`, [{ path: 'name', message: 'الاسم مستخدم' }]);
       }
-      const created = await tx.contact.create({ data: input });
+      const opening = money(input.openingBalance);
+      const created = await tx.contact.create({ data: { ...input, openingBalance: opening, balance: opening } });
       await writeAudit(tx, {
         userId: actor.id,
         action: 'CONTACT_CREATE',
@@ -165,6 +168,48 @@ export class ContactsService {
   }
 
   /**
+   * «💯 صفّر الحساب»: one payment for the whole balance, as in the old system. A positive balance is
+   * collected/paid in full; a negative one is refunded in cash or settled on the books only.
+   */
+  async zero(id: string, input: ZeroAccountInput, actor: Actor): Promise<ContactDto> {
+    const contact = await withTx(this.prisma, async (tx) => {
+      const c = await liveContact(tx, id);
+      const b = money(c.balance);
+      if (b.isZero()) throw badRequest('الحساب خالص أصلًا');
+      const owed = b.greaterThan(0);
+      const affectsCash = owed || input.cash;
+      const note = owed
+        ? 'تصفير الحساب'
+        : affectsCash
+          ? `رد رصيد ${c.type === 'CUSTOMER' ? 'للعميل' : 'من المورد'} (تصفير الحساب)`
+          : 'رصيد: تسوية تصفير الحساب (من غير فلوس)';
+      const payment = await tx.payment.create({
+        data: {
+          contactId: id,
+          direction: c.type === 'CUSTOMER' ? 'IN' : 'OUT',
+          amount: b,
+          method: 'CASH',
+          date: dayToDate(todayYmd()),
+          note,
+          affectsCash,
+          createdById: actor.id,
+        },
+      });
+      await changeBalance(tx, id, b.negated());
+      await writeAudit(tx, {
+        userId: actor.id,
+        action: 'PAYMENT_CREATE',
+        entity: 'Payment',
+        entityId: payment.id,
+        after: { contact: c.name, amount: num(b), zeroAccount: true, affectsCash },
+        ip: actor.ip,
+      });
+      return tx.contact.findUniqueOrThrow({ where: { id } });
+    });
+    return toContactDto(contact);
+  }
+
+  /**
    * Account statement. Every line that moved the balance, oldest first, with a running balance;
    * lines before `from` are folded into the opening balance.
    */
@@ -186,7 +231,21 @@ export class ContactsService {
     ]);
 
     type Raw = Omit<StatementLine, 'balance'> & { at: Date };
+    const openingLine: Raw[] = contact.openingBalance.isZero()
+      ? []
+      : [
+          {
+            kind: 'OPENING',
+            id: contact.id,
+            date: dateToDay(contact.createdAt),
+            at: new Date(0),
+            label: 'رصيد سابق',
+            debit: Math.max(0, num(contact.openingBalance)),
+            credit: Math.max(0, -num(contact.openingBalance)),
+          },
+        ];
     const raw: Raw[] = [
+      ...openingLine,
       ...invoices.map((i) => ({
         kind: 'INVOICE' as const,
         id: i.id,
