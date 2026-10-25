@@ -26,7 +26,10 @@ type Inv = Prisma.InvoiceGetPayload<{ include: typeof SALE_INCLUDE }>;
 interface Range {
   from?: string;
   to?: string;
+  /** One company only (Hydrolek's own figures); omitted = both. */
+  company?: 'MK' | 'HY';
 }
+const co = (r: Range) => (r.company ? { company: r.company } : {});
 
 /** Number view of an invoice line: what the old reports call a sale/purchase row. */
 interface Line {
@@ -67,20 +70,20 @@ export class ReportsService {
 
   private invoices(kind: 'SALE' | 'PURCHASE', r: Range) {
     return this.prisma.invoice.findMany({
-      where: { kind, status: 'ACTIVE', date: dayRange(r.from, r.to) },
+      where: { kind, status: 'ACTIVE', date: dayRange(r.from, r.to), ...co(r) },
       include: SALE_INCLUDE,
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
   }
   private returns(r: Range) {
     return this.prisma.return.findMany({
-      where: { date: dayRange(r.from, r.to) },
+      where: { date: dayRange(r.from, r.to), ...co(r) },
       include: { product: { select: { name: true } } },
       orderBy: { date: 'desc' },
     });
   }
   private expenses(r: Range) {
-    return this.prisma.expense.findMany({ where: { deletedAt: null, date: dayRange(r.from, r.to) }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] });
+    return this.prisma.expense.findMany({ where: { deletedAt: null, date: dayRange(r.from, r.to), ...co(r) }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] });
   }
   private products() {
     return this.prisma.product.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
@@ -93,7 +96,7 @@ export class ReportsService {
       this.invoices('PURCHASE', r),
       this.returns(r),
       this.expenses(r),
-      this.prisma.payment.aggregate({ where: { direction: 'IN', cancelledAt: null, date: dayRange(r.from, r.to) }, _sum: { amount: true } }),
+      this.prisma.payment.aggregate({ where: { direction: 'IN', cancelledAt: null, date: dayRange(r.from, r.to), ...co(r) }, _sum: { amount: true } }),
     ]);
     const rs = RT.filter((x) => x.kind === 'SALE');
     const rp = RT.filter((x) => x.kind === 'PURCHASE');

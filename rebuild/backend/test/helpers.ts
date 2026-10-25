@@ -25,7 +25,8 @@ export async function resetDb(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(
     `TRUNCATE "AuditLog", "RefreshToken", "Setting", "User", "Counter", "Product", "StockMove", "Contact",
       "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount",
-      "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem"
+      "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem",
+      "Partner", "PartnerMove", "Vehicle", "VehicleLog", "FieldOrder", "VanStock", "VanMove", "VanClose", "Contract", "OutboundMessage"
       RESTART IDENTITY CASCADE`,
   );
 }

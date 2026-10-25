@@ -52,6 +52,7 @@ export const STOCK_REASONS = [
   'GIFT',
   'GRADE',
   'SAMPLE',
+  'VAN_CLOSE',
 ] as const;
 export type StockReason = (typeof STOCK_REASONS)[number];
 
@@ -103,5 +104,13 @@ export const AUDIT_ACTIONS = [
   'KIT_DELETE',
   'SAMPLE_SAVE',
   'WANTED_SAVE',
+  'IC_TRANSFER',
+  'PARTNER_SAVE',
+  'VEHICLE_SAVE',
+  'FIELD_ORDER',
+  'VAN_MOVE',
+  'VAN_CLOSE',
+  'CONTRACT_SAVE',
+  'WA_SEND',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

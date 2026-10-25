@@ -60,6 +60,14 @@ enum AuditAction {
   KIT_DELETE
   SAMPLE_SAVE
   WANTED_SAVE
+  IC_TRANSFER
+  PARTNER_SAVE
+  VEHICLE_SAVE
+  FIELD_ORDER
+  VAN_MOVE
+  VAN_CLOSE
+  CONTRACT_SAVE
+  WA_SEND
 }
 
 enum Company {
@@ -117,6 +125,7 @@ enum StockReason {
   GIFT
   GRADE
   SAMPLE
+  VAN_CLOSE
 }
 
 enum DaybookKind {
@@ -297,6 +306,9 @@ model Invoice {
   paidSplit   Json?
   /// "" for invoices typed in directly, "DAYBOOK" when made by settling the daybook.
   source      String         @default("")
+  /// Inter-company deal: the other company, and the id shared by the sale and the purchase.
+  ic          Company?
+  icRef       String?
   createdById String?
   updatedById String?
   voidedById  String?
@@ -689,4 +701,189 @@ model WantedItem {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([done])
+}
+
+// ---------- Phase 5: Hydrolek («🏢 الشركات») ----------
+
+/// «🤝 الشركاء»: Hydrolek's partners and their fixed share of its profit.
+model Partner {
+  id        String        @id @default(cuid())
+  name      String
+  phone     String        @default("")
+  share     Decimal       @default(0) @db.Decimal(6, 2)
+  note      String        @default("")
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  moves     PartnerMove[]
+}
+
+/// capital (put money in) | draw (took money) | profit (we paid their share)
+model PartnerMove {
+  id        String   @id @default(cuid())
+  partnerId String
+  kind      String
+  amount    Decimal  @db.Decimal(14, 2)
+  date      DateTime @db.Date
+  note      String   @default("")
+  byName    String   @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+}
+
+/// «🚗 السيارة»; `meta` holds owner, driver, licence/insurance/service dates and the next-service km.
+model Vehicle {
+  id        String       @id @default(cuid())
+  name      String
+  plate     String       @default("")
+  meta      Json         @default("{}")
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  log       VehicleLog[]
+}
+
+/// One running cost; each also creates a Hydrolek expense «سيارة: <kind>».
+model VehicleLog {
+  id        String   @id @default(cuid())
+  vehicleId String
+  date      DateTime @db.Date
+  kind      String
+  amount    Decimal  @db.Decimal(14, 2)
+  km        Decimal? @db.Decimal(12, 1)
+  liters    Decimal? @db.Decimal(10, 2)
+  note      String   @default("")
+  expenseId String?
+  byName    String   @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, date])
+}
+
+/// «⚡ أوردر ميداني»: what the rep sold from the van now (s) and what is requested from Mekanizm (r), per line.
+model FieldOrder {
+  id        String    @id @default(cuid())
+  no        String    @unique
+  company   Company   @default(HY)
+  date      DateTime  @db.Date
+  customer  String
+  phone     String    @default("")
+  addr      String    @default("")
+  eta       String    @default("")
+  items     String    @default("")
+  total     Decimal   @default(0) @db.Decimal(14, 2)
+  note      String    @default("")
+  rep       String    @default("")
+  /// [{ pid, n, q, pr, wh, nw, d, img, pri, st, s, r, sd, inv, dm, dd, h: [{st, by, at}] }]
+  lines     Json      @default("[]")
+  /// new | doing | done | cancel
+  status    String    @default("new")
+  sentAt    DateTime? @db.Timestamptz(3)
+  doneBy    String    @default("")
+  wh        String    @default("")
+  doneAt    DateTime? @db.Timestamptz(3)
+  invoiceNo String    @default("")
+  vehicleId String    @default("")
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+  @@index([customer])
+}
+
+/// What is on the van now, per product and funder (a partner's capital or none).
+model VanStock {
+  id        String  @id @default(cuid())
+  productId String
+  name      String
+  qty       Decimal @default(0) @db.Decimal(14, 3)
+  cost      Decimal @default(0) @db.Decimal(14, 2)
+  funder    String  @default("")
+
+  @@unique([productId, funder])
+}
+
+/// load | sale | return | adjust | unload — qty is signed (sales and unloads are negative).
+model VanMove {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  kind      String
+  productId String
+  name      String
+  qty       Decimal  @db.Decimal(14, 3)
+  /// mk | hy | partner
+  src       String   @default("hy")
+  funder    String   @default("")
+  cost      Decimal  @default(0) @db.Decimal(14, 2)
+  ref       String   @default("")
+  note      String   @default("")
+  vehicleId String   @default("")
+  byName    String   @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([date])
+  @@index([productId])
+}
+
+/// «🧾 تصفية آخر اليوم» for one van and day.
+model VanClose {
+  id           String    @id @default(cuid())
+  date         DateTime  @db.Date
+  vehicleId    String    @default("")
+  closed       Boolean   @default(true)
+  cash         Decimal   @default(0) @db.Decimal(14, 2)
+  credit       Decimal   @default(0) @db.Decimal(14, 2)
+  expenses     Decimal   @default(0) @db.Decimal(14, 2)
+  expectedCash Decimal   @default(0) @db.Decimal(14, 2)
+  handed       Decimal   @default(0) @db.Decimal(14, 2)
+  diffValue    Decimal   @default(0) @db.Decimal(14, 2)
+  note         String    @default("")
+  data         Json      @default("{}")
+  byName       String    @default("")
+  closedAt     DateTime? @db.Timestamptz(3)
+  reopenedBy   String    @default("")
+  reopenedAt   DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@unique([date, vehicleId])
+}
+
+/// «📑 العقود والعرابين»: a customer paid (contract or deposit) and we bring them work.
+model Contract {
+  id        String   @id @default(cuid())
+  no        String   @unique
+  client    String
+  phone     String   @default("")
+  kind      String   @default("عقد شغل")
+  title     String
+  total     Decimal  @default(0) @db.Decimal(14, 2)
+  start     String   @default("")
+  due       String   @default("")
+  /// open | work | done | cancel
+  status    String   @default("open")
+  note      String   @default("")
+  /// [{ id, date, amt, m, note, rec, by }]
+  pays      Json     @default("[]")
+  /// [{ id, date, amt, desc, by }]
+  costs     Json     @default("[]")
+  orders    Json     @default("[]")
+  hist      Json     @default("[]")
+  byName    String   @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+/// WhatsApp messages waiting for the shop PC's bridge (wa_out in the old system).
+model OutboundMessage {
+  id        String    @id @default(cuid())
+  toPhone   String
+  body      String
+  /// queued | sent | failed
+  status    String    @default("queued")
+  err       String    @default("")
+  byName    String    @default("")
+  claimedAt DateTime? @db.Timestamptz(3)
+  doneAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
 }

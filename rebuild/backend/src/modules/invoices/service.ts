@@ -273,6 +273,9 @@ export interface CreateOptions {
   source?: string;
   /** A sale to nobody in particular («يومية»): never creates a contact for the name. */
   noContact?: boolean;
+  /** Inter-company deal between Mekanizm and Hydrolek. */
+  ic?: 'MK' | 'HY';
+  icRef?: string;
 }
 
 /** Creates an invoice inside the caller's transaction; returns its id. */
@@ -307,6 +310,7 @@ export async function createInvoiceInTx(
       payMethod: input.payMethod,
       ...(opts.paidSplit ? { paidSplit: opts.paidSplit } : {}),
       source: opts.source ?? '',
+      ...(opts.ic ? { ic: opts.ic, icRef: opts.icRef ?? null } : {}),
       createdById: actor.id,
     },
   });
