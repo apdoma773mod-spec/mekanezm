@@ -7,16 +7,12 @@ import type {
   ResetPasswordInput,
   UpdateUserInput,
 } from '@mk/shared';
+import type { Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { hashPassword } from '../../lib/password.js';
 import { toPublicUser } from '../../lib/serialize.js';
 import { withTx } from '../../lib/tx.js';
-
-export interface Actor {
-  id: string;
-  ip: string | null;
-}
 
 async function getOrThrow(tx: Prisma.TransactionClient, id: string): Promise<User> {
   const user = await tx.user.findUnique({ where: { id } });

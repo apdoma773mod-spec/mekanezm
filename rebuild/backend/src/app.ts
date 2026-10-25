@@ -10,6 +10,13 @@ import authRoutes from './modules/auth/routes.js';
 import usersRoutes from './modules/users/routes.js';
 import settingsRoutes from './modules/settings/routes.js';
 import auditRoutes from './modules/audit/routes.js';
+import productsRoutes from './modules/products/routes.js';
+import contactsRoutes from './modules/contacts/routes.js';
+import invoicesRoutes from './modules/invoices/routes.js';
+import paymentsRoutes from './modules/payments/routes.js';
+import returnsRoutes from './modules/returns/routes.js';
+import expensesRoutes from './modules/expenses/routes.js';
+import cashRoutes from './modules/cash/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -44,6 +51,13 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(usersRoutes, { prefix: '/users' });
       await api.register(settingsRoutes, { prefix: '/settings' });
       await api.register(auditRoutes, { prefix: '/audit' });
+      await api.register(productsRoutes, { prefix: '/products' });
+      await api.register(contactsRoutes, { prefix: '/contacts' });
+      await api.register(invoicesRoutes, { prefix: '/invoices' });
+      await api.register(paymentsRoutes, { prefix: '/payments' });
+      await api.register(returnsRoutes, { prefix: '/returns' });
+      await api.register(expensesRoutes, { prefix: '/expenses' });
+      await api.register(cashRoutes, { prefix: '/cash' });
     },
     { prefix: '/api/v1' },
   );

@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { DEFAULT_SETTINGS, SETTING_KEYS, settingSchemas, type SettingKey, type SettingsMap } from '@mk/shared';
 import { writeAudit } from '../../lib/audit.js';
 import { withTx } from '../../lib/tx.js';
-import type { Actor } from '../users/service.js';
+import type { Actor } from '../../lib/actor.js';
 
 /** Stored values are re-validated on read; anything stale or broken falls back to the default. */
 function coerce<K extends SettingKey>(key: K, raw: unknown): SettingsMap[K] {

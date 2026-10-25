@@ -16,6 +16,42 @@ export const intFromInput = z.preprocess(
   z.number().int(),
 );
 
+const toNumber = (v: unknown) => {
+  if (typeof v !== 'string') return v;
+  const s = normalizeDigits(v).replace(/,/g, '').trim();
+  return s === '' ? undefined : Number(s);
+};
+
+/** Money amount: accepts Arabic/Hindi digits, at most 2 decimals, never negative. */
+export const moneySchema = z.preprocess(
+  toNumber,
+  z
+    .number({ invalid_type_error: 'اكتب رقم صحيح', required_error: 'اكتب المبلغ' })
+    .finite('اكتب رقم صحيح')
+    .min(0, 'المبلغ مينفعش يكون بالسالب')
+    .max(100_000_000, 'المبلغ كبير جدًا')
+    .refine((n) => Math.round(n * 100) === Number((n * 100).toFixed(6)), 'المبلغ بحد أقصى قرشين بعد العلامة'),
+);
+
+/** Quantity: up to 3 decimals so meters and kilos work. */
+export const qtySchema = z.preprocess(
+  toNumber,
+  z
+    .number({ invalid_type_error: 'اكتب رقم صحيح', required_error: 'اكتب الكمية' })
+    .finite('اكتب رقم صحيح')
+    .max(10_000_000, 'الكمية كبيرة جدًا')
+    .refine((n) => Math.round(n * 1000) === Number((n * 1000).toFixed(6)), 'الكمية بحد أقصى ٣ أرقام بعد العلامة'),
+);
+
+export const positiveQty = qtySchema.pipe(z.number().gt(0, 'الكمية لازم تكون أكبر من صفر'));
+
+export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'التاريخ لازم يكون YYYY-MM-DD');
+
+export const dateRangeQuery = z.object({
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+});
+
 export const paginationQuery = z.object({
   page: intFromInput.pipe(z.number().int().min(1)).default(1),
   pageSize: intFromInput.pipe(z.number().int().min(1).max(200)).default(50),

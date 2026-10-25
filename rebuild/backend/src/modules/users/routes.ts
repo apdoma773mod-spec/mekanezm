@@ -1,12 +1,11 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { createUserInput, idParam, listUsersQuery, resetPasswordInput, updateUserInput } from '@mk/shared';
-import { currentUser } from '../../plugins/auth.js';
+import { actorOf as actor } from '../../lib/actor.js';
 import { parse } from '../../lib/validate.js';
-import { UsersService, type Actor } from './service.js';
+import { UsersService } from './service.js';
 
 export default async function usersRoutes(app: FastifyInstance) {
   const service = new UsersService(app.prisma);
-  const actor = (request: FastifyRequest): Actor => ({ id: currentUser(request).id, ip: request.ip ?? null });
 
   app.addHook('preHandler', app.requireAdmin);
 

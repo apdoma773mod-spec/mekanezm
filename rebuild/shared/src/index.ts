@@ -6,3 +6,7 @@ export * from './schemas/users.js';
 export * from './schemas/settings.js';
 export * from './schemas/audit.js';
 export * from './schemas/setup.js';
+export * from './schemas/products.js';
+export * from './schemas/contacts.js';
+export * from './schemas/invoices.js';
+export * from './schemas/money.js';

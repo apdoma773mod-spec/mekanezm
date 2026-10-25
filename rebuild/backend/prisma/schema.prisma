@@ -21,6 +21,74 @@ enum AuditAction {
   USER_DEACTIVATE
   USER_PASSWORD_RESET
   SETTING_UPDATE
+  PRODUCT_CREATE
+  PRODUCT_UPDATE
+  PRODUCT_DELETE
+  STOCK_ADJUST
+  CONTACT_CREATE
+  CONTACT_UPDATE
+  CONTACT_DELETE
+  INVOICE_CREATE
+  INVOICE_UPDATE
+  INVOICE_VOID
+  PAYMENT_CREATE
+  PAYMENT_CANCEL
+  RETURN_CREATE
+  EXPENSE_CREATE
+  EXPENSE_UPDATE
+  EXPENSE_DELETE
+}
+
+enum Company {
+  MK
+  HY
+}
+
+enum ContactType {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum InvoiceKind {
+  SALE
+  PURCHASE
+}
+
+enum InvoiceStatus {
+  ACTIVE
+  VOID
+}
+
+enum PayMethod {
+  CASH
+  INSTAPAY
+  WALLET
+  TRANSFER
+}
+
+enum PaymentDirection {
+  IN
+  OUT
+}
+
+enum ReturnKind {
+  SALE
+  PURCHASE
+}
+
+enum ReturnSettlement {
+  CASH
+  BALANCE
+}
+
+enum StockReason {
+  SALE
+  PURCHASE
+  SALE_RETURN
+  PURCHASE_RETURN
+  ADJUST
+  INVOICE_EDIT
+  INVOICE_VOID
 }
 
 model User {
@@ -37,6 +105,14 @@ model User {
   tokens       RefreshToken[]
   auditLogs    AuditLog[]
   settings     Setting[]
+  stockMoves   StockMove[]
+  invoicesMade Invoice[]      @relation("InvoiceCreatedBy")
+  invoicesEdit Invoice[]      @relation("InvoiceUpdatedBy")
+  invoicesVoid Invoice[]      @relation("InvoiceVoidedBy")
+  payments     Payment[]      @relation("PaymentCreatedBy")
+  paymentsOff  Payment[]      @relation("PaymentCancelledBy")
+  returns      Return[]
+  expenses     Expense[]
 }
 
 model RefreshToken {
@@ -79,4 +155,202 @@ model AuditLog {
   @@index([createdAt])
   @@index([userId])
   @@index([action])
+}
+
+/// Gap-free number sequences: product codes, sale and purchase invoice numbers.
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
+model Product {
+  id        String        @id @default(cuid())
+  /// Never reused, even after the product is deleted (soft delete keeps the row).
+  code      String        @unique
+  name      String
+  barcode   String?       @unique
+  category  String        @default("")
+  unit      String        @default("قطعة")
+  price     Decimal       @default(0) @db.Decimal(14, 2)
+  cost      Decimal       @default(0) @db.Decimal(14, 2)
+  qty       Decimal       @default(0) @db.Decimal(14, 3)
+  minQty    Decimal       @default(0) @db.Decimal(14, 3)
+  company   Company       @default(MK)
+  note      String        @default("")
+  deletedAt DateTime?     @db.Timestamptz(3)
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+  moves     StockMove[]
+  items     InvoiceItem[]
+  returns   Return[]
+
+  @@index([name])
+  @@index([category])
+  @@index([company, deletedAt])
+}
+
+model StockMove {
+  id        String      @id @default(cuid())
+  productId String
+  qtyChange Decimal     @db.Decimal(14, 3)
+  qtyAfter  Decimal     @db.Decimal(14, 3)
+  reason    StockReason
+  refType   String?
+  refId     String?
+  note      String      @default("")
+  userId    String?
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([refType, refId])
+}
+
+model Contact {
+  id        String      @id @default(cuid())
+  type      ContactType
+  name      String
+  phone     String      @default("")
+  address   String      @default("")
+  note      String      @default("")
+  /// Customer: what they owe us. Supplier: what we owe them. Kept in step with every invoice, payment and return.
+  balance   Decimal     @default(0) @db.Decimal(14, 2)
+  deletedAt DateTime?   @db.Timestamptz(3)
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime    @updatedAt @db.Timestamptz(3)
+  invoices  Invoice[]
+  payments  Payment[]
+  returns   Return[]
+
+  @@index([type, name])
+  @@index([phone])
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  kind        InvoiceKind
+  no          String
+  status      InvoiceStatus @default(ACTIVE)
+  company     Company       @default(MK)
+  /// Business day in Cairo time.
+  date        DateTime      @db.Date
+  contactId   String?
+  person      String        @default("")
+  phone       String        @default("")
+  address     String        @default("")
+  note        String        @default("")
+  subtotal    Decimal       @db.Decimal(14, 2)
+  discount    Decimal       @default(0) @db.Decimal(14, 2)
+  shipping    Decimal       @default(0) @db.Decimal(14, 2)
+  total       Decimal       @db.Decimal(14, 2)
+  paid        Decimal       @db.Decimal(14, 2)
+  remaining   Decimal       @db.Decimal(14, 2)
+  payMethod   PayMethod     @default(CASH)
+  createdById String?
+  updatedById String?
+  voidedById  String?
+  voidedAt    DateTime?     @db.Timestamptz(3)
+  voidReason  String?
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+  contact     Contact?      @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  createdBy   User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?         @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  voidedBy    User?         @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  items       InvoiceItem[]
+  payments    Payment[]
+  returns     Return[]
+
+  @@unique([kind, no])
+  @@index([kind, date])
+  @@index([contactId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id        String   @id @default(cuid())
+  invoiceId String
+  productId String?
+  name      String
+  unit      String   @default("قطعة")
+  qty       Decimal  @db.Decimal(14, 3)
+  price     Decimal  @db.Decimal(14, 2)
+  total     Decimal  @db.Decimal(14, 2)
+  /// Cost per unit when the line was saved: product cost for a sale, the purchase price for a purchase.
+  unitCost  Decimal  @db.Decimal(14, 2)
+  position  Int
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model Payment {
+  id            String           @id @default(cuid())
+  contactId     String
+  invoiceId     String?
+  direction     PaymentDirection
+  amount        Decimal          @db.Decimal(14, 2)
+  method        PayMethod        @default(CASH)
+  company       Company          @default(MK)
+  date          DateTime         @db.Date
+  note          String           @default("")
+  createdById   String?
+  cancelledById String?
+  cancelledAt   DateTime?        @db.Timestamptz(3)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  contact       Contact          @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  invoice       Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdBy     User?            @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  cancelledBy   User?            @relation("PaymentCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+
+  @@index([contactId, date])
+  @@index([date])
+}
+
+model Return {
+  id          String           @id @default(cuid())
+  kind        ReturnKind
+  productId   String
+  contactId   String?
+  invoiceId   String?
+  person      String           @default("")
+  qty         Decimal          @db.Decimal(14, 3)
+  price       Decimal          @db.Decimal(14, 2)
+  total       Decimal          @db.Decimal(14, 2)
+  unitCost    Decimal          @db.Decimal(14, 2)
+  settlement  ReturnSettlement @default(CASH)
+  method      PayMethod        @default(CASH)
+  company     Company          @default(MK)
+  date        DateTime         @db.Date
+  note        String           @default("")
+  createdById String?
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  contact     Contact?         @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  invoice     Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdBy   User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([productId])
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  category    String    @default("عام")
+  amount      Decimal   @db.Decimal(14, 2)
+  method      PayMethod @default(CASH)
+  company     Company   @default(MK)
+  date        DateTime  @db.Date
+  note        String    @default("")
+  createdById String?
+  deletedAt   DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([category])
 }
