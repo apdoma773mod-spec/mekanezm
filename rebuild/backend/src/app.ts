@@ -30,6 +30,7 @@ import kitsRoutes from './modules/kits/routes.js';
 import samplesRoutes from './modules/samples/routes.js';
 import wantedRoutes from './modules/wanted/routes.js';
 import hydrolekRoutes from './modules/hydrolek/routes.js';
+import workRoutes from './modules/work/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -84,6 +85,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(samplesRoutes, { prefix: '/samples' });
       await api.register(wantedRoutes, { prefix: '/wanted' });
       await api.register(hydrolekRoutes, { prefix: '/hy' });
+      await api.register(workRoutes, { prefix: '/work' });
     },
     { prefix: '/api/v1' },
   );

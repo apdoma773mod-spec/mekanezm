@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import type { InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
 import { ProductModal } from './product-modal';
-import { TransactionModal } from './transaction-modal';
+import { TransactionModal, type SalePreset } from './transaction-modal';
 import { InvoiceView } from './invoice-view';
 import { ReturnModal } from './return-modal';
 import { ContactModal } from './contact-modal';
@@ -21,7 +21,7 @@ import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 export type ModalSpec =
   | { kind: 'quick' }
   | { kind: 'product'; id?: string }
-  | { kind: 'transaction'; type: InvoiceKind; editId?: string; person?: string; contactId?: string; fromQuote?: string }
+  | { kind: 'transaction'; type: InvoiceKind; editId?: string; person?: string; contactId?: string; fromQuote?: string; preset?: SalePreset }
   | { kind: 'quote'; id?: string }
   | { kind: 'quoteView'; id: string }
   | { kind: 'shipEdit'; id?: string; invoiceId?: string }

@@ -49,6 +49,17 @@ interface Props {
   quoteId?: string;
   /** «🧾 تحويل لفاتورة بيع»: a sale prefilled from this quote, which is marked converted after saving. */
   fromQuote?: string;
+  /** A sale prepared elsewhere (work orders): lines, customer and note filled in; onSaved runs after it is saved. */
+  preset?: SalePreset;
+}
+
+export interface SalePreset {
+  person?: string;
+  phone?: string;
+  note?: string;
+  paid?: number;
+  lines: { productId?: string; name: string; qty: number; price: number }[];
+  onSaved?: () => Promise<void> | void;
 }
 
 export function TransactionModal(props: Props) {
@@ -81,7 +92,7 @@ export function TransactionModal(props: Props) {
 }
 
 /** «تسجيل فاتورة بيع / شراء» — same fields and flow as the old openTransaction window. */
-function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, fromQuote }: Props & { invoice?: InvoiceDto; quote?: QuoteDto }) {
+function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, fromQuote, preset }: Props & { invoice?: InvoiceDto; quote?: QuoteDto }) {
   const { open, close } = useModal();
   const toast = useToast();
   const isSale = type === 'SALE';
@@ -103,17 +114,17 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           qty: String(it.qty),
           price: String(it.price),
         }))
-      : [],
+      : (preset?.lines ?? []).map((it) => ({ key: newKey(), productId: it.productId, name: it.name, unit: 'قطعة', available: null, qty: String(it.qty), price: String(it.price) })),
   );
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [person, setPerson] = useState(src?.person ?? presetPerson ?? '');
-  const [phone, setPhone] = useState(src?.phone ?? '');
+  const [person, setPerson] = useState(src?.person ?? presetPerson ?? preset?.person ?? '');
+  const [phone, setPhone] = useState(src?.phone ?? preset?.phone ?? '');
   const [address, setAddress] = useState(src?.address ?? '');
   const [shipping, setShipping] = useState(src && src.shipping ? String(src.shipping) : '');
-  const [paid, setPaid] = useState(invoice ? String(invoice.paid) : '');
-  const [paidTouched, setPaidTouched] = useState(!!invoice);
-  const [note, setNote] = useState(src?.note ?? '');
+  const [paid, setPaid] = useState(invoice ? String(invoice.paid) : preset?.paid !== undefined ? String(preset.paid) : '');
+  const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
+  const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -233,6 +244,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         ? await update.mutateAsync({ id: invoice.id, input: { ...body, company: invoice.company, payMethod: invoice.payMethod, discount: invoice.discount } })
         : await create.mutateAsync({ ...body, kind: type, company: co, discount: 0, payMethod: 'CASH' });
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
+      if (!invoice && preset?.onSaved) {
+        try {
+          await preset.onSaved();
+        } catch (e) {
+          window.alert(`⚠️ الفاتورة اتحفظت ✔ بس الخطوة اللي بعدها ماكملتش:\n${errorMessage(e)}`);
+        }
+      }
       toast(invoice ? 'تم حفظ التعديل' : isSale ? 'تم تسجيل البيع' : 'تم تسجيل الشراء');
       open({ kind: 'invoice', id: saved.id });
     } catch (err) {

@@ -41,6 +41,12 @@ const MAIN: NavItem[] = [
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
+  { href: '/work?k=ord', label: 'أنظمة الشغل', icon: '🛠', adminOnly: true },
+  { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true },
+  { href: '/work?k=bamboo', label: 'أدراج البامبو', icon: '🎍', adminOnly: true },
+  { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true },
+  { href: '/work?k=disp', label: 'بضاعة العرض', icon: '🏬', adminOnly: true },
+  { href: '/work?k=off', label: 'الفضل', icon: '🧰', adminOnly: true },
   { href: '/samples', label: 'العينات', icon: '🧪' },
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
 ];
