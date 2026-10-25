@@ -24,12 +24,15 @@ Branch: `tajroba-rebuild`. Code: `rebuild/` (npm workspaces: `shared`, `backend`
 - Phone access: `C:\mk-pgtest\cloudflared.exe tunnel --no-autoupdate --url http://localhost:3100` (logs to `C:\mk-pgtest\tunnel.log`; the trycloudflare link changes every restart, so send him the new one).
 - The dev database holds the owner's real account (he set the password himself). Never wipe the `User` table again.
 
+## FIRST: the look is wrong (owner, 2026-10-25)
+The owner says the new app doesn't look like the old one, some parts use a design he removed, and the sidebar is missing. Cause: phase 1 copied only the old base CSS (index.html lines 35-110). The live look is «ميكانيزم برو» on top of it: CSS in index.html lines 8298-8891 (`mkProCss`, `mkPro`, body.mkpro / mkdark / mk-rich) plus the script at 8939-9258 (a colored icon per screen, the big launcher tiles on the dashboard, the moving logo, the alerts ticker under the logo, background and sidebar color from «المظهر», «الإعدادات والخروج» at the end of the sidebar, text-contrast fixer). Also the phone sidebar: a ☰ button (#navBtn) opens the aside as a drawer (lines 2915-2962); the new app-shell has none, so on phones the sidebar is gone. Before phase 7: port all of that into globals.css + app-shell.tsx, and copy every other later <style> block in index.html, not just the first one. Then ask him which screens still look different.
+
 ## Next (in this order, each as a commit on the branch)
 1. Phase 3 is done (not yet clicked through in the browser with a real login; tests and the build pass).
 2. Phase 4 is done (same note: tests and build pass, not clicked through with a real login).
 3. Phase 5 is done (tests and build pass, not clicked through with a real login).
 4. Phase 6 is done (tests and build pass, not clicked through with a real login).
-5. Phase 7: WhatsApp and printer bridge endpoints, AI invoice reader, SMS inbox, social inbox, backups, import from file.
+5. Phase 7 (not started; old code studied: whatsapp-bridge/*.js RPCs wa_submit, wa_photo_submit, wa_known_phones, wa_rules_get/stat, wa_out_claim/done, print jobs = to_phone PRINT:receipt|label|a4; sms-in parser copied in chat, it reads Vodafone Cash SMS {token,text,from}; parse-invoice and social-webhook are in supabase/functions): WhatsApp and printer bridge endpoints, AI invoice reader, SMS inbox, social inbox, backups, import from file.
 
 The owner said (2026-10-25): do the phases back to back without sending a summary or link after each one; report once at the end.
 
