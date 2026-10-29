@@ -225,6 +225,8 @@ model Product {
   unit      String         @default("قطعة")
   price     Decimal        @default(0) @db.Decimal(14, 2)
   cost      Decimal        @default(0) @db.Decimal(14, 2)
+  /// «تقديري»: the cost was guessed from the sell price (💰 بضاعة قديمة) until a real purchase replaces it.
+  costEst   Boolean        @default(false)
   qty       Decimal        @default(0) @db.Decimal(14, 3)
   minQty    Decimal        @default(0) @db.Decimal(14, 3)
   company   Company        @default(MK)

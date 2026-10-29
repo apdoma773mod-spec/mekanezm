@@ -25,7 +25,7 @@ export function toProductDto(p: Product, admin: boolean): ProductDto {
     category: p.category,
     unit: p.unit,
     price: num(p.price),
-    ...(admin ? { cost: num(p.cost) } : {}),
+    ...(admin ? { cost: num(p.cost), costEst: p.costEst } : {}),
     qty: num(p.qty),
     minQty: num(p.minQty),
     company: p.company,
@@ -196,6 +196,7 @@ export class ProductsService {
         where: { id },
         data: {
           ...rest,
+          ...(rest.cost !== undefined && !D(rest.cost).equals(before.cost) ? { costEst: false } : {}),
           ...(code ? { code } : {}),
           ...(barcode !== undefined ? { barcode: emptyToNull(barcode) } : {}),
         },
@@ -235,6 +236,112 @@ export class ProductsService {
         await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'Product', entityId: p.id, before: snapshot(p), after: snapshot(updated), ip: actor.ip });
       }
       return rows.length;
+    });
+  }
+
+  /** Every live product in one go (print lists, labels, bulk price, pickers) with the same filters as the screen. */
+  async all(query: { q?: string; category?: string; company?: 'MK' | 'HY'; stock?: 'all' | 'low' | 'out' }, actor: Actor): Promise<ProductDto[]> {
+    const admin = isAdmin(actor);
+    const words = (query.q ?? '').trim().split(/\s+/).filter(Boolean);
+    const rows = await this.prisma.product.findMany({
+      where: {
+        deletedAt: null,
+        ...(query.category ? { category: query.category } : {}),
+        ...(query.company ? { company: query.company } : {}),
+        ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
+        AND: words.map((w) => ({
+          OR: [
+            { name: { contains: w, mode: 'insensitive' as const } },
+            { code: { contains: w, mode: 'insensitive' as const } },
+            { barcode: { contains: w, mode: 'insensitive' as const } },
+            { category: { contains: w, mode: 'insensitive' as const } },
+          ],
+        })),
+      },
+      orderBy: { name: 'asc' },
+    });
+    const keep = query.stock === 'low' ? rows.filter((p) => p.qty.gt(0) && p.qty.lte(p.minQty)) : rows;
+    return keep.map((p) => toProductDto(p, admin));
+  }
+
+  /** 💰 بضاعة قديمة: أصناف ليها سعر بيع ومن غير سعر شراء. */
+  async zeroCost(): Promise<{ count: number; items: { code: string; name: string; price: number }[] }> {
+    const rows = await this.prisma.product.findMany({ where: { deletedAt: null, cost: { lte: 0 }, price: { gt: 0 } }, orderBy: { name: 'asc' } });
+    return { count: rows.length, items: rows.slice(0, 300).map((p) => ({ code: p.code, name: p.name, price: num(p.price) })) };
+  }
+
+  /** سعر الشراء = نسبة من سعر البيع، ويتعلّم «تقديري» لحد ما يتشترى بسعر حقيقي. */
+  async estimateCosts(pct: number, actor: Actor): Promise<number> {
+    const k = Math.min(99, Math.max(10, pct)) / 100;
+    return withTx(this.prisma, async (tx) => {
+      const rows = await tx.product.findMany({ where: { deletedAt: null, cost: { lte: 0 }, price: { gt: 0 } } });
+      for (const p of rows) {
+        const updated = await tx.product.update({ where: { id: p.id }, data: { cost: money(p.price.mul(k)), costEst: true } });
+        await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'Product', entityId: p.id, before: snapshot(p), after: snapshot(updated), ip: actor.ip });
+      }
+      return rows.length;
+    });
+  }
+
+  /** ضيف بضاعة قديمة بسرعة: الاسم | الكمية | سعر البيع | سعر الشراء (اختياري). */
+  async addOldGoods(
+    input: { pct: number; category: string; unit: string; lines: { name: string; qty: number; price: number; cost?: number }[] },
+    actor: Actor,
+  ): Promise<{ added: number; estimated: number; skipped: string[] }> {
+    const k = Math.min(99, Math.max(10, input.pct)) / 100;
+    return withTx(this.prisma, async (tx) => {
+      const names = new Set((await tx.product.findMany({ where: { deletedAt: null }, select: { name: true } })).map((p) => p.name));
+      let added = 0;
+      let estimated = 0;
+      const skipped: string[] = [];
+      for (const l of input.lines) {
+        if (names.has(l.name)) {
+          skipped.push(`${l.name} (موجود)`);
+          continue;
+        }
+        const est = !(l.cost && l.cost > 0);
+        const created = await tx.product.create({
+          data: {
+            code: await generateCode(tx),
+            name: l.name,
+            category: input.category,
+            unit: input.unit,
+            price: money(l.price),
+            cost: money(est ? D(l.price).mul(k) : l.cost!),
+            costEst: est,
+          },
+        });
+        if (l.qty > 0) {
+          await moveStock(tx, { productId: created.id, change: D(l.qty), reason: 'ADJUST', refType: 'Product', refId: created.id, note: 'رصيد أول المدة', userId: actor.id });
+        }
+        await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_CREATE', entity: 'Product', entityId: created.id, after: snapshot(await tx.product.findUniqueOrThrow({ where: { id: created.id } })), ip: actor.ip });
+        names.add(l.name);
+        added++;
+        if (est) estimated++;
+      }
+      return { added, estimated, skipped };
+    });
+  }
+
+  /** استيراد أصناف من ملف: بكمية صفر وحد أدنى 5، والمكرر بالاسم بيتخطى. */
+  async importNames(input: { category: string; rows: { name: string; price: number; cost: number }[] }, actor: Actor): Promise<{ added: number; skipped: number }> {
+    return withTx(this.prisma, async (tx) => {
+      const names = new Set((await tx.product.findMany({ where: { deletedAt: null }, select: { name: true } })).map((p) => p.name));
+      let added = 0;
+      let skipped = 0;
+      for (const r of input.rows) {
+        if (names.has(r.name)) {
+          skipped++;
+          continue;
+        }
+        const created = await tx.product.create({
+          data: { code: await generateCode(tx), name: r.name, category: input.category, price: money(r.price), cost: money(r.cost), minQty: 5 },
+        });
+        await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_CREATE', entity: 'Product', entityId: created.id, after: snapshot(created), ip: actor.ip });
+        names.add(r.name);
+        added++;
+      }
+      return { added, skipped };
     });
   }
 

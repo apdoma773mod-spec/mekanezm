@@ -364,3 +364,50 @@ export const useToday = () =>
     queryFn: ({ signal }) => api.get<{ today: TodaySummary }>('/cash/today', undefined, signal).then((r) => r.today),
     refetchInterval: 60_000,
   });
+
+// ---------- product tools (bulk price, labels, print, old goods, import, split) ----------
+
+export interface AllProductsQuery {
+  q?: string;
+  category?: string;
+  company?: 'MK' | 'HY';
+  stock?: 'all' | 'low' | 'out';
+}
+
+/** Every live product at once (print lists, labels, bulk price, pickers). */
+export const useAllProducts = (q: AllProductsQuery = {}, enabled = true) =>
+  useQuery<ProductDto[]>({
+    queryKey: ['products', 'all', q],
+    queryFn: ({ signal }) => api.get<{ items: ProductDto[] }>('/products/all', q as Record<string, string>, signal).then((r) => r.items),
+    enabled,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+
+export const useBulkPrice = () =>
+  useTradeMutation((v: { ids: string[]; field: 'price' | 'cost' | 'both'; pct: number; round: number }) =>
+    api.post<{ updated: number }>('/products/bulk-price', v).then((r) => r.updated),
+  );
+
+export const useSplitProduct = () =>
+  useTradeMutation((v: { sourceId: string; targetId: string; ratio: number; qty: number }) =>
+    api.post<{ source: ProductDto; target: ProductDto }>('/products/split', v),
+  );
+
+export const useZeroCost = () =>
+  useQuery({
+    queryKey: ['products', 'zero-cost'],
+    queryFn: ({ signal }) => api.get<{ count: number; items: { code: string; name: string; price: number }[] }>('/products/old-goods', undefined, signal),
+  });
+
+export const useEstimateCosts = () => useTradeMutation((pct: number) => api.post<{ updated: number }>('/products/old-goods/estimate', { pct }).then((r) => r.updated));
+
+export const useAddOldGoods = () =>
+  useTradeMutation((v: { pct: number; category: string; unit: string; lines: { name: string; qty: number; price: number; cost?: number }[] }) =>
+    api.post<{ added: number; estimated: number; skipped: string[] }>('/products/old-goods/add', v),
+  );
+
+export const useImportNames = () =>
+  useTradeMutation((v: { category: string; rows: { name: string; price: number; cost: number }[] }) =>
+    api.post<{ added: number; skipped: number }>('/products/import', v),
+  );

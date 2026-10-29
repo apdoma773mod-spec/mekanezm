@@ -6,7 +6,7 @@ import { useToast } from './ui/toast';
 
 export type Co = 'MK' | 'HY';
 const KEY = 'mk_co';
-const COL: Record<Co, string> = { MK: '#1d3fb8', HY: '#d97706' };
+export const COL: Record<Co, string> = { MK: '#1d3fb8', HY: '#d97706' };
 
 const Ctx = createContext<{ co: Co; setCo: (c: Co) => void }>({ co: 'MK', setCo: () => {} });
 

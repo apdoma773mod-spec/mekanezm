@@ -10,12 +10,18 @@ import { Pagination } from '@/components/ui/pagination';
 import { TableState } from '@/components/ui/states';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
-import { useProducts } from '@/lib/trade-queries';
+import { CameraScanner } from '@/components/scan/camera-scanner';
+import { useToast } from '@/components/ui/toast';
+import { useIsAdmin } from '@/components/use-role';
+import { lookupProduct, useProducts } from '@/lib/trade-queries';
 
 type StockFilter = 'all' | 'low' | 'out';
 
 function ProductsScreen() {
   const { open } = useModal();
+  const toast = useToast();
+  const isAdmin = useIsAdmin();
+  const [scanning, setScanning] = useState(false);
   const params = useSearchParams();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
@@ -44,20 +50,47 @@ function ProductsScreen() {
             <button type="button" className="secondary" onClick={() => open({ kind: 'gifts' })}>
               🎁 الهدايا
             </button>
-            <button type="button" className="secondary" onClick={() => open({ kind: 'wanted' })}>
-              🔎 مطلوب ومش عندنا
+            <button type="button" className="secondary" onClick={() => open({ kind: 'oldGoods' })}>
+              💰 بضاعة قديمة
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'printProducts', q: search, stock })}>
+              🖨️ طباعة
+            </button>
+            <button type="button" className="secondary" onClick={() => setScanning(true)}>
+              📷 بالباركود
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'labels' })}>
+              🏷️ ملصقات
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'labels', all: true })}>
+              🏷️ ملصقات كل المنتجات
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'bulkPrice' })}>
+              💲 أسعار جماعي
             </button>
             <a className="secondary" href="/count" style={{ textDecoration: 'none' }}>
               🧮 جرد
             </a>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'importFile' })}>
+              <Icon name="file" /> استيراد من ملف
+            </button>
             <button type="button" className="primary" onClick={() => open({ kind: 'product' })}>
               <Icon name="plus" /> منتج جديد
+            </button>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'split' })}>
+              🔪 فك لفة / تقسيم
             </button>
           </div>
         }
       />
-      <div className="toolbar">
-        <input className="search" placeholder="ابحث باسم المنتج أو الكود..." value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="toolbar" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input className="search" style={{ flex: 1, minWidth: 0 }} placeholder="ابحث باسم المنتج أو الكود..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="secondary vsbtn" title="مطلوب ومش عندنا" onClick={() => open({ kind: 'wanted' })}>
+          🔎
+        </button>
+        <a className="secondary vsbtn" title="صور الواتساب" href="/transfers" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+          📲
+        </a>
         <select
           className="search"
           style={{ maxWidth: 180 }}
@@ -72,6 +105,26 @@ function ProductsScreen() {
           <option value="out">نفد</option>
         </select>
       </div>
+      {scanning && (
+        <CameraScanner
+          title="امسح باركود الصنف"
+          onClose={() => setScanning(false)}
+          onCode={async (code) => {
+            try {
+              const p = await lookupProduct(code);
+              setTimeout(() => open({ kind: 'product', id: p.id }), 300);
+              return p.name;
+            } catch {
+              if (!isAdmin) {
+                toast(`باركود مش متسجل: ${code}`, 'bad');
+                return false;
+              }
+              setTimeout(() => open({ kind: 'linkBarcode', code }), 300);
+              return 'جديد';
+            }
+          }}
+        />
+      )}
       {products.data && <div className="count-line">{products.data.total.toLocaleString('ar-EG')} صنف</div>}
       <div className="card">
         <div className="table-wrap">

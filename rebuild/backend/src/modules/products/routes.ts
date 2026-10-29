@@ -39,6 +39,69 @@ export default async function productsRoutes(app: FastifyInstance) {
     return service.moves(id, page, pageSize);
   });
 
+  app.get('/all', { preHandler: app.authenticate }, async (request) => {
+    const q = parse(
+      z.object({
+        q: z.string().trim().max(100).optional(),
+        category: z.string().trim().max(80).optional(),
+        company: z.enum(['MK', 'HY']).optional(),
+        stock: z.enum(['all', 'low', 'out']).default('all'),
+      }),
+      request.query,
+    );
+    return { items: await service.all(q, actorOf(request)) };
+  });
+
+  app.get('/old-goods', { preHandler: app.requireAdmin }, async () => service.zeroCost());
+
+  app.post('/old-goods/estimate', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(z.object({ pct: z.number().min(10).max(99) }), request.body);
+    return { updated: await service.estimateCosts(b.pct, actorOf(request)) };
+  });
+
+  app.post('/old-goods/add', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(
+      z.object({
+        pct: z.number().min(10).max(99).default(75),
+        category: z.string().trim().max(80).default(''),
+        unit: z.string().trim().min(1).max(30).default('قطعة'),
+        lines: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(200),
+              qty: z.number().min(0).max(1_000_000),
+              price: z.number().gt(0).max(100_000_000),
+              cost: z.number().min(0).max(100_000_000).optional(),
+            }),
+          )
+          .min(1)
+          .max(1000),
+      }),
+      request.body,
+    );
+    return service.addOldGoods(b, actorOf(request));
+  });
+
+  app.post('/import', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(
+      z.object({
+        category: z.string().trim().max(80).default(''),
+        rows: z
+          .array(
+            z.object({
+              name: z.string().trim().min(1).max(200),
+              price: z.number().min(0).max(100_000_000).default(0),
+              cost: z.number().min(0).max(100_000_000).default(0),
+            }),
+          )
+          .min(1)
+          .max(3000),
+      }),
+      request.body,
+    );
+    return service.importNames(b, actorOf(request));
+  });
+
   app.post('/bulk-price', { preHandler: app.requireAdmin }, async (request) => {
     const b = parse(
       z.object({

@@ -71,6 +71,8 @@ export interface ProductDto {
   price: number;
   /** Only present for admins. */
   cost?: number;
+  /** Only present for admins: the cost is an estimate. */
+  costEst?: boolean;
   qty: number;
   minQty: number;
   company: (typeof COMPANIES)[number];

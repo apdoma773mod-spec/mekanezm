@@ -16,6 +16,7 @@ import { CountResult } from './count-result';
 import { QuoteView } from './quote-view';
 import { ShipmentEdit, ShipPaid, ShipWho } from './shipment-modals';
 import { Phase4Modal, type Phase4Spec } from './phase4-modals';
+import { ProductToolModal, type ProductToolSpec } from './product-tools';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
@@ -28,6 +29,7 @@ export type ModalSpec =
   | { kind: 'shipWho'; s: ShipmentDto; next: ShipStatus }
   | { kind: 'shipPaid'; s: ShipmentDto }
   | Phase4Spec
+  | ProductToolSpec
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
   | { kind: 'contact'; id?: string }
@@ -104,6 +106,15 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'countResult':
         content = <CountResult count={spec.count} />;
+        break;
+      case 'bulkPrice':
+      case 'printProducts':
+      case 'labels':
+      case 'linkBarcode':
+      case 'oldGoods':
+      case 'importFile':
+      case 'split':
+        content = <ProductToolModal spec={spec} />;
         break;
       default:
         content = <Phase4Modal spec={spec} />;

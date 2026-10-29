@@ -195,9 +195,9 @@ async function writeLines(
         userId: actor.id,
       });
     }
-    if (!sale && !l.price.isZero() && !l.product.cost.equals(l.price)) {
+    if (!sale && !l.price.isZero() && (!l.product.cost.equals(l.price) || l.product.costEst)) {
       // Latest purchase price becomes the product cost, as in the old system.
-      await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price } });
+      await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price, costEst: false } });
     }
   }
 }
