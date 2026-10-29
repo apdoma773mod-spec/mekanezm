@@ -887,3 +887,55 @@ model OutboundMessage {
 
   @@index([status, createdAt])
 }
+
+// ---------- 📲 فلوس فودافون كاش (الموبايل بيبعت الرسالة على /sms/in) ----------
+model SmsIn {
+  id         String   @id @default(cuid())
+  sender     String   @default("")
+  amount     Decimal  @db.Decimal(14, 2)
+  note       String   @default("")
+  phone      String?
+  /// in = استلمت، out = بعتّ
+  direction  String?
+  /// pending | used | ignored
+  status     String   @default("pending")
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([status, receivedAt])
+}
+
+// ---------- 💬 طلبات الواتساب (الجسر بيبعت الرسالة اللي فيها «طلب») ----------
+model WaOrder {
+  id           String    @id @default(cuid())
+  msgId        String?   @unique
+  phone        String    @default("")
+  customerName String    @default("")
+  body         String
+  /// new | done | ignored | promoted
+  status       String    @default("new")
+  invoiceNo    String?
+  handledAt    DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+// ---------- 🖼️ صور الواتساب (تحويلات وتصاميم العملاء) ----------
+model WaPhoto {
+  id        String    @id @default(cuid())
+  msgId     String?   @unique
+  phone     String    @default("")
+  name      String    @default("")
+  caption   String    @default("")
+  /// data:image/...;base64,...
+  img       String    @db.Text
+  seen      String    @default("")
+  matches   Json      @default("[]")
+  /// new | sent | missing | ignored | paid | transfer
+  status    String    @default("new")
+  handledBy String    @default("")
+  handledAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}

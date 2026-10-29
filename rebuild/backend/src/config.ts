@@ -14,6 +14,10 @@ const envSchema = z.object({
   COOKIE_SECURE: bool.default('false'),
   TRUST_PROXY: bool.default('false'),
   LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  /** The phone's SMS forwarder sends this with every message (the old sms-in function). Empty = refuse everything. */
+  SMS_TOKEN: z.string().default(''),
+  /** The WhatsApp / printer bridge on the shop PC sends this (the old wa_config secret). Empty = refuse everything. */
+  BRIDGE_SECRET: z.string().default(''),
 });
 
 export type Config = z.infer<typeof envSchema>;

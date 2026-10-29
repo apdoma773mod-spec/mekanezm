@@ -6,7 +6,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
 import { Launch, proOn, ProIll } from '@/components/pro';
 import { DashboardBanners, DashboardCharts } from '@/components/dashboard-extras';
-import { CompanyBar } from '@/components/company';
 import { Icon } from '@/components/icon';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
@@ -103,7 +102,6 @@ export default function DashboardPage() {
         </div>
       </div>
       <Launch />
-      {admin && <CompanyBar />}
       {admin && <DashboardBanners />}
       {overview.isError && <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />}
       <Link
