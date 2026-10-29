@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Portal } from '@/components/ui/portal';
 
 /** 📷 ماسح الباركود بالكاميرا (mkScan القديمة): نفس html5-qrcode ونفس الرسايل، وكل مسحة = قطعة لو multi. */
 interface Html5Qr {
@@ -105,6 +106,7 @@ export function CameraScanner({
   }, []);
 
   return (
+    <Portal>
     <div id="scanBox">
       <div className="sb">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -142,5 +144,6 @@ export function CameraScanner({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

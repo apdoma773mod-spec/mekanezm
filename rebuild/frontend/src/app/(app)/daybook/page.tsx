@@ -7,6 +7,7 @@ import { ImportDailyButton } from '@/components/daybook/import-daily';
 import { DaybookWaBox, MoneySection, PostedRowCard } from '@/components/daybook/money-section';
 import { useModal } from '@/components/modals/modal-host';
 import { useIsAdmin } from '@/components/use-role';
+import { Portal } from '@/components/ui/portal';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText, todayYmd } from '@/lib/format';
@@ -95,16 +96,18 @@ function LineCard({ onClose, children }: { onClose: () => void; children: ReactN
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div
-      id="lcBox"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="lc" role="dialog" aria-modal="true">
-        {children}
+    <Portal>
+      <div
+        id="lcBox"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <div className="lc" role="dialog" aria-modal="true">
+          {children}
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 

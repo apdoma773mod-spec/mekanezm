@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { Icon } from '../icon';
+import { Portal } from './portal';
 
 interface Props {
   title: ReactNode;
@@ -27,6 +28,7 @@ export function Modal({ title, onClose, wide, children }: Props) {
   }, [onClose]);
 
   return (
+    <Portal>
     <div
       className="modal-bg"
       onMouseDown={(e) => {
@@ -43,5 +45,6 @@ export function Modal({ title, onClose, wide, children }: Props) {
         {children}
       </div>
     </div>
+    </Portal>
   );
 }

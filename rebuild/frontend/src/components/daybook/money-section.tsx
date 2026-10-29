@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ContactDto, DaybookEntryDto } from '@mk/shared';
+import { Portal } from '@/components/ui/portal';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money } from '@/lib/format';
@@ -25,6 +26,7 @@ const CATS: [string, string][] = [
 
 function Lc({ title, sub, onClose, children }: { title: string; sub: string; onClose: () => void; children: ReactNode }) {
   return (
+    <Portal>
     <div id="lcBox" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="lc">
         <div className="lch">
@@ -39,6 +41,7 @@ function Lc({ title, sub, onClose, children }: { title: string; sub: string; onC
         {children}
       </div>
     </div>
+    </Portal>
   );
 }
 

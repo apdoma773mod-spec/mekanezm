@@ -27,10 +27,10 @@ const loadXlsx = () =>
     document.head.appendChild(s);
   });
 
-async function fetchAll<T>(path: string): Promise<T[]> {
+async function fetchAll<T>(path: string, query: Record<string, string> = {}): Promise<T[]> {
   const out: T[] = [];
   for (let page = 1; page < 100; page++) {
-    const r = await api.get<Paginated<T>>(path, { page, pageSize: 200 });
+    const r = await api.get<Paginated<T>>(path, { ...query, page, pageSize: 200 });
     out.push(...r.items);
     if (out.length >= r.total || !r.items.length) break;
   }
@@ -100,7 +100,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts?type=CUSTOMER')]).then(([p, c]) => {
+    void Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts', { type: 'CUSTOMER' })]).then(([p, c]) => {
       setProducts(p);
       setCustomers(c.filter((x) => x.type === 'CUSTOMER'));
     });
