@@ -635,3 +635,38 @@ export function ProUiCard() {
     </div>
   );
 }
+
+/**
+ * 🔔 شريط التنبيهات الدايم فوق أي شاشة (index.html 2880): بيزق المحتوى لتحت ومايختفيش غير لما الحاجة تتعالج.
+ * القديم كان فيه كمان طلبات الموقع (طلب من الموقع / طلب تجهيز / طلب بالصور) — دي هتتضاف مع شاشة طلبات الموقع.
+ */
+export function NotifyBar({ waPhotos, sms }: { waPhotos: number; sms: number }) {
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+  const L: [string, number, string][] = [];
+  if (waPhotos) L.push(['💬 صورة واتساب', waPhotos, '/transfers']);
+  if (sms) L.push(['📲 فلوس واصلة', sms, '/vodafone']);
+  const sig = L.map((x) => x[0] + x[1]).join('|');
+  useEffect(() => {
+    const B = document.body;
+    if (!L.length) {
+      B.classList.remove('hasNb');
+      return;
+    }
+    B.classList.add('hasNb');
+    if (ref.current) document.documentElement.style.setProperty('--nbH', `${ref.current.offsetHeight}px`);
+    return () => B.classList.remove('hasNb');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  if (!L.length) return null;
+  return (
+    <div id="mkNb" ref={ref} style={{ display: 'flex' }}>
+      {L.map(([t, n, href]) => (
+        <button key={t} type="button" onClick={() => router.push(href)}>
+          {t}
+          <b>{n}</b>
+        </button>
+      ))}
+    </div>
+  );
+}

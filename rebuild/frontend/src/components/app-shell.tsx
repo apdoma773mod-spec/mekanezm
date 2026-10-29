@@ -9,7 +9,7 @@ import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
 import { useInboxCounts } from '@/lib/inbox-queries';
-import { BgFx, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
+import { BgFx, NotifyBar, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
@@ -37,26 +37,26 @@ const MAIN: NavItem[] = [
   { href: '/products', label: 'المنتجات والمخزون', short: 'المخزون', icon: 'box', adminOnly: true, mobile: true },
   { href: '/count', label: 'الجرد', icon: '🧮', adminOnly: true },
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
+  // Order read from the old system as it runs today (2026-10-29), after «ميكانيزم برو» moved the work screens.
+  // «فلوس فودافون كاش» is not in the old sidebar: it opens from the top alerts bar.
   { href: '/daybook', label: 'يومية المحل', icon: '📒' },
-  { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
-  { href: '/transfers', label: 'تحويلات الواتساب', icon: '🖼', adminOnly: true, badge: 'waPhotos' },
-  { href: '/vodafone', label: 'فلوس فودافون كاش', icon: '📲', adminOnly: true, badge: 'sms' },
-  // «ميكانيزم برو» put the work screens right after the daybook.
+  { href: '/transfers', label: 'تحويلات الواتساب', icon: '🖼', adminOnly: true, badge: 'waPhotos', pro: 'tf' },
   { href: '/work?k=ord', label: 'أنظمة الشغل', icon: '🛠', adminOnly: true, pro: 'mkSideWk' },
   { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true, pro: 'mkSideSt' },
   { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true, pro: 'mkSideFf' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
+  { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
+  { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
-  { href: '/contacts', label: 'العملاء والموردون', icon: 'users', adminOnly: true },
+  { href: '/contacts', label: 'العملاء والموردين', icon: 'users', adminOnly: true },
   { href: '/debts', label: 'الديون والتذكير', icon: '💰', adminOnly: true },
   { href: '/reorder', label: 'اقتراحات الطلب', icon: '📦', adminOnly: true },
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
-  { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
+  { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
   { href: '/samples', label: 'العينات', icon: '🧪' },
-  { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
 ];
 /** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
 const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/hy', '/settings', '/account'];
@@ -184,6 +184,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <ProBody />
       </Suspense>
+      {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} />}
       <PunchCatcher />
       <header className="top">
         <div className="brand">
