@@ -88,9 +88,15 @@ Deno.serve(async (req) => {
       const parts: unknown[] = [{ text: S_PROMPT(String(b.name || "").slice(0, 120)) + "\n\n=== نص الكلام ===\n" + tr }];
       frames.forEach((f: string) => parts.push({ inline_data: { mime_type: "image/jpeg", data: f } }));
       const { txt, m } = await gemini(gkey, parts, 24000);
-      const k = txt.search(/^---[ \t]*\r?\n[ \t]*name:/m);
-      const skill = (k >= 0 ? txt.slice(k) : txt).replace(/\n```\s*$/, "").trim();
-      if (k < 0 && !skill.startsWith("---")) return json({ error: "الرد مش مفهوم (" + m + "): " + txt.slice(0, 150).replace(/\s+/g, " ") }, 502);
+      let k = txt.search(/^---[ \t]*\r?\n[ \t]*name:/m), skill: string;
+      if (k >= 0) skill = txt.slice(k);
+      else {   // أحيانًا جيميناي بيرجّع name/description من غير سطري --- فنركّبهم
+        k = txt.search(/^[ \t]*name:/m);
+        if (k < 0) return json({ error: "الرد مش مفهوم (" + m + "): " + txt.slice(0, 150).replace(/\s+/g, " ") }, 502);
+        skill = txt.slice(k).replace(/^\s*name:[^\n]*\n\s*description:[^\n]*\n/, (h) => "---\n" + h.trim() + "\n---\n");
+        skill = skill.startsWith("---") ? skill : "---\n" + skill;
+      }
+      skill = skill.replace(/\n```\s*$/, "").trim();
       return json({ skill, _model: m });
     }
     const audio = b.audio;

@@ -22,8 +22,8 @@ const SCHEMA = {
   },
   required: ["segments", "events"],
 };
-const PROMPT = (offset: number, first: boolean, products: string[]) => `ده صوت جزء من فيديو شغل لمحل إكسسوار مطابخ ودريسنج روم وعدد في مصر (ميكانيزم). اللي بيتكلم صاحب المحل بالعامية المصرية وبيشرح منتج أو شغلانة.
-اكتب الكلام زي ما اتقال بالظبط بالعامية المصرية (من غير تصحيح للفصحى ومن غير ترجمة)، مقسم لجمل قصيرة (من ٣ لـ ٨ كلمات) كل جملة بتوقيت بدايتها ونهايتها بالثواني من أول الجزء ده (s و e). التوقيت لازم يكون دقيق على الكلام.
+const PROMPT = (offset: number, first: boolean, products: string[], gloss: string[] = []) => `ده صوت جزء من فيديو شغل لمحل إكسسوار مطابخ ودريسنج روم وعدد في مصر (ميكانيزم). اللي بيتكلم صاحب المحل بالعامية المصرية وبيشرح منتج أو شغلانة.
+اكتب الكلام زي ما اتقال بالظبط بالعامية المصرية (من غير تصحيح للفصحى ومن غير ترجمة).${gloss.length ? " كلمات متكررة في الفيديوهات دي لازم تتكتب بالشكل ده بالظبط لو اتنطقت: " + gloss.slice(0, 150).join(" | ") + "." : ""}، مقسم لجمل قصيرة (من ٣ لـ ٨ كلمات) كل جملة بتوقيت بدايتها ونهايتها بالثواني من أول الجزء ده (s و e). التوقيت لازم يكون دقيق على الكلام.
 events = الحاجات اللي محتاجة تتوضّح على الشاشة وقت ما بتتقال:
 - measure: أي مقاس أو رقم بوحدة (سم، مم، متر، م، كيلو، بوصة، درجة، لتر). value = الرقم بالإنجليزي، unit = الوحدة زي ما اتقالت مختصرة (سم/مم/م/كجم/بوصة)، label = الجملة القصيرة اللي توضّحه (مثلًا «عرض الدرج 60 سم»).
 - product: لما يذكر صنف أو نموذج أو موديل (مفصلة، مجرى، مقبض، كالون، ميكانيزم ركنة، سلة، ...). label = اسم الصنف.${products.length ? " لو الكلام قريب من صنف من دول اكتب اسمه زي ما هو: " + products.slice(0, 80).join(" | ") : ""}
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     if (!(await authed(req))) return json({ error: "لازم تسجّل دخول بحساب ميكانيزم" }, 401);
     const gkey = Deno.env.get("GEMINI_API_KEY");
     if (!gkey) return json({ error: "مفتاح Gemini مش متسجل على السيرفر" }, 500);
-    const { audio, mime, offset, first, products } = await req.json();
+    const { audio, mime, offset, first, products, gloss } = await req.json();
     if (typeof audio !== "string" || !audio) return json({ error: "مفيش صوت" }, 400);
     if (audio.length > MAX_B64) return json({ error: "الجزء كبير — قصّره" }, 413);
     const t0 = Date.now();
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
           method: "POST", signal: AbortSignal.timeout(Math.min(m.includes("pro") ? 70000 : 50000, left)),
           headers: { "x-goog-api-key": gkey, "content-type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: PROMPT(Number(offset) || 0, !!first, Array.isArray(products) ? products.map(String) : []) }, { inline_data: { mime_type: mime || "audio/wav", data: audio } }] }],
+            contents: [{ parts: [{ text: PROMPT(Number(offset) || 0, !!first, Array.isArray(products) ? products.map(String) : [], Array.isArray(gloss) ? gloss.map((x: unknown) => String(x).slice(0, 40)) : []) }, { inline_data: { mime_type: mime || "audio/wav", data: audio } }] }],
             generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0, maxOutputTokens: 16384 },
           }),
         });

@@ -37,10 +37,17 @@ async function doLogin(){const b=$s('sm_li');b.disabled=true;b.textContent='جا
  try{const r=await sbk().auth.signInWithPassword({email:$s('sm_em').value.trim(),password:$s('sm_pw').value});if(r.error)throw r.error;say('✔ اتسجل الدخول');paint()}
  catch(e){b.disabled=false;b.textContent='دخول';say('❌ '+(/Invalid login/i.test(e.message||'')?'الإيميل أو الباسورد غلط':(e.message||e)))}}
 
+/* ---------- قاموس المصطلحات: الذكاء يكتبها صح، وأي كلمة تصلّحها في الترجمة تتحفظ لوحدها ---------- */
+const GLOS0=['ميكانيزم','دريسنج روم','أكر','سوفت كلوز','دلفة','جرار','باسكت قمامة','دولاب سوبر ماركت','خزنة بصمة','قطاع ألمنيوم','مقبض','كالون','فصالة','سكة'];
+const gloss=()=>{let L=[];try{L=JSON.parse(localStorage.getItem('mkz-gloss')||'[]')}catch(e){}return [...new Set(GLOS0.concat(Array.isArray(L)?L:[]))].slice(0,150)};
+const addGloss=ws=>{try{const L=JSON.parse(localStorage.getItem('mkz-gloss')||'[]');ws.forEach(w=>{w=String(w).replace(/[.,،؟!?:«»"]/g,'');if(w.length>=3&&!L.includes(w)&&!GLOS0.includes(w))L.push(w)});localStorage.setItem('mkz-gloss',JSON.stringify(L.slice(-120)))}catch(e){}};
+const dlBlob=(b,nm)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=String(nm).replace(/[\/:*?"<>|]+/g,'-');a.click()};
+
 /* ---------- الحالة ---------- */
 const FONTS=[['Cairo','القاهرة'],['Tajawal','تجوال'],['Almarai','المراعي'],['Changa','شانجا'],['Lalezar','لاله زار'],['El Messiri','المسيري'],['Reem Kufi','ريم كوفي'],['Marhey','مرحي']];
 /* القالب = مجموعة اختيارات جاهزة، وكل اختيار يتغيّر لوحده من «تخصيص» (بيتحفظ في S.o) */
 const TPL={
+ magic:{n:'🎯 احترافي ذكي (سكيل المونتاج)',d:'قص السكتات والإعادات + كلام كلمة كلمة بعيد عن واجهة تيك توك/ريلز + كروت صغيرة نضيفة ماتغطيش الوش + اسم المنتج مرة واحدة + أقصى عنصرين مع بعض',cap:'wbw',motion:'soft',cut:2,takes:true,kw:true,chap:false,ov:true,prog:false,wm:false,letter:false,look:'auto',safe:true,calm:true,chip:true,l3:true},
  pro:{n:'🔥 يوتيوب احترافي',d:'قص قوي من غير سكتات ولا إعادات + زووم مع كل قطع + الكلمات المهمة بماركر ملون وملصقات بإيموجي + كروت وعناوين أقسام + أصوات',cap:'bold',motion:'punch',cut:3,takes:true,kw:true,chap:true,ov:true,prog:true,wm:true,letter:false,look:'auto'},
  fast:{n:'⚡ تيك توك سريع',d:'كلمة كلمة كبير + زووم مع كل قطع + قص قوي + شريط تقدم',cap:'karaoke',motion:'punch',cut:3,takes:true,kw:true,chap:false,ov:true,prog:true,wm:true,letter:false,look:'vivid'},
  tech:{n:'🛠️ شرح فني',d:'ترجمة في بوكس + كروت المقاسات والخطوات والتحذيرات + زووم خفيف + قص عادي',cap:'box',motion:'soft',cut:2,takes:true,kw:true,chap:true,ov:true,prog:false,wm:true,letter:false,look:'auto'},
@@ -50,20 +57,20 @@ const TPL={
  calm:{n:'✨ هادي وأنيق',d:'ترجمة صغيرة تحت + كروت هادية من غير زووم ولا قص',cap:'lower',motion:'none',cut:0,takes:false,kw:false,chap:false,ov:true,prog:false,wm:false,letter:false,look:'auto'},
  clean:{n:'📐 توضيحات بس',d:'من غير ترجمة — المقاسات والأصناف والأسعار بس + قص خفيف',cap:'none',motion:'soft',cut:1,takes:true,kw:false,chap:true,ov:true,prog:false,wm:true,letter:false,look:'auto'}};
 /* إضافات الحركة والرسومات لكل قالب: انتقال عند القطع، ملصقات للكلمات المهمة، نداء للشراء في النص، أصوات (في السحابة) */
-const TPLX={pro:{trans:'zoom',stk:true,cta:true,sfx:true},fast:{trans:'flash',stk:true,cta:true,sfx:true},tech:{trans:'zoom',stk:true,cta:true,sfx:true},ad:{trans:'flash',stk:true,cta:true,sfx:true},
+const TPLX={magic:{trans:'none',stk:false,cta:false,sfx:false},pro:{trans:'zoom',stk:true,cta:true,sfx:true},fast:{trans:'flash',stk:true,cta:true,sfx:true},tech:{trans:'zoom',stk:true,cta:true,sfx:true},ad:{trans:'flash',stk:true,cta:true,sfx:true},
  talk:{trans:'zoom',stk:true,cta:true,sfx:true},cine:{trans:'none',stk:false,cta:false,sfx:false},calm:{trans:'none',stk:false,cta:false,sfx:false},clean:{trans:'zoom',stk:false,cta:true,sfx:true}};
 Object.keys(TPLX).forEach(k=>Object.assign(TPL[k],TPLX[k],{anim:true}));
 const TRANS=[['zoom','زووم سريع'],['flash','فلاش أبيض'],['none','من غير']];
 /* إيموجي مناسب للكلام (بعد توحيد الحروف) */
 const EMJ=[[/مجر|درج|ادراج/,'🗄️'],[/مطبخ|مطابخ/,'🍳'],[/دريسنج|دولاب|دواليب|هدوم/,'👔'],[/مفصل/,'🔩'],[/مقبض|مقابض|اكر|كالون|باب|ضلف/,'🚪'],[/سعر|جنيه|فلوس|رخيص|خصم|عرض خاص/,'💰'],[/ضمان/,'🛡️'],[/جود|اصلي|ممتاز|فاخر|احسن|افضل/,'⭐'],[/هادي|صوت|خبط/,'🤫'],[/قوي|تقيل|يشيل|كيلو|وزن/,'💪'],[/سريع|بسرع/,'⚡'],[/المنيوم|حديد|ستانلس|معدن/,'🔧'],[/لون|الوان|اسود|ابيض|ذهبي/,'🎨'],[/مقاس|سم|متر|طول/,'📏'],[/تركيب|يركب|ركب/,'🛠️'],[/توصيل|شحن/,'🚚'],[/اطلب|كلمنا|اتصل|واتساب/,'📞'],[/جديد|وصل/,'🆕'],[/مشكل|غلط|احذر/,'⚠️'],[/نصيح|خلي بالك|سر/,'💡'],[/ركن/,'📐'],[/مضمون|ثقه/,'🤝']];
-const CAPS=[['bold','عريض بحدود (من غير بوكس)'],['box','في بوكس غامق'],['pill','بخلفية ملونة'],['karaoke','كلمة كلمة كبير'],['lower','صغير هادي تحت'],['none','من غير كلام']];
+const CAPS=[['wbw','كلمة بكلمة (الجارية ملونة) — آمن'],['bold','عريض بحدود (من غير بوكس)'],['box','في بوكس غامق'],['pill','بخلفية ملونة'],['karaoke','كلمة كلمة كبير'],['lower','صغير هادي تحت'],['none','من غير كلام']];
 /* شكل كل نوع كلام: عدد الكلمات في السطر، المكان المفضّل (نسبة من الطول)، الحجم */
-const CAPF={bold:{words:5,pos:.78,sz:64},box:{words:6,pos:.80,sz:56},pill:{words:5,pos:.78,sz:58},karaoke:{words:3,pos:.66,sz:92},lower:{words:7,pos:.87,sz:46},none:{words:6,pos:.8,sz:56}};
+const CAPF={wbw:{words:4,pos:.70,sz:62},bold:{words:5,pos:.78,sz:64},box:{words:6,pos:.80,sz:56},pill:{words:5,pos:.78,sz:58},karaoke:{words:3,pos:.66,sz:92},lower:{words:7,pos:.87,sz:46},none:{words:6,pos:.8,sz:56}};
 const MOTIONS=[['punch','زووم مع كل قطع (يوتيوب)'],['soft','زووم خفيف على المهم'],['ken','حركة بطيئة سينمائية'],['none','ثابت']];
 const CUTS=[[3,'قوي — من غير ولا سكتة'],[2,'عادي'],[1,'خفيف'],[0,'من غير قص']];
 const LOOKS=[['auto','تلقائي — يشيل الصفار'],['vivid','ألوان أقوى'],['warm','دافي'],['bw','أبيض وأسود'],['off','زي ما هو']];
 const COLORS=[['#F6DC8A','ذهبي'],['#FFE600','أصفر'],['#2EC4B6','تركواز ميكانيزم'],['#35E0A0','أخضر'],['#4FC3FF','أزرق'],['#FF7A45','برتقالي'],['#FFFFFF','أبيض']];
-let S=Object.assign({tpl:'pro',o:{},font:'Cairo',size:1,color:'#F6DC8A',aspect:'916',q:1080,intro:true,outro:true,smart:true},(()=>{try{return JSON.parse(localStorage.getItem('mkz-smart')||'{}')}catch(e){return {}}})());
+let S=Object.assign({tpl:'magic',o:{},font:'Cairo',size:1,color:'#F6DC8A',aspect:'916',q:1080,intro:true,outro:true,smart:true},(()=>{try{return JSON.parse(localStorage.getItem('mkz-smart')||'{}')}catch(e){return {}}})());
 if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={};
 const saveS=()=>{try{localStorage.setItem('mkz-smart',JSON.stringify(S))}catch(e){}};
 const O=k=>(S.o&&S.o[k]!=null)?S.o[k]:TPL[S.tpl][k];
@@ -99,7 +106,7 @@ function vad(f32){const F=320,n=Math.floor(f32.length/F);if(n<10)return [];const
  const I=[];let st=-1;for(let i=0;i<=n;i++){const on=i<n&&E[i]>thr;if(on&&st<0)st=i;if(!on&&st>=0){I.push([st*.02,i*.02]);st=-1}}
  const M=[];I.forEach(x=>{const l=M[M.length-1];if(l&&x[0]-l[1]<.18)l[1]=x[1];else M.push([x[0],x[1]])});return M.filter(x=>x[1]-x[0]>=.12).map(x=>[+x[0].toFixed(2),+x[1].toFixed(2)])}
 async function callAI(b64,offset,first,tok){
- const r=await fetch(MK_URL+'/functions/v1/video-ai',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok,apikey:MK_KEY},body:JSON.stringify({audio:b64,mime:'audio/wav',offset,first,products:prods().map(p=>p.nm).filter(Boolean)})});
+ const r=await fetch(MK_URL+'/functions/v1/video-ai',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok,apikey:MK_KEY},body:JSON.stringify({audio:b64,mime:'audio/wav',offset,first,products:prods().map(p=>p.nm).filter(Boolean),gloss:gloss()})});
  const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
 /* نتيجة الذكاء لكل جزء → كلام وأحداث بتوقيت الفيديو كله (نفس الشكل في العامل السحابي) */
 function mergeAI(res,offs){let seg=[],ev=[],title='';
@@ -181,6 +188,11 @@ function build(){retime();const cf=CF(),cut=+O('cut')||0,takes=O('takes');CAP=[]
  if(O('anim')&&!EV.some(e=>e.type==='anim'))EV=EV.concat(autoAnims(SEG)).sort((a,b)=>a.s-b.s);
  /* رسمة واحدة في المرة: لو بدأت رسمة جديدة، اللي قبلها تخلص */
  {let prev=null;EV.forEach(e=>{if(e.type!=='anim'||!e.on)return;if(prev&&prev.e>e.s-.15)prev.e=Math.max(prev.s+1.2,e.s-.15);prev=e})}
+ /* وضع «سكيل المونتاج»: كل عنصر مدته ١٫٢–٣ ثواني، اسم المنتج يظهر مرة واحدة، وأقصى عنصرين مع بعض (الرسمة بعنصرين) — اللي يزيد يتشال مش يتضغط */
+ EV.forEach(e=>{e.skip=false});
+ if(O('calm')){const seen=new Set(),act=[];EV.forEach(e=>{if(!showEv(e))return;if(e.type==='product'){const k=norm(e.label);if(seen.has(k)){e.skip=true;return}seen.add(k);if(O('l3'))e.e=e.s+2}
+  else if(e.type!=='anim')e.e=Math.max(e.s+1.4,Math.min(e.e,e.s+3));
+  const w=e.type==='anim'?2:1;let load=0;act.forEach(a=>{if(a.e>e.s)load+=a.w});if(load+w>2){e.skip=true;return}act.push({e:e.e,w})})}
  /* ملصقات الكلمات المهمة: كلمة كبيرة بإيموجي كل ٤ ثواني تقريبًا (لو مفيش كارت ظاهر ساعتها) */
  CTA=null;const od=outDur();if(O('cta')&&od>22){const s=srcT(od*.48);CTA={s,e:s+3.4}}
  STK=[];if(O('stk')){let last=-9;CAP.forEach(c=>{const k1=(c.kw||[]).find(k=>k.split(/\s+/).length<=2&&k.split(/\s+/).every(x=>c.w.some(w=>norm(w)===norm(x))));const w=k1||c.w.find(x=>isKw(x,c.kw));if(!w)return;const o=outT(c.s);if(o-last<4||o<2.6)return;if(EV.some(e=>showEv(e)&&e.s<c.e+.3&&e.e>c.s-.3))return;if(CTA&&c.s<CTA.e+.3&&c.s+1.7>CTA.s-.3)return;
@@ -255,13 +267,20 @@ function capLayout(c){const key='c'+c.s;if(LAY.has(key))return LAY.get(key);cons
 const capAt=t=>O('cap')==='none'?null:CAP.find(x=>t>=x.s&&t<x.e+.08);
 
 /* كل حاجة تحت: الكلام في آخر الشاشة، والكروت والرسومات فوقه على طول — عند الرجلين مش على الجسم أو الوش */
-function capBottom(){return CV.height*(O('letter')?.905:.945)}
+function capBottom(){return CV.height*(O('safe')?.77:O('letter')?.905:.945)}
 function stackBase(){const u=CV.width/1080,cf=CF();if(O('cap')==='none')return capBottom();const lh=Math.round(cf.sz*u*S.size)*1.34;return capBottom()-2*lh-30*u}
 const EVH={measure:250,product:215,price:145,point:120,warn:120,step:120,topic:130,anim:500};
-function evY(e,i){const key='e'+i+':'+e.s;if(LAY.has(key))return LAY.get(key);const H=CV.height,u=CV.width/1080,h=(EVH[e.type]||115)*u;
- let cur=stackBase();EV.forEach((x,j)=>{if(j<i&&x.s<=e.s&&x.e>e.s&&showEv(x))cur=Math.min(cur,evY(x,j)-(EVH[x.type]||115)*u/2-16*u)});
- const y=Math.max(H*.05+h/2,cur-h/2-6*u);LAY.set(key,y);return y}
-const showEv=e=>e.on&&(e.type==='topic'?O('chap'):e.type==='anim'?O('anim'):O('ov'));
+const chipK=e=>O('chip')&&e.type!=='anim'?.8:1;
+function evY(e,i){const key='e'+i+':'+e.s;if(LAY.has(key))return LAY.get(key);const H=CV.height,u=CV.width/1080,h=(EVH[e.type]||115)*u*chipK(e)*(e.type==='anim'&&O('calm')?.8:1);
+ let cur=stackBase();EV.forEach((x,j)=>{if(j<i&&x.s<=e.s&&x.e>e.s&&showEv(x)){const yx=evY(x,j);if(yx!=null)cur=Math.min(cur,yx-(EVH[x.type]||115)*u*chipK(x)/2-16*u)}});
+ let y=Math.max(H*.05+h/2,cur-h/2-6*u);
+ if(O('calm')){/* ممنوع أي عنصر يتقاطع مع الراس (من أول الكارت لآخره) — بندوّر على أقرب مكان فاضي جوه الحدود الآمنة، ولو مفيش: العنصر يتشال */
+  const hs=[0,.5,1].map(k=>headRect(e.s+(e.e-e.s)*k)).filter(Boolean),top=H*(O('safe')?.10:.05)+h/2,bot=Math.max(top,cur+h/2-6*u);
+  const bad=yy=>hs.some(r=>yy+h/2>r[0]&&yy-h/2<r[1]);
+  if(bad(y)||y<top){let ok=null;for(let d=0;d<H&&ok==null;d+=H*.02){for(const yy of [y-d,y+d])if(yy>=top&&yy<=bot&&!bad(yy)){ok=yy;break}}
+   if(ok==null){LAY.set(key,null);return null}y=ok}}
+ LAY.set(key,y);return y}
+const showEv=e=>e.on&&!e.skip&&(e.type==='topic'?O('chap'):e.type==='anim'?O('anim'):O('ov'));
 
 /* ---------- 🎞️ رسومات متحركة بتشرح الكلام (مكتبة مشاهد لمنتجات ميكانيزم) ----------
    كل مشهد بيترسم بالكود (من غير صور) في كارت كبير: ضلفة بتفتح لفوق بالدراع الباكم، مجرى درج، مفصلة، كالون، ركنة، بانتوجراف، مقبض.
@@ -409,6 +428,7 @@ function drawDsl(sc,p,bw,bh){const k=Math.min(bw/400,bh/260);CX.save();CX.scale(
   CX.restore()}
  CX.restore()}
 /* الكارت الكبير للمشهد: خلفية فاتحة + المشهد + سطر الشرح تحت. compare = نصين: العادي بيتكسر ✖ وميكانيزم ✔ */
+function dk(x,y,w,h,r,a){const k=CV.width/1080;CX.save();CX.shadowColor='rgba(0,0,0,.45)';CX.shadowBlur=22*k;CX.shadowOffsetY=6*k;rr(x,y,w,h,r);const g=CX.createLinearGradient(0,y,0,y+h);g.addColorStop(0,`rgba(32,35,43,${a})`);g.addColorStop(1,`rgba(9,10,13,${a})`);CX.fillStyle=g;CX.fill();CX.restore();CX.save();rr(x,y,w,h,r);CX.lineWidth=2*k;CX.strokeStyle='rgba(255,255,255,.16)';CX.stroke();CX.restore()}
 function drawAnimPanel(e,y,t,W,H,u,F,acc){const d=Math.max(1,e.e-e.s),p=cl((t-e.s)/d),pw=Math.min(W*.9,820*u),ph=Math.min(H*.27,490*u),lab=56*u;SCX.label=e.label||'';
  const a=Math.min(ease((t-e.s)/.35),1-ease((t-e.e+.35)/.35));if(a<=0)return;CX.save();CX.globalAlpha=a;CX.translate(W/2,y);const s=.85+.15*back(cl((t-e.s)/.45));CX.scale(s,s);
  rr(-pw/2,-ph/2,pw,ph,30*u);CX.fillStyle=SC_COL.bg;CX.fill();CX.lineWidth=6*u;CX.strokeStyle=acc;CX.stroke();
@@ -447,17 +467,20 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
   const tsz=Math.round(86*u*S.size);CX.font=`900 ${tsz}px ${F}`;const L=wrapLines(D.title.split(/\s+/),W*.84),bh=L.length*tsz*1.2+90*u,ty=stackBase()-bh/2-10*u,y0=ty-bh/2+tsz*.6;
   L.forEach((l,i)=>{const y=y0+i*tsz*1.2,s=.9+.1*back(ot/.5);CX.save();CX.translate(W/2,y);CX.scale(s,s);CX.lineWidth=12*u;CX.lineJoin='round';CX.strokeStyle='rgba(0,0,0,.75)';CX.strokeText(l.join(' '),0,0);CX.fillStyle='#fff';CX.fillText(l.join(' '),0,0);CX.restore()});
   const ly=y0+L.length*tsz*1.2-tsz*.2;CX.fillStyle=acc;CX.fillRect(W/2-W*.15*ease(ot/.6),ly,W*.3*ease(ot/.6),8*u);CX.font=`700 ${Math.round(40*u)}px ${F}`;CX.fillText(br.shop||'ميكانيزم',W/2,ly+48*u);CX.globalAlpha=1}
- /* الكروت وعناوين الأقسام */
- EV.forEach((e,i)=>{if(!showEv(e)||t<e.s||t>e.e||inOut||inIntro)return;if(e.type==='anim'){drawAnimPanel(e,evY(e,i),t,W,H,u,F,acc);CX.globalAlpha=1;return}const a=ease((t-e.s)/.3),out=1-ease((t-e.e+.3)/.3),al=Math.min(a,out);if(al<=0)return;CX.globalAlpha=al;const y=evY(e,i),sc=.8+.2*back((t-e.s)/.4);
-  CX.save();CX.translate(W/2,y);
+ /* الكروت وعناوين الأقسام (الوضع الآمن: مزاحة شوية بعيد عن أزرار المنصة اللي على اليمين) */
+ if(O('safe')){CX.save();CX.translate(-W*.06,0)}
+ EV.forEach((e,i)=>{if(!showEv(e)||t<e.s||t>e.e||inOut||inIntro)return;if(evY(e,i)==null)return;if(e.type==='anim'){drawAnimPanel(e,evY(e,i),t,W,H,u,F,acc);CX.globalAlpha=1;return}const a=ease((t-e.s)/.3),out=1-ease((t-e.e+.3)/.3),al=Math.min(a,out);if(al<=0)return;CX.globalAlpha=al;const y=evY(e,i),sc=.8+.2*back((t-e.s)/.4);
+  CX.save();CX.translate(W/2,y);if(chipK(e)!==1)CX.scale(chipK(e),chipK(e));
   if(e.type==='topic'){/* عنوان قسم: شريط داخل من اليمين */const sl=(1-ease((t-e.s)/.45))*W;CX.translate(sl,0);CX.font=`900 ${Math.round(58*u)}px ${F}`;const tw=CX.measureText(e.label).width,bw=Math.min(W*.92,tw+140*u);
-   rr(-bw/2,-62*u,bw,124*u,18*u);CX.fillStyle='rgba(10,10,12,.86)';CX.fill();CX.fillStyle=acc;CX.fillRect(bw/2-22*u,-62*u,22*u,124*u);CX.fillStyle='#fff';CX.fillText(e.label,-11*u,3*u)}
+   dk(-bw/2,-62*u,bw,124*u,18*u,.86);CX.fillStyle=acc;CX.fillRect(bw/2-22*u,-62*u,22*u,124*u);CX.fillStyle='#fff';CX.fillText(e.label,-11*u,3*u)}
   else{CX.scale(sc,sc);
   if(e.type==='measure'){const val=(e.value||'')+' '+(e.unit||''),lab=e.label||'';CX.font=`900 ${Math.round(110*u)}px ${F}`;const vwid=CX.measureText(ar(val)).width;CX.font=`700 ${Math.round(38*u)}px ${F}`;const lw=CX.measureText(lab).width,bw=Math.min(W*.92,Math.max(vwid,lw)+120*u);
-   const hasL=lab&&lab.replace(/\s/g,'')!==val.replace(/\s/g,'');rr(-bw/2,(hasL?-125:-95)*u,bw,(hasL?245:190)*u,28*u);CX.fillStyle='rgba(10,10,12,.84)';CX.fill();CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
+   const hasL=lab&&lab.replace(/\s/g,'')!==val.replace(/\s/g,'');dk(-bw/2,(hasL?-125:-95)*u,bw,(hasL?245:190)*u,28*u,.84);CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
    /* مسطرة بتتمد */const rw=(bw-80*u)*ease((t-e.s)/.6);const ry=(hasL?80:52)*u;CX.fillStyle=acc;CX.fillRect(-rw/2,ry,rw,8*u);for(let k=0;k<=10;k++){const x=-rw/2+rw*k/10;CX.fillRect(x-1.5*u,ry-(k%5?8:16)*u,3*u,(k%5?16:24)*u)}
    /* الرقم بيعدّ لحد قيمته */const num=parseFloat(e.value),cnt=isFinite(num)&&num>0?(Math.round(num*ease((t-e.s)/.7)*10)/10):null;
    CX.fillStyle=acc;CX.font=`900 ${Math.round(110*u)}px ${F}`;CX.fillText(ar(cnt!=null&&t-e.s<.7?(Number.isInteger(num)?Math.round(cnt):cnt)+' '+(e.unit||''):val),0,-14*u);if(hasL){CX.fillStyle='#fff';CX.font=`700 ${Math.round(38*u)}px ${F}`;CX.fillText(lab,0,-90*u)}}
+  else if(e.type==='product'&&O('l3')){const p=findProd(e.label),nm=p?p.nm:e.label;CX.font=`800 ${Math.round(44*u)}px ${F}`;const tw=CX.measureText(nm).width,bw=Math.min(W*.8,tw+96*u),bh=84*u;
+   dk(-bw/2,-bh/2,bw,bh,14*u,.82);CX.fillStyle=acc;CX.fillRect(bw/2-10*u,-bh/2,10*u,bh*ease((t-e.s)/.35));CX.fillStyle='#fff';CX.fillText(nm,-8*u,3*u)}
   else if(e.type==='product'){const p=findProd(e.label),im=p&&prodImg[p.id],has=im&&im.complete&&im.naturalWidth;CX.font=`800 ${Math.round(46*u)}px ${F}`;const nm=p?p.nm:e.label,tw=CX.measureText(nm).width,bw=Math.min(W*.9,tw+(has?250:110)*u),bh=has?210*u:120*u;
    rr(-bw/2,-bh/2,bw,bh,26*u);CX.fillStyle='rgba(255,255,255,.96)';CX.fill();CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
    if(has){const s=170*u,r=Math.min(s/im.naturalWidth,s/im.naturalHeight);CX.drawImage(im,bw/2-20*u-s+(s-im.naturalWidth*r)/2,-s/2+(s-im.naturalHeight*r)/2,im.naturalWidth*r,im.naturalHeight*r)}
@@ -465,12 +488,12 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
   else if(e.type==='price'){const txt=ar((e.value||e.label)+' '+(e.unit||'جنيه'));CX.font=`900 ${Math.round(80*u)}px ${F}`;const bw=CX.measureText(txt).width+110*u,wob=1+.06*Math.sin(Math.max(0,t-e.s-.4)*6)*Math.max(0,1-(t-e.s-.4)/1.2);
    CX.scale(wob,wob);rr(-bw/2,-70*u,bw,140*u,70*u);CX.fillStyle=acc;CX.fill();CX.lineWidth=6*u;CX.strokeStyle='rgba(0,0,0,.35)';CX.stroke();CX.fillStyle='#111';CX.fillText(txt,0,4*u)}
   else if(e.type==='step'){CX.font=`800 ${Math.round(48*u)}px ${F}`;const n=ar(e.value||'•'),txt=e.label,tw=CX.measureText(txt).width,bw=Math.min(W*.92,tw+190*u);
-   rr(-bw/2,-56*u,bw,112*u,56*u);CX.fillStyle='rgba(10,10,12,.86)';CX.fill();CX.beginPath();CX.arc(bw/2-56*u,0,44*u,0,7);CX.fillStyle=acc;CX.fill();CX.fillStyle='#111';CX.font=`900 ${Math.round(50*u)}px ${F}`;CX.fillText(n,bw/2-56*u,4*u);
+   dk(-bw/2,-56*u,bw,112*u,56*u,.86);CX.beginPath();CX.arc(bw/2-56*u,0,44*u,0,7);CX.fillStyle=acc;CX.fill();CX.fillStyle='#111';CX.font=`900 ${Math.round(50*u)}px ${F}`;CX.fillText(n,bw/2-56*u,4*u);
    CX.fillStyle='#fff';CX.font=`800 ${Math.round(48*u)}px ${F}`;CX.fillText(txt,-50*u,3*u)}
   else if(e.type==='warn'){CX.font=`800 ${Math.round(48*u)}px ${F}`;const txt='⚠️ '+e.label,bw=Math.min(W*.92,CX.measureText(txt).width+90*u),sh=Math.sin((t-e.s)*28)*6*u*Math.max(0,1-(t-e.s)/.5);
    CX.translate(sh,0);rr(-bw/2,-58*u,bw,116*u,58*u);CX.fillStyle='rgba(200,30,30,.92)';CX.fill();CX.lineWidth=4*u;CX.strokeStyle='#FFD54F';CX.stroke();CX.fillStyle='#fff';CX.fillText(txt,0,3*u)}
   else{/* نقطة مهمة + أيقونة متحركة على حسب الكلام (ضمان، أصلي، شحن، تواصل، مقاسات، تركيب) */const ic=iconFor(e.label);CX.font=`800 ${Math.round(46*u)}px ${F}`;const tw=CX.measureText(e.label).width,bw=Math.min(W*.94,tw+190*u);
-   rr(-bw/2,-60*u,bw,120*u,60*u);CX.fillStyle='rgba(10,10,12,.88)';CX.fill();CX.lineWidth=4*u;CX.strokeStyle=acc;CX.stroke();drawIcon(ic,bw/2-60*u,0,46*u,t-e.s,acc);CX.fillStyle='#fff';CX.fillText(e.label,-45*u,3*u)}}
+   dk(-bw/2,-60*u,bw,120*u,60*u,.88);CX.lineWidth=4*u;CX.strokeStyle=acc;CX.stroke();drawIcon(ic,bw/2-60*u,0,46*u,t-e.s,acc);CX.fillStyle='#fff';CX.fillText(e.label,-45*u,3*u)}}
   CX.restore();CX.globalAlpha=1});
  /* ملصق الكلمة المهمة: إيموجي بينط + الكلمة كبيرة مايلة + خطوط انفجار */
  STK.forEach((x,i)=>{if(inOut||inIntro||t<x.s||t>x.e)return;const key='s'+i;let y=LAY.get(key);if(y==null){const cc=capAt(x.s);y=stackBase()-165*u;LAY.set(key,y)}
@@ -488,13 +511,14 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
  if(c){const Ly=capLayout(c),{L,lh,sz,y0}=Ly,a=ease((t-c.s)/.15);CX.font=`900 ${sz}px ${F}`;
   const nWord=Math.min(c.w.length-1,Math.floor((t-c.s)/((c.e-c.s)/c.w.length)));let wi=0;const sp=CX.measureText(' ').width;
   L.forEach((ln,li)=>{const y=y0+li*lh,txt=ln.join(' '),tw=CX.measureText(txt).width;
-   if(cs==='box'||cs==='lower'||cs==='pill'){CX.globalAlpha=cs==='lower'?a:1;rr(W/2-tw/2-28*u,y-lh/2+4*u,tw+56*u,lh-4*u,16*u);CX.fillStyle=cs==='pill'?acc:cs==='lower'?'rgba(0,0,0,.5)':'rgba(0,0,0,.66)';CX.fill()}
+   if(cs==='box'||cs==='lower'||cs==='pill'||cs==='wbw'){CX.globalAlpha=cs==='lower'?a:1;rr(W/2-tw/2-28*u,y-lh/2+4*u,tw+56*u,lh-4*u,16*u);CX.fillStyle=cs==='pill'?acc:cs==='lower'?'rgba(0,0,0,.5)':cs==='wbw'?'rgba(8,9,12,.58)':'rgba(0,0,0,.66)';CX.fill()}
    const base=cs==='pill'?'#111':'#fff',hi=cs==='pill'?'#fff':acc,stroke=cs==='bold'?12*u:cs==='karaoke'?14*u:cs==='pill'?0:0;
    let x=W/2+tw/2;const pop=cs==='bold'?.94+.06*a:cs==='karaoke'?.92+.08*a:1;
-   ln.forEach(w=>{const ww=CX.measureText(w).width,cur=cs==='karaoke'&&wi===nWord,k=kwOn&&isKw(w,c.kw);
-    const mk=k&&(cs==='bold'||cs==='karaoke'||cs==='box');   // ماركر ملون ورا الكلمة المهمة بيتمسح من اليمين
+   ln.forEach(w=>{const ww=CX.measureText(w).width,cur=(cs==='karaoke'||cs==='wbw')&&wi===nWord,k=kwOn&&isKw(w,c.kw);
+    const mk=k&&!cur&&(cs==='bold'||cs==='karaoke'||cs==='box');   // ماركر ملون ورا الكلمة المهمة بيتمسح من اليمين
     drawWord(w,x-ww/2,y+2*u,{u,size:sz,sc:cur?pop*1.08:k&&cs!=='lower'?pop*1.04:pop,stroke:mk?0:(cs==='pill'&&k)?6*u:stroke,fill:mk?'#111':cur||k?hi:base,bg:mk?acc:null,wipe:mk?ease((t-c.s)/.28):1});x-=ww+sp;wi++});
    CX.globalAlpha=1})}
+ if(O('safe'))CX.restore();
  /* شريط التقدم + اسم المحل في الركن */
  if(O('prog')&&dur){const p=Math.min(1,ot/od),by=O('letter')?H*.085:0;CX.fillStyle='rgba(255,255,255,.25)';CX.fillRect(0,by,W,9*u);CX.fillStyle=acc;CX.fillRect(W*(1-p),by,W*p,9*u)}
  if(O('wm')&&!inOut&&!inIntro){const nm=br.shop||'ميكانيزم';CX.font=`800 ${Math.round(30*u)}px ${F}`;const tw=CX.measureText(nm).width,bw=tw+56*u,top=(O('letter')?H*.085:0)+(O('prog')?22*u:16*u),x=W-bw-18*u;
@@ -536,10 +560,10 @@ const chk=(id,v,txt)=>`<label style="display:flex;gap:6px;align-items:center"><i
 function paintOpts(){const el=$s('sm_op');if(!el)return;
  el.innerHTML=`<div class="r2"><label>شكل الكلام${sel('so_cap',CAPS,O('cap'))}</label><label>حركة الكاميرا${sel('so_mo',MOTIONS,O('motion'))}</label>
   <label>شيل السكتات${sel('so_cut',CUTS,O('cut'))}</label><label>الألوان${sel('so_lk',LOOKS,O('look'))}</label><label>الانتقال عند القطع${sel('so_tr',TRANS,O('trans'))}</label></div>
-  <div class="r2" style="margin-top:8px">${chk('so_tk',O('takes'),'شيل الإعادات والتهتهة')}${chk('so_kw',O('kw'),'لوّن الكلمات المهمة')}${chk('so_ov',O('ov'),'كروت المقاسات والأصناف والأسعار')}${chk('so_ch',O('chap'),'عناوين الأقسام')}${chk('so_pr',O('prog'),'شريط تقدم فوق')}${chk('so_wm',O('wm'),'اسم المحل في الركن')}${chk('so_lt',O('letter'),'شرايط سينما')}${chk('so_an',O('anim'),'🎞️ رسومات متحركة بتشرح الكلام')}${chk('so_st',O('stk'),'ملصقات للكلمات المهمة بإيموجي')}${chk('so_ct',O('cta'),'نداء «اطلب دلوقتي» في النص')}${chk('so_fx',O('sfx'),'أصوات مع الرسومات (في الخلفية)')}${chk('so_sm',S.smart,'👀 الكلام مايغطيش وشّي')}</div>`;
+  <div class="r2" style="margin-top:8px">${chk('so_tk',O('takes'),'شيل الإعادات والتهتهة')}${chk('so_kw',O('kw'),'لوّن الكلمات المهمة')}${chk('so_ov',O('ov'),'كروت المقاسات والأصناف والأسعار')}${chk('so_ch',O('chap'),'عناوين الأقسام')}${chk('so_pr',O('prog'),'شريط تقدم فوق')}${chk('so_wm',O('wm'),'اسم المحل في الركن')}${chk('so_lt',O('letter'),'شرايط سينما')}${chk('so_an',O('anim'),'🎞️ رسومات متحركة بتشرح الكلام')}${chk('so_st',O('stk'),'ملصقات للكلمات المهمة بإيموجي')}${chk('so_ct',O('cta'),'نداء «اطلب دلوقتي» في النص')}${chk('so_fx',O('sfx'),'أصوات مع الرسومات (في الخلفية)')}${chk('so_sm',S.smart,'👀 الكلام مايغطيش وشّي')}${chk('so_sf',O('safe'),'🛡️ بعيد عن واجهة تيك توك/ريلز')}${chk('so_cl',O('calm'),'🎯 أقصى عنصرين + ولا عنصر على الوش')}${chk('so_cp',O('chip'),'كروت صغيرة')}${chk('so_l3',O('l3'),'اسم المنتج شريط صغير مرة واحدة')}</div>`;
  const set=(id,k,f)=>{$s(id).onchange=()=>{const v=f($s(id));if(k==='smart')S.smart=v;else S.o[k]=v;saveS();changed()}};
  set('so_cap','cap',x=>x.value);set('so_mo','motion',x=>x.value);set('so_cut','cut',x=>+x.value);set('so_lk','look',x=>x.value);
- set('so_tk','takes',x=>x.checked);set('so_kw','kw',x=>x.checked);set('so_ov','ov',x=>x.checked);set('so_ch','chap',x=>x.checked);set('so_pr','prog',x=>x.checked);set('so_wm','wm',x=>x.checked);set('so_lt','letter',x=>x.checked);set('so_tr','trans',x=>x.value);set('so_st','stk',x=>x.checked);set('so_an','anim',x=>x.checked);set('so_ct','cta',x=>x.checked);set('so_fx','sfx',x=>x.checked);set('so_sm','smart',x=>x.checked)}
+ set('so_tk','takes',x=>x.checked);set('so_kw','kw',x=>x.checked);set('so_ov','ov',x=>x.checked);set('so_ch','chap',x=>x.checked);set('so_pr','prog',x=>x.checked);set('so_wm','wm',x=>x.checked);set('so_lt','letter',x=>x.checked);set('so_tr','trans',x=>x.value);set('so_st','stk',x=>x.checked);set('so_an','anim',x=>x.checked);set('so_ct','cta',x=>x.checked);set('so_fx','sfx',x=>x.checked);set('so_sm','smart',x=>x.checked);set('so_sf','safe',x=>x.checked);set('so_cl','calm',x=>x.checked);set('so_cp','chip',x=>x.checked);set('so_l3','l3',x=>x.checked)}
 function changed(){LK.t=-9;if(D&&V){build();renderLists();draw(V.currentTime);updBar()}}
 function paint(){const el=$s('v-smart');if(!el)return;
  el.innerHTML=`<h1>🎬 مونتاج ذكي</h1><p class="mu">ارفع الفيديو اللي صورته — السيستم بيسمع كلامك، يشيل السكتات والإعادات، يكتب الكلام على الفيديو من غير ما يغطي وشك، ويظهر المقاسات والأصناف والأسعار والخطوات وقت ما تقولها، ويظبط الألوان. اختار الطريقة وبعدين «صدّر» أو «اعمله في الخلفية».</p>
@@ -559,7 +583,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
-  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
+  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
  <div id="sm_out"></div>
@@ -598,13 +622,21 @@ async function go(){if(busy)return;if(!F)return say('اختار الفيديو �
   $s('sm_res').style.display='';setupCanvas();renderLists();loop();wirePlayer();$s('sm_res').scrollIntoView({behavior:'smooth'})}
  catch(e){if(e.message==='LOGIN'){pg.textContent='';const a=$s('sm_auth');a.innerHTML=loginBox();$s('sm_li').onclick=doLogin;a.scrollIntoView({behavior:'smooth'});say('سجّل دخول بحساب ميكانيزم الأول')}else{const m=/no longer available|اتقفل/i.test(e.message||'')?'موديل جوجل اتغيّر — حدّث الصفحة وجرّب تاني':(e.message||e);pg.textContent='❌ '+m;say('❌ '+m)}}
  finally{busy=false;b.disabled=false;b.textContent='✨ اعمل المونتاج تاني'}}
+/* ترجمة SRT بتوقيت الفيديو بعد القص + صورة غلاف من لقطة واضحة بعد المقدمة */
+function exportSrt(){const tc=t=>{const ms=Math.round(Math.max(0,t)*1000),p=(x,l)=>String(x).padStart(l,'0');return `${p(Math.floor(ms/3600000),2)}:${p(Math.floor(ms/60000)%60,2)}:${p(Math.floor(ms/1000)%60,2)},${p(ms%1000,3)}`};
+ const L=CAP.filter(c=>!inGap(c.s)).map((c,i)=>`${i+1}
+${tc(outT(c.s))} --> ${tc(Math.max(outT(c.s)+.3,outT(c.e)))}
+${c.w.join(' ')}
+`).join('\n');dlBlob(new Blob([L],{type:'text/plain;charset=utf-8'}),(D.title||'ترجمة')+'.srt')}
+async function exportCover(){const t=srcT(Math.max(2.8,Math.min(outDur()*.25,outDur()-.6)));await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2500)});draw(V.currentTime);CV.toBlob(b=>b&&dlBlob(b,(D.title||'غلاف')+'.jpg'),'image/jpeg',.92)}
 function wirePlayer(){$s('sm_pl').onclick=async()=>{if(V.paused){try{if(V._ac)await V._ac.resume();await V.play()}catch(e){}$s('sm_pl').textContent='⏸️'}else{V.pause();$s('sm_pl').textContent='▶️'}};
  V.onended=()=>{$s('sm_pl').textContent='▶️'};const sk=$s('sm_seek');sk.oninput=()=>{sk._drag=1;V.currentTime=sk.value/1000*(V.duration||0)};sk.onchange=()=>{sk._drag=0};
- $s('sm_ex').onclick=exportVid;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
+ $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
 function renderLists(){
+ (D.seg||[]).forEach(g=>{if(g._o==null)g._o=g.t});
  $s('sm_cap').innerHTML=D.seg.map((g,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;${g.cut&&O('takes')?'opacity:.5':''}"><button type="button" class="b o" data-sk="${g.s}" style="flex:none;min-width:58px;padding:6px">${fmt(g.s)}</button><label title="شيل الجملة دي" style="flex:none;display:flex;align-items:center;gap:2px">✂️<input type="checkbox" data-sc="${i}" ${g.cut?'checked':''} style="width:20px;height:20px"></label><input data-sg="${i}" value="${esc(g.t)}" style="flex:1"></div>`).join('')||'<p class="mu">مفيش كلام</p>';
  $s('sm_cap').onclick=e=>{const b=e.target.closest('[data-sk]');if(b){V.currentTime=+b.dataset.sk;draw(V.currentTime)}};
- $s('sm_cap').onchange=e=>{const i=e.target.dataset.sc;if(i==null)return;D.seg[+i].cut=e.target.checked;if(e.target.checked&&!O('takes')){S.o.takes=true;saveS();paintOpts()}build();renderLists();draw(V.currentTime);updBar()};
+ $s('sm_cap').onchange=e=>{if(e.target.dataset.sg!=null){const g=D.seg[+e.target.dataset.sg];if(g&&g._o!=null){const old=new Set(String(g._o).split(/s+/));addGloss(e.target.value.split(/s+/).filter(w=>!old.has(w)))}return}const i=e.target.dataset.sc;if(i==null)return;D.seg[+i].cut=e.target.checked;if(e.target.checked&&!O('takes')){S.o.takes=true;saveS();paintOpts()}build();renderLists();draw(V.currentTime);updBar()};
  $s('sm_cap').oninput=e=>{const i=e.target.dataset.sg;if(i==null)return;D.seg[+i].t=e.target.value;build();draw(V.currentTime)};
  const IC={measure:'📏',product:'📦',price:'💰',point:'✔',step:'🔢',warn:'⚠️',topic:'📌',anim:'🎞️'};
  $s('sm_ev').innerHTML=(D.ev.length?D.ev.map((x,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" data-eo="${i}" ${x.on?'checked':''} style="width:22px;height:22px;flex:none"><button type="button" class="b o" data-sk="${x.s}" style="flex:none;min-width:58px;padding:6px">${fmt(x.s)}</button><span style="flex:none">${IC[x.type]||'•'}</span><input data-el="${i}" value="${esc(x.type==='measure'||x.type==='price'?((x.value||'')+' '+(x.unit||'')).trim():x.label)}" style="flex:1"></div>${x.type==='anim'?`<div style="display:flex;gap:6px;margin:-2px 0 8px 0">${sel('',SCENES,x.scene).replace('<select id=""',`<select data-as="${i}" style="flex:1"`)}${sel('',ACTIONS,x.action).replace('<select id=""',`<select data-aa="${i}" style="flex:1"`)}</div>`:''}`).join(''):'<p class="mu">مالقيتش مقاسات أو أصناف في الكلام.</p>')
@@ -629,7 +661,7 @@ async function cloudSubmit(){if(busy)return;if(!F)return say('اختار الف�
   let resume=false;try{const o=await withTO(c.from('mk_video_jobs').select('id,spec').eq('status','uploading').order('created_at',{ascending:false}).limit(5),20000,'السيرفر مابيردش');const m=(o.data||[]).find(x=>x.spec&&+x.spec.srcSize===F.size);if(m){id=m.id;resume=true}}catch(e){}
   pg.textContent='⏳ بجهّز الطلب…';
   const P=prods().slice(0,40),slim=[];for(const p of P)slim.push({id:p.id,nm:p.nm,pr:p.pr,img:await slimImg(p.img,220)});
-  const spec={S:Object.assign({},S),brand:brand(),products:slim,src:F.name,srcSize:F.size};
+  const spec={S:Object.assign({},S),brand:brand(),gloss:gloss(),products:slim,src:F.name,srcSize:F.size};
   step='تسجيل الطلب';let ins=resume?await withTO(c.from('mk_video_jobs').update({spec}).eq('id',id),30000,'السيرفر مابيردش'):await withTO(c.from('mk_video_jobs').insert({id,user_id:uid,name:(F.name||'فيديو').slice(0,80),status:'uploading',spec}),30000,'السيرفر مابيردش');if(ins.error)throw new Error(/mk_video_jobs|relation/.test(ins.error.message||'')?'جدول المهام مش متعمل — كلمني':ins.error.message);
   step='رفع الفيديو';const n=Math.ceil(F.size/PART),paths=[];let have={};
   if(resume){try{const L=await withTO(c.storage.from('video-jobs').list(`${uid}/${id}`,{limit:1000}),20000,'السيرفر مابيردش');(L.data||[]).forEach(o=>{have[o.name]=o.metadata&&+o.metadata.size})}catch(e){}if(Object.keys(have).length)say('⬆️ هكمّل الرفع من مكان ما وقف')}

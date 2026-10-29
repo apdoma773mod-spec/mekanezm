@@ -61,10 +61,10 @@ function vad(f32) { const F = 320, n = Math.floor(f32.length / F); if (n < 10) r
   const so = Array.from(E).sort((a, b) => a - b), fl = so[Math.floor(n * .1)], pk = so[Math.floor(n * .98)], thr = Math.max(fl + (pk - fl) * .3, pk - 32);
   const I = []; let st = -1; for (let i = 0; i <= n; i++) { const on = i < n && E[i] > thr; if (on && st < 0) st = i; if (!on && st >= 0) { I.push([st * .02, i * .02]); st = -1; } }
   const M = []; I.forEach(x => { const l = M[M.length - 1]; if (l && x[0] - l[1] < .18) l[1] = x[1]; else M.push([x[0], x[1]]); }); return M.filter(x => x[1] - x[0] >= .12).map(x => [+x[0].toFixed(2), +x[1].toFixed(2)]); }
-async function callAI(b64, offset, first, products) {
+async function callAI(b64, offset, first, products, gloss) {
   for (let k = 0; ; k++) {
     try {
-      const r = await fetch(SB_URL + '/functions/v1/video-ai', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, 'x-vr-secret': SECRET }, body: JSON.stringify({ audio: b64, mime: 'audio/wav', offset, first, products }) });
+      const r = await fetch(SB_URL + '/functions/v1/video-ai', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY, 'x-vr-secret': SECRET }, body: JSON.stringify({ audio: b64, mime: 'audio/wav', offset, first, products, gloss }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j.error) throw new Error(j.error || 'HTTP ' + r.status);
       return j;
@@ -86,7 +86,7 @@ async function analyze(file, spec, prog) {
   const f32 = pcm16k(file), pts = splitPoints(f32, 40), jobs = [];
   for (let i = 0; i < pts.length - 1; i++) jobs.push({ i, a: pts[i], b: pts[i + 1] });
   const res = new Array(jobs.length), prods = (spec.products || []).map(p => p.nm).filter(Boolean); let done = 0;
-  for (let i = 0; i < jobs.length; i += 3) await Promise.all(jobs.slice(i, i + 3).map(async j => { res[j.i] = await callAI(wav64(f32.subarray(j.a, j.b)), j.a / 16000, j.i === 0, prods); done++; await prog(10 + Math.round(done / jobs.length * 25), 'بفهم الكلام… ' + done + ' من ' + jobs.length); }));
+  for (let i = 0; i < jobs.length; i += 3) await Promise.all(jobs.slice(i, i + 3).map(async j => { res[j.i] = await callAI(wav64(f32.subarray(j.a, j.b)), j.a / 16000, j.i === 0, prods, spec.gloss || []); done++; await prog(10 + Math.round(done / jobs.length * 25), 'بفهم الكلام… ' + done + ' من ' + jobs.length); }));
   const seg = [], ev = []; let title = '';
   res.forEach((r, i) => {
     const off = jobs[i].a / 16000; if (i === 0) title = r.title || '';
