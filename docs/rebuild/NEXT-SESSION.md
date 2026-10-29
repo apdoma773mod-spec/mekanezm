@@ -1,4 +1,20 @@
-# Next session brief (written 2026-10-29, end of session 2) — READ THIS FIRST, then HANDOFF.md
+# Next session brief — READ THIS FIRST, then HANDOFF.md
+
+## Session 3 update (2026-10-29, newest — supersedes the "Still missing" list below where they differ)
+All committed and pushed on `tajroba-rebuild`; backend tests 113/113; production build on :3100 is the latest code; tunnel link unchanged (https://vermont-wrestling-helps-field.trycloudflare.com).
+**Done in session 3 (each checked in a real browser on the :3200 test stack with a Playwright script in `C:\mk-e2e\pw`: products.cjs, purchases.cjs, contacts.cjs, count.cjs, dash.cjs):**
+- Products toolbar like the old: 🎁 💰 بضاعة قديمة (estimated cost flag `Product.costEst`, migration `product_cost_est`), 🖨️ طباعة, 📷 بالباركود (+link new barcode to a product), 🏷️ ملصقات (+all), 💲 أسعار جماعي, 🧮 جرد, استيراد من ملف (PDF/CSV/txt), 🔪 فك لفة. Code: `components/modals/product-tools.tsx`, backend `/products/all|old-goods|import|bulk-price|split`.
+- Purchases screen = the old «فواتير الشراء الغنية» (`components/purchases-screen.tsx`): filter card, one card per invoice, تغيّر التكلفة + تحديث التكلفة, نسخ/طباعة/دفعة/مرتجع, «رقم فاتورة المورد» + duplicate warning in the purchase window; 💹 أسعار السوق (`modals/market-prices.tsx`, Setting `market_prices`, banner on dashboard); 📥 استيراد فواتير from Excel/CSV/JSON (`modals/purchase-import.tsx`).
+- Customers/suppliers: the sidebar item opens the chooser, two modes with balance filters, summary, «📦 البضاعة الفاضلة» (Setting `inv_notes`), invoice window with 📦 استلام وناقص, 🖨️ نوع الطباعة (receipt/A4, remembered), prep sheet, «تحويل إلى PDF» + share (html2canvas/jsPDF from cdnjs).
+- Count screen: 4 header buttons, camera scan, printed sheet/result, 🗂️ جلسات الجرد (Setting `count_sessions`, approve = real stock count). Cash header like the old (🧾 مصاريف المعرض, no drawer card). Reports: 🖨️ طباعة التقرير, numbers row, «تقرير عميل / مورد», «أكتر العملاء شراءً», «حالة المخزون». Dashboard: today tiles open detail windows, «— ميكانيزم» in the title, 🔎 استعلام عن سعر صنف, SMS tile.
+**Still different from the old (compare against the LIVE old site, it is richer than the base `index.html` HTML: many later scripts rewrite each screen):**
+1. Not compared yet at all: settings (old has title-row buttons «🔔 تنبيهات ضد السرقة» / «📊 تقرير اليوم», cards for users, backups, كلمات الواتساب, أنظمة الشغل), theme, returns modal, quotes, shipping, debts, reorder, staff, kits, samples, the contact-file modal («حالة الاستلام», portal link), the purchase view/edit window, the sale window extras.
+2. Missing features: 🔔 instant alerts + daily WhatsApp report (server-side triggers in the old DB: void, below-cost sale, big discount, manual stock adjust, drawer shortage, invoice edit, cancelled payment, gift, attendance), customer portal link (🔗 رابط العميل), 📇 من التليفون contact import, partner tile («🤝 حساب … له عندك») and «حركات مخزون معلّقة» tile on the dashboard, purchase invoice-photo reader queue (needs an AI key), 📈 تحليلات ذكية (`biz`), website orders/content, social inbox, voice command, prep-sheet code/barcode for invoices, `📷` photo search in products. Today-detail «low» window marks «اتباعت النهاردة» by first item only.
+3. Hardware/bridges: silent print jobs and switching the WhatsApp/printer bridges + phone SMS forwarder to the new backend (only when the owner says so).
+**Tips learned:** the Claude-in-Chrome tab on the old site often freezes on heavy pages (products, settings): reload the tab, or read `index.html` instead. PowerShell scripts must use the ASCII short path `C:\Users\AD30~1\...` (Arabic profile name breaks them): `C:\mk-e2e\rebuild-fe.ps1` rebuilds the :3200 test frontend, `C:\mk-e2e\rebuild-prod.ps1` rebuilds the owner-facing :3100 production build. Restart the :4001 test backend after backend changes (tsx without watch); the login rate limiter there needs a restart after many logins. Don't use bash heredocs/`node -e` for text with Arabic + quotes: write the file with the Write tool.
+
+---
+## Older brief (session 2) follows
 
 Branch: `tajroba-rebuild` (never merge to main, never touch the live system: index.html, Supabase, the old bridges). Commit + push after each chunk. Co-author line: whatever the system reminder says.
 
