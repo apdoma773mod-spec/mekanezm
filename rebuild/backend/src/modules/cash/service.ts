@@ -147,7 +147,7 @@ export class CashService {
   }
 
   async overview(actor: Actor): Promise<Overview> {
-    const [count, stock, sales, purchases, saleRet, purRet, expenses, receivables, cashBalance] = await Promise.all([
+    const [count, stock, sales, purchases, saleRet, purRet, expenses, receivables, cashBalance, outCount, lowRows, owed] = await Promise.all([
       this.prisma.product.count({ where: { deletedAt: null } }),
       isAdmin(actor)
         ? this.prisma.$queryRaw<{ v: Prisma.Decimal | null }[]>`
@@ -160,10 +160,16 @@ export class CashService {
       this.prisma.expense.aggregate({ where: { deletedAt: null }, _sum: { amount: true } }),
       this.prisma.contact.aggregate({ where: { type: 'CUSTOMER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
       this.balance(),
+      this.prisma.product.count({ where: { deletedAt: null, qty: { lte: 0 } } }),
+      this.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`,
+      this.prisma.contact.aggregate({ where: { type: 'SUPPLIER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
     ]);
     const n = (d: Prisma.Decimal | null | undefined) => num(d ?? ZERO);
     return {
       productsCount: count,
+      outCount,
+      lowCount: Number(lowRows[0]?.n ?? 0),
+      suppliersOwed: n(owed._sum.balance),
       ...(stock ? { stockValue: num(money(stock[0]?.v ?? ZERO)) } : {}),
       salesTotal: num(money((sales._sum.total ?? ZERO).minus(saleRet._sum.total ?? ZERO))),
       purchasesTotal: num(money((purchases._sum.total ?? ZERO).minus(purRet._sum.total ?? ZERO))),

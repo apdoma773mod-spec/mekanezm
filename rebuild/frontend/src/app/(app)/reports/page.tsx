@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { REPORTS, type ReportCell, type ReportColType, type ReportId, type ReportResult, type ReportRow, type ReportTone } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
+import { ContactReportCard, ReportsStatsRow, StockStatusCard } from '@/components/reports-extras';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -361,6 +362,40 @@ function ReportsScreen() {
   const overview = useOverview();
   const o = overview.data;
   const P = periods.data;
+  const settings = useSettings().data;
+  /** 🖨️ طباعة التقرير: الأرقام الكبيرة + جدول الفترات (printReports القديمة). */
+  const printGeneral = () => {
+    if (!P || !o || !settings) return;
+    const rows: [string, keyof typeof P.day][] = [
+      ['المبيعات (صافي بعد المرتجع)', 'sales'],
+      ['المشتريات (صافي بعد المرتجع)', 'purch'],
+      ['المرتجعات', 'ret'],
+      ['المصروفات', 'exp'],
+      ['إجمالي الربح', 'gross'],
+      ['صافي الربح', 'net'],
+    ];
+    printHtml(
+      reportHtml(
+        {
+          title: 'التقرير العام',
+          range: '',
+          sum: [
+            ['صافي الربح (الإجمالي)', money(P.all.net)],
+            ['رصيد الخزنة', money(o.cashBalance)],
+            ['قيمة المخزون', money(o.stockValue)],
+            ['مستحقات عند العملاء', money(o.receivables)],
+            ['إجمالي المبيعات', money(o.salesTotal)],
+            ['إجمالي المشتريات', money(o.purchasesTotal)],
+            ['إجمالي المصروفات', money(o.expensesTotal)],
+            ['إجمالي الربح', money(P.all.gross)],
+          ],
+          head: ['البند', 'اليوم', 'الشهر', 'السنة', 'الإجمالي'],
+          rows: rows.map(([t, k]) => [t, money(P.day[k]), money(P.month[k]), money(P.year[k]), money(P.all[k])]),
+        },
+        settings,
+      ),
+    );
+  };
   const groups = [...new Set(REPORTS.map((r) => r.g))];
   const chips = <Chips pre={pre} setPre={setPre} custom={custom} setCustom={setCustom} range={range} />;
   const h = headline.data;
@@ -372,6 +407,9 @@ function ReportsScreen() {
           <h1>التقارير</h1>
           <p>ملخص اليوم والشهر والسنة وإجمالي الأرباح</p>
         </div>
+        <button type="button" className="secondary" disabled={!P || !o || !settings} onClick={printGeneral}>
+          🖨️ طباعة التقرير
+        </button>
       </div>
       <div className="card" style={{ marginBottom: 14 }}>
         <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
@@ -441,6 +479,7 @@ function ReportsScreen() {
           <strong>{o ? money(o.receivables) : '…'}</strong>
         </div>
       </div>
+      <ReportsStatsRow />
       <div className="card" style={{ marginTop: 14 }}>
         <h3>تقرير الفترات</h3>
         <div className="table-wrap">
@@ -473,6 +512,7 @@ function ReportsScreen() {
           </table>
         </div>
       </div>
+      <ContactReportCard />
       <div className="stats" style={{ marginTop: 14 }}>
         <div className="stat">
           <small>إجمالي المبيعات</small>
@@ -491,6 +531,8 @@ function ReportsScreen() {
           <strong>{P ? money(P.all.gross) : '…'}</strong>
         </div>
       </div>
+
+      <StockStatusCard />
 
       {cur && <ReportView id={cur} onBack={() => setCur(null)} chips={chips} range={range} rangeText={rngTxt(pre, range)} />}
     </>

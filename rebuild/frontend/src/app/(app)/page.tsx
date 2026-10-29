@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
 import { MarketBanner } from '@/components/modals/market-prices';
+import { PriceLookupCard } from '@/components/price-lookup';
+import { useCompany } from '@/components/company';
+import { useInboxCounts } from '@/lib/inbox-queries';
+import { CO_NAME } from '@mk/shared';
 import { Launch, proOn, ProIll } from '@/components/pro';
 import { DashboardBanners, DashboardCharts } from '@/components/dashboard-extras';
 import { Icon } from '@/components/icon';
@@ -61,6 +65,8 @@ export default function DashboardPage() {
   const today = useToday();
   const router = useRouter();
   const t = today.data;
+  const { co } = useCompany();
+  const counts = useInboxCounts(admin);
   const [pro, setPro] = useState(false);
   useEffect(() => setPro(proOn()), []);
   /** «برو» swaps the action icons for its 3D drawings, as the old paint() did. */
@@ -91,14 +97,19 @@ export default function DashboardPage() {
       <MarketBanner />
       {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
       <div id="mkToday">
+        {admin && !!counts.data?.sms && (
+          <button id="mkSmsTile" type="button" className="secondary" style={{ width: '100%', marginBottom: 10, padding: 12, fontWeight: 800 }} onClick={() => router.push('/vodafone')}>
+            📲 فيه {counts.data.sms} مبلغ فودافون كاش مستني تسجيله
+          </button>
+        )}
         <div className="card" style={{ marginBottom: 14 }}>
-          <h3 style={{ margin: '0 0 10px' }}>📅 النهاردة</h3>
+          <h3 style={{ margin: '0 0 10px' }}>📅 النهاردة — {CO_NAME[co]}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {todayTile('💰', 'مبيعات النهاردة', t ? money(t.sales.total) : '…', () => router.push('/sales'))}
-            {todayTile('🧾', 'فواتير النهاردة', t ? t.sales.count.toLocaleString('ar-EG') : '…', () => router.push('/sales'))}
-            {todayTile('📥', 'اتحصّل النهاردة', t ? money(t.sales.paid) : '…', () => router.push('/cash'), 'var(--green)')}
-            {todayTile('📤', 'مصروفات النهاردة', t ? money(t.expenses) : '…', () => router.push('/cash'), t?.expenses ? 'var(--danger)' : '')}
-            {todayTile('⚠️', 'أصناف قربت تخلص', t ? t.lowStockCount.toLocaleString('ar-EG') : '…', () => router.push('/reorder'), t?.lowStockCount ? 'var(--danger)' : '')}
+            {todayTile('💰', 'مبيعات النهاردة', t ? money(t.sales.total) : '…', () => open({ kind: 'todayDetail', k: 'sales' }))}
+            {todayTile('🧾', 'فواتير النهاردة', t ? String(t.sales.count) : '…', () => open({ kind: 'todayDetail', k: 'inv' }))}
+            {todayTile('📥', 'اتحصّل النهاردة', t ? money(t.sales.paid) : '…', () => open({ kind: 'todayDetail', k: 'coll' }), 'var(--green)')}
+            {todayTile('📤', 'مصروفات النهاردة', t ? money(t.expenses) : '…', () => open({ kind: 'todayDetail', k: 'exp' }), t?.expenses ? 'var(--danger)' : '')}
+            {todayTile('⚠️', 'أصناف قربت تخلص', t ? String(t.lowStockCount) : '…', () => open({ kind: 'todayDetail', k: 'low' }), t?.lowStockCount ? 'var(--danger)' : '')}
             {todayTile('👥', 'فلوس عند العملاء', t ? money(t.receivables) : '…', () => router.push(admin ? '/debts' : '/contacts'))}
           </div>
         </div>
@@ -106,7 +117,7 @@ export default function DashboardPage() {
       <Launch />
       {admin && <DashboardBanners />}
       {overview.isError && <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />}
-      <Link
+      {!pro && <Link
         href="/daybook"
         style={{
           width: '100%',
@@ -127,7 +138,7 @@ export default function DashboardPage() {
         }}
       >
         📒 يومية المحل — اكتب بيعة بسرعة <span>←</span>
-      </Link>
+      </Link>}
       <div className="dash-acts">
         <button type="button" className="pri" onClick={() => open({ kind: 'transaction', type: 'SALE' })}>
           {actIc('saleNew', <Icon name="up" />)}فاتورة بيع<small>تسجيل بيع جديد</small>
@@ -158,6 +169,7 @@ export default function DashboardPage() {
       >
         🔒 تقفيل اليومية
       </button>
+      {admin && <PriceLookupCard />}
 
       <div className="grid2">
         <div className="card">

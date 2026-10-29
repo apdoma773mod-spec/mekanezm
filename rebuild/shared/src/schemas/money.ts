@@ -177,6 +177,10 @@ export interface CashSummary {
 /** The old system's all-time figures (dashboard, cash and returns screens). */
 export interface Overview {
   productsCount: number;
+  /** Products with nothing left, products at or under their alert level, and what we owe suppliers. */
+  outCount: number;
+  lowCount: number;
+  suppliersOwed: number;
   /** Only for admins: quantity × cost over all products. */
   stockValue?: number;
   /** Sales minus sale returns, purchases minus purchase returns. */

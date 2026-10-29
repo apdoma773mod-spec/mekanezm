@@ -20,6 +20,8 @@ import { ProductToolModal, type ProductToolSpec } from './product-tools';
 import { MarketModal } from './market-prices';
 import { ContactToolModal, type ContactToolSpec } from './contact-tools';
 import { CountSessions } from './count-sessions';
+import { TodayDetail, type TodayKind } from './today-detail';
+import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
 
 /** Every window the old system opened with openModal(), by name. */
@@ -36,6 +38,8 @@ export type ModalSpec =
   | ProductToolSpec
   | { kind: 'market' }
   | { kind: 'countSessions' }
+  | { kind: 'todayDetail'; k: TodayKind }
+  | { kind: 'contactReport'; name: string; type: ContactType; from?: string; to?: string }
   | ContactToolSpec
   | { kind: 'purchImport' }
   | { kind: 'invoice'; id: string }
@@ -120,6 +124,12 @@ export function ModalHost({ children }: { children: ReactNode }) {
       case 'missing':
       case 'invNotes':
         content = <ContactToolModal spec={spec} />;
+        break;
+      case 'contactReport':
+        content = <ContactReportModal key={`${spec.type}-${spec.name}-${spec.from}-${spec.to}`} name={spec.name} type={spec.type} from={spec.from} to={spec.to} />;
+        break;
+      case 'todayDetail':
+        content = <TodayDetail key={spec.k} k={spec.k} />;
         break;
       case 'countSessions':
         content = <CountSessions />;
