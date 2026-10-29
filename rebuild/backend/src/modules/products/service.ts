@@ -11,8 +11,8 @@ import type {
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { COUNTER, nextNumber } from '../../lib/counters.js';
-import { conflict, notFound } from '../../lib/errors.js';
-import { num, qty as roundQty } from '../../lib/money.js';
+import { badRequest, conflict, notFound } from '../../lib/errors.js';
+import { D, money, num, qty as roundQty } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
 
@@ -214,6 +214,30 @@ export class ProductsService {
     return toProductDto(product, true);
   }
 
+  /**
+   * 💲 تحديث أسعار جماعي (mk_bulk_price القديمة): زيادة أو نقص بنسبة % على سعر البيع أو الشراء أو الاتنين،
+   * وتقريب لأقرب 1/5/10 جنيه. كله في transaction واحدة وكل صنف بيتسجل في سجل المراجعة.
+   */
+  async bulkPrice(input: { ids: string[]; field: 'price' | 'cost' | 'both'; pct: number; round: number }, actor: Actor): Promise<number> {
+    const factor = 1 + input.pct / 100;
+    if (factor <= 0) throw badRequest('النسبة دي هتخلي الأسعار صفر أو بالسالب');
+    const calc = (v: Prisma.Decimal) => {
+      const x = v.mul(factor);
+      return input.round > 0 ? D(Math.round(x.toNumber() / input.round) * input.round) : money(x);
+    };
+    return withTx(this.prisma, async (tx) => {
+      const rows = await tx.product.findMany({ where: { id: { in: input.ids }, deletedAt: null } });
+      for (const p of rows) {
+        const data: Prisma.ProductUpdateInput = {};
+        if (input.field !== 'cost') data.price = calc(p.price);
+        if (input.field !== 'price') data.cost = calc(p.cost);
+        const updated = await tx.product.update({ where: { id: p.id }, data });
+        await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'Product', entityId: p.id, before: snapshot(p), after: snapshot(updated), ip: actor.ip });
+      }
+      return rows.length;
+    });
+  }
+
   /** Soft delete: history keeps pointing at the product, and its code stays reserved. */
   async remove(id: string, actor: Actor): Promise<void> {
     await withTx(this.prisma, async (tx) => {
@@ -256,6 +280,30 @@ export class ProductsService {
       return after;
     });
     return toProductDto(product, true);
+  }
+
+  /**
+   * 🔪 فك لفة / تقسيم صنف: بتخصم وحدات كبيرة من الصنف الكبير وتزوّد الصغير بالعدد المقابل،
+   * وتكلفة الوحدة الصغيرة بتتوزع (متوسط مرجّح مع اللي كان موجود). كله في transaction واحدة.
+   */
+  async split(input: { sourceId: string; targetId: string; ratio: number; qty: number }, actor: Actor): Promise<{ source: ProductDto; target: ProductDto }> {
+    if (input.sourceId === input.targetId) throw badRequest('اختار صنفين مختلفين');
+    return withTx(this.prisma, async (tx) => {
+      const s = await liveProduct(tx, input.sourceId);
+      const t = await liveProduct(tx, input.targetId);
+      const add = roundQty(D(input.ratio).mul(input.qty));
+      const unitCost = s.cost.div(input.ratio);
+      const newCost = money(t.qty.plus(add).isZero() ? t.cost : t.qty.mul(t.cost).plus(add.mul(unitCost)).div(t.qty.plus(add)));
+      const note = `فك ${input.qty} ${s.unit} ← ${num(add)} ${t.name}`;
+      await moveStock(tx, { productId: s.id, change: D(input.qty).neg(), reason: 'ADJUST', refType: 'Product', refId: s.id, note, userId: actor.id });
+      await moveStock(tx, { productId: t.id, change: add, reason: 'ADJUST', refType: 'Product', refId: t.id, note: `من فك ${input.qty} ${s.name}`, userId: actor.id });
+      await tx.product.update({ where: { id: t.id }, data: { cost: newCost } });
+      await writeAudit(tx, { userId: actor.id, action: 'STOCK_ADJUST', entity: 'Product', entityId: s.id, after: { split: { to: t.id, ratio: input.ratio, qty: input.qty, added: num(add), cost: num(newCost) } }, ip: actor.ip });
+      return {
+        source: toProductDto(await tx.product.findUniqueOrThrow({ where: { id: s.id } }), true),
+        target: toProductDto(await tx.product.findUniqueOrThrow({ where: { id: t.id } }), true),
+      };
+    });
   }
 
   async moves(id: string, page: number, pageSize: number): Promise<Paginated<StockMoveDto>> {

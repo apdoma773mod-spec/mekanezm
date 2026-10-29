@@ -99,4 +99,13 @@ export interface InvoiceDto {
   updatedAt: string;
 }
 
-export type InvoiceListItem = Omit<InvoiceDto, 'items' | 'profit'> & { itemCount: number };
+export type InvoiceListItem = Omit<InvoiceDto, 'items' | 'profit'> & { itemCount: number; /** First line's name, as the old list showed it. */ firstItem: string };
+
+/** The list plus the totals of everything the search matched (not just this page), like the old count line. */
+export interface InvoiceListResult {
+  items: InvoiceListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  sums: { total: number; remaining: number };
+}

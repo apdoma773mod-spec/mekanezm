@@ -1,3 +1,5 @@
+> **Newest:** read `docs/rebuild/NEXT-SESSION.md` first (written 2026-10-29) — it supersedes the status below.
+
 # Rebuild handoff (read this first)
 
 Branch: `tajroba-rebuild`. Code: `rebuild/` (npm workspaces: `shared`, `backend`, `frontend`). Plan: `docs/rebuild/02-architecture.md`.

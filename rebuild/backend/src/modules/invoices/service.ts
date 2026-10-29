@@ -3,9 +3,8 @@ import type {
   PayMethod,
   InvoiceDto,
   InvoiceInput,
-  InvoiceListItem,
+  InvoiceListResult,
   ListInvoicesQuery,
-  Paginated,
   UpdateInvoiceInput,
   VoidInvoiceInput,
 } from '@mk/shared';
@@ -343,7 +342,7 @@ export class InvoicesService {
     return inv;
   }
 
-  async list(query: ListInvoicesQuery): Promise<Paginated<InvoiceListItem>> {
+  async list(query: ListInvoicesQuery): Promise<InvoiceListResult> {
     const q = query.q?.trim();
     const where: Prisma.InvoiceWhereInput = {
       ...(query.kind ? { kind: query.kind } : {}),
@@ -363,25 +362,28 @@ export class InvoicesService {
           }
         : {}),
     };
-    const [rows, total] = await this.prisma.$transaction([
+    const [rows, total, agg] = await this.prisma.$transaction([
       this.prisma.invoice.findMany({
         where,
         include: {
           createdBy: { select: { id: true, name: true } },
           updatedBy: { select: { id: true, name: true } },
           _count: { select: { items: true } },
+          items: { select: { name: true }, orderBy: { position: 'asc' }, take: 1 },
         },
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
       this.prisma.invoice.count({ where }),
+      this.prisma.invoice.aggregate({ where, _sum: { total: true, remaining: true } }),
     ]);
     return {
-      items: rows.map((r) => ({ ...header(r), itemCount: r._count.items })),
+      items: rows.map((r) => ({ ...header(r), itemCount: r._count.items, firstItem: r.items[0]?.name ?? '' })),
       total,
       page: query.page,
       pageSize: query.pageSize,
+      sums: { total: num(agg._sum.total), remaining: num(agg._sum.remaining) },
     };
   }
 

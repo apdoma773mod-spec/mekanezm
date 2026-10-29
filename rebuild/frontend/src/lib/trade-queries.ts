@@ -30,7 +30,7 @@ import type {
   ExpenseInput,
   InvoiceDto,
   InvoiceInput,
-  InvoiceListItem,
+  InvoiceListResult,
   ListContactsQuery,
   ListExpensesQuery,
   ListInvoicesQuery,
@@ -166,7 +166,7 @@ export const useZeroAccount = () =>
 export const useInvoices = (q: Q<ListInvoicesQuery>, enabled = true) =>
   useQuery({
     queryKey: ['invoices', q],
-    queryFn: ({ signal }) => api.get<Paginated<InvoiceListItem>>('/invoices', q, signal),
+    queryFn: ({ signal }) => api.get<InvoiceListResult>('/invoices', q, signal),
     placeholderData: keepPreviousData,
     enabled,
   });

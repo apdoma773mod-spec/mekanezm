@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import {
   adjustStockInput,
   idParam,
@@ -36,6 +37,27 @@ export default async function productsRoutes(app: FastifyInstance) {
     const { id } = parse(idParam, request.params);
     const { page, pageSize } = parse(paginationQuery, request.query);
     return service.moves(id, page, pageSize);
+  });
+
+  app.post('/bulk-price', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(
+      z.object({
+        ids: z.array(z.string().min(1).max(64)).min(1).max(5000),
+        field: z.enum(['price', 'cost', 'both']),
+        pct: z.number().min(-90).max(1000).refine((v) => v !== 0, 'اكتب النسبة'),
+        round: z.number().int().min(0).max(100).default(0),
+      }),
+      request.body,
+    );
+    return { updated: await service.bulkPrice(b, actorOf(request)) };
+  });
+
+  app.post('/split', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(
+      z.object({ sourceId: z.string().min(1).max(64), targetId: z.string().min(1).max(64), ratio: z.number().gt(0), qty: z.number().gt(0) }),
+      request.body,
+    );
+    return service.split(b, actorOf(request));
   });
 
   app.post('/', { preHandler: app.requireAdmin }, async (request, reply) => {
