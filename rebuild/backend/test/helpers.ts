@@ -5,6 +5,8 @@ import { loadConfig } from '../src/config.js';
 import { hashPassword } from '../src/lib/password.js';
 
 export const PASSWORD = 'test-password-123';
+export const SMS_TOKEN = 'sms-test-token';
+export const BRIDGE_SECRET = 'bridge-test-secret';
 
 export async function createTestApp(): Promise<{ app: FastifyInstance; prisma: PrismaClient }> {
   const url = process.env.TEST_DATABASE_URL!;
@@ -15,6 +17,8 @@ export async function createTestApp(): Promise<{ app: FastifyInstance; prisma: P
     DATABASE_URL: url,
     JWT_SECRET: 'test-secret-that-is-long-enough-0123456789',
     LOGIN_RATE_LIMIT_MAX: '1000',
+    SMS_TOKEN: SMS_TOKEN,
+    BRIDGE_SECRET: BRIDGE_SECRET,
   });
   const app = await buildApp({ config, prisma });
   await app.ready();
@@ -26,7 +30,8 @@ export async function resetDb(prisma: PrismaClient): Promise<void> {
     `TRUNCATE "AuditLog", "RefreshToken", "Setting", "User", "Counter", "Product", "StockMove", "Contact",
       "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount",
       "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem",
-      "Partner", "PartnerMove", "Vehicle", "VehicleLog", "FieldOrder", "VanStock", "VanMove", "VanClose", "Contract", "OutboundMessage"
+      "Partner", "PartnerMove", "Vehicle", "VehicleLog", "FieldOrder", "VanStock", "VanMove", "VanClose", "Contract", "OutboundMessage",
+      "SmsIn", "WaOrder", "WaPhoto"
       RESTART IDENTITY CASCADE`,
   );
 }
