@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { storeSettings, type StoreSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { BackupCard } from '@/components/backup/backup-card';
 import { Input } from '@/components/ui/field';
 import { ErrorBox, FormError, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -120,6 +121,7 @@ export default function SettingsPage() {
   return (
     <AdminOnly>
       <SettingsScreen />
+      <BackupCard />
     </AdminOnly>
   );
 }
