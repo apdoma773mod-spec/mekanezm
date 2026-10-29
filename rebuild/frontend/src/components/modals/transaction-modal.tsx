@@ -1,5 +1,7 @@
 'use client';
 
+import { CustomerBar } from '@/components/modals/customer-bar';
+import { termsFor, useTerms } from '@/lib/terms';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
@@ -136,6 +138,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const results = useProducts({ q: debounced, pageSize: 15 }, debounced.replace(/\s+/g, '').length >= 2);
   const contacts = useContacts({ type: isSale ? 'CUSTOMER' : 'SUPPLIER', q: person.trim() || undefined, pageSize: 20 });
 
+  // 🏷️ سعر العميل: خصمه الثابت بيتطبّق على الصنف أول ما يتضاف، وحد دينه بيحذّر قبل الحفظ
+  const termsQ = useTerms(isSale);
+  const cterm = isSale ? termsFor(termsQ.data, person) : null;
+  const contactNow = contacts.data?.items.find((c) => c.name === person.trim());
   const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * toNum(l.price), 0)), [lines]);
   const total = r2(subtotal + toNum(shipping));
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
@@ -154,7 +160,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           unit: p.unit,
           available: p.qty,
           qty: '1',
-          price: String(isSale ? p.price : (p.cost ?? 0)),
+          price: String(isSale ? (cterm?.t.pct ? Math.round(p.price * (1 - cterm.t.pct / 100) * 100) / 100 : p.price) : (p.cost ?? 0)),
         },
       ];
     });
@@ -225,6 +231,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     if (paidValue > total + 0.001) return toast('المدفوع أكبر من إجمالي الفاتورة', 'bad');
     if (total - paidValue > 0.001 && !person.trim()) {
       return toast(isSale ? 'اكتب اسم العميل عشان نسجل الباقي عليه' : 'اكتب اسم المورد عشان نسجل الباقي ليه', 'bad');
+    }
+    if (isSale && !invoice && cterm?.t.limit && remaining > 0) {
+      const bal = contactNow?.balance ?? 0;
+      if (bal + remaining > cterm.t.limit && !window.confirm(`⚠️ ${person.trim()}
+عليه دلوقتي ${money(bal)} + الباقي في الفاتورة دي ${money(remaining)} = ${money(bal + remaining)}
+وحد دينه ${money(cterm.t.limit)}.
+
+تكمّل الفاتورة برضو؟`)) return;
     }
     if (isSale) {
       const short = lines.filter((l) => l.available !== null && toNum(l.qty) > l.available).map((l) => l.name);
@@ -403,6 +417,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => pickPerson(e.target.value)}
             error={errors.person}
           />
+          {cterm || (isSale && contactNow && contactNow.balance) ? (
+            <CustomerBar name={person.trim()} term={cterm?.t} balance={contactNow?.balance ?? 0} />
+          ) : null}
           <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
           <Input
             label={isSale ? 'تليفون العميل' : 'تليفون المورد'}

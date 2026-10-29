@@ -20,6 +20,8 @@ const SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">';
 export function pageIdOf(pathname: string, k?: string | null): string {
   if (pathname === '/') return 'dashboard';
   const p = pathname.split('/')[1] ?? '';
+  if (p === 'terms') return 'custTerms';
+  if (p === 'transfers') return 'tf';
   if (p === 'work') return { ord: 'wkOrd', new: 'wkLeaf', steel: 'wkSteel', rods: 'wkRods', forf: 'wkForf', disp: 'wkDisp', exp: 'wkExp', off: 'wkOff' }[k ?? 'ord'] ?? 'wkOrd';
   return p;
 }

@@ -56,6 +56,7 @@ const MAIN: NavItem[] = [
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
+  { href: '/terms', label: 'أسعار وحدود العملاء', icon: '🏷️', adminOnly: true, pro: 'custTerms' },
   { href: '/samples', label: 'العينات', icon: '🧪' },
 ];
 /** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
