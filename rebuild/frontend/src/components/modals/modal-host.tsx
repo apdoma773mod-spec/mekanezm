@@ -19,6 +19,7 @@ import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 import { ProductToolModal, type ProductToolSpec } from './product-tools';
 import { MarketModal } from './market-prices';
 import { ContactToolModal, type ContactToolSpec } from './contact-tools';
+import { CountSessions } from './count-sessions';
 import { PurchaseImport } from './purchase-import';
 
 /** Every window the old system opened with openModal(), by name. */
@@ -34,6 +35,7 @@ export type ModalSpec =
   | Phase4Spec
   | ProductToolSpec
   | { kind: 'market' }
+  | { kind: 'countSessions' }
   | ContactToolSpec
   | { kind: 'purchImport' }
   | { kind: 'invoice'; id: string }
@@ -118,6 +120,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
       case 'missing':
       case 'invNotes':
         content = <ContactToolModal spec={spec} />;
+        break;
+      case 'countSessions':
+        content = <CountSessions />;
         break;
       case 'market':
         content = <MarketModal />;

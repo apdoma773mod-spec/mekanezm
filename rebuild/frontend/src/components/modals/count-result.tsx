@@ -4,10 +4,13 @@ import type { StockCountDto } from '@mk/shared';
 import { Modal } from '../ui/modal';
 import { useModal } from './modal-host';
 import { money, qtyText } from '@/lib/format';
+import { printHtml, reportHtml } from '@/lib/print';
+import { useSettings } from '@/lib/queries';
 
 /** The old countResult(): what a saved count changed. */
 export function CountResult({ count }: { count: StockCountDto }) {
   const { close } = useModal();
+  const settings = useSettings().data;
   const rows = count.items.filter((x) => x.diff !== 0);
   return (
     <Modal title={`✔ الجرد اتحفظ ${count.no}`} onClose={close}>
@@ -59,6 +62,35 @@ export function CountResult({ count }: { count: StockCountDto }) {
             )}
           </tbody>
         </table>
+      </div>
+      <div className="btnrow" style={{ marginTop: 10 }}>
+        <button
+          type="button"
+          className="secondary"
+          disabled={!settings}
+          onClick={() =>
+            settings &&
+            printHtml(
+              reportHtml(
+                {
+                  title: `نتيجة الجرد ${count.no}`,
+                  range: '',
+                  sum: [
+                    ['أصناف اتعدّت', String(count.itemCount)],
+                    ['قيمة العجز', money(count.shortValue)],
+                    ['قيمة الزيادة', money(count.excessValue)],
+                    ['الصافي', money(count.excessValue - count.shortValue)],
+                  ],
+                  head: ['الصنف', 'الكود', 'كان', 'اتعدّ', 'الفرق', 'القيمة'],
+                  rows: count.items.filter((x) => x.diff !== 0).map((x) => [x.name, x.code || '', String(x.before), String(x.counted), `${x.diff > 0 ? '+' : ''}${x.diff}`, money(Math.abs(x.diff) * x.cost)]),
+                },
+                settings,
+              ),
+            )
+          }
+        >
+          🖨️ طباعة نتيجة الجرد
+        </button>
       </div>
     </Modal>
   );

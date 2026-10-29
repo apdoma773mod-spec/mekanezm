@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ProductDto } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { useModal } from '@/components/modals/modal-host';
@@ -9,7 +9,11 @@ import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
-import { lookupProduct, useCategories, useCounts, useCreateCount, useProducts } from '@/lib/trade-queries';
+import { CameraScanner } from '@/components/scan/camera-scanner';
+import { printHtml, reportHtml } from '@/lib/print';
+import { useSettings } from '@/lib/queries';
+import { vn } from '@/lib/import-daily';
+import { lookupProduct, useAllProducts, useCategories, useCounts, useCreateCount, useProducts } from '@/lib/trade-queries';
 
 /** Same draft key as the old system, so a half-done count survives a reload. */
 const CD = 'mk_count_draft';
@@ -105,7 +109,9 @@ function CountScreen() {
   const [show, setShow] = useState<'all' | 'done' | 'diff'>('all');
   const [hit, setHit] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [scan, setScan] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const settings = useSettings().data;
+  const allProducts = useAllProducts({}, false);
   const [history, setHistory] = useState(false);
   const cats = useCategories();
   const products = useProducts({ q: q || undefined, category: cat || undefined, pageSize: 200 }, show === 'all');
@@ -151,20 +157,43 @@ function CountScreen() {
     else ev += df * l.cost;
   }
 
-  const onScan = async () => {
-    const code = toWestern(scan.trim());
-    setScan('');
-    if (!code) return;
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const onCode = async (raw: string): Promise<boolean | string> => {
+    const code = toWestern(raw.trim());
     try {
       const p = await lookupProduct(code);
-      const cur = draft[p.id];
+      const cur = draftRef.current[p.id];
       const v = String((Number(cur?.v) || 0) + 1);
-      setCount(p, v);
+      const next = { ...draftRef.current, [p.id]: { v, name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0 } };
+      draftRef.current = next;
+      update(next);
       setHit(p.id);
-      toast(`${p.name} = ${v}`);
+      return `${p.name} = ${v}`;
     } catch {
       toast(`باركود مش متسجل: ${code}`, 'bad');
+      return false;
     }
+  };
+
+  /** 🖨️ ورقة جرد فاضية للعدّ باليد (حسب البحث والتصنيف). */
+  const printSheet = async () => {
+    if (!settings) return;
+    const all = await allProducts.refetch();
+    const w = vn(q).split(' ').filter(Boolean);
+    const L = (all.data ?? []).filter((p) => (!cat || p.category === cat) && w.every((x) => vn(`${p.name} ${p.code}`).includes(x)));
+    printHtml(
+      reportHtml(
+        {
+          title: `ورقة جرد${cat ? ` — ${cat}` : ''}`,
+          range: 'التاريخ: ........................   القائم بالجرد: ................................',
+          sum: [],
+          head: ['#', 'الكود', 'الصنف', 'الوحدة', 'في السيستم', 'العدد الفعلي', 'ملاحظات'],
+          rows: L.map((p, i) => [String(i + 1), p.code, p.name, p.unit || '', String(p.qty), '☐', '']),
+        },
+        settings,
+      ),
+    );
   };
 
   const onSave = async () => {
@@ -191,8 +220,17 @@ function CountScreen() {
           <p>عدّ الأصناف (أو امسحها بالباركود)، والسيستم يقولك العجز والزيادة ويظبط المخزون</p>
         </div>
         <div className="btnrow">
+          <button type="button" className="secondary" onClick={() => open({ kind: 'countSessions' })}>
+            🗂️ جلسات الجرد (على أكتر من يوم)
+          </button>
+          <button type="button" className="secondary" onClick={() => void printSheet()}>
+            🖨️ ورقة جرد
+          </button>
           <button type="button" className="secondary" onClick={() => setHistory(true)}>
             سجل الجرد
+          </button>
+          <button type="button" className="primary" onClick={() => setScanning(true)}>
+            📷 جرد بالباركود
           </button>
         </div>
       </div>
@@ -209,19 +247,8 @@ function CountScreen() {
           <option value="done">اللي اتعدّ بس</option>
           <option value="diff">اللي فيه فرق</option>
         </select>
-        <input
-          className="search"
-          placeholder="📷 جرد بالباركود — امسح هنا (كل مسحة = قطعة)"
-          value={scan}
-          onChange={(e) => setScan(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              void onScan();
-            }
-          }}
-        />
       </div>
+      {scanning && <CameraScanner multi title="جرد بالباركود — كل مسحة = قطعة" onClose={() => setScanning(false)} onCode={onCode} />}
       <div className="card" style={{ padding: 0 }}>
         <div className="cnt-row" style={{ fontSize: 12, color: 'var(--muted)', background: '#fafcfc' }}>
           <div>الصنف</div>
