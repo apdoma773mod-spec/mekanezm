@@ -14,6 +14,7 @@ import '@fontsource/amiri/700.css';
 import '@fontsource/changa/400.css';
 import '@fontsource/changa/700.css';
 import './globals.css';
+import './legacy.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {

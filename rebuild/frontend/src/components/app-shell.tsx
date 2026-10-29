@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import type { ThemeSettings } from '@mk/shared';
+import { I } from '@/legacy/pro-art';
 import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
-import { useMe, useSettings } from '@/lib/queries';
+import { useLogout, useMe, useSettings } from '@/lib/queries';
+import { BgFx, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
@@ -22,6 +24,8 @@ interface NavItem {
   mobile?: boolean;
   /** The old sidebar named some screens differently for staff (e.g. «حضوري»). */
   staffLabel?: string;
+  /** «ميكانيزم برو» icon key when it differs from the page id. */
+  pro?: string;
 }
 
 /** Same groups, names, order and icons as the old sidebar. */
@@ -31,6 +35,10 @@ const MAIN: NavItem[] = [
   { href: '/count', label: 'الجرد', icon: '🧮', adminOnly: true },
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
   { href: '/daybook', label: 'يومية المحل', icon: '📒' },
+  // «ميكانيزم برو» put the work screens right after the daybook.
+  { href: '/work?k=ord', label: 'أنظمة الشغل', icon: '🛠', adminOnly: true, pro: 'mkSideWk' },
+  { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true, pro: 'mkSideSt' },
+  { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true, pro: 'mkSideFf' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
@@ -41,23 +49,24 @@ const MAIN: NavItem[] = [
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
-  { href: '/work?k=ord', label: 'أنظمة الشغل', icon: '🛠', adminOnly: true },
-  { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true },
-  { href: '/work?k=bamboo', label: 'أدراج البامبو', icon: '🎍', adminOnly: true },
-  { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true },
-  { href: '/work?k=disp', label: 'بضاعة العرض', icon: '🏬', adminOnly: true },
-  { href: '/work?k=off', label: 'الفضل', icon: '🧰', adminOnly: true },
   { href: '/samples', label: 'العينات', icon: '🧪' },
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
 ];
 /** The old bottom bar's own order (sales before purchases, unlike the sidebar). */
 const MOBILE_ORDER = ['/', '/products', '/sales', '/purchases', '/returns', '/reports', '/hy', '/settings', '/account'];
 /** «الشركات» at the bottom of the sidebar, as the old one. */
-const COMPANIES: NavItem[] = [{ href: '/hy', label: 'هيدرولك', icon: '🏢', mobile: true }];
-const SYSTEM: NavItem[] = [
+/** The old side-items script appended bamboo, display goods and offcuts to the last group (الشركات). */
+const COMPANIES: NavItem[] = [
+  { href: '/hy', label: 'هيدرولك', icon: '🏢', mobile: true },
+  { href: '/work?k=bamboo', label: 'بامبو', icon: '🎍', adminOnly: true },
+  { href: '/work?k=disp', label: 'بضاعة العرض', icon: '🏬', adminOnly: true },
+  { href: '/work?k=off', label: 'الفضل', icon: '🧰', adminOnly: true },
+];
+const SYSTEM: NavItem[] = [{ href: '/account', label: 'حسابي', icon: '👤', staffOnly: true, mobile: true }];
+/** «الإعدادات والخروج»: «ميكانيزم برو» moved theme, settings and logout to the end of the sidebar. */
+const END: NavItem[] = [
   { href: '/theme', label: 'المظهر والتخصيص', icon: 'palette', adminOnly: true },
   { href: '/settings', label: 'الإدارة والإعدادات', short: 'الإدارة', icon: 'gear', adminOnly: true, mobile: true },
-  { href: '/account', label: 'حسابي', icon: '👤', staffOnly: true, mobile: true },
 ];
 
 function NavIcon({ icon }: { icon: NavItem['icon'] }) {
@@ -116,8 +125,12 @@ function Shell({ children }: { children: ReactNode }) {
   const me = useMe();
   const settings = useSettings();
   const { open } = useModal();
+  const router = useRouter();
+  const logout = useLogout();
   const T = settings.data?.theme;
   useApplyTheme(T);
+  const [pro, setPro] = useState(false);
+  useEffect(() => setPro(proOn()), []);
 
   if (me.isPending) return <Loading />;
   if (me.isError) return <ErrorBox message={errorMessage(me.error)} onRetry={() => me.refetch()} />;
@@ -126,22 +139,54 @@ function Shell({ children }: { children: ReactNode }) {
   const allowed = (i: NavItem) => (!i.adminOnly || admin) && (!i.staffOnly || !admin);
   const main = MAIN.filter(allowed);
   const system = SYSTEM.filter(allowed);
-  const mobile = [...main, ...system, ...COMPANIES]
+  const companies = COMPANIES.filter(allowed);
+  const end = END.filter(allowed);
+  const mobile = [...main, ...system, ...companies, ...end]
     .filter((i) => i.mobile)
     .sort((a, b) => MOBILE_ORDER.indexOf(a.href) - MOBILE_ORDER.indexOf(b.href));
+  const navClose = () => document.body.classList.remove('navon');
+  const navBtn = (
+    <button
+      type="button"
+      id="navBtn"
+      aria-label="القايمة"
+      onClick={(e) => {
+        e.stopPropagation();
+        document.body.classList.add('navon');
+      }}
+    >
+      ☰
+    </button>
+  );
+  const item = (i: NavItem, short?: boolean) => {
+    const k = i.pro ?? pageIdOf(i.href.split('?')[0]);
+    return (
+      <Link key={i.href} href={i.href} data-page={k} className={isActive(pathname, i.href) ? 'active' : ''} onClick={navClose}>
+        {pro && I[k] ? <ProIcon k={k} /> : <NavIcon icon={i.icon} />} {short ? null : ' '}
+        <span>{short ? (i.short ?? i.label) : !admin && i.staffLabel ? i.staffLabel : i.label}</span>
+      </Link>
+    );
+  };
 
   return (
     <div className="app">
       {T && <BackgroundLayer T={T} />}
+      {pro && <BgFx />}
+      <Suspense fallback={null}>
+        <ProBody />
+      </Suspense>
       <PunchCatcher />
       <header className="top">
         <div className="brand">
+          {!pro && navBtn}
           {T?.logoHeader && T.logo && <img src={T.logo} alt="" />}
           <div>
             ميكانيزم <span>| MEKANIZM</span>
           </div>
+          {pro && <ProLogo logo={T?.logo} />}
         </div>
         <div className="top-actions">
+          {pro && navBtn}
           <button type="button" className="icon-btn" onClick={() => open({ kind: 'quick' })} title="إضافة" aria-label="إضافة">
             <Icon name="plus" />
           </button>
@@ -159,52 +204,72 @@ function Shell({ children }: { children: ReactNode }) {
               👤
             </Link>
           )}
+          {pro && <Ticker />}
+          {pro && <MkMini />}
         </div>
       </header>
       <div className="layout">
         <aside>
+          <div className="navhd">
+            <span>ميكانيزم</span>
+            <button type="button" id="navX" aria-label="قفل" onClick={navClose}>
+              ✕
+            </button>
+          </div>
           <div className="nav-title">الرئيسية</div>
-          <nav className="nav">
-            {main.map((i) => (
-              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
-                <NavIcon icon={i.icon} /> <span>{!admin && i.staffLabel ? i.staffLabel : i.label}</span>
-              </Link>
-            ))}
-          </nav>
-          <div className="nav-title">النظام</div>
-          <nav className="nav">
-            {system.map((i) => (
-              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
-                <NavIcon icon={i.icon} /> <span>{i.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <nav className="nav">{main.map((i) => item(i))}</nav>
+          {system.length > 0 && (
+            <>
+              <div className="nav-title">النظام</div>
+              <nav className="nav">{system.map((i) => item(i))}</nav>
+            </>
+          )}
           <div className="nav-title" style={{ marginTop: 16 }}>
             الشركات
           </div>
-          <nav className="nav">
-            {COMPANIES.map((i) => (
-              <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
-                <NavIcon icon={i.icon} /> <span>{i.label}</span>
-              </Link>
-            ))}
+          <nav className="nav">{companies.map((i) => item(i))}</nav>
+          <div className="nav-title" id="mkNavEndT">
+            الإعدادات والخروج
+          </div>
+          <nav className="nav" id="mkNavEnd">
+            {end.map((i) => item(i))}
+            <button
+              type="button"
+              className="own"
+              id="outBtn"
+              style={{ color: '#c0392b' }}
+              disabled={logout.isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                navClose();
+                logout.mutate(undefined, { onSettled: () => router.replace('/login') });
+              }}
+            >
+              {pro ? <ProIcon k="logout" /> : <span style={{ width: '1.15em', textAlign: 'center' }}>🚪</span>} <span>تسجيل الخروج</span>
+            </button>
           </nav>
         </aside>
-        <main>{children}</main>
+        <main>
+          <section id={pageIdOf(pathname)} className="page active">
+            {children}
+          </section>
+        </main>
       </div>
+      <div id="navBg" onClick={navClose} />
       <button type="button" className="fab" onClick={() => open({ kind: 'quick' })} aria-label="إضافة عملية">
         <Icon name="plus" />
       </button>
-      <nav className="mobile-nav">
-        {mobile.map((i) => (
-          <Link key={i.href} href={i.href} className={isActive(pathname, i.href) ? 'active' : ''}>
-            <NavIcon icon={i.icon} />
-            <span>{i.short ?? i.label}</span>
-          </Link>
-        ))}
-      </nav>
+      <nav className="mobile-nav">{mobile.map((i) => item(i, true))}</nav>
     </div>
   );
+}
+
+/** Keeps the old body classes (screen color, dark ground, sticky header) in step with the route. */
+function ProBody() {
+  const pathname = usePathname();
+  const k = useSearchParams().get('k');
+  useProBody(pageIdOf(pathname, k));
+  return null;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {

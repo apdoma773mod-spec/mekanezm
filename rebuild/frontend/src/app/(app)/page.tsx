@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
+import { Launch, proOn, ProIll } from '@/components/pro';
 import { DashboardBanners, DashboardCharts } from '@/components/dashboard-extras';
 import { CompanyBar } from '@/components/company';
 import { Icon } from '@/components/icon';
@@ -56,7 +59,23 @@ export default function DashboardPage() {
   const admin = useIsAdmin();
   const overview = useOverview();
   const today = useToday();
-  const o = overview.data;
+  const router = useRouter();
+  const t = today.data;
+  const [pro, setPro] = useState(false);
+  useEffect(() => setPro(proOn()), []);
+  /** «برو» swaps the action icons for its 3D drawings, as the old paint() did. */
+  const actIc = (k: string, plain: ReactNode) => (pro ? <span className="ic mkx"><ProIll k={k} /></span> : <span className="ic">{plain}</span>);
+  const todayTile = (ic: string, l: string, v: string, go: () => void, col?: string) => (
+    <button
+      type="button"
+      onClick={go}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: 10, border: '1px solid var(--border,#e5e7ef)', borderRadius: 14, background: 'var(--card,#fff)', textAlign: 'right', minHeight: 84, minWidth: 0, cursor: 'pointer', color: 'inherit', font: 'inherit' }}
+    >
+      <span style={{ fontSize: 24, lineHeight: 1 }}>{ic}</span>
+      <small style={{ color: 'var(--muted)', fontSize: 11 }}>{l}</small>
+      <b style={{ fontSize: 14, ...(col ? { color: col } : {}) }}>{v}</b>
+    </button>
+  );
 
   return (
     <>
@@ -69,82 +88,76 @@ export default function DashboardPage() {
           </button>
         }
       />
+      {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
+      <div id="mkToday">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: '0 0 10px' }}>📅 النهاردة</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            {todayTile('💰', 'مبيعات النهاردة', t ? money(t.sales.total) : '…', () => router.push('/sales'))}
+            {todayTile('🧾', 'فواتير النهاردة', t ? t.sales.count.toLocaleString('ar-EG') : '…', () => router.push('/sales'))}
+            {todayTile('📥', 'اتحصّل النهاردة', t ? money(t.sales.paid) : '…', () => router.push('/cash'), 'var(--green)')}
+            {todayTile('📤', 'مصروفات النهاردة', t ? money(t.expenses) : '…', () => router.push('/cash'), t?.expenses ? 'var(--danger)' : '')}
+            {todayTile('⚠️', 'أصناف قربت تخلص', t ? t.lowStockCount.toLocaleString('ar-EG') : '…', () => router.push('/reorder'), t?.lowStockCount ? 'var(--danger)' : '')}
+            {todayTile('👥', 'فلوس عند العملاء', t ? money(t.receivables) : '…', () => router.push(admin ? '/debts' : '/contacts'))}
+          </div>
+        </div>
+      </div>
+      <Launch />
       {admin && <CompanyBar />}
       {admin && <DashboardBanners />}
-      {overview.isError ? (
-        <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />
-      ) : (
-        <div className="stats">
-          <div className="stat">
-            <div className="ic">
-              <Icon name="box" />
-            </div>
-            <small>عدد المنتجات</small>
-            <strong>{o ? o.productsCount.toLocaleString('ar-EG') : '…'}</strong>
-          </div>
-          <div className="stat">
-            <div className="ic">
-              <Icon name="wallet" />
-            </div>
-            <small>قيمة المخزون</small>
-            <strong>{o ? (o.stockValue !== undefined ? money(o.stockValue) : '—') : '…'}</strong>
-          </div>
-          <div className="stat">
-            <div className="ic">
-              <Icon name="up" />
-            </div>
-            <small>إجمالي المبيعات</small>
-            <strong>{o ? money(o.salesTotal) : '…'}</strong>
-          </div>
-          <div className="stat">
-            <div className="ic">
-              <Icon name="down" />
-            </div>
-            <small>إجمالي المشتريات</small>
-            <strong>{o ? money(o.purchasesTotal) : '…'}</strong>
-          </div>
-        </div>
-      )}
-
-      {today.data && (
-        <div className="card" style={{ marginTop: 14 }}>
-          <h3>النهاردة</h3>
-          <div className="cstats" style={{ margin: 0 }}>
-            <div>
-              <small>مبيعات ({today.data.sales.count.toLocaleString('ar-EG')} فاتورة)</small>
-              <b>{money(today.data.sales.total)}</b>
-            </div>
-            <div>
-              <small>الخزنة النهاردة</small>
-              <b>{money(today.data.cashNet)}</b>
-            </div>
-            <div>
-              <small>مصروفات</small>
-              <b>{money(today.data.expenses)}</b>
-            </div>
-            {today.data.profit !== undefined && (
-              <div>
-                <small>ربح المبيعات</small>
-                <b>{money(today.data.profit)}</b>
-              </div>
-            )}
-            <div>
-              <small>مستحقات عند العملاء</small>
-              <b>{money(today.data.receivables)}</b>
-            </div>
-            {admin && (
-              <Link href="/products?stock=low" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10 }}>
-                  <small style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>أصناف تحت حد التنبيه</small>
-                  <b style={{ color: today.data.lowStockCount ? 'var(--danger)' : 'inherit' }}>
-                    {today.data.lowStockCount.toLocaleString('ar-EG')}
-                  </b>
-                </div>
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      {overview.isError && <ErrorBox message={errorMessage(overview.error)} onRetry={() => overview.refetch()} />}
+      <Link
+        href="/daybook"
+        style={{
+          width: '100%',
+          marginBottom: 14,
+          background: 'var(--blue)',
+          color: '#fff',
+          border: 0,
+          borderRadius: 16,
+          padding: 16,
+          fontSize: 18,
+          fontWeight: 800,
+          textAlign: 'right',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          textDecoration: 'none',
+          boxSizing: 'border-box',
+        }}
+      >
+        📒 يومية المحل — اكتب بيعة بسرعة <span>←</span>
+      </Link>
+      <div className="dash-acts">
+        <button type="button" className="pri" onClick={() => open({ kind: 'transaction', type: 'SALE' })}>
+          {actIc('saleNew', <Icon name="up" />)}فاتورة بيع<small>تسجيل بيع جديد</small>
+        </button>
+        <button type="button" className="pri" onClick={() => open({ kind: 'transaction', type: 'PURCHASE' })}>
+          {actIc('purchaseNew', <Icon name="down" />)}فاتورة شراء<small>تسجيل مشتريات</small>
+        </button>
+        {admin && (
+          <button type="button" className="own" onClick={() => open({ kind: 'product' })}>
+            {actIc('productNew', <Icon name="box" />)}إضافة منتج<small>صنف جديد للمخزون</small>
+          </button>
+        )}
+        <button type="button" onClick={() => open({ kind: 'quote' })}>
+          {actIc('quotes', '📝')}عرض سعر<small>من غير ما يخصم من المخزون</small>
+        </button>
+        <button type="button" onClick={() => router.push('/sales')}>
+          {actIc('sales', <Icon name="file" />)}فواتير البيع<small>كل فواتير البيع والبحث</small>
+        </button>
+        <button type="button" onClick={() => router.push('/purchases')}>
+          {actIc('purchases', <Icon name="down" />)}فواتير الشراء<small>كل فواتير الشراء والبحث</small>
+        </button>
+      </div>
+      <button
+        type="button"
+        className="secondary"
+        style={{ width: '100%', marginTop: 14, padding: 16, fontSize: 17, fontWeight: 800 }}
+        onClick={() => open({ kind: 'closing' })}
+      >
+        🔒 تقفيل اليومية
+      </button>
 
       <div className="grid2">
         <div className="card">
@@ -153,26 +166,6 @@ export default function DashboardPage() {
         </div>
         <div className="card">
           <h3>اختصارات</h3>
-          <Link
-            href="/daybook"
-            style={{
-              width: '100%',
-              marginBottom: 14,
-              background: 'var(--blue)',
-              color: 'var(--onblue)',
-              borderRadius: 16,
-              padding: 16,
-              fontSize: 18,
-              fontWeight: 800,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              textDecoration: 'none',
-              boxSizing: 'border-box',
-            }}
-          >
-            📒 يومية المحل — اكتب بيعة بسرعة <span>←</span>
-          </Link>
           <div className="quick">
             {admin && (
               <button type="button" onClick={() => open({ kind: 'product' })}>
@@ -202,15 +195,15 @@ export default function DashboardPage() {
                 <small>بيع أو شراء</small>
               </button>
             )}
+            {admin && (
+              <button type="button" onClick={() => router.push('/reports')}>
+                <b>
+                  <Icon name="chart" /> التقارير
+                </b>
+                <small>أرباح ومبيعات</small>
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            className="secondary"
-            style={{ width: '100%', marginTop: 14, padding: 16, fontSize: 17, fontWeight: 800 }}
-            onClick={() => open({ kind: 'closing' })}
-          >
-            🔒 تقفيل اليومية
-          </button>
         </div>
       </div>
       {admin && <DashboardCharts />}
