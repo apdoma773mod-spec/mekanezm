@@ -34,6 +34,7 @@ import workRoutes from './modules/work/routes.js';
 import { smsRoutes } from './modules/inbox/sms.js';
 import { bridgeRoutes } from './modules/inbox/bridge.js';
 import { inboxAdminRoutes } from './modules/inbox/admin.js';
+import backupRoutes from './modules/backup/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -92,6 +93,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(smsRoutes, { prefix: '/sms' });
       await api.register(bridgeRoutes, { prefix: '/bridge' });
       await api.register(inboxAdminRoutes, { prefix: '/inbox' });
+      await api.register(backupRoutes, { prefix: '/backup' });
     },
     { prefix: '/api/v1' },
   );

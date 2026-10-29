@@ -939,3 +939,10 @@ model WaPhoto {
 
   @@index([status, createdAt])
 }
+
+// ---------- 💾 النسخ الاحتياطية (نسخة كل يوم، آخر ٣١ يوم) ----------
+model Backup {
+  day    String   @id
+  data   Json
+  madeAt DateTime @default(now()) @db.Timestamptz(3)
+}
