@@ -52,7 +52,7 @@ export default function ShippingPage() {
   };
 
   return (
-    <section id="shipping">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>🚚 الشحن والتوصيل</h1>
@@ -230,6 +230,6 @@ export default function ShippingPage() {
           )}
         </>
       )}
-    </section>
+    </>
   );
 }

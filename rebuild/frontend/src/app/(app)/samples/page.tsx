@@ -126,7 +126,7 @@ export default function SamplesPage() {
   const out = samples.filter((x) => x.status === 'out');
   const rest = samples.filter((x) => x.status !== 'out');
   return (
-    <section id="samples">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>🧪 العينات</h1>
@@ -150,6 +150,6 @@ export default function SamplesPage() {
         {rest.length ? rest.map((s) => <Row key={s.id} s={s} />) : <div className="empty">لسه مفيش سجل</div>}
       </div>
       {adding && <NewSample onClose={() => setAdding(false)} />}
-    </section>
+    </>
   );
 }

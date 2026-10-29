@@ -366,7 +366,7 @@ function ReportsScreen() {
   const h = headline.data;
 
   return (
-    <section id="reports">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>التقارير</h1>
@@ -493,7 +493,7 @@ function ReportsScreen() {
       </div>
 
       {cur && <ReportView id={cur} onBack={() => setCur(null)} chips={chips} range={range} rangeText={rngTxt(pre, range)} />}
-    </section>
+    </>
   );
 }
 

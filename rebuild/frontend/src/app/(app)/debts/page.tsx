@@ -143,7 +143,7 @@ function DebtsScreen() {
     .sort((a, b) => (sort === 'age' ? (b.old ? 1e6 : (b.days ?? 0)) - (a.old ? 1e6 : (a.days ?? 0)) : b.balance - a.balance));
 
   return (
-    <section id="debts">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>💰 الديون والتذكير</h1>
@@ -250,7 +250,7 @@ function DebtsScreen() {
         </div>
       )}
       {remind && data.data && <RemindModal x={remind} tpl={data.data.template} onClose={() => setRemind(null)} />}
-    </section>
+    </>
   );
 }
 

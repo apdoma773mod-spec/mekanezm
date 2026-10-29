@@ -25,7 +25,7 @@ export default function QuotesPage() {
   const L = list.data?.items ?? [];
 
   return (
-    <section id="quotes">
+    <>
       <PageHeader
         title="عروض الأسعار"
         subtitle="مش بتخصم من المخزون ومش بتدخل في التقارير"
@@ -72,6 +72,6 @@ export default function QuotesPage() {
         </div>
         {list.data && <Pagination page={list.data.page} pageSize={list.data.pageSize} total={list.data.total} onPage={setPage} />}
       </div>
-    </section>
+    </>
   );
 }

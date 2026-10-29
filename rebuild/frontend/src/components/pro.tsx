@@ -81,8 +81,9 @@ interface Bg {
   side: string;
 }
 const HEX = /^#[0-9a-f]{6}$/i;
+/** Starts from the owner's own choice in the old system (yellow ground, white sidebar); «المظهر» changes it. */
 function bgGet(): Bg {
-  let o: Bg = { c: '#f7f6fb', fx: true, side: '' };
+  let o: Bg = { c: '#ffe08a', fx: true, side: '#ffffff' };
   try {
     const v = JSON.parse(localStorage.getItem('mk_bg') || 'null');
     if (v && HEX.test(v.c)) o = { c: v.c, fx: v.fx !== 0, side: HEX.test(v.side || '') ? v.side : '' };
@@ -125,6 +126,93 @@ function bgSet(c: string | null, fx: boolean | null, side: string | null) {
   return o;
 }
 
+// ══ 🎛️ تحكّم في الشكل (index.html 8892-8936): لون البراند، البانر، الحركة، حجم الخط، الأيقونات، الجداول كروت، وضع السرعة ══
+interface Ui {
+  brand: string;
+  bn: 'show' | 'hide';
+  bnh: 's' | 'n' | 'l';
+  bnc: string;
+  anim: number;
+  rich: number;
+  rc: number;
+  fs: number;
+  dn: 'c' | 'n' | 'r';
+  ic: 'tint' | 'solid' | 'plain';
+  fast: number;
+  tc: number;
+}
+/** The owner's settings in the old system on 2026-10-29 (the old defaults were gold, normal font, moving logo). */
+const UI_DEFAULT: Ui = { brand: '#0d9488', bn: 'show', bnh: 'n', bnc: '', anim: 0, rich: 0, rc: 16, fs: 1.12, dn: 'n', ic: 'solid', fast: 1, tc: 1 };
+const UI_KEY = 'mk_ui';
+function uiGet(): Ui {
+  try {
+    const v = JSON.parse(localStorage.getItem(UI_KEY) || 'null');
+    if (v) return { ...UI_DEFAULT, ...v };
+  } catch {
+    /* default */
+  }
+  return { ...UI_DEFAULT };
+}
+function uiApply() {
+  const o = uiGet();
+  const B = document.body;
+  const ink = lum(o.brand) > 0.4 ? '#1A1306' : '#ffffff';
+  B.style.setProperty('--brand', o.brand);
+  B.style.setProperty('--brand-ink', ink);
+  B.style.setProperty('--gd', o.brand);
+  B.style.setProperty('--gold', o.brand);
+  B.style.setProperty('--gdI', ink);
+  B.style.setProperty('--rc', `${o.rc}px`);
+  B.classList.toggle('mk-nobrand', o.bn === 'hide');
+  B.classList.toggle('mk-bnsm', o.bnh === 's');
+  B.classList.toggle('mk-bnlg', o.bnh === 'l');
+  if (HEX.test(o.bnc || '')) {
+    B.style.setProperty('--bnBg', o.bnc);
+    B.classList.add('mk-bncolor');
+  } else {
+    B.style.removeProperty('--bnBg');
+    B.classList.remove('mk-bncolor');
+  }
+  B.classList.toggle('mk-noanim', !o.anim);
+  B.classList.toggle('mk-rich', !!o.rich);
+  B.style.setProperty('--zm', String(o.fs));
+  B.classList.toggle('mk-compact', o.dn === 'c');
+  B.classList.toggle('mk-roomy', o.dn === 'r');
+  B.classList.toggle('mk-ic-solid', o.ic === 'solid');
+  B.classList.toggle('mk-ic-plain', o.ic === 'plain');
+  B.classList.toggle('mk-fast', !!o.fast);
+  B.classList.toggle('mk-tcards', !!o.tc);
+  cardify();
+}
+/** On phones, tables become cards: each cell gets its column name as data-l (the CSS shows it). */
+function cardify() {
+  if (!uiGet().tc || window.innerWidth > 700) return;
+  document.querySelectorAll<HTMLTableElement>('main table:not(.mkTc):not([data-nc])').forEach((t) => {
+    const hs = Array.from(t.querySelectorAll('thead th')).map((h) => h.textContent?.trim() ?? '');
+    if (!hs.length) {
+      t.setAttribute('data-nc', '1');
+      return;
+    }
+    t.querySelectorAll('tbody tr').forEach((r) => {
+      Array.from(r.children).forEach((c, i) => {
+        const el = c as HTMLElement;
+        if (!el.dataset.l) el.dataset.l = hs[i] || '';
+      });
+    });
+    t.classList.add('mkTc');
+  });
+}
+function uiSet<K extends keyof Ui>(k: K, v: Ui[K]) {
+  const o = uiGet();
+  o[k] = v;
+  try {
+    localStorage.setItem(UI_KEY, JSON.stringify(o));
+  } catch {
+    /* private mode */
+  }
+  uiApply();
+}
+
 /** كل شاشة بلونها (نفس لون أيقونتها)، والمزدحمة شريط عنوان كامل بلونها. */
 const STRONG = ['daybook', 'count', 'sales', 'waorders', 'weborders', 'shipping'];
 
@@ -134,6 +222,19 @@ export function useProBody(pageId: string) {
     const B = document.body;
     B.classList.toggle('mkpro', proOn());
     bgApply();
+    uiApply();
+    // new rows and screens keep turning into cards on phones, like the old MutationObserver
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const mo = new MutationObserver(() => {
+      clearTimeout(t);
+      t = setTimeout(cardify, 250);
+    });
+    const main = document.querySelector('main');
+    if (main) mo.observe(main, { childList: true, subtree: true });
+    return () => {
+      clearTimeout(t);
+      mo.disconnect();
+    };
   }, []);
   useEffect(() => {
     const B = document.body;
@@ -401,6 +502,136 @@ export function ProThemeCard() {
         <input type="color" id="mkSdC" value={o.side || '#0B1650'} onChange={(e) => set(null, null, e.target.value)} style={{ width: 54, height: 38, padding: 2, borderRadius: 10, cursor: 'pointer' }} />
       </label>
       <style>{'#mkBgP button.on,#mkSdP button.on{border-color:#FFBE0B!important;box-shadow:0 0 0 3px rgba(255,190,11,.3)}'}</style>
+    </div>
+  );
+}
+
+const BR: [string, string][] = [
+  ['#E8B04A', 'ذهبي'],
+  ['#FFBE0B', 'منجاوي'],
+  ['#1F3FB8', 'أزرق'],
+  ['#0d9488', 'تركواز'],
+  ['#16a34a', 'أخضر'],
+  ['#e11d48', 'أحمر'],
+  ['#7c3aed', 'بنفسجي'],
+  ['#ea580c', 'برتقالي'],
+  ['#0f172a', 'كحلي غامق'],
+];
+const BN: [string, string][] = [
+  ['', 'تلقائي (كحلي)'],
+  ['#0B1650', 'كحلي'],
+  ['#1F3FB8', 'أزرق'],
+  ['#0f172a', 'أسود مزرق'],
+  ['#111111', 'أسود'],
+  ['#14532d', 'أخضر غامق'],
+  ['#7f1d1d', 'عنابي'],
+  ['#FFBE0B', 'منجاوي'],
+  ['#ffffff', 'أبيض'],
+];
+
+/** 🎛️ تحكّم في الشكل — كل حاجة بتتغيّر فورًا وبتتحفظ على الجهاز ده (زي القديم). */
+export function ProUiCard() {
+  const [o, setO] = useState<Ui>(UI_DEFAULT);
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setO(uiGet());
+    setDark(document.body.classList.contains('mkdark'));
+  }, []);
+  const set = <K extends keyof Ui>(k: K, v: Ui[K]) => {
+    uiSet(k, v);
+    setO(uiGet());
+  };
+  const sw = (list: [string, string][], cur: string, on: (v: string) => void) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {list.map(([v, label]) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => on(v)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', minHeight: 44, borderRadius: 12, border: `2px solid ${v === cur ? '#FFBE0B' : 'var(--border,#ddd)'}`, background: 'var(--card,#fff)', color: 'inherit', fontWeight: 700 }}
+        >
+          <i style={{ width: 20, height: 20, borderRadius: 6, border: '1px solid #0003', background: v || 'linear-gradient(135deg,#0B1650,#1A34A8)' }} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+  const seg = <T extends string | number>(list: [T, string][], cur: T, on: (v: T) => void) => (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {list.map(([v, label]) => {
+        const sel = String(v) === String(cur);
+        return (
+          <button
+            key={label}
+            type="button"
+            onClick={() => on(v)}
+            style={{ flex: 1, minWidth: 84, minHeight: 46, padding: '8px 12px', borderRadius: 12, fontWeight: 800, border: `2px solid ${sel ? '#FFBE0B' : 'var(--border,#ddd)'}`, background: sel ? 'var(--brand,#E8B04A)' : 'var(--card,#fff)', color: sel ? 'var(--brand-ink,#1A1306)' : 'inherit' }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+  return (
+    <div className="card" id="mkUiCard" style={{ marginBottom: 14 }}>
+      <h3>🎛️ تحكّم في الشكل</h3>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 13, lineHeight: 1.8 }}>كل حاجة هنا بتتغيّر فورًا وبتتحفظ على الجهاز ده.</p>
+      <b>الشكل العام</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<number>([[0, 'مسطّح احترافي'], [1, 'مجسّم (القديم)']], o.rich ? 1 : 0, (v) => set('rich', v))}</div>
+      <b>اللون الأساسي (الأصفر بتاع ميكانيزم)</b>
+      <div style={{ margin: '6px 0 8px' }}>{sw(BR, o.brand, (v) => set('brand', v))}</div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 14 }}>
+        لون براحتك <input type="color" value={o.brand} onChange={(e) => set('brand', e.target.value)} style={{ width: 54, height: 40, padding: 2, borderRadius: 10 }} />
+      </label>
+      <b>الشعار والبانر اللي فوق</b>
+      <div style={{ margin: '6px 0 8px' }}>{seg<Ui['bn']>([['show', 'ظاهر'], ['hide', 'مخفي']], o.bn, (v) => set('bn', v))}</div>
+      <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>الارتفاع</div>
+      {seg<Ui['bnh']>([['s', 'صغير'], ['n', 'عادي'], ['l', 'كبير']], o.bnh, (v) => set('bnh', v))}
+      <div style={{ margin: '12px 0 6px', fontSize: 13, color: 'var(--muted)' }}>لون خلفية البانر</div>
+      {sw(BN, o.bnc || '', (v) => set('bnc', v))}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, margin: '8px 0 14px' }}>
+        لون براحتك <input type="color" value={o.bnc || '#0B1650'} onChange={(e) => set('bnc', e.target.value)} style={{ width: 54, height: 40, padding: 2, borderRadius: 10 }} />
+      </label>
+      <b>الحركة (اللوجو والأيقونات)</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<number>([[1, 'شغّالة'], [0, 'واقفة (أسرع)']], o.anim ? 1 : 0, (v) => set('anim', v))}</div>
+      <b>حجم الخط والكتابة</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<number>([[0.9, 'صغير'], [1, 'عادي'], [1.12, 'كبير'], [1.25, 'كبير جدًا']], o.fs, (v) => set('fs', v))}</div>
+      <b>المسافات بين الكروت</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<Ui['dn']>([['c', 'مضغوطة'], ['n', 'عادية'], ['r', 'واسعة']], o.dn, (v) => set('dn', v))}</div>
+      <b>وضع الألوان</b>
+      <div style={{ margin: '6px 0 14px' }}>
+        {seg<number>([[0, 'فاتح'], [1, 'غامق']], dark ? 1 : 0, (v) => {
+          bgSet(v ? '#0e1114' : '#f7f6fb', null, null);
+          setDark(!!v);
+        })}
+      </div>
+      <b>شكل الأيقونات</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<Ui['ic']>([['tint', 'فاتحة'], ['solid', 'ملوّنة'], ['plain', 'من غير خلفية']], o.ic, (v) => set('ic', v))}</div>
+      <b>الجداول على الموبايل</b>
+      <div style={{ margin: '6px 0 14px' }}>{seg<number>([[1, 'كروت'], [0, 'جداول']], o.tc ? 1 : 0, (v) => set('tc', v))}</div>
+      <b>وضع السرعة</b>
+      <div style={{ margin: '6px 0 4px', fontSize: 12, color: 'var(--muted)' }}>بيوقف كل الحركة والظلال. شغّله لو الجهاز تقيل.</div>
+      <div style={{ margin: '6px 0 14px' }}>{seg<number>([[0, 'عادي'], [1, 'سريع جدًا']], o.fast ? 1 : 0, (v) => set('fast', v))}</div>
+      <b>استدارة الكروت</b>
+      <div style={{ margin: '6px 0 4px' }}>
+        <input type="range" min={4} max={28} step={2} value={o.rc} onChange={(e) => set('rc', +e.target.value)} style={{ width: '100%' }} />
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          try {
+            localStorage.removeItem(UI_KEY);
+          } catch {
+            /* private mode */
+          }
+          uiApply();
+          setO(uiGet());
+        }}
+        style={{ marginTop: 12, minHeight: 46, width: '100%', borderRadius: 12, border: '1px solid var(--border,#ddd)', background: 'var(--card,#fff)', color: 'inherit', fontWeight: 800 }}
+      >
+        ↺ رجّع الإعدادات الافتراضية
+      </button>
     </div>
   );
 }

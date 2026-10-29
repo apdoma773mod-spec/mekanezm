@@ -82,7 +82,7 @@ export default function HyPage() {
     }
   };
   return (
-    <section id="hy">
+    <>
       <div style={{ position: 'sticky', top: 0, zIndex: 2, background: 'var(--bg,#f5f7f8)', padding: '12px 0 6px', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button type="button" onClick={() => router.back()} style={{ flex: 'none', padding: '12px 16px', borderRadius: 12, background: 'var(--card,#fff)', border: '1.5px solid var(--border)', fontWeight: 700, color: 'inherit' }}>
@@ -108,6 +108,6 @@ export default function HyPage() {
         {tab !== 'ct' && tab !== 'id' && <TodayChips go={setTab} />}
         {view()}
       </div>
-    </section>
+    </>
   );
 }

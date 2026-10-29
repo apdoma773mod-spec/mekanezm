@@ -112,7 +112,7 @@ function ReorderScreen() {
   const n = data.data?.length ?? 0;
 
   return (
-    <section id="reorder">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>📦 اقتراحات الطلب من الموردين</h1>
@@ -145,7 +145,7 @@ function ReorderScreen() {
           ))}
         </>
       )}
-    </section>
+    </>
   );
 }
 

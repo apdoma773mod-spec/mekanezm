@@ -184,7 +184,7 @@ function CountScreen() {
   };
 
   return (
-    <section id="count">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>🧮 الجرد</h1>
@@ -300,7 +300,7 @@ function CountScreen() {
         </div>
       </div>
       {history && <CountHistory onClose={() => setHistory(false)} />}
-    </section>
+    </>
   );
 }
 

@@ -973,18 +973,18 @@ export default function StaffPage() {
     const me = d.staff[0];
     if (!me)
       return (
-        <section id="staff">
+        <>
           <div className="title-row">
             <div className="title">
               <h1>👷 حضوري</h1>
             </div>
           </div>
           <div className="empty">حسابك لسه مش مربوط بملف موظف — كلم صاحب المحل.</div>
-        </section>
+        </>
       );
     const c = calc(me, d);
     return (
-      <section id="staff">
+      <>
         <div className="title-row">
           <div className="title">
             <h1>👷 حضوري — {me.name}</h1>
@@ -1011,7 +1011,7 @@ export default function StaffPage() {
           </div>
         </div>
         <AttTable rows={d.attendance.filter((r) => r.staffId === me.id)} />
-      </section>
+      </>
     );
   }
 
@@ -1026,7 +1026,7 @@ export default function StaffPage() {
   const gone = d.staff.filter((s) => !s.active);
 
   return (
-    <section id="staff">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>👷 العمالة والمرتبات</h1>
@@ -1207,7 +1207,7 @@ export default function StaffPage() {
       {view?.kind === 'config' && <ConfigModal cfg={d.config ?? { absent: true, late: 0 }} onClose={close} />}
       {view?.kind === 'qr' && <QrScreen onClose={close} />}
       {view?.kind === 'points' && <PointsModal onClose={close} />}
-    </section>
+    </>
   );
 }
 

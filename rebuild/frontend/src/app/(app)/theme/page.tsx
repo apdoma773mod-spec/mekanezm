@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
-import { ProThemeCard } from '@/components/pro';
+import { ProThemeCard, ProUiCard } from '@/components/pro';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
@@ -118,6 +118,7 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
         }
       />
       <ProThemeCard />
+      <ProUiCard />
       <div className="grid2">
         <div className="card">
           <h3>لوجو ميكانيزم</h3>

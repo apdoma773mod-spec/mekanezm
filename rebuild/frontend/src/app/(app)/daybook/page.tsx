@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DaybookEntryDto, DaybookPay, ProductDto } from '@mk/shared';
+import { DaybookWaBox, MoneySection, PostedRowCard } from '@/components/daybook/money-section';
 import { useModal } from '@/components/modals/modal-host';
+import { useIsAdmin } from '@/components/use-role';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText, todayYmd } from '@/lib/format';
@@ -105,7 +107,8 @@ function LineCard({ onClose, children }: { onClose: () => void; children: ReactN
 
 type CardSpec =
   | { kind: 'item'; productId?: string; name?: string; row?: DaybookEntryDto }
-  | { kind: 'pay'; row?: DaybookEntryDto; person?: string };
+  | { kind: 'pay'; row?: DaybookEntryDto; person?: string }
+  | { kind: 'posted'; row: DaybookEntryDto };
 
 function ItemCard({
   spec,
@@ -437,6 +440,7 @@ export default function DaybookPage() {
   const [q, setQ] = useState('');
   const [boxOpen, setBoxOpen] = useState(false);
   const [card, setCard] = useState<CardSpec | null>(null);
+  const admin = useIsAdmin();
   const searchRef = useRef<HTMLInputElement>(null);
   const personRef = useRef<HTMLInputElement>(null);
   const data = useDaybook(day);
@@ -535,7 +539,8 @@ export default function DaybookPage() {
 
   const openRow = (r: DaybookEntryDto) => {
     if (r.postedAt) {
-      if (r.invoice) open({ kind: 'invoice', id: r.invoice.id });
+      // the old click on a posted row: change cash/instapay/transfer, or open its invoice
+      setCard({ kind: 'posted', row: r });
       return;
     }
     setCard(r.kind === 'PAY' ? { kind: 'pay', row: r } : { kind: 'item', productId: r.productId ?? undefined, row: r });
@@ -553,7 +558,7 @@ export default function DaybookPage() {
   const openRows = rows.filter((r) => !r.postedAt);
 
   return (
-    <section id="daybook">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>📒 يومية المحل — {dayLabel(day)}</h1>
@@ -628,6 +633,7 @@ export default function DaybookPage() {
       </div>
 
       <div id="dbBody">
+        {admin && <DaybookWaBox />}
         {data.isError ? (
           <div className="card">
             <p style={{ color: 'var(--danger)', margin: 0 }}>{errorMessage(data.error)}</p>
@@ -684,7 +690,7 @@ export default function DaybookPage() {
         )}
       </div>
 
-      <div className="dbfoot">
+      <div id="dbFoot" className="dbfoot">
         <div className="t">
           <span>
             الإجمالي <b>{money(S.tot)}</b>
@@ -711,6 +717,8 @@ export default function DaybookPage() {
         ) : null}
       </div>
 
+      {admin && <MoneySection day={day} today={todayYmd()} cash={S.CASH} />}
+
       {owedList.length > 0 && (
         <div>
           <h3 style={{ margin: '18px 0 8px' }}>📦 باقي للعملاء ({owedList.length})</h3>
@@ -734,7 +742,18 @@ export default function DaybookPage() {
       {card?.kind === 'item' && (
         <ItemCard key={card.row?.id ?? card.productId ?? card.name} spec={card} day={day} person={who} pay={pay} onClose={() => setCard(null)} onAdded={focusSearch} />
       )}
+      {card?.kind === 'posted' && (
+        <PostedRowCard
+          r={card.row}
+          onClose={() => setCard(null)}
+          onOpenInvoice={() => {
+            const inv = card.row.invoice;
+            setCard(null);
+            if (inv) open({ kind: 'invoice', id: inv.id });
+          }}
+        />
+      )}
       {card?.kind === 'pay' && <PayCard key={card.row?.id ?? card.person ?? 'new'} spec={card} day={day} person={who} pay={pay} onClose={() => setCard(null)} />}
-    </section>
+    </>
   );
 }

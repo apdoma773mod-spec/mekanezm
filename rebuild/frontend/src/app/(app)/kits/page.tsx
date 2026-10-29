@@ -460,7 +460,7 @@ function KitsScreen() {
   const [view, setView] = useState<{ kind: 'edit'; k?: KitDto } | { kind: 'sell'; k: KitDto } | null>(null);
   const K = kits.data ?? [];
   return (
-    <section id="kits">
+    <>
       <div className="title-row">
         <div className="title">
           <h1>🧩 الأطقم والتركيبات</h1>
@@ -555,7 +555,7 @@ function KitsScreen() {
       )}
       {view?.kind === 'edit' && <KitEditor key={view.k?.id ?? 'new'} kit={view.k} P={P} onClose={() => setView(null)} />}
       {view?.kind === 'sell' && <KitSale key={view.k.id} k={view.k} P={P} onClose={() => setView(null)} />}
-    </section>
+    </>
   );
 }
 
