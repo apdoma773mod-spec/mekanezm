@@ -8,6 +8,7 @@ import { I } from '@/legacy/pro-art';
 import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
+import { useInboxCounts } from '@/lib/inbox-queries';
 import { BgFx, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
@@ -26,6 +27,8 @@ interface NavItem {
   staffLabel?: string;
   /** «ميكانيزم برو» icon key when it differs from the page id. */
   pro?: string;
+  /** Live count shown as a badge (the inbox screens). */
+  badge?: 'sms' | 'waOrders' | 'waPhotos';
 }
 
 /** Same groups, names, order and icons as the old sidebar. */
@@ -35,6 +38,9 @@ const MAIN: NavItem[] = [
   { href: '/count', label: 'الجرد', icon: '🧮', adminOnly: true },
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
   { href: '/daybook', label: 'يومية المحل', icon: '📒' },
+  { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
+  { href: '/transfers', label: 'تحويلات الواتساب', icon: '🖼', adminOnly: true, badge: 'waPhotos' },
+  { href: '/vodafone', label: 'فلوس فودافون كاش', icon: '📲', adminOnly: true, badge: 'sms' },
   // «ميكانيزم برو» put the work screens right after the daybook.
   { href: '/work?k=ord', label: 'أنظمة الشغل', icon: '🛠', adminOnly: true, pro: 'mkSideWk' },
   { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true, pro: 'mkSideSt' },
@@ -126,6 +132,7 @@ function Shell({ children }: { children: ReactNode }) {
   const settings = useSettings();
   const { open } = useModal();
   const router = useRouter();
+  const counts = useInboxCounts(!!me.data && me.data.role === 'ADMIN');
   const logout = useLogout();
   const T = settings.data?.theme;
   useApplyTheme(T);
@@ -164,6 +171,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Link key={i.href} href={i.href} data-page={k} className={isActive(pathname, i.href) ? 'active' : ''} onClick={navClose}>
         {pro && I[k] ? <ProIcon k={k} /> : <NavIcon icon={i.icon} />} {short ? null : ' '}
         <span>{short ? (i.short ?? i.label) : !admin && i.staffLabel ? i.staffLabel : i.label}</span>
+        {i.badge && counts.data?.[i.badge] ? <span className="badge">{counts.data[i.badge]}</span> : null}
       </Link>
     );
   };
@@ -183,7 +191,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div>
             ميكانيزم <span>| MEKANIZM</span>
           </div>
-          {pro && <ProLogo logo={T?.logo} />}
+          {pro && <ProLogo />}
         </div>
         <div className="top-actions">
           {pro && navBtn}

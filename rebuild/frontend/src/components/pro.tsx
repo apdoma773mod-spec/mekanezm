@@ -200,7 +200,8 @@ export function BgFx() {
 }
 
 /** لوجو ميكانيزم المتحرك تحت الشريط العلوي. */
-export function ProLogo({ logo }: { logo?: string }) {
+/** The old page used MK_LOGO (public/brand/mk-logo.png) as the mask of the gold wordmark. */
+export function ProLogo() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const w = ref.current;
@@ -209,9 +210,9 @@ export function ProLogo({ logo }: { logo?: string }) {
     const svg = w.querySelector('svg') as SVGSVGElement | null;
     if (!svg) return;
     const bi = w.querySelector('.mkbrand i') as HTMLElement | null;
-    if (logo && bi) {
-      bi.style.webkitMaskImage = `url(${logo})`;
-      bi.style.maskImage = `url(${logo})`;
+    if (bi) {
+      bi.style.webkitMaskImage = 'url(/brand/mk-logo.png)';
+      bi.style.maskImage = 'url(/brand/mk-logo.png)';
     }
     const mq = window.matchMedia('(max-width:700px)');
     const fit = () => svg.setAttribute('viewBox', mq.matches ? '400 0 900 200' : '0 0 1700 200');
@@ -231,7 +232,7 @@ export function ProLogo({ logo }: { logo?: string }) {
       io?.disconnect();
       document.removeEventListener('visibilitychange', vis);
     };
-  }, [logo]);
+  }, []);
   return <div id="mkLogo" ref={ref} />;
 }
 

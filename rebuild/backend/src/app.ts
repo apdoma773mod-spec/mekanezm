@@ -33,6 +33,7 @@ import hydrolekRoutes from './modules/hydrolek/routes.js';
 import workRoutes from './modules/work/routes.js';
 import { smsRoutes } from './modules/inbox/sms.js';
 import { bridgeRoutes } from './modules/inbox/bridge.js';
+import { inboxAdminRoutes } from './modules/inbox/admin.js';
 
 export interface BuildOptions {
   config: Config;
@@ -90,6 +91,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(workRoutes, { prefix: '/work' });
       await api.register(smsRoutes, { prefix: '/sms' });
       await api.register(bridgeRoutes, { prefix: '/bridge' });
+      await api.register(inboxAdminRoutes, { prefix: '/inbox' });
     },
     { prefix: '/api/v1' },
   );
