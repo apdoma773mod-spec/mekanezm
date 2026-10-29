@@ -9,13 +9,20 @@ import {
 } from '@mk/shared';
 import { actorOf } from '../../lib/actor.js';
 import { parse } from '../../lib/validate.js';
-import { ContactsService } from './service.js';
+import { ContactsService, toContactDto } from './service.js';
 
 export default async function contactsRoutes(app: FastifyInstance) {
   const service = new ContactsService(app.prisma);
 
   // Staff can look contacts up to pick a customer on a sale; everything else is for admins.
   app.get('/', { preHandler: app.authenticate }, async (request) => service.list(parse(listContactsQuery, request.query)));
+
+  /** Everything at once (the old screen lists all customers/suppliers with no paging). */
+  app.get('/all', { preHandler: app.requireAdmin }, async (request) => {
+    const q = parse(listContactsQuery.pick({ type: true }), request.query);
+    const rows = await app.prisma.contact.findMany({ where: { deletedAt: null, ...(q.type ? { type: q.type } : {}) }, orderBy: { name: 'asc' } });
+    return { items: rows.map(toContactDto) };
+  });
 
   app.get('/:id', { preHandler: app.authenticate }, async (request) => {
     const { id } = parse(idParam, request.params);

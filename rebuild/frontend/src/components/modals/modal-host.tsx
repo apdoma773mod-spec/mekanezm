@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type { InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
+import type { ContactType, InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
 import { ProductModal } from './product-modal';
 import { TransactionModal, type SalePreset } from './transaction-modal';
@@ -18,6 +18,7 @@ import { ShipmentEdit, ShipPaid, ShipWho } from './shipment-modals';
 import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 import { ProductToolModal, type ProductToolSpec } from './product-tools';
 import { MarketModal } from './market-prices';
+import { ContactToolModal, type ContactToolSpec } from './contact-tools';
 import { PurchaseImport } from './purchase-import';
 
 /** Every window the old system opened with openModal(), by name. */
@@ -33,10 +34,11 @@ export type ModalSpec =
   | Phase4Spec
   | ProductToolSpec
   | { kind: 'market' }
+  | ContactToolSpec
   | { kind: 'purchImport' }
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
-  | { kind: 'contact'; id?: string }
+  | { kind: 'contact'; id?: string; type?: ContactType }
   | { kind: 'contactFile'; id: string }
   | { kind: 'payment'; contactId: string }
   | { kind: 'expense'; id?: string }
@@ -76,7 +78,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <ReturnModal key={spec.type} type={spec.type} />;
         break;
       case 'contact':
-        content = <ContactModal key={spec.id ?? 'new'} id={spec.id} />;
+        content = <ContactModal key={spec.id ?? `new-${spec.type ?? ''}`} id={spec.id} type={spec.type} />;
         break;
       case 'contactFile':
         content = <ContactFile key={spec.id} id={spec.id} />;
@@ -110,6 +112,12 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'countResult':
         content = <CountResult count={spec.count} />;
+        break;
+      case 'printAsk':
+      case 'ctChooser':
+      case 'missing':
+      case 'invNotes':
+        content = <ContactToolModal spec={spec} />;
         break;
       case 'market':
         content = <MarketModal />;

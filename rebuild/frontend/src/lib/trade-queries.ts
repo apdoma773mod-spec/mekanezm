@@ -470,3 +470,42 @@ export const useSaveMarketPrices = () => {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['market'] }),
   });
 };
+
+// ---------- contacts screen extras ----------
+
+export const useAllContacts = (type: 'CUSTOMER' | 'SUPPLIER', enabled = true) =>
+  useQuery<ContactDto[]>({
+    queryKey: ['contacts', 'all', type],
+    queryFn: ({ signal }) => api.get<{ items: ContactDto[] }>('/contacts/all', { type }, signal).then((r) => r.items),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+
+export interface InvNote {
+  recv: string;
+  miss: string;
+  gotDate: string;
+  got: string;
+}
+export interface InvNoteRow extends InvNote {
+  id: string;
+  no: string;
+  person: string;
+  contactId: string | null;
+  date: string;
+  total: number;
+}
+export const useInvNotes = (q: { person?: string; missing?: boolean } = {}, enabled = true) =>
+  useQuery<InvNoteRow[]>({
+    queryKey: ['inv-notes', q],
+    queryFn: ({ signal }) => api.get<{ items: InvNoteRow[] }>('/invoices/notes', { person: q.person, missing: q.missing ? 'true' : undefined }, signal).then((r) => r.items),
+    enabled,
+  });
+
+export const useSaveInvNote = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ no, note }: { no: string; note: InvNote }) => api.put<{ ok: true }>(`/invoices/notes/${encodeURIComponent(no)}`, note),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['inv-notes'] }),
+  });
+};

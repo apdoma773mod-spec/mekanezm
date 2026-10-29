@@ -175,7 +175,20 @@ function Shell({ children }: { children: ReactNode }) {
   const item = (i: NavItem, short?: boolean) => {
     const k = i.pro ?? pageIdOf(i.href.split('?')[0]);
     return (
-      <Link key={i.href} href={i.href} data-page={k} className={isActive(pathname, i.href) ? 'active' : ''} onClick={navClose}>
+      <Link
+        key={i.href}
+        href={i.href}
+        data-page={k}
+        className={isActive(pathname, i.href) ? 'active' : ''}
+        onClick={(e) => {
+          navClose();
+          // like the old system, «العملاء والموردين» opens a chooser: customers or suppliers
+          if (i.href === '/contacts') {
+            e.preventDefault();
+            open({ kind: 'ctChooser' });
+          }
+        }}
+      >
         {pro && I[k] ? <ProIcon k={k} /> : <NavIcon icon={i.icon} />} {short ? null : ' '}
         <span>{short ? (i.short ?? i.label) : !admin && i.staffLabel ? i.staffLabel : i.label}</span>
         {i.badge && counts.data?.[i.badge] ? <span className="badge">{counts.data[i.badge]}</span> : null}

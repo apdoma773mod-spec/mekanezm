@@ -11,7 +11,7 @@ import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 
-export function ContactModal({ id }: { id?: string }) {
+export function ContactModal({ id, type }: { id?: string; type?: ContactType }) {
   const { close } = useModal();
   const existing = useContact(id ?? null);
   if (id && existing.isPending) {
@@ -28,11 +28,11 @@ export function ContactModal({ id }: { id?: string }) {
       </Modal>
     );
   }
-  return <ContactForm contact={id ? existing.data : undefined} />;
+  return <ContactForm contact={id ? existing.data : undefined} fixedType={type} />;
 }
 
 /** «إضافة عميل / مورد» and «تعديل بيانات …» from the old system. */
-function ContactForm({ contact: c }: { contact?: ContactDto }) {
+function ContactForm({ contact: c, fixedType }: { contact?: ContactDto; fixedType?: ContactType }) {
   const { open, close } = useModal();
   const toast = useToast();
   const create = useCreateContact();
@@ -40,7 +40,7 @@ function ContactForm({ contact: c }: { contact?: ContactDto }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
     name: c?.name ?? '',
-    type: (c?.type ?? 'CUSTOMER') as ContactType,
+    type: (c?.type ?? fixedType ?? 'CUSTOMER') as ContactType,
     phone: c?.phone ?? '',
     address: c?.address ?? '',
     openingBalance: '0',
@@ -72,10 +72,11 @@ function ContactForm({ contact: c }: { contact?: ContactDto }) {
   };
 
   return (
-    <Modal title={c ? `تعديل بيانات ${c.name}` : 'إضافة عميل / مورد'} onClose={back}>
+    <Modal title={c ? `تعديل بيانات ${c.name}` : fixedType ? (fixedType === 'CUSTOMER' ? 'إضافة عميل' : 'إضافة مورد') : 'إضافة عميل / مورد'} onClose={back}>
       <form onSubmit={submit} noValidate>
         <div className="form">
           <Input label="الاسم" value={f.name} onChange={set('name')} error={errors.name} />
+          {!fixedType && (
           <Select
             label="النوع"
             value={f.type}
@@ -86,6 +87,7 @@ function ContactForm({ contact: c }: { contact?: ContactDto }) {
               { value: 'SUPPLIER', label: 'مورد' },
             ]}
           />
+          )}
           <Input label="الهاتف" type="tel" dir="ltr" value={f.phone} onChange={set('phone')} error={errors.phone} />
           {c ? (
             <Input label="العنوان" value={f.address} onChange={set('address')} error={errors.address} />

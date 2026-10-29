@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { errorMessage } from '@/lib/api';
-import { arDate, formatDateTime, money, qtyText } from '@/lib/format';
-import { invoiceA4Html, printHtml, receiptHtml, whatsappLink } from '@/lib/print';
+import type { InvoiceDto, SettingsMap } from '@mk/shared';
+import { formatDateTime, money, qtyText } from '@/lib/format';
+import { htmlToPdf, shareOrSave } from '@/lib/pdf';
+import { dimOf, invoiceA4Html, prepSheetHtml, printHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
-import { useInvoice, useVoidInvoice } from '@/lib/trade-queries';
+import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
 import { useShipments } from '@/lib/phase4-queries';
 import { kindIc, stLabel, useShipActions } from './shipment-modals';
 import { Modal } from '../ui/modal';
@@ -45,7 +47,22 @@ export function InvoiceView({ id }: { id: string }) {
   const r = inv.data;
   const isSale = r.kind === 'SALE';
   const voided = r.status === 'VOID';
-  const wa = settings.data ? whatsappLink(r, settings.data) : null;
+  const waNum = (ph: string) => {
+    let d = ph.replace(/\D/g, '');
+    if (d.startsWith('0')) d = `20${d.slice(1)}`;
+    return d;
+  };
+  const prep = () =>
+    printHtml(
+      prepSheetHtml({
+        owner: (r.person || '').trim(),
+        no: r.no,
+        date: r.date,
+        src: isSale ? 'فاتورة بيع' : 'فاتورة شراء',
+        lines: r.items.map((x) => ({ name: x.name, qty: x.qty, unit: x.unit, dims: dimOf(x.name) })),
+        notes: r.note.replace(/\s*—\s*⚙️.*$/, ''),
+      }),
+    );
 
   const doVoid = async () => {
     if (!reason.trim()) return toast('اكتب سبب الإلغاء', 'bad');
@@ -75,10 +92,6 @@ export function InvoiceView({ id }: { id: string }) {
             </>
           )}
         </div>
-        <div>
-          التاريخ: <b>{arDate(r.date)}</b>
-          {r.createdBy && <small style={{ color: 'var(--muted)' }}> — سجّلها {r.createdBy.name}</small>}
-        </div>
         {r.items.map((x) => (
           <div key={x.id}>
             {x.name} × {qtyText(x.qty)} — {money(x.total)}
@@ -98,6 +111,11 @@ export function InvoiceView({ id }: { id: string }) {
           <div style={{ color: 'var(--muted)', fontSize: 13 }}>الربح: {money(r.profit)}</div>
         )}
         {r.note && <div style={{ color: 'var(--muted)' }}>البيان: {r.note}</div>}
+        {r.createdBy && (
+          <div>
+            سجّلها: <b>{r.createdBy.name}</b>
+          </div>
+        )}
       </div>
 
       {admin && !voided && (
@@ -155,31 +173,107 @@ export function InvoiceView({ id }: { id: string }) {
         );
       })()}
 
-      <div className="btnrow" style={{ marginTop: 14 }}>
-        <button
-          type="button"
-          className="primary"
-          style={{ flex: 1, padding: 14 }}
-          disabled={!settings.data}
-          onClick={() => settings.data && printHtml(invoiceA4Html(r, settings.data))}
-        >
-          🖨 طباعة / PDF
+      <div className="btnrow" style={{ marginTop: 8 }}>
+        <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'printAsk', id: r.id })}>
+          🖨️ طباعة (إيصال أو A4)
         </button>
-        <button
-          type="button"
-          className="secondary"
-          style={{ padding: 14 }}
-          disabled={!settings.data}
-          onClick={() => settings.data && printHtml(receiptHtml(r, settings.data))}
-        >
-          🧾 إيصال
-        </button>
-        {wa && (
-          <a className="secondary" style={{ padding: 14, textDecoration: 'none' }} href={wa} target="_blank" rel="noopener noreferrer">
-            واتساب
-          </a>
-        )}
       </div>
+      {isSale && <NotesButton no={r.no} id={r.id} />}
+      <div id="prepB">
+        <button type="button" className="secondary" style={{ width: '100%', padding: 12, marginTop: 8 }} onClick={prep}>
+          🖨️ طباعة ورق التجهيز (من غير أسعار)
+        </button>
+      </div>
+      <PdfBox inv={r} settings={settings.data} wa={isSale && r.phone ? waNum(r.phone) : ''} />
     </Modal>
+  );
+}
+
+/** 📦 استلام وناقص — بيقول «(فيه ناقص)» لو في بضاعة فاضلة. */
+function NotesButton({ no, id }: { no: string; id: string }) {
+  const { open } = useModal();
+  const notes = useInvNotes({});
+  const n = notes.data?.find((x) => x.no === no);
+  return (
+    <button id="invNb" type="button" className="secondary" style={{ width: '100%', padding: 14, marginTop: 10 }} onClick={() => open({ kind: 'invNotes', no, id })}>
+      📦 استلام وناقص{n?.miss ? ' (فيه ناقص)' : ''}
+    </button>
+  );
+}
+
+type PdfState = 'idle' | 'busy' | { blob: Blob; img: string } | { err: string };
+
+/** «تحويل إلى PDF» ← معاينة + مشاركة PDF + رسالة واتساب + حفظ. */
+function PdfBox({ inv, settings, wa }: { inv: InvoiceDto; settings: SettingsMap | undefined; wa: string }) {
+  const toast = useToast();
+  const [state, setState] = useState<PdfState>('idle');
+  const name = `فاتورة-${inv.no}.pdf`;
+  const convert = async () => {
+    if (!settings) return;
+    setState('busy');
+    try {
+      setState(await htmlToPdf(invoiceA4Html(inv, settings)));
+    } catch (e) {
+      const m = (e as Error).message;
+      setState({ err: m === 'lib' ? 'مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت وجرب تاني.' : m === 'timeout' ? 'التحويل أخد وقت طويل وتوقف. اضغط إعادة المحاولة.' : `حصل خطأ أثناء إنشاء الـ PDF (${m})` });
+    }
+  };
+  const ready = typeof state === 'object' && 'blob' in state ? state : null;
+  const failed = typeof state === 'object' && 'err' in state ? state : null;
+  return (
+    <div id="invOut" style={{ marginTop: 14 }}>
+      {ready ? (
+        <>
+          <img src={ready.img} alt="معاينة الفاتورة" style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 12 }} />
+          <div style={{ display: 'grid', gap: 8 }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={async () => {
+                const r = await shareOrSave(ready.blob, name, `فاتورة ${inv.no}`);
+                if (r === 'saved') toast('المتصفح ده مش بيدعم المشاركة المباشرة — الملف اتحفظ على الجهاز، افتحه وابعته من الواتساب');
+              }}
+            >
+              مشاركة PDF (اختار الواتساب وبعدها العميل)
+            </button>
+            {wa && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  const msg = `أهلاً ${inv.person || ''}\nدي فاتورتك رقم ${inv.no} من ${settings?.store.name || 'ميكانيزم'}\nالإجمالي: ${money(inv.total)}\nشكراً لتعاملك معانا 🙏`;
+                  window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+                  toast('ابعت ملف الـ PDF مع الرسالة');
+                }}
+              >
+                فتح محادثة العميل برسالة فقط (من غير الملف)
+              </button>
+            )}
+            <button
+              type="button"
+              className="secondary"
+              onClick={async () => {
+                await shareOrSave(ready.blob, name, `فاتورة ${inv.no}`);
+                toast('تم تجهيز ملف الفاتورة');
+              }}
+            >
+              حفظ PDF على الجهاز
+            </button>
+          </div>
+          <p style={{ color: 'var(--muted)', fontSize: 12, margin: '10px 0 0' }}>تقدر ترجع لأي فاتورة في أي وقت من صفحة المبيعات (زرار PDF).</p>
+        </>
+      ) : failed ? (
+        <>
+          <p style={{ color: 'var(--danger)' }}>{failed.err}</p>
+          <button type="button" className="primary" style={{ width: '100%' }} onClick={() => setState('idle')}>
+            إعادة المحاولة
+          </button>
+        </>
+      ) : (
+        <button id="invBtn" type="button" className="primary" style={{ width: '100%', padding: 14 }} disabled={state === 'busy' || !settings} onClick={() => void convert()}>
+          {state === 'busy' ? 'جاري تجهيز الفاتورة...' : 'تحويل إلى PDF'}
+        </button>
+      )}
+    </div>
   );
 }

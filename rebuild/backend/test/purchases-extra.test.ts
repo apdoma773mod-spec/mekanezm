@@ -18,7 +18,7 @@ beforeEach(async () => {
   pid = (await call(admin, 'POST', '/products', { name: 'مفصلة', price: 50, cost: 10, qty: 0 })).json().product.id;
 });
 
-const call = (cookie: string, method: 'GET' | 'POST', url: string, payload?: unknown) =>
+const call = (cookie: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) =>
   app.inject({ method, url: `/api/v1${url}`, headers: { cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
 const buy = async (person: string, price: number, date: string, paid = 0, note = '') =>
   (await call(admin, 'POST', '/invoices', { kind: 'PURCHASE', date, person, note, items: [{ productId: pid, qty: 5, price }], paid })).json().invoice;
@@ -55,5 +55,31 @@ describe('purchases screen extras', () => {
     expect((await dup({ person: 'المورد أ', total: 100, sno: '55' })).json().duplicate).toMatchObject({ total: 100 });
     expect((await dup({ person: 'المورد أ', total: 100, sno: '56' })).json().duplicate).toBeNull();
     expect((await dup({ person: 'المورد ب', total: 100, sno: '55' })).json().duplicate).toBeNull();
+  });
+});
+
+describe('receipt notes and the full contacts list', () => {
+  it('keeps an «استلام وناقص» note per sale invoice and lists what is still missing', async () => {
+    const sale = (await call(admin, 'POST', '/invoices', { kind: 'SALE', person: 'سمير', paid: 0, items: [{ productId: pid, qty: 1, price: 50 }] })).json().invoice;
+    const put = (no: string, body: object) => app.inject({ method: 'PUT', url: `/api/v1/invoices/notes/${no}`, headers: { cookie: staff }, payload: body });
+    expect((await put(sale.no, { recv: '2026-10-20', miss: 'مفصلة × 2', got: '', gotDate: '' })).statusCode).toBe(200);
+    const miss = (await call(staff, 'GET', '/invoices/notes?missing=true')).json().items;
+    expect(miss).toHaveLength(1);
+    expect(miss[0]).toMatchObject({ no: sale.no, person: 'سمير', miss: 'مفصلة × 2', recv: '2026-10-20' });
+    // delivered: the note stays, but it is no longer «missing»
+    await put(sale.no, { recv: '2026-10-20', miss: '', got: 'مفصلة × 2', gotDate: '2026-10-25' });
+    expect((await call(staff, 'GET', '/invoices/notes?missing=true')).json().items).toHaveLength(0);
+    expect((await call(staff, 'GET', '/invoices/notes?person=سمير')).json().items).toHaveLength(1);
+    // an empty note is removed
+    await put(sale.no, {});
+    expect((await call(staff, 'GET', '/invoices/notes')).json().items).toHaveLength(0);
+  });
+
+  it('lists all contacts for the owner without paging', async () => {
+    await call(admin, 'POST', '/invoices', { kind: 'SALE', person: 'سمير', paid: 0, items: [{ productId: pid, qty: 1, price: 50 }] });
+    const all = (await call(admin, 'GET', '/contacts/all?type=CUSTOMER')).json().items;
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ name: 'سمير', balance: 50 });
+    expect((await call(staff, 'GET', '/contacts/all')).statusCode).toBe(403);
   });
 });
