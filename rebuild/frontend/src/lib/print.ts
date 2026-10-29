@@ -221,3 +221,49 @@ ${sh.note ? `<div class="nt">📝 ${esc(sh.note)}</div>` : ''}
 .nt{font-size:16pt;font-weight:700;border:2px dashed #000;border-radius:4mm;padding:3mm 5mm}
 .ft{display:flex;align-items:center;justify-content:space-between;gap:5mm;border-top:2px solid #000;padding-top:3mm}.gr{display:flex;flex-wrap:wrap;gap:2mm 6mm;font-size:12pt;font-weight:600}.gr b{font-weight:800}.bc{width:60mm;height:18mm;flex:none}.bc svg{width:100%;height:100%}</style></head><body>${pages}</body></html>`;
 }
+// ---------- 🖨️ ورق التجهيز (index.html 11355): من غير أسعار ولا إجماليات ولا اسم العميل. A4 بخط كبير ----------
+export interface PrepSheet {
+  code?: string;
+  owner?: string;
+  no?: string;
+  date?: string;
+  src?: string;
+  lines: { name: string; qty?: number | string; unit?: string; dims?: string; sub?: string[] }[];
+  notes?: string;
+  stages?: string[];
+  cur?: number;
+}
+
+/** مقاس مكتوب في اسم الصنف: «٦٠×٤٠» أو «١٢٠ سم» (نفس dimOf القديمة). */
+export const dimOf = (n: string) => {
+  const m = String(n || '').match(/(\d+(?:[.,]\d+)?\s*[x×*]\s*\d+(?:[.,]\d+)?(?:\s*[x×*]\s*\d+(?:[.,]\d+)?)?)|(\d+(?:[.,]\d+)?\s*(?:سم|مم|م|متر)(?=\s|$))/);
+  return m ? m[0] : '';
+};
+
+export function prepSheetHtml(P: PrepSheet): string {
+  const css =
+    '@page{size:A4;margin:12mm}*{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}body{margin:0;color:#000}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#222;color:#fff;padding:8px;font-size:13pt;text-align:right}td{padding:10px 8px;border-bottom:2px solid #999;vertical-align:middle}.bx{display:inline-block;width:15mm;height:15mm;border:3px solid #000;border-radius:3px;background:#fff}tr{page-break-inside:avoid}thead{display:table-header-group}';
+  const head = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:4px solid #000;padding-bottom:8px;margin-bottom:8px"><div>${
+    P.code ? `<div style="font-size:38pt;font-weight:900;letter-spacing:2px;line-height:1.1" dir="ltr">${esc(P.code)}</div>` : ''
+  }<div style="font-size:20pt;font-weight:800;margin-top:4px">ورقة تجهيز${P.owner ? ': ' + esc(P.owner) : ''}</div><div style="font-size:14pt;margin-top:4px">${
+    P.date ? 'التاريخ: <b>' + esc(P.date) + '</b>' : ''
+  }${P.no ? ' &nbsp;•&nbsp; ' + esc(P.src || '') + ' <b>' + esc(P.no) + '</b>' : P.src ? ' &nbsp;•&nbsp; ' + esc(P.src) : ''}</div></div></div>`;
+  const rows = P.lines
+    .map(
+      (x, i) =>
+        `<tr><td style="font-size:15pt">${i + 1}</td><td style="font-size:16pt"><b>${esc(x.name)}</b>${
+          (x.sub || []).length ? '<div style="font-size:12pt;color:#333">' + x.sub!.map(esc).join('<br>') + '</div>' : ''
+        }</td><td style="font-size:18pt;font-weight:800">${esc(x.qty != null ? String(x.qty) : '')} ${esc(x.unit || '')}</td><td style="font-size:15pt">${esc(x.dims || '')}</td><td style="text-align:center"><span class="bx"></span></td></tr>`,
+    )
+    .join('');
+  const body = `${head}<table><thead><tr><th style="width:12mm">#</th><th>الصنف</th><th style="width:30mm">الكمية</th><th>المقاس / تفاصيل</th><th style="width:22mm;text-align:center">✔</th></tr></thead><tbody>${rows}</tbody></table>${
+    P.notes ? `<div style="border:3px solid #000;border-radius:8px;padding:10px;margin:10px 0;font-size:15pt"><b>ملاحظات التصنيع:</b><br>${esc(P.notes).replace(/\n/g, '<br>')}</div>` : ''
+  }${
+    (P.stages || []).length
+      ? `<div style="margin-top:10px;font-size:15pt"><b>المراحل:</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">${P.stages!
+          .map((s, i) => `<span style="border:2px solid #000;border-radius:8px;padding:4px 10px;${i === P.cur ? 'background:#ffe9a8;font-weight:800' : ''}">☐ ${esc(s)}</span>`)
+          .join('')}</div></div>`
+      : ''
+  }<div style="margin-top:24px;font-size:15pt">اسم الجاهز: ______________________ &nbsp;&nbsp; التوقيع: ______________________</div>`;
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>ورقة تجهيز ${esc(P.code || P.no || '')}</title><style>${css}</style></head><body>${body}</body></html>`;
+}

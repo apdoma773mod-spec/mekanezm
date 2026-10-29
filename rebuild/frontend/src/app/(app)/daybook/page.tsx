@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DaybookEntryDto, DaybookPay, ProductDto } from '@mk/shared';
+import { CameraScanner } from '@/components/scan/camera-scanner';
+import { ImportDailyButton } from '@/components/daybook/import-daily';
 import { DaybookWaBox, MoneySection, PostedRowCard } from '@/components/daybook/money-section';
 import { useModal } from '@/components/modals/modal-host';
 import { useIsAdmin } from '@/components/use-role';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText, todayYmd } from '@/lib/format';
+import { dimOf, prepSheetHtml, printHtml } from '@/lib/print';
 import {
   lookupProduct,
   useContacts,
@@ -441,6 +444,7 @@ export default function DaybookPage() {
   const [boxOpen, setBoxOpen] = useState(false);
   const [card, setCard] = useState<CardSpec | null>(null);
   const admin = useIsAdmin();
+  const [scanning, setScanning] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const personRef = useRef<HTMLInputElement>(null);
   const data = useDaybook(day);
@@ -537,6 +541,23 @@ export default function DaybookPage() {
     }
   };
 
+  /** 🖨️ ورق التجهيز: بيعات اليوم من غير أسعار (mkPrepDay القديمة). */
+  const printPrep = () => {
+    const items = rows.filter((x) => x.kind === 'ITEM');
+    if (!items.length) return toast('مفيش بيعات في اليومية لليوم ده', 'bad');
+    printHtml(
+      prepSheetHtml({
+        no: `يومية ${day}`,
+        date: day,
+        src: 'يومية المحل',
+        lines: items.map((x) => {
+          const d = dimOf(x.name);
+          return { name: x.name, qty: x.qty, unit: x.unit ?? '', dims: d + (x.note ? (d ? ' — ' : '') + x.note : '') };
+        }),
+      }),
+    );
+  };
+
   const openRow = (r: DaybookEntryDto) => {
     if (r.postedAt) {
       // the old click on a posted row: change cash/instapay/transfer, or open its invoice
@@ -568,6 +589,10 @@ export default function DaybookPage() {
           <input type="date" className="search" style={{ maxWidth: 170, minWidth: 0 }} value={day} onChange={(e) => setDay(e.target.value || todayYmd())} />
           <button type="button" className="secondary" onClick={() => data.refetch()} aria-label="تحديث">
             🔄
+          </button>
+          {admin && <ImportDailyButton>📥 استيراد يومية من Excel</ImportDailyButton>}
+          <button type="button" className="secondary" onClick={printPrep}>
+            🖨️ ورق التجهيز
           </button>
         </div>
       </div>
@@ -611,7 +636,10 @@ export default function DaybookPage() {
             placeholder="اكتب اسم الصنف أو الكود..."
             autoComplete="off"
           />
-          <button type="button" className="secondary" title="دفعة من العميل" onClick={() => setCard({ kind: 'pay' })}>
+          <button type="button" className="secondary" id="dbScan" title="امسح باركود" onClick={() => setScanning(true)}>
+            📷
+          </button>
+          <button type="button" className="secondary" id="dbPayBtn" title="دفعة من العميل" onClick={() => setCard({ kind: 'pay' })}>
             💰
           </button>
         </div>
@@ -741,6 +769,16 @@ export default function DaybookPage() {
 
       {card?.kind === 'item' && (
         <ItemCard key={card.row?.id ?? card.productId ?? card.name} spec={card} day={day} person={who} pay={pay} onClose={() => setCard(null)} onAdded={focusSearch} />
+      )}
+      {scanning && (
+        <CameraScanner
+          multi
+          title="امسح الأصناف — كل مسحة = قطعة"
+          onClose={() => setScanning(false)}
+          onCode={async (c) => {
+            await scanAdd(c);
+          }}
+        />
       )}
       {card?.kind === 'posted' && (
         <PostedRowCard

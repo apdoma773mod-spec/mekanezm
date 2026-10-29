@@ -139,6 +139,11 @@ function Shell({ children }: { children: ReactNode }) {
   useApplyTheme(T);
   const [pro, setPro] = useState(false);
   useEffect(() => setPro(proOn()), []);
+  // the old body.emp: staff get the same trimmed screen and an orange user button
+  const role = me.data?.role;
+  useEffect(() => {
+    if (role) document.body.classList.toggle('emp', role !== 'ADMIN');
+  }, [role]);
 
   if (me.isPending) return <Loading />;
   if (me.isError) return <ErrorBox message={errorMessage(me.error)} onRetry={() => me.refetch()} />;
@@ -197,6 +202,16 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
         <div className="top-actions">
           {pro && navBtn}
+          <button
+            type="button"
+            className="icon-btn"
+            id="whoBtn"
+            title="خروج / تبديل المستخدم"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })}
+          >
+            👤 {me.data.name} — خروج
+          </button>
           <button type="button" className="icon-btn" onClick={() => open({ kind: 'quick' })} title="إضافة" aria-label="إضافة">
             <Icon name="plus" />
           </button>
