@@ -349,7 +349,9 @@ export class InvoicesService {
       status: query.status ?? 'ACTIVE',
       ...(query.company ? { company: query.company } : {}),
       ...(query.contactId ? { contactId: query.contactId } : {}),
-      ...(query.unpaid ? { remaining: { gt: 0 } } : {}),
+      ...(query.unpaid || query.pay === 'credit' ? { remaining: { gt: 0 } } : {}),
+      ...(query.pay === 'paid' ? { remaining: { lte: 0 } } : {}),
+      ...(query.person ? { person: query.person } : {}),
       ...(query.from || query.to ? { date: dayRange(query.from, query.to) } : {}),
       ...(q
         ? {
@@ -357,6 +359,7 @@ export class InvoicesService {
               { no: { contains: q.toUpperCase() } },
               { person: { contains: q, mode: 'insensitive' } },
               { phone: { contains: q } },
+              { note: { contains: q, mode: 'insensitive' } },
               { items: { some: { name: { contains: q, mode: 'insensitive' } } } },
             ],
           }
@@ -369,7 +372,7 @@ export class InvoicesService {
           createdBy: { select: { id: true, name: true } },
           updatedBy: { select: { id: true, name: true } },
           _count: { select: { items: true } },
-          items: { select: { name: true }, orderBy: { position: 'asc' }, take: 1 },
+          items: { select: { name: true, qty: true }, orderBy: { position: 'asc' }, take: 3 },
         },
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         skip: (query.page - 1) * query.pageSize,
@@ -379,7 +382,7 @@ export class InvoicesService {
       this.prisma.invoice.aggregate({ where, _sum: { total: true, remaining: true } }),
     ]);
     return {
-      items: rows.map((r) => ({ ...header(r), itemCount: r._count.items, firstItem: r.items[0]?.name ?? '' })),
+      items: rows.map((r) => ({ ...header(r), itemCount: r._count.items, firstItem: r.items[0]?.name ?? '', preview: r.items.map((x) => ({ name: x.name, qty: num(x.qty) })) })),
       total,
       page: query.page,
       pageSize: query.pageSize,
@@ -462,6 +465,68 @@ export class InvoicesService {
    * balance. When the invoice is on a contact, money already paid stays as credit for them;
    * otherwise it is treated as refunded.
    */
+  /** Names that appear on invoices of one kind (the purchases screen's supplier filter). */
+  async persons(kind: 'SALE' | 'PURCHASE', company?: 'MK' | 'HY'): Promise<string[]> {
+    const rows = await this.prisma.invoice.findMany({
+      where: { kind, status: 'ACTIVE', person: { not: '' }, ...(company ? { company } : {}) },
+      distinct: ['person'],
+      select: { person: true },
+      orderBy: { person: 'asc' },
+    });
+    return rows.map((r) => r.person);
+  }
+
+  /** «تغيّر التكلفة»: each purchase line against the previous purchase price of the same product, and the stock cost now. */
+  async costChange(id: string): Promise<{ name: string; productId: string | null; price: number; prev: number | null; cost: number | null }[]> {
+    const inv = await this.prisma.invoice.findUnique({ where: { id }, include: { items: { orderBy: { position: 'asc' } } } });
+    if (!inv || inv.kind !== 'PURCHASE') throw notFound('فاتورة الشراء دي مش موجودة');
+    const out = [];
+    for (const it of inv.items) {
+      const prev = it.productId
+        ? await this.prisma.invoiceItem.findFirst({
+            where: { productId: it.productId, invoiceId: { not: id }, invoice: { kind: 'PURCHASE', status: 'ACTIVE', date: { lte: inv.date } } },
+            orderBy: [{ invoice: { date: 'desc' } }, { invoice: { createdAt: 'desc' } }],
+            select: { price: true },
+          })
+        : null;
+      const p = it.productId ? await this.prisma.product.findUnique({ where: { id: it.productId }, select: { cost: true } }) : null;
+      out.push({ name: it.name, productId: it.productId, price: num(it.price), prev: prev ? num(prev.price) : null, cost: p ? num(p.cost) : null });
+    }
+    return out;
+  }
+
+  /** «🔄 حدّث سعر الشراء في المخزن بالأسعار دي». */
+  async applyCost(id: string, actor: Actor): Promise<number> {
+    return withTx(this.prisma, async (tx) => {
+      const inv = await tx.invoice.findUnique({ where: { id }, include: { items: true } });
+      if (!inv || inv.kind !== 'PURCHASE') throw notFound('فاتورة الشراء دي مش موجودة');
+      let n = 0;
+      for (const it of inv.items) {
+        if (!it.productId || !it.price.gt(0)) continue;
+        await tx.product.update({ where: { id: it.productId }, data: { cost: it.price, costEst: false } });
+        n++;
+      }
+      await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'Invoice', entityId: id, after: { appliedCost: n }, ip: actor.ip });
+      return n;
+    });
+  }
+
+  /** Same supplier and the same total (with the supplier's own invoice number, or on the same day) = probably saved twice. */
+  async duplicate(input: { person: string; total: number; sno?: string }): Promise<{ no: string; total: number } | null> {
+    const day = dayToDate(todayYmd());
+    const hit = await this.prisma.invoice.findFirst({
+      where: {
+        kind: 'PURCHASE',
+        status: 'ACTIVE',
+        person: input.person.trim(),
+        total: { gte: money(input.total - 0.01), lte: money(input.total + 0.01) },
+        ...(input.sno ? { note: { contains: `فاتورة المورد: ${input.sno}` } } : { date: day }),
+      },
+      select: { no: true, total: true },
+    });
+    return hit ? { no: hit.no, total: num(hit.total) } : null;
+  }
+
   async void(id: string, input: VoidInvoiceInput, actor: Actor): Promise<InvoiceDto> {
     await withTx(this.prisma, async (tx) => {
       const inv = await tx.invoice.findUnique({ where: { id } });

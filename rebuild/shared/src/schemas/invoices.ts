@@ -47,6 +47,10 @@ export const listInvoicesQuery = paginationQuery.extend({
   status: z.enum(INVOICE_STATUSES).optional(),
   company: z.enum(COMPANIES).optional(),
   contactId: z.string().max(64).optional(),
+  /** Exact customer/supplier name on the invoice (the old purchases screen's supplier filter). */
+  person: z.string().trim().max(120).optional(),
+  /** paid = nothing left to pay, credit = something still owed. */
+  pay: z.enum(['all', 'paid', 'credit']).default('all'),
   unpaid: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
@@ -99,7 +103,7 @@ export interface InvoiceDto {
   updatedAt: string;
 }
 
-export type InvoiceListItem = Omit<InvoiceDto, 'items' | 'profit'> & { itemCount: number; /** First line's name, as the old list showed it. */ firstItem: string };
+export type InvoiceListItem = Omit<InvoiceDto, 'items' | 'profit'> & { itemCount: number; /** First line's name, as the old list showed it. */ firstItem: string; /** First three lines for the card view. */ preview: { name: string; qty: number }[] };
 
 /** The list plus the totals of everything the search matched (not just this page), like the old count line. */
 export interface InvoiceListResult {

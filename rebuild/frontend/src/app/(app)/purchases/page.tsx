@@ -1,5 +1,5 @@
-import { InvoiceListScreen } from '@/components/invoice-list';
+import { PurchasesScreen } from '@/components/purchases-screen';
 
 export default function PurchasesPage() {
-  return <InvoiceListScreen kind="PURCHASE" />;
+  return <PurchasesScreen />;
 }

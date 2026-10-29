@@ -12,11 +12,11 @@ import { invalidateTrade } from '@/lib/trade-queries';
 
 /** 📥 استيراد يومية من Excel — نفس شاشة القديم: ملف، ورقة، تاريخ، تجميع الصفوف، مطابقة الأصناف، تأكيد. */
 const XLSX_SRC = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-interface Xlsx {
-  read: (data: ArrayBuffer, o: unknown) => { SheetNames: string[]; Sheets: Record<string, unknown> };
+export interface Xlsx {
+  read: (data: ArrayBuffer | string, o: unknown) => { SheetNames: string[]; Sheets: Record<string, unknown> };
   utils: { sheet_to_json: (s: unknown, o: unknown) => unknown[][] };
 }
-const loadXlsx = () =>
+export const loadXlsx = () =>
   new Promise<Xlsx>((ok, bad) => {
     const w = window as unknown as { XLSX?: Xlsx };
     if (w.XLSX) return ok(w.XLSX);

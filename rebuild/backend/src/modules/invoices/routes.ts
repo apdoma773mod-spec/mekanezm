@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { idParam, invoiceInput, listInvoicesQuery, updateInvoiceInput, voidInvoiceInput } from '@mk/shared';
 import { actorOf } from '../../lib/actor.js';
 import { parse } from '../../lib/validate.js';
@@ -9,6 +10,26 @@ export default async function invoicesRoutes(app: FastifyInstance) {
 
   // Like the old system: staff create and view invoices; editing and voiding are for admins.
   app.get('/', { preHandler: app.authenticate }, async (request) => service.list(parse(listInvoicesQuery, request.query)));
+
+  app.get('/persons', { preHandler: app.authenticate }, async (request) => {
+    const q = parse(z.object({ kind: z.enum(['SALE', 'PURCHASE']).default('PURCHASE'), company: z.enum(['MK', 'HY']).optional() }), request.query);
+    return { persons: await service.persons(q.kind, q.company) };
+  });
+
+  app.post('/check-duplicate', { preHandler: app.authenticate }, async (request) => {
+    const b = parse(z.object({ person: z.string().trim().min(1).max(120), total: z.number().gt(0), sno: z.string().trim().max(60).optional() }), request.body);
+    return { duplicate: await service.duplicate(b) };
+  });
+
+  app.get('/:id/cost-change', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(idParam, request.params);
+    return { items: await service.costChange(id) };
+  });
+
+  app.post('/:id/apply-cost', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(idParam, request.params);
+    return { updated: await service.applyCost(id, actorOf(request)) };
+  });
 
   app.get('/:id', { preHandler: app.authenticate }, async (request) => {
     const { id } = parse(idParam, request.params);

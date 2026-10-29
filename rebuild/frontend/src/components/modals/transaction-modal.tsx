@@ -10,6 +10,7 @@ import { serverErrors, type FieldErrors } from '@/lib/form';
 import { useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
 import { useCompany } from '../company';
 import {
+  checkDuplicatePurchase,
   lookupProduct,
   useContacts,
   useCreateInvoice,
@@ -127,6 +128,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paid, setPaid] = useState(invoice ? String(invoice.paid) : preset?.paid !== undefined ? String(preset.paid) : '');
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
+  const [sno, setSno] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -244,11 +246,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       const short = lines.filter((l) => l.available !== null && toNum(l.qty) > l.available).map((l) => l.name);
       if (short.length) toast(`⚠️ الرصيد هيبقى بالسالب: ${short.slice(0, 3).join(' • ')}`);
     }
+    if (!isSale && !invoice && person.trim() && total > 0) {
+      const dup = await checkDuplicatePurchase({ person: person.trim(), total, sno: sno.trim() || undefined }).catch(() => null);
+      if (dup && !window.confirm(`⚠️ فيه فاتورة شراء بنفس المورد ${sno.trim() ? 'ونفس رقم الفاتورة ' : 'ونفس الإجمالي النهارده '}(${dup.no} — ${money(total)}). تحفظ تاني برضه؟`)) return;
+    }
+    const noteOut = !isSale && !invoice && sno.trim() && !/فاتورة المورد:/.test(note) ? `فاتورة المورد: ${sno.trim()}${note ? ` — ${note}` : ''}` : note;
     const body = {
       person: person.trim(),
       phone,
       address,
-      note,
+      note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
       items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: toNum(l.qty), price: toNum(l.price) })),
@@ -446,6 +453,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               />
               <Input label={isSale ? 'المتبقي على العميل' : 'المتبقي للمورد'} readOnly value={String(remaining)} dir="ltr" />
             </>
+          )}
+          {!isSale && !asQuote && !invoice && (
+            <Input label="رقم فاتورة المورد (اختياري — يمنع التكرار)" placeholder="رقم الفاتورة عند المورد" value={sno} onChange={(e) => setSno(e.target.value)} />
           )}
           <Input
             label="البيان"

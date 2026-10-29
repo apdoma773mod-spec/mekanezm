@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
+import { MarketBanner } from '@/components/modals/market-prices';
 import { Launch, proOn, ProIll } from '@/components/pro';
 import { DashboardBanners, DashboardCharts } from '@/components/dashboard-extras';
 import { Icon } from '@/components/icon';
@@ -87,6 +88,7 @@ export default function DashboardPage() {
           </button>
         }
       />
+      <MarketBanner />
       {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
       <div id="mkToday">
         <div className="card" style={{ marginBottom: 14 }}>

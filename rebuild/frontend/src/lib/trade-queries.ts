@@ -411,3 +411,62 @@ export const useImportNames = () =>
   useTradeMutation((v: { category: string; rows: { name: string; price: number; cost: number }[] }) =>
     api.post<{ added: number; skipped: number }>('/products/import', v),
   );
+
+// ---------- purchases screen extras ----------
+
+export const useInvoicePersons = (kind: 'SALE' | 'PURCHASE', company?: 'MK' | 'HY') =>
+  useQuery({
+    queryKey: ['invoices', 'persons', kind, company],
+    queryFn: ({ signal }) => api.get<{ persons: string[] }>('/invoices/persons', { kind, company }, signal).then((r) => r.persons),
+    staleTime: 30_000,
+  });
+
+export interface CostChangeRow {
+  name: string;
+  productId: string | null;
+  price: number;
+  prev: number | null;
+  cost: number | null;
+}
+export const useCostChange = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['invoices', 'cost-change', id],
+    queryFn: ({ signal }) => api.get<{ items: CostChangeRow[] }>(`/invoices/${id}/cost-change`, undefined, signal).then((r) => r.items),
+    enabled,
+  });
+
+export const useApplyCost = () => useTradeMutation((id: string) => api.post<{ updated: number }>(`/invoices/${id}/apply-cost`).then((r) => r.updated));
+
+export const checkDuplicatePurchase = (v: { person: string; total: number; sno?: string }) =>
+  api.post<{ duplicate: { no: string; total: number } | null }>('/invoices/check-duplicate', v).then((r) => r.duplicate);
+
+// ---------- 💹 market prices ----------
+
+export interface MarketOffer {
+  s: string;
+  p: number;
+  at: string;
+}
+export interface MarketBuy extends MarketOffer {
+  pid: string;
+}
+export interface MarketData {
+  prices: Record<string, MarketOffer[]>;
+  buys: MarketBuy[];
+  last: MarketBuy[];
+}
+export const useMarketPrices = (enabled = true) =>
+  useQuery({
+    queryKey: ['market'],
+    queryFn: ({ signal }) => api.get<MarketData>('/market-prices', undefined, signal),
+    enabled,
+    staleTime: 20_000,
+  });
+
+export const useSaveMarketPrices = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (prices: Record<string, MarketOffer[]>) => api.put<{ ok: true }>('/market-prices', { prices }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['market'] }),
+  });
+};
