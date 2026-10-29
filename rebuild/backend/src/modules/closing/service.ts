@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { alertClosing } from '../../lib/alert-hooks.js';
 import type { ClosingDto, ClosingInput, DaySummary, Paginated } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
@@ -115,7 +116,9 @@ export class ClosingService {
       });
       return row.id;
     });
-    return this.toDto(await this.prisma.dayClosing.findUniqueOrThrow({ where: { id }, include: { createdBy: { select: { name: true } } } }));
+    const saved = await this.prisma.dayClosing.findUniqueOrThrow({ where: { id }, include: { createdBy: { select: { name: true } } } });
+    await alertClosing(this.prisma, { cashDiff: saved.cashDiff ? num(saved.cashDiff) : null, cashExpected: num(saved.cashExpected), cashActual: saved.cashActual ? num(saved.cashActual) : null, note: saved.note }, actor);
+    return this.toDto(saved);
   }
 
   async list(page: number, pageSize: number): Promise<Paginated<ClosingDto>> {

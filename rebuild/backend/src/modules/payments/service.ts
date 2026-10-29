@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { alertPaymentCancelled } from '../../lib/alert-hooks.js';
 import type { ListPaymentsQuery, Paginated, PaymentDto, PaymentInput } from '@mk/shared';
 import type { Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
@@ -94,6 +95,7 @@ export class PaymentsService {
 
   /** Cancelling restores the balance as if the payment never happened; the row stays for the audit trail. */
   async cancel(id: string, actor: Actor): Promise<PaymentDto> {
+    const snap = await this.prisma.payment.findUnique({ where: { id }, include: { contact: { select: { name: true } } } });
     await withTx(this.prisma, async (tx) => {
       const p = await tx.payment.findUnique({ where: { id } });
       if (!p) throw notFound('الدفعة دي مش موجودة');
@@ -109,6 +111,7 @@ export class PaymentsService {
         ip: actor.ip,
       });
     });
+    if (snap) await alertPaymentCancelled(this.prisma, { direction: snap.direction, amount: snap.amount, note: snap.note, contactName: snap.contact.name }, actor);
     return toDto(await this.prisma.payment.findUniqueOrThrow({ where: { id }, include: INCLUDE }));
   }
 }

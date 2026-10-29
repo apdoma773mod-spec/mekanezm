@@ -1,4 +1,5 @@
 import type { Gift, PrismaClient } from '@prisma/client';
+import { alertGift } from '../../lib/alert-hooks.js';
 import type { GiftDto, GiftInput, GiftsSummary, GradeInput } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
@@ -59,6 +60,7 @@ export class GiftsService {
       await writeAudit(tx, { userId: actor.id, action: 'GIFT_CREATE', entity: 'Gift', entityId: row.id, after: { product: p.name, qty: num(q), to: input.toName }, ip: actor.ip });
       return row;
     });
+    await alertGift(this.prisma, { name: g.productName, qty: num(g.qty), to: g.toName, kind: g.toKind, phone: g.toPhone, value: num(g.price) * num(g.qty), note: g.note }, actor);
     return this.dto(g, isAdmin(actor));
   }
 

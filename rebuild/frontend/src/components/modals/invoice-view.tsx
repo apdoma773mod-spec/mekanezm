@@ -92,11 +92,17 @@ export function InvoiceView({ id }: { id: string }) {
             </>
           )}
         </div>
-        {r.items.map((x) => (
-          <div key={x.id}>
-            {x.name} × {qtyText(x.qty)} — {money(x.total)}
+        {!isSale && (
+          <div>
+            التاريخ: <b>{r.date}</b>
           </div>
-        ))}
+        )}
+        {isSale &&
+          r.items.map((x) => (
+            <div key={x.id}>
+              {x.name} × {qtyText(x.qty)} — {money(x.total)}
+            </div>
+          ))}
         {r.shipping > 0 && <div>🚚 مصاريف النقل — {money(r.shipping)}</div>}
         {r.discount > 0 && <div>الخصم — {money(r.discount)}</div>}
         <div>
@@ -118,6 +124,30 @@ export function InvoiceView({ id }: { id: string }) {
         )}
       </div>
 
+      {!isSale && (
+        <div className="table-wrap" style={{ marginTop: 10 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>الصنف</th>
+                <th>العدد</th>
+                <th>السعر</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.items.map((x) => (
+                <tr key={x.id}>
+                  <td>{x.name}</td>
+                  <td>{qtyText(x.qty)}</td>
+                  <td>{money(x.price)}</td>
+                  <td>{money(x.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {admin && !voided && (
         <div className="btnrow" style={{ marginTop: 12 }}>
           <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'transaction', type: r.kind, editId: r.id })}>
@@ -174,9 +204,15 @@ export function InvoiceView({ id }: { id: string }) {
       })()}
 
       <div className="btnrow" style={{ marginTop: 8 }}>
-        <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'printAsk', id: r.id })}>
-          🖨️ طباعة (إيصال أو A4)
-        </button>
+        {isSale ? (
+          <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'printAsk', id: r.id })}>
+            🖨️ طباعة (إيصال أو A4)
+          </button>
+        ) : (
+          <button type="button" className="secondary" style={{ flex: 1 }} disabled={!settings.data} onClick={() => settings.data && printHtml(invoiceA4Html(r, settings.data))}>
+            🖨️ طباعة
+          </button>
+        )}
       </div>
       {isSale && <NotesButton no={r.no} id={r.id} />}
       <div id="prepB">
@@ -184,7 +220,7 @@ export function InvoiceView({ id }: { id: string }) {
           🖨️ طباعة ورق التجهيز (من غير أسعار)
         </button>
       </div>
-      <PdfBox inv={r} settings={settings.data} wa={isSale && r.phone ? waNum(r.phone) : ''} />
+      {isSale && <PdfBox inv={r} settings={settings.data} wa={r.phone ? waNum(r.phone) : ''} />}
     </Modal>
   );
 }

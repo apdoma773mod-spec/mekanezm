@@ -16,8 +16,8 @@ import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useIsAdmin } from '@/components/use-role';
 import { errorMessage } from '@/lib/api';
-import { money } from '@/lib/format';
-import { useInvoices, useOverview, useToday } from '@/lib/trade-queries';
+import { balanceText, money } from '@/lib/format';
+import { useAllContacts, useInvoices, useOverview, useToday } from '@/lib/trade-queries';
 
 function RecentOps() {
   const { open } = useModal();
@@ -67,6 +67,8 @@ export default function DashboardPage() {
   const t = today.data;
   const { co } = useCompany();
   const counts = useInboxCounts(admin);
+  // partners are supplier accounts marked «[شريك]» in the note (the old mkPtnTile)
+  const partners = (useAllContacts('SUPPLIER', admin).data ?? []).filter((c) => c.note.includes('[شريك]')).slice(0, 2);
   const [pro, setPro] = useState(false);
   useEffect(() => setPro(proOn()), []);
   /** «برو» swaps the action icons for its 3D drawings, as the old paint() did. */
@@ -97,6 +99,18 @@ export default function DashboardPage() {
       <MarketBanner />
       {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
       <div id="mkToday">
+        {admin &&
+          partners.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="mkPtnTile"
+              onClick={() => open({ kind: 'contactFile', id: p.id })}
+              style={{ margin: '8px 0', width: '100%', padding: 12, borderRadius: 14, border: '2px solid #087f8c', background: 'var(--card,#fff)', font: 'inherit', fontWeight: 800, color: '#087f8c', textAlign: 'right' }}
+            >
+              🤝 حساب {p.name} — {balanceText(p)}
+            </button>
+          ))}
         {admin && !!counts.data?.sms && (
           <button id="mkSmsTile" type="button" className="secondary" style={{ width: '100%', marginBottom: 10, padding: 12, fontWeight: 800 }} onClick={() => router.push('/vodafone')}>
             📲 فيه {counts.data.sms} مبلغ فودافون كاش مستني تسجيله

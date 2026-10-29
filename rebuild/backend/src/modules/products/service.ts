@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient, type Product } from '@prisma/client';
+import { alertStockAdjust } from '../../lib/alert-hooks.js';
 import type {
   AdjustStockInput,
   ListProductsQuery,
@@ -384,9 +385,10 @@ export class ProductsService {
         after: { qty: num(after.qty), change: num(change), note: input.note },
         ip: actor.ip,
       });
-      return after;
+      return { after, before };
     });
-    return toProductDto(product, true);
+    await alertStockAdjust(this.prisma, product.after, num(product.before.qty), num(product.after.qty), input.note, actor);
+    return toProductDto(product.after, true);
   }
 
   /**

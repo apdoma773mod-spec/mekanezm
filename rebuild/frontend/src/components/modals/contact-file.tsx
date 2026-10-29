@@ -20,6 +20,7 @@ import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 import { useSampleCount } from '@/lib/phase4-queries';
+import { useInvNotes } from '@/lib/trade-queries';
 
 const sum = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) * 100) / 100;
 
@@ -157,8 +158,8 @@ export function ContactFile({ id }: { id: string }) {
         >
           {isC ? 'فاتورة بيع جديدة' : 'فاتورة شراء جديدة'}
         </button>
-        <button type="button" className="secondary" disabled={wantStatement} onClick={() => setWantStatement(true)}>
-          {wantStatement ? '⏳' : '📄'} كشف حساب
+        <button type="button" className="secondary" onClick={() => open({ kind: 'contactReport', name: c.name, type: c.type })}>
+          📄 كشف حساب
         </button>
         <button type="button" className="secondary" onClick={() => open({ kind: 'contact', id })}>
           ✏️ تعديل البيانات
@@ -188,6 +189,7 @@ export function ContactFile({ id }: { id: string }) {
           ))}
       </div>
 
+      {isC && <ReceiptStatus person={c.name} />}
       <h3 style={{ margin: '16px 0 8px' }}>الفواتير</h3>
       <div className="table-wrap">
         <table className="table" style={{ minWidth: 480 }}>
@@ -308,5 +310,30 @@ export function ContactFile({ id }: { id: string }) {
         </>
       )}
     </Modal>
+  );
+}
+
+/** 📦 حالة الاستلام في ملف العميل: اللي اتستلم، واللي فاضل (من «استلام وناقص» في الفاتورة). */
+function ReceiptStatus({ person }: { person: string }) {
+  const notes = useInvNotes({ person });
+  const L = notes.data ?? [];
+  const rows = L.filter((n) => n.recv || n.got || n.miss);
+  if (!rows.length) return null;
+  const open = rows.filter((n) => n.miss).length;
+  return (
+    <>
+      <h3 style={{ margin: '16px 0 8px' }}>📦 حالة الاستلام</h3>
+      <div className="card" style={{ lineHeight: 1.8 }}>
+        {open ? <div style={{ color: '#b3261e', fontWeight: 800, marginBottom: 6 }}>فاضل له بضاعة في {open} فاتورة</div> : <div style={{ color: '#1e7a3c', fontWeight: 800, marginBottom: 6 }}>كل البضاعة اتستلمت ✔</div>}
+        {rows.map((n) => (
+          <div key={n.no} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+            <b>{n.no}</b>
+            {n.recv ? <> — ✔ اتستلم{n.gotDate ? ` بتاريخ ${n.gotDate}` : ` ${n.recv}`}</> : null}
+            {n.miss ? <div style={{ color: '#b3261e' }}>⚠️ فاضل: {n.miss}</div> : null}
+            {n.got ? <div style={{ fontSize: 13, color: 'var(--muted)' }}>اللي اتسلّم: {n.got}</div> : null}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

@@ -37,6 +37,7 @@ import { inboxAdminRoutes } from './modules/inbox/admin.js';
 import backupRoutes from './modules/backup/routes.js';
 import termsRoutes from './modules/terms/routes.js';
 import marketRoutes from './modules/market/routes.js';
+import alertsRoutes from './modules/alerts/routes.js';
 import { daybookImportRoutes } from './modules/daybook/import.js';
 
 export interface BuildOptions {
@@ -100,6 +101,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(backupRoutes, { prefix: '/backup' });
       await api.register(termsRoutes, { prefix: '/terms' });
       await api.register(marketRoutes, { prefix: '/market-prices' });
+      await api.register(alertsRoutes, { prefix: '/alerts' });
     },
     { prefix: '/api/v1' },
   );

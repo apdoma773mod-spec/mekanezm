@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { ensureToday } from './modules/backup/service.js';
+import { reportTick } from './modules/alerts/report.js';
 
 const config = loadConfig();
 const app = await buildApp({ config });
@@ -10,8 +11,14 @@ const backupTimer = setInterval(() => {
   ensureToday(app.prisma).catch((err) => app.log.error({ err }, 'daily backup failed'));
 }, 30 * 60_000);
 
+/** 📊 تقرير آخر اليوم: كل 5 دقايق يشوف لو جه الميعاد (mk_report_tick القديمة). */
+const reportTimer = setInterval(() => {
+  reportTick(app.prisma).catch((err) => app.log.error({ err }, 'daily report failed'));
+}, 5 * 60_000);
+
 const shutdown = async (signal: string) => {
   clearInterval(backupTimer);
+  clearInterval(reportTimer);
   app.log.info({ signal }, 'shutting down');
   await app.close();
   process.exit(0);

@@ -16,6 +16,7 @@ import { badRequest, notFound } from '../../lib/errors.js';
 import { ZERO, money, num, qty as roundQty, sum } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
+import { alertInvoiceSaved, alertInvoiceVoided } from '../../lib/alert-hooks.js';
 import { changeBalance, findOrCreateContact, liveContact } from '../contacts/service.js';
 
 type InvoiceWithRels = Invoice & {
@@ -396,11 +397,13 @@ export class InvoicesService {
 
   async create(input: InvoiceInput, actor: Actor): Promise<InvoiceDto> {
     const id = await withTx(this.prisma, (tx) => createInvoiceInTx(tx, input, actor));
+    await alertInvoiceSaved(this.prisma, id, actor);
     return toInvoiceDto(await this.load(id), isAdmin(actor));
   }
 
   /** Admin edit: undo the old invoice's effect on stock and balance, then apply the new version. */
   async update(id: string, input: UpdateInvoiceInput, actor: Actor): Promise<InvoiceDto> {
+    const oldTotal = num((await this.prisma.invoice.findUnique({ where: { id }, select: { total: true } }))?.total);
     await withTx(this.prisma, async (tx) => {
       const before = await tx.invoice.findUnique({ where: { id }, include: INCLUDE });
       if (!before) throw notFound('الفاتورة دي مش موجودة');
@@ -457,6 +460,7 @@ export class InvoicesService {
         ip: actor.ip,
       });
     });
+    await alertInvoiceSaved(this.prisma, id, actor, { oldTotal });
     return toInvoiceDto(await this.load(id), true);
   }
 
@@ -528,6 +532,7 @@ export class InvoicesService {
   }
 
   async void(id: string, input: VoidInvoiceInput, actor: Actor): Promise<InvoiceDto> {
+    const snap = await this.prisma.invoice.findUnique({ where: { id }, select: { kind: true, no: true, total: true, person: true, createdById: true } });
     await withTx(this.prisma, async (tx) => {
       const inv = await tx.invoice.findUnique({ where: { id } });
       if (!inv) throw notFound('الفاتورة دي مش موجودة');
@@ -584,6 +589,7 @@ export class InvoicesService {
         ip: actor.ip,
       });
     });
+    if (snap) await alertInvoiceVoided(this.prisma, snap, actor);
     return toInvoiceDto(await this.load(id), true);
   }
 }

@@ -20,6 +20,7 @@ import { ProductToolModal, type ProductToolSpec } from './product-tools';
 import { MarketModal } from './market-prices';
 import { ContactToolModal, type ContactToolSpec } from './contact-tools';
 import { CountSessions } from './count-sessions';
+import { AlertsModal, DayReportModal } from './alerts-modals';
 import { TodayDetail, type TodayKind } from './today-detail';
 import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
@@ -38,6 +39,8 @@ export type ModalSpec =
   | ProductToolSpec
   | { kind: 'market' }
   | { kind: 'countSessions' }
+  | { kind: 'alerts' }
+  | { kind: 'dayReport' }
   | { kind: 'todayDetail'; k: TodayKind }
   | { kind: 'contactReport'; name: string; type: ContactType; from?: string; to?: string }
   | ContactToolSpec
@@ -130,6 +133,12 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'todayDetail':
         content = <TodayDetail key={spec.k} k={spec.k} />;
+        break;
+      case 'alerts':
+        content = <AlertsModal />;
+        break;
+      case 'dayReport':
+        content = <DayReportModal />;
         break;
       case 'countSessions':
         content = <CountSessions />;

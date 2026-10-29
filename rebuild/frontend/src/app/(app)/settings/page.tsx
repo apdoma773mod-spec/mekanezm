@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { storeSettings, type StoreSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { BackupCard } from '@/components/backup/backup-card';
+import { useModal } from '@/components/modals/modal-host';
 import { Input } from '@/components/ui/field';
 import { ErrorBox, FormError, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -81,13 +82,27 @@ function CompanyForm({ initial }: { initial: StoreSettings }) {
 
 function SettingsScreen() {
   const settings = useSettings();
+  const { open } = useModal();
   const logout = useLogout();
   const router = useRouter();
   if (settings.isPending) return <Loading />;
   if (settings.isError) return <ErrorBox message={errorMessage(settings.error)} onRetry={() => settings.refetch()} />;
   return (
     <>
-      <PageHeader title="الإدارة والإعدادات" subtitle="تحكم كامل في بيانات النظام والمستخدمين" />
+      <PageHeader
+        title="الإدارة والإعدادات"
+        subtitle="تحكم كامل في بيانات النظام والمستخدمين"
+        action={
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" id="alBtn" className="primary" onClick={() => open({ kind: 'alerts' })}>
+              🔔 تنبيهات ضد السرقة
+            </button>
+            <button type="button" className="primary" onClick={() => open({ kind: 'dayReport' })}>
+              📊 تقرير آخر اليوم
+            </button>
+          </div>
+        }
+      />
       <div className="grid2">
         <CompanyForm initial={settings.data.store} />
         <div className="card">
@@ -112,6 +127,20 @@ function SettingsScreen() {
             </button>
           </div>
         </div>
+      </div>
+      <div className="card" id="kwCard" style={{ marginTop: 14 }}>
+        <h3>🔑 كلمات الواتساب المفتاحية</h3>
+        <p style={{ margin: '0 0 10px', color: 'var(--muted)', fontSize: 13 }}>الرسايل اللي مفيهاش كلمة منهم بتتجاهل. تضيف وتعدّل بنفسك.</p>
+        <Link className="primary" href="/keywords" style={{ textDecoration: 'none' }}>
+          فتح الشاشة
+        </Link>
+      </div>
+      <div className="card" id="wkCard" style={{ marginTop: 14 }}>
+        <h3>🛠️ أنظمة الشغل</h3>
+        <p style={{ margin: '0 0 10px', color: 'var(--muted)', fontSize: 13 }}>أوردرات دلف واستانلس بخط سير، طباعة وباركود، العرض والمصاريف.</p>
+        <Link className="primary" href="/work" style={{ textDecoration: 'none' }}>
+          فتح
+        </Link>
       </div>
     </>
   );
