@@ -17,7 +17,7 @@ beforeEach(async () => {
   staff = await login(app, '01100000001');
 });
 
-const call = (cookie: string, method: 'GET' | 'POST', url: string, payload?: unknown) =>
+const call = (cookie: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) =>
   app.inject({ method, url: `/api/v1${url}`, headers: { cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
 
 const sms = (text: string, from = 'VF Cash', token = SMS_TOKEN) =>

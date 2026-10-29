@@ -35,6 +35,7 @@ import { smsRoutes } from './modules/inbox/sms.js';
 import { bridgeRoutes } from './modules/inbox/bridge.js';
 import { inboxAdminRoutes } from './modules/inbox/admin.js';
 import backupRoutes from './modules/backup/routes.js';
+import { daybookImportRoutes } from './modules/daybook/import.js';
 
 export interface BuildOptions {
   config: Config;
@@ -77,6 +78,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(expensesRoutes, { prefix: '/expenses' });
       await api.register(cashRoutes, { prefix: '/cash' });
       await api.register(daybookRoutes, { prefix: '/daybook' });
+      await api.register(daybookImportRoutes, { prefix: '/daybook-import' });
       await api.register(closingRoutes, { prefix: '/closings' });
       await api.register(countsRoutes, { prefix: '/counts' });
       await api.register(reportsRoutes, { prefix: '/reports' });
