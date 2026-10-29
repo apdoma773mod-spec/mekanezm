@@ -114,3 +114,18 @@ describe('whatsapp bridge', () => {
     expect((await bridge('GET', '/known-phones')).json()).toEqual(['1012345678']);
   });
 });
+
+describe('whatsapp keyword rules', () => {
+  it('owner saves the rules and the bridge reads the same ones', async () => {
+    const rules = { enabled: true, rules: [{ phrases: ['استانلس'], type: 'استانلس', scope: 'both', mode: 'contains', on: true }] };
+    expect((await call(staff, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(403);
+    expect((await call(admin, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(200);
+    expect((await call(admin, 'GET', '/inbox/wa-rules')).json().rules).toMatchObject({ enabled: true });
+    expect((await bridge('GET', '/rules')).json()).toMatchObject({ rules: [{ type: 'استانلس' }] });
+  });
+
+  it('refuses an empty rule list (the bridge would then accept everything)', async () => {
+    const r = await call(admin, 'PUT', '/inbox/wa-rules', { rules: { enabled: true, rules: [] } });
+    expect(r.statusCode).toBe(400);
+  });
+});

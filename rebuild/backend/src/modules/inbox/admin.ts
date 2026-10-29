@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { actorOf } from '../../lib/actor.js';
-import { notFound } from '../../lib/errors.js';
+import { writeAudit } from '../../lib/audit.js';
+import { badRequest, notFound } from '../../lib/errors.js';
 import { actorName } from '../../lib/names.js';
 
 /**
@@ -17,6 +18,28 @@ const statusBody = (allowed: string[]) => z.object({ status: z.enum(allowed as [
 export async function inboxAdminRoutes(app: FastifyInstance) {
   const db = app.prisma;
   app.addHook('preHandler', app.requireAdmin);
+
+  /** 🔑 كلمات الواتساب المفتاحية: القواعد اللي الجسر بيفلتر بيها الرسايل (نفس شكل mk_settings.wa_rules القديم). */
+  app.get("/wa-rules", async () => {
+    const s = await db.setting.findUnique({ where: { key: "wa_rules" } });
+    const stat = await db.setting.findUnique({ where: { key: "wa_rules_stat" } });
+    return { rules: s?.value ?? null, stat: stat?.value ?? null };
+  });
+
+  app.put("/wa-rules", async (request) => {
+    const body = z.object({ rules: z.record(z.unknown()) }).parse(request.body);
+    if (!Array.isArray(body.rules.rules) || body.rules.rules.length === 0) throw badRequest("لازم قاعدة واحدة على الأقل");
+    const actor = actorOf(request);
+    await db.$transaction(async (tx) => {
+      await tx.setting.upsert({
+        where: { key: "wa_rules" },
+        create: { key: "wa_rules", value: body.rules as object, updatedById: actor.id },
+        update: { value: body.rules as object, updatedById: actor.id },
+      });
+      await writeAudit(tx, { userId: actor.id, action: "SETTING_UPDATE", entity: "Setting", entityId: "wa_rules", ip: actor.ip });
+    });
+    return { ok: true };
+  });
 
   /** Badge numbers for the sidebar and the dashboard tiles. */
   app.get('/counts', async () => {
