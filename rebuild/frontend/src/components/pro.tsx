@@ -321,19 +321,28 @@ export function ProLogo() {
     const fit = () => svg.setAttribute('viewBox', mq.matches ? '400 0 900 200' : '0 0 1700 200');
     fit();
     mq.addEventListener('change', fit);
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(hover:none) and (pointer:coarse)').matches;
-    let io: IntersectionObserver | null = null;
-    if (still) svg.pauseAnimations();
-    else {
-      io = new IntersectionObserver((es) => es.forEach((x) => (x.isIntersecting ? svg.unpauseAnimations() : svg.pauseAnimations())));
-      io.observe(w);
-    }
-    const vis = () => (document.hidden || still ? svg.pauseAnimations() : svg.unpauseAnimations());
-    document.addEventListener('visibilitychange', vis);
+    // «الحركة: واقفة» (the default) must stop the logo too: its SVG animations ignore the CSS `animation:none`
+    const hold = () =>
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      window.matchMedia('(hover:none) and (pointer:coarse)').matches ||
+      document.body.classList.contains('mk-noanim');
+    let visible = true;
+    const sync = () => (document.hidden || hold() || !visible ? svg.pauseAnimations() : svg.unpauseAnimations());
+    const io = new IntersectionObserver((es) => {
+      es.forEach((x) => (visible = x.isIntersecting));
+      sync();
+    });
+    io.observe(w);
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    // the appearance card flips the body class: follow it at once
+    const mo = new MutationObserver(sync);
+    mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => {
       mq.removeEventListener('change', fit);
-      io?.disconnect();
-      document.removeEventListener('visibilitychange', vis);
+      io.disconnect();
+      mo.disconnect();
+      document.removeEventListener('visibilitychange', sync);
     };
   }, []);
   return <div id="mkLogo" ref={ref} />;

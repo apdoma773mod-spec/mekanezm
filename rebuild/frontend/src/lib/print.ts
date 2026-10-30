@@ -39,7 +39,8 @@ export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
   const A = T.invSync ? T.accent : T.invAccent;
   const HT = textOn(H);
   const tint = mix(H, 0.08);
-  const fam = fontStack(T.invFont === 'same' ? T.font : T.invFont);
+  // used inside style="…": double quotes in the font names ("Cairo") would cut the attribute and drop the font
+  const fam = fontStack(T.invFont === 'same' ? T.font : T.invFont).replace(/"/g, "'");
   const shop = esc(s.store.name || 'ميكانيزم');
   const addr = esc(s.store.address);
   const ph = esc(s.store.phones.join(' - '));
@@ -144,7 +145,7 @@ export function quoteHtml(q: QuoteDto, s: SettingsMap): string {
   const sub = Math.round((q.total - q.shipping) * 100) / 100;
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>عرض سعر ${esc(q.no)}</title>${FONT_LINKS}
 <style>@page{size:A4;margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0}</style></head><body>
-<div style="width:794px;min-height:1000px;margin:0 auto;background:#fff;direction:rtl;font-family:${fontStack(T.font)};color:#18343a;position:relative;overflow:hidden">
+<div style="width:794px;min-height:1000px;margin:0 auto;background:#fff;direction:rtl;font-family:${fontStack(T.font).replace(/"/g, "'")};color:#18343a;position:relative;overflow:hidden">
 <div style="background:${H};color:${HT};padding:30px 44px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center">${logo}<div><div style="font-size:34px;font-weight:800">${shop}</div><div style="margin-top:6px;font-size:14px;opacity:.9">${esc(s.store.address)}${ph ? ` • تليفون: <span dir="ltr">${ph}</span>` : ''}</div></div></div><div style="font-size:30px;font-weight:800;color:${A}">عرض سعر</div></div>
 <div style="height:6px;background:${A}"></div>
 <div style="padding:30px 44px"><div style="display:flex;gap:20px"><div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H}">مقدّم إلى</div><div>الاسم: <b>${esc(q.person || '—')}</b></div>${q.phone ? `<div>التليفون: <b dir="ltr">${esc(q.phone)}</b></div>` : ''}</div>
