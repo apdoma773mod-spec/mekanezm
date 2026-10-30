@@ -10,14 +10,14 @@ export const revalidate = 300;
 const ROW = 12;
 
 export default async function Home() {
-  const [{ site: full, ok }, site] = await Promise.all([getCatalog(), getSettings()]);
+  const [{ site: full, ok, fresh }, site] = await Promise.all([getCatalog(), getSettings()]);
   const P = full.products;
   const cat = catalogUrl(site);
   const D = site.delivery.filter(x => x.area);
   const top = P.filter(p => p.top);
   const latest = P.slice(-ROW).reverse();
   const rows = site.sections.map(s => ({ s, ps: P.filter(p => p.sec === s.id) })).filter(r => r.ps.length);
-  const card = (p: (typeof P)[number]) => ({ p, ok: ok(p) });
+  const card = (p: (typeof P)[number]) => ({ p, ok: ok(p), fresh: fresh(p) });
   const byId = new Map(P.map(p => [p.img, p.id]));
   const slides: Slide[] = slidesList(full).map(s => ({ ...s, href: s.c && byId.get(s.img) ? productPath(byId.get(s.img)!) : '/search' }));
   const trust = site.trust?.filter(Boolean).length ? site.trust : [

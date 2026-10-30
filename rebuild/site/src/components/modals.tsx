@@ -7,7 +7,7 @@ import type { Item, Ship, ShipMethod } from '@/lib/schema';
 import { deliveryFee, GOVS, orderMsg, shipBits, shipLine, waUrl } from '@/lib/shop';
 import { ev } from '@/lib/track';
 import { shrinkImage } from '@/lib/images';
-import { useShop } from './shop-provider';
+import { saveOrder, useShop } from './shop-provider';
 
 function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () => void; label: string }) {
   useEffect(() => {
@@ -91,6 +91,7 @@ function CartSheet() {
       if (r.ok && typeof r.data === 'string') {
         const ref = r.data.slice(0, 8);
         if (phone.trim()) saveLast(ref, phone.trim());
+        saveOrder({ ref, at: new Date().toISOString(), phone: phone.trim(), lines: lines.map(l => [l.item.name, l.q]), ship: shipLine(sh) });
         setDone({ ref: r.data, ship: sh, lines: text, back: anyBack, name: name.trim(), phone: phone.trim() });
         clearCart();
         ev('generate_lead', 'Lead');
@@ -165,7 +166,10 @@ function CartSheet() {
       {lines.length > 0 && (
         <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
       )}
-      {lines.length > 0 && <button type="button" className="sec" onClick={shareCart}>📤 ابعت السلة كلينك (لنجار أو زبون)</button>}
+      {lines.length > 0 && <div className="row">
+        <button type="button" className="sec" onClick={shareCart}>📤 ابعت السلة كلينك</button>
+        <a className="sec" style={{ textAlign: 'center', textDecoration: 'none' }} target="_blank" rel="noopener" href={'/quote?i=' + lines.map(l => `${encodeURIComponent(l.item.id)}.${l.q}`).join(',') + (name.trim() ? '&n=' + encodeURIComponent(name.trim()) : '')}>🧾 عرض سعر / PDF</a>
+      </div>}
       <div className="row">
         {lines.length > 0 && <button className="pri" onClick={send} disabled={busy}>إرسال الطلب</button>}
         <button className="sec" onClick={close}>إغلاق</button>

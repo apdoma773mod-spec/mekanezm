@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { listReviews, type Review } from '@/lib/api';
 import { ART_DEFS, sectionArt } from '@/lib/art';
 import type { Product } from '@/lib/schema';
-import { productPath, sectionPath, visibleSections, waUrl } from '@/lib/shop';
+import { productPath, ROOMS, sectionPath, visibleSections, waUrl } from '@/lib/shop';
 import { ItemCard, ProductCard } from './product-card';
 import { HowToRequest } from './modals';
 import { useShop, type Modal } from './shop-provider';
@@ -54,7 +54,7 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
 }
 
 /* ---------- a swipeable row of product cards (يمين وشمال) ---------- */
-export function ProductRow({ title, href, items, total, id, priority }: { title: string; href: string; items: { p: Product; ok: boolean }[]; total: number; id?: string; priority?: boolean }) {
+export function ProductRow({ title, href, items, total, id, priority }: { title: string; href: string; items: { p: Product; ok: boolean; fresh?: boolean }[]; total: number; id?: string; priority?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [edge, setEdge] = useState({ start: true, end: items.length < 3 });
   const check = () => {
@@ -72,7 +72,7 @@ export function ProductRow({ title, href, items, total, id, priority }: { title:
       </div>
       <div className="prow-w">
         <div className="prow-s" ref={ref} onScroll={check}>
-          {items.map(({ p, ok }, k) => <ProductCard key={p.id} p={p} ok={ok} priority={priority && k < 2} />)}
+          {items.map(({ p, ok, fresh }, k) => <ProductCard key={p.id} p={p} ok={ok} fresh={fresh} priority={priority && k < 2} />)}
           {total > items.length && <Link className="more-card" href={href}><b>+{total - items.length}</b>شوف باقي القسم ←</Link>}
         </div>
         {!edge.start && <button className="rarr r" onClick={() => move(-1)} aria-label="السابق">›</button>}
@@ -83,11 +83,7 @@ export function ProductRow({ title, href, items, total, id, priority }: { title:
 }
 
 /* ---------- choice assistant ---------- */
-const SP: [string, RegExp][] = [
-  ['🍽️ مطبخ', /مطبخ|مفصل|مجر|بلوم|اوكر|مقبض|جزام/],
-  ['👗 دريسنج روم', /دريسنج|جرار|دلف|مجر|مقبض|اوكر/],
-  ['🚪 دولاب / غرفة نوم', /دولاب|جرار|مفصل|مقبض|اوكر|جزام/],
-];
+const SP = ROOMS;
 export function Finder() {
   const { site } = useShop();
   const [k, setK] = useState(-1);

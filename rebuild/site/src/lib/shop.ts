@@ -25,6 +25,55 @@ export function queryProducts(products: Product[], ok: (p: Product) => boolean, 
   return L;
 }
 
+/** Rooms the shop serves; sections whose names match the same room complement each other. */
+export const ROOMS: [string, RegExp][] = [
+  ['🍽️ مطبخ', /مطبخ|مفصل|مجر|بلوم|اوكر|مقبض|جزام/],
+  ['👗 دريسنج روم', /دريسنج|جرار|دلف|مجر|مقبض|اوكر/],
+  ['🚪 دولاب / غرفة نوم', /دولاب|جرار|مفصل|مقبض|اوكر|جزام/],
+];
+
+/** Products from related sections (same room) that complete the job, available ones first. */
+export function complements(all: Product[], sections: { id: string; name: string }[], p: Product, ok: (p: Product) => boolean, n = 8) {
+  const mine = sections.find(s => s.id === p.sec)?.name ?? '';
+  const rooms = ROOMS.filter(r => r[1].test(mine));
+  const secs = new Set(sections.filter(s => s.id !== p.sec && rooms.some(r => r[1].test(s.name))).map(s => s.id));
+  const L = all.filter(x => secs.has(x.sec));
+  return [...L.filter(ok), ...L.filter(x => !ok(x))].slice(0, n);
+}
+
+const STOP = new Set(['من', 'في', 'على', 'مع', 'او', 'و', 'لل', 'ال', 'سم', 'مم', 'قطعه', 'قطعة', 'طقم', 'عدد', 'نوع', 'لون']);
+/** Frequent words/word pairs in product names (for quick filter chips inside a big section). */
+export function topTerms(products: Product[], max = 10): string[] {
+  if (products.length < 4) return [];
+  const count = new Map<string, number>();
+  for (const p of products) {
+    const w = norm(p.name).split(' ').filter(x => x.length >= 2);
+    const seen = new Set<string>();
+    w.forEach((x, i) => {
+      if (!STOP.has(x) && (x.length >= 3 || /\d/.test(x))) seen.add(x);
+      if (i < w.length - 1 && !STOP.has(x) && !STOP.has(w[i + 1])) seen.add(x + ' ' + w[i + 1]);
+    });
+    seen.forEach(k => count.set(k, (count.get(k) ?? 0) + 1));
+  }
+  const n = products.length;
+  const L = [...count].filter(([, c]) => c >= 2 && c <= n * 0.8).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length);
+  const out: string[] = [];
+  for (const [k] of L) {
+    if (out.some(o => o.includes(k) || k.includes(o))) continue;
+    out.push(k);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** When nothing matches every word: products matching any word (name first). */
+export function looseQuery(products: Product[], q: string, n = 12) {
+  const words = norm(q).split(' ').filter(w => w.length >= 2);
+  if (!words.length) return [];
+  const score = (p: Product) => { const h = norm(p.name), d = norm(p.code + ' ' + p.desc); return words.reduce((s, w) => s + (h.includes(w) ? 2 : d.includes(w) ? 1 : 0) + (w.length >= 4 && h.includes(w.slice(0, -1)) ? 1 : 0), 0); };
+  return products.map(p => [p, score(p)] as const).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(x => x[0]);
+}
+
 export const sectionPath = (id: string) => `/c/${encodeURIComponent(id)}`;
 export const visibleSections = (s: Pick<Settings, 'sections' | 'counts'>) => s.sections.filter(x => (s.counts[x.id] ?? 0) > 0);
 

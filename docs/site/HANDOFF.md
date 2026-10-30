@@ -40,6 +40,13 @@ swipeable photo viewer; previous/next product in section; «مفتوح دلوق�
 `/contact`, `/policy`; WhatsApp button is a small circle off the home top and mentions the open product/section;
 `/api/health` for uptime monitoring; richer HardwareStore JSON-LD, category share images, favicon.
 
+## v4
+«تكمّل بيها الشغل» on product pages (`complements()`: other sections of the same room, `ROOMS` in shop.ts); blurred tiny-photo placeholder (`lqip`, `.lq`);
+auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=` inside a section; «عرض المزيد» loads by itself on scroll (`AutoMore`);
+`/orders` «طلباتي» (orders saved in `mk_orders` after sending, with track button); cart reminder toast once per visit;
+`/quote?i=…&n=` printable quote request (button «عرض سعر / PDF» in the cart); search with no full match shows «نتايج قريبة» (`looseQuery`) + sections;
+«جديد» badge on the newest 12 products (only when the catalog has more than 24); «ابعته لصاحبك» WhatsApp share; WhatsApp/phone taps tracked as `contact`; preconnect to the image CDN.
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.

@@ -44,11 +44,16 @@ export const getStock = cache(async (): Promise<Stock> => {
   }
 });
 
-/** Catalog + an availability check, for server components. */
+const FRESH = 12;
+
+/** Catalog + availability and «new» checks, for server components. */
 export const getCatalog = cache(async () => {
   const [site, stock] = await Promise.all([getSite(), getStock()]);
   const ok = (p: Product) => stockOk(p, stock);
-  return { site, ok };
+  // The newest products (end of the list) get a «جديد» badge — only once the catalog is big enough to mean something.
+  const freshIds = new Set(site.products.length > FRESH * 2 ? site.products.slice(-FRESH).map(p => p.id) : []);
+  const fresh = (p: Product) => freshIds.has(p.id);
+  return { site, ok, fresh };
 });
 
 /** Everything except the product list, plus how many products each section has. */
@@ -69,8 +74,8 @@ export const PAGE = 24;
 
 /** One page-range of products for a section / search (pages are cumulative: page 2 = first 48). */
 export async function listProducts(o: { sec?: string; q?: string; sort?: Sort; av?: boolean; page?: number }) {
-  const { site, ok } = await getCatalog();
+  const { site, ok, fresh } = await getCatalog();
   const all = queryProducts(site.products, ok, o);
   const n = Math.max(1, o.page ?? 1) * PAGE;
-  return { total: all.length, items: all.slice(0, n).map(p => ({ p, ok: ok(p) })) };
+  return { total: all.length, items: all.slice(0, n).map(p => ({ p, ok: ok(p), fresh: fresh(p) })) };
 }

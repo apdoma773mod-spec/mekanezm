@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { bumpVisit } from '@/lib/api';
+import { ev } from '@/lib/track';
 import { waUrl } from '@/lib/shop';
 import { Modals } from './modals';
 import { useMounted, useShop } from './shop-provider';
@@ -41,6 +42,9 @@ export function Chrome() {
   }, [y]);
   useEffect(() => {
     bumpVisit('shop');
+    // Count WhatsApp / phone taps as contacts in analytics.
+    const tap = (e: MouseEvent) => { const a = (e.target as Element)?.closest?.('a[href*="wa.me"],a[href^="tel:"]'); if (a) ev('contact', 'Contact', { method: a.getAttribute('href')!.startsWith('tel:') ? 'phone' : 'whatsapp' }); };
+    document.addEventListener('click', tap, true);
     // Offline support + fast repeat visits (see public/sw.js).
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   }, []);
@@ -57,6 +61,14 @@ export function Chrome() {
     } catch { /* */ }
     return () => { removeEventListener('online', f); removeEventListener('offline', f); removeEventListener('beforeinstallprompt', b); removeEventListener('appinstalled', done); clearTimeout(t); };
   }, [say]);
+  // Returning visitor with a saved cart: remind once per visit.
+  useEffect(() => {
+    if (!mounted || !cc) return;
+    try { if (sessionStorage.getItem('mk_remind')) return; sessionStorage.setItem('mk_remind', '1'); } catch { return; }
+    const t = setTimeout(() => say(`🛒 لسه عندك ${cc} في طلبك`, () => open({ kind: 'cart' }), 'كمّل الطلب'), 2500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, cc > 0]);
   // ?track=REF opens tracking (links from the custom-order page and old shop.html?track=).
   useEffect(() => { if (qs.has('track')) open({ kind: 'track', ref: qs.get('track') ?? '' }); }, [qs, open]);
 
@@ -80,7 +92,7 @@ ${location.href}`);
       {inst && <button className="inst" onClick={async () => { inst.prompt(); try { await inst.userChoice; } catch { /* */ } setInst(null); }}>⬇️ ثبّت التطبيق</button>}
       <div className={'toast' + (toast ? ' on' : '')} role="status">
         <span>{toast?.msg}</span>
-        {toast?.undo && <button type="button" onClick={toast.undo}>تراجع</button>}
+        {toast?.undo && <button type="button" onClick={toast.undo}>{toast.label ?? 'تراجع'}</button>}
       </div>
       {!onProduct && (
         <nav className="nv" aria-label="التنقل">

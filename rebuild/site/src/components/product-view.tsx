@@ -7,10 +7,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
 import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
-import { Placeholder } from './product-card';
+import { lqip, Placeholder } from './product-card';
 import { useShop } from './shop-provider';
 
-export function ProductView({ p, ok, sim, prev, next }: { p: Product; ok: boolean; sim: Item[]; prev?: Item; next?: Item }) {
+export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product; ok: boolean; sim: Item[]; comp?: Item[]; prev?: Item; next?: Item }) {
   const { site, cart, add, fav, toggleFav, open, pushRecent, say } = useShop();
   const router = useRouter();
   const item = toItem(p, ok);
@@ -63,7 +63,7 @@ export function ProductView({ p, ok, sim, prev, next }: { p: Product; ok: boolea
             <div className="pvs framed" ref={strip} style={{ position: 'relative' }}
               onScroll={e => { const s = e.currentTarget; const k = Math.round(Math.abs(s.scrollLeft) / s.clientWidth); if (k !== i) setI(k); }}>
               {im.length ? im.map((x, k) => (
-                <div key={x} onClick={() => open({ kind: 'image', srcs: im, i: k })}>
+                <div key={x} className="lq" style={lqip(x)} onClick={() => open({ kind: 'image', srcs: im, i: k })}>
                   <Image src={x} alt={`${p.name} ${k + 1}`} fill sizes="(max-width:900px) 100vw, 550px" priority={k === 0} />
                 </div>
               )) : <div><Placeholder section={sec?.name} /></div>}
@@ -122,10 +122,23 @@ export function ProductView({ p, ok, sim, prev, next }: { p: Product; ok: boolea
             {phone && <a href={'tel:' + String(phone).replace(/\s/g, '')}>📞 اتصل بنا</a>}
             <a href="#" onClick={e => { e.preventDefault(); print(); }}>🖨️ اطبع الورقة</a>
           </div>
+          <a className="friend" target="_blank" rel="noopener" href={'https://wa.me/?text=' + encodeURIComponent(`شوف ده من ميكانيزم: ${p.name}
+${productUrl(p.id)}`)}>📤 ابعته لصاحبك أو للنجار على الواتساب</a>
           {sim.length > 0 && (
             <div className="pvbox">
               <h2>منتجات مشابهة</h2>
               <div className="pvsim">{sim.map(x => (
+                <Link key={x.id} href={productPath(x.id)}>
+                  <span className="im">{x.img ? <Image src={x.img} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
+                  {x.name}
+                </Link>
+              ))}</div>
+            </div>
+          )}
+          {comp.length > 0 && (
+            <div className="pvbox">
+              <h2>🧩 تكمّل بيها الشغل</h2>
+              <div className="pvsim">{comp.map(x => (
                 <Link key={x.id} href={productPath(x.id)}>
                   <span className="im">{x.img ? <Image src={x.img} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
                   {x.name}

@@ -14,7 +14,7 @@ export type Modal =
   | { kind: 'work'; i: number }
   | { kind: 'image'; srcs: string[]; i: number };
 
-type Toast = { msg: string; undo?: () => void; n: number } | null;
+type Toast = { msg: string; undo?: () => void; label?: string; n: number } | null;
 export type Line = { item: Item; q: number };
 
 type Ctx = {
@@ -32,7 +32,7 @@ type Ctx = {
   open: (m: Modal) => void;
   close: () => void;
   toast: Toast;
-  say: (msg: string, undo?: () => void) => void;
+  say: (msg: string, undo?: () => void, label?: string) => void;
 };
 
 const C = createContext<Ctx | null>(null);
@@ -73,10 +73,10 @@ export function ShopProvider({ site, children }: { site: Settings; children: Rea
   useEffect(() => { if (loaded.current) write(K.fav, fav); }, [fav]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const say = useCallback((msg: string, undo?: () => void) => {
-    setToast(t => ({ msg, undo, n: (t?.n ?? 0) + 1 }));
+  const say = useCallback((msg: string, undo?: () => void, label?: string) => {
+    setToast(t => ({ msg, undo, label, n: (t?.n ?? 0) + 1 }));
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setToast(null), 3500);
+    timer.current = setTimeout(() => setToast(null), label ? 7000 : 3500);
   }, []);
 
   const setQty = useCallback((id: string, q: number) => setCart(c => {
@@ -122,4 +122,13 @@ export function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
   return m;
+}
+
+/** Orders sent from this browser («طلباتي»). */
+export type SavedOrder = { ref: string; at: string; phone: string; lines: [string, number][]; ship: string; custom?: boolean };
+export function saveOrder(o: SavedOrder) {
+  try {
+    const L = JSON.parse(localStorage.getItem('mk_orders') || '[]') as SavedOrder[];
+    localStorage.setItem('mk_orders', JSON.stringify([o, ...L.filter(x => x.ref !== o.ref)].slice(0, 30)));
+  } catch { /* storage blocked */ }
 }

@@ -46,7 +46,7 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/policy">🚚 التوصيل والاستبدال</Link>
           <Link href="/contact">📞 تواصل معانا</Link>
           <OpenBtn modal={{ kind: 'req' }} className="lnk">📷 اطلب منتج مش موجود</OpenBtn>
-          <OpenBtn modal={{ kind: 'track' }} className="lnk">📦 تتبّع طلبك</OpenBtn>
+          <Link href="/orders">📦 طلباتي وتتبّع الطلب</Link>
           <Link href="/story">🎬 المنتجات بالتفصيل</Link>
           <Link href="/custom">🛠️ تجهيز المنتجات</Link>
         </div>

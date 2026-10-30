@@ -5,6 +5,7 @@ import { bumpVisit, placeCustomOrder, uploadRequestImage } from '@/lib/api';
 import { CUSTOM_TEL, CUSTOM_WA } from '@/lib/config';
 import { checkSizes, defaults, DRAW, GUIDE, KIND, num, quick, summary, warnings, type Kind, type Vals } from '@/lib/custom-draw';
 import { svgToJpeg } from '@/lib/images';
+import { saveOrder } from '@/components/shop-provider';
 
 const wa = (t: string) => `https://wa.me/${CUSTOM_WA}?text=${encodeURIComponent(t)}`;
 const STEPS = <div className="stp"><span className="on">١ المقاسات</span><span>٢ بياناتك</span><span>٣ تأكيد</span></div>;
@@ -103,6 +104,7 @@ function Form({ k, back, onDone }: { k: Kind; back: () => void; onDone: (d: { co
       }
       const ref = r.data.slice(0, 8);
       try { localStorage.setItem('mk_last_order', JSON.stringify({ ref, phone: phone.trim() })); localStorage.removeItem(DK); } catch { /* */ }
+      saveOrder({ ref, at: new Date().toISOString(), phone: phone.trim(), lines: [[KIND[k], Math.max(1, Math.round(num(V.q)) || 1)]], ship: 'تجهيز بمقاس', custom: true });
       onDone({ code: ref, sum, draw, name: name.trim() });
       scrollTo(0, 0);
     } catch {

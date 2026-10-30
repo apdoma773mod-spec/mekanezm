@@ -7,7 +7,8 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
-import { FB_PIXEL, GA_ID, SITE_URL } from '@/lib/config';
+import { preconnect } from 'react-dom';
+import { FB_PIXEL, GA_ID, SB_URL, SITE_URL } from '@/lib/config';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -27,6 +28,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#0f1a14' };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  // Start the connection to the photo CDN before the first image is requested.
+  preconnect(SB_URL);
   return (
     <html lang="ar" dir="rtl">
       <body>
