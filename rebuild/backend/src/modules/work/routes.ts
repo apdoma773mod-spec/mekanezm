@@ -4,16 +4,16 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { actorOf } from '../../lib/actor.js';
+import { actorOf, isAdmin } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
-import { badRequest, notFound } from '../../lib/errors.js';
+import { badRequest, forbidden, notFound } from '../../lib/errors.js';
 import { parse } from '../../lib/validate.js';
 
 /**
  * «🛠️ أنظمة الشغل» keeps its documents as JSON, as the old system did in mk_settings (wk_*):
  * orders with their stages, config, display goods, show-room expenses, offcuts and forged-rod work.
  */
-const KEYS = ['count_sessions', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
+const KEYS = ['count_sessions', 'voice_cmds', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
 const keyParam = z.object({ key: z.enum(KEYS) });
 
 const UPLOADS = path.resolve(process.cwd(), 'uploads');
@@ -23,8 +23,10 @@ const MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', pn
 export default async function workRoutes(app: FastifyInstance) {
   const db = app.prisma;
 
-  app.get('/kv/:key', { preHandler: app.requireAdmin }, async (request) => {
+  app.get('/kv/:key', { preHandler: app.authenticate }, async (request) => {
     const { key } = parse(keyParam, request.params);
+    // the voice command words are read by everyone's 🎤 window; every other document is the owner's
+    if (key !== 'voice_cmds' && !isAdmin(actorOf(request))) throw forbidden('الشاشة دي للمدير بس');
     const s = await db.setting.findUnique({ where: { key } });
     return { value: s?.value ?? null };
   });

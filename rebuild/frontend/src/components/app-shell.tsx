@@ -240,6 +240,9 @@ function Shell({ children }: { children: ReactNode }) {
           <button type="button" className="icon-btn" onClick={() => open({ kind: 'quick' })} title="إضافة" aria-label="إضافة">
             <Icon name="plus" />
           </button>
+          <button type="button" className="icon-btn" onClick={() => open({ kind: 'voice' })} title="أمر صوتي" aria-label="أمر صوتي">
+            🎤
+          </button>
           {admin ? (
             <>
               <Link className="icon-btn" href="/theme" title="المظهر" aria-label="المظهر">

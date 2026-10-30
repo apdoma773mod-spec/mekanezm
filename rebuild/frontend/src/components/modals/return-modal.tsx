@@ -13,15 +13,24 @@ import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 
 /** «تسجيل مرتجع» — same fields as the old window, plus settling against the account when the person is known. */
-export function ReturnModal({ type: initial }: { type: ReturnKind }) {
+export interface ReturnPreset {
+  product?: ProductDto;
+  person?: string;
+  qty?: number;
+  price?: number;
+}
+
+export function ReturnModal({ type: initial, preset }: { type: ReturnKind; preset?: ReturnPreset }) {
   const { close } = useModal();
   const toast = useToast();
   const create = useCreateReturn();
   const [kind, setKind] = useState<ReturnKind>(initial);
-  const [product, setProduct] = useState<ProductDto | null>(null);
-  const [person, setPerson] = useState('');
-  const [qty, setQty] = useState('');
-  const [price, setPrice] = useState('');
+  const [product, setProduct] = useState<ProductDto | null>(preset?.product ?? null);
+  const [person, setPerson] = useState(preset?.person ?? '');
+  const [qty, setQty] = useState(preset?.qty != null ? String(preset.qty) : '');
+  const [price, setPrice] = useState(
+    preset?.price != null ? String(preset.price) : preset?.product ? String(initial === 'SALE' ? preset.product.price : (preset.product.cost ?? 0)) : '',
+  );
   const [note, setNote] = useState('');
   const [onAccount, setOnAccount] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});

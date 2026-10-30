@@ -87,7 +87,7 @@ function Moves({ id }: { id: string }) {
   );
 }
 
-export function ProductModal({ id }: { id?: string }) {
+export function ProductModal({ id, preset }: { id?: string; preset?: ProductPreset }) {
   const { close } = useModal();
   const existing = useProduct(id ?? null);
   if (id && existing.isPending) {
@@ -104,7 +104,7 @@ export function ProductModal({ id }: { id?: string }) {
       </Modal>
     );
   }
-  return <ProductForm product={id ? existing.data : undefined} />;
+  return <ProductForm product={id ? existing.data : undefined} preset={preset} />;
 }
 
 /** «🎁 هدية» «⚠️ مخربش؟ درجة تانية» «🔁 بدائل» and the alternatives line under them. */
@@ -156,7 +156,15 @@ export function ExtraButtons({ product: p }: { product: ProductDto }) {
   );
 }
 
-function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof useProduct>['data']> }) {
+export interface ProductPreset {
+  name?: string;
+  code?: string;
+  cost?: number;
+  price?: number;
+  qty?: number;
+}
+
+function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnType<typeof useProduct>['data']>; preset?: ProductPreset }) {
   const { close } = useModal();
   const toast = useToast();
   const categories = useCategories();
@@ -168,13 +176,13 @@ function ProductForm({ product: p }: { product?: NonNullable<ReturnType<typeof u
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
-    code: p?.code ?? '',
-    name: p?.name ?? '',
+    code: p?.code ?? pr?.code?.toUpperCase() ?? '',
+    name: p?.name ?? pr?.name ?? '',
     barcode: p?.barcode ?? '',
     category: p?.category ?? 'إكسسوارات مطابخ',
-    qty: String(p?.qty ?? 0),
-    cost: String(p?.cost ?? 0),
-    price: String(p?.price ?? 0),
+    qty: String(p?.qty ?? pr?.qty ?? 0),
+    cost: String(p?.cost ?? pr?.cost ?? 0),
+    price: String(p?.price ?? pr?.price ?? 0),
     minQty: String(p?.minQty ?? 5),
     unit: p?.unit ?? 'قطعة',
   });

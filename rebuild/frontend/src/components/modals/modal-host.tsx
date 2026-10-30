@@ -3,10 +3,11 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { ContactType, InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
-import { ProductModal } from './product-modal';
+import { ProductModal, type ProductPreset } from './product-modal';
 import { TransactionModal, type SalePreset } from './transaction-modal';
 import { InvoiceView } from './invoice-view';
-import { ReturnModal } from './return-modal';
+import { ReturnModal, type ReturnPreset } from './return-modal';
+import { VoiceCfg, VoiceModal } from './voice-modal';
 import { ContactModal } from './contact-modal';
 import { ContactFile } from './contact-file';
 import { PaymentModal } from './payment-modal';
@@ -32,7 +33,9 @@ import { PhoneImport } from './phone-import';
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
   | { kind: 'quick' }
-  | { kind: 'product'; id?: string }
+  | { kind: 'product'; id?: string; preset?: ProductPreset }
+  | { kind: 'voice' }
+  | { kind: 'voiceCfg' }
   | { kind: 'transaction'; type: InvoiceKind; editId?: string; person?: string; contactId?: string; fromQuote?: string; preset?: SalePreset }
   | { kind: 'quote'; id?: string }
   | { kind: 'quoteView'; id: string }
@@ -56,11 +59,11 @@ export type ModalSpec =
   | { kind: 'portalNew' }
   | { kind: 'phoneImport' }
   | { kind: 'invoice'; id: string }
-  | { kind: 'return'; type: ReturnKind }
-  | { kind: 'contact'; id?: string; type?: ContactType }
+  | { kind: 'return'; type: ReturnKind; preset?: ReturnPreset }
+  | { kind: 'contact'; id?: string; type?: ContactType; preset?: { name?: string; phone?: string } }
   | { kind: 'contactFile'; id: string }
   | { kind: 'payment'; contactId: string }
-  | { kind: 'expense'; id?: string }
+  | { kind: 'expense'; id?: string; preset?: { note?: string; amount?: number } }
   | { kind: 'closing'; day?: string }
   | { kind: 'closingHistory' }
   | { kind: 'countResult'; count: StockCountDto };
@@ -85,7 +88,13 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <QuickModal />;
         break;
       case 'product':
-        content = spec.id ? <ProductCard key={spec.id} id={spec.id} /> : <ProductModal key="new" />;
+        content = spec.id ? <ProductCard key={spec.id} id={spec.id} /> : <ProductModal key="new" preset={spec.preset} />;
+        break;
+      case 'voice':
+        content = <VoiceModal />;
+        break;
+      case 'voiceCfg':
+        content = <VoiceCfg />;
         break;
       case 'productEdit':
         content = <ProductModal key={`e-${spec.id}`} id={spec.id} />;
@@ -102,10 +111,10 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <InvoiceView key={spec.id} id={spec.id} />;
         break;
       case 'return':
-        content = <ReturnModal key={spec.type} type={spec.type} />;
+        content = <ReturnModal key={spec.type} type={spec.type} preset={spec.preset} />;
         break;
       case 'contact':
-        content = <ContactModal key={spec.id ?? `new-${spec.type ?? ''}`} id={spec.id} type={spec.type} />;
+        content = <ContactModal key={spec.id ?? `new-${spec.type ?? ''}`} id={spec.id} type={spec.type} preset={spec.preset} />;
         break;
       case 'contactFile':
         content = <ContactFile key={spec.id} id={spec.id} />;
@@ -114,7 +123,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <PaymentModal key={spec.contactId} contactId={spec.contactId} />;
         break;
       case 'expense':
-        content = <ExpenseModal key={spec.id ?? 'new'} id={spec.id} />;
+        content = <ExpenseModal key={spec.id ?? 'new'} id={spec.id} preset={spec.preset} />;
         break;
       case 'closing':
         content = <ClosingModal day={spec.day} />;
