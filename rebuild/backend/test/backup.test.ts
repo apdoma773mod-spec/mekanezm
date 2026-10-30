@@ -59,3 +59,21 @@ describe('backups', () => {
     expect((await call(admin, 'GET', '/backup/2020-01-01')).statusCode).toBe(404);
   });
 });
+
+describe('second copy outside the database', () => {
+  it('writes a gzip file per day into the chosen folder and says when the folder is not writable', async () => {
+    const { mkdtempSync, readdirSync, readFileSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { gunzipSync } = await import('node:zlib');
+    const dir = mkdtempSync(join(tmpdir(), 'mk-bk-'));
+    const put = (d: string) => app.inject({ method: 'PUT', url: '/api/v1/backup/copy', headers: { cookie: admin }, payload: { dir: d } });
+    expect((await put(dir)).statusCode).toBe(200);
+    const files = readdirSync(dir).filter((f) => f.endsWith('.json.gz'));
+    expect(files).toHaveLength(1);
+    expect(JSON.parse(gunzipSync(readFileSync(join(dir, files[0]!))).toString()).format).toBe('mekanizm-backup');
+    const r = await app.inject({ method: 'GET', url: '/api/v1/backup/copy', headers: { cookie: admin } });
+    expect(r.json().copy.lastFile).toBe(files[0]);
+    expect((await put(join(dir, files[0]!, 'x'))).statusCode).toBe(400);
+  });
+});
