@@ -1,5 +1,19 @@
 # Next session brief — READ THIS FIRST, then HANDOFF.md
 
+## Session 6 hand-over (2026-10-30) — READ THIS FIRST
+**Done in session 6 (all committed + pushed on `tajroba-rebuild`, browser-checked on the :3200 test stack):**
+- Full backend suite 136/136 at the start; new tests since: recat, voice_cmds kv, attendance alert (all pass).
+- `webreq.cjs` fixed (window.open captured, «اعرض كل الطلبات» before the replied check) → all 7 pass.
+- Speed: reports «حالة المخزون» loads only low+out (`/products/all?stock=low|out`), «تقرير عميل/مورد» loads names on focus, the sale window loads product packs only once a stock line exists.
+- «إعادة تصنيف الأصناف» (old `openRecat`) in settings → `Recat` in `product-tools.tsx`, backend `POST /products/recat` (owner only, audited).
+- 🎤 أمر صوتي (`components/modals/voice-modal.tsx`, header button after ➕ like the old): base `voiceParse/voiceGo` + the name-command layer (`فاتورة بيع X` lists his invoices, `كشف حساب`, `تحصيل`, `سداد`) + ⚙️ كلمات الأوامر (Setting `voice_cmds`; everyone reads, owner saves). Return/expense/product/contact modals take a `preset`. Script `C:\mk-e2e\pw\voice.cjs` (10 checks pass). Real microphone NOT tested (headless).
+- Owner asks (memory `owner-requests-2026-10-30`): phone table-cards had `min-width:620px` → cards overflowed; fixed in `legacy.css` (cards fit, colored box + side stripe, nested `.card .card` / `.modal .card` colored); `cardify()` in `pro.tsx` now labels rows that arrive later. `phonefit.cjs` = 12 screens fit at 390px. Top alert bar now also shows 🛒 طلب من الموقع / 🛠️ طلب تجهيز / 📷 طلب بالصور (old order).
+- WhatsApp photos: the owner's screenshot was the OLD system; the new `/transfers` cards already have ✔ اتبعتت / 💰 اتدفعت / ❌ مش موجودة / 🙈 تجاهل.
+- 🔔 attendance alert: QR punch in/out queues «👷 X حضر الساعة … — متأخر N دقيقة» (late > 10) / «انصرف» (type `staff`).
+- Test backend restart script: `C:\mk-e2e\be4001.ps1` (DB `mekanizm_test` — the vitest DB too, so running tests wipes the test stack data; login 01000000001 / test-password-123 is re-seeded by tests).
+**Left:** invoice-photo reader (needs an AI key from the owner), copy of the old site content, cameras + face recognition for attendance/customers (owner said LATER, he will dictate), screen-by-screen comparison of the remaining windows, bridges switch (only when the owner says).
+**Running:** :4000 owner backend (untouched this session, needs restart to get session-6 backend changes: recat, voice_cmds, attendance alert), :3100 owner frontend (started by me, PID of cmd 16696), tunnel PID 7184 → link in the final report, :3200/:4001 test stack.
+
 ## Session 5 hand-over (2026-10-30) — READ THIS FIRST
 ### Final status (end of session 5)
 **Verified in a real browser (Playwright, production build on the :3200 test stack, no console/API errors): ** daybook Excel import window (code fix only, not with the owner's own .xlsx), invoice preview window + Cairo font in it (Google Fonts blocked on purpose), logo animation stops, work-systems open speed (≈0.5–1 s, 2nd screen <100 ms), 🛒 طلبات الموقع (public order → card → eta window → convert to invoice → marked done), 🌐 محتوى الموقع (contact tab saved), 📈 تحليلات ذكية (all 14 tabs open with data; dead stock, supplier comparison, lapsed, points add, catalog preview), 🔗 رابط العميل (link made, opened with no login, request sent, dashboard banner, request listed), 🧾 message → sale invoice (product + quantity found), 📇 من التليفون (.vcf read, duplicate in file dropped, saved as customer/supplier).
