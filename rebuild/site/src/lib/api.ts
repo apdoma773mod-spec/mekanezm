@@ -70,13 +70,14 @@ export async function trackCustom(ref: string, phone: string) {
 }
 
 export type Review = { name: string; rating: number; body?: string };
-export async function listReviews(): Promise<Review[]> {
+/** Approved reviews: the shop's (no id) or one product's. */
+export async function listReviews(product?: string): Promise<Review[]> {
   try {
-    const r = await rpc<Review[]>('list_reviews', { p_product: null });
+    const r = await rpc<Review[]>('list_reviews', { p_product: product ?? null });
     return Array.isArray(r.data) ? r.data : [];
   } catch { return []; }
 }
-export const addReview = (name: string, rating: number, body: string) => rpc('add_review', { p_name: name, p_rating: rating, p_body: body, p_product: null });
+export const addReview = (name: string, rating: number, body: string, product?: string) => rpc('add_review', { p_name: name, p_rating: rating, p_body: body, p_product: product ?? null });
 export const addNotifyMe = (id: string, pname: string, name: string, phone: string) =>
   rpc('add_notify_me', { p_product: id, p_pname: pname, p_name: name, p_phone: phone });
 

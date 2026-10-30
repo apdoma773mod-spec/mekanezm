@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PayInfo } from '@/components/modals';
 import { Footer } from '@/components/site-parts';
 import { getSettings } from '@/lib/catalog';
 import { deliveryFee, FAQ, shipBits, waUrl } from '@/lib/shop';
@@ -30,6 +31,7 @@ export default async function Policy() {
           </div>
           <div><h2>🛵 توصيل داخل القاهرة والجيزة</h2>{L.note || 'مندوب بيوصّلك الطلب لحد باب البيت'}{shipBits(L) && <div>{shipBits(L)}</div>}</div>
           <div><h2>📦 شحن لأي محافظة</h2>{G.note || 'بنشحن لكل محافظات مصر مع شركات الشحن'}{shipBits(G) && <div>{shipBits(G)}</div>}</div>
+          <div><h2>💳 طرق الدفع</h2><PayInfo method="pickup" /><PayInfo method="ship" /></div>
           <div><h2>🏪 استلام من المحل</h2>{site.address}{site.hours && <div>🕒 {site.hours}</div>}</div>
           {(site.deliveryNote.trim() || D.length > 0) && (
             <div>

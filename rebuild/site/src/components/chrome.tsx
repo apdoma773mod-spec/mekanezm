@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { bumpVisit } from '@/lib/api';
-import { ev } from '@/lib/track';
+import { ev, reportError } from '@/lib/track';
 import { waUrl } from '@/lib/shop';
 import { Modals } from './modals';
 import { useMounted, useShop } from './shop-provider';
@@ -47,6 +47,9 @@ export function Chrome() {
     document.addEventListener('click', tap, true);
     // Offline support + fast repeat visits (see public/sw.js).
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Script errors on customers' phones go to /api/log (see reportError).
+    addEventListener('error', e => reportError(e.message, e.error?.stack));
+    addEventListener('unhandledrejection', e => reportError(String(e.reason?.message ?? e.reason), e.reason?.stack));
   }, []);
   useEffect(() => {
     const f = () => setOffline(!navigator.onLine);

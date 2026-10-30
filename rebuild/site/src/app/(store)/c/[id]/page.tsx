@@ -9,7 +9,7 @@ import { SITE_URL } from '@/lib/config';
 import type { Sort } from '@/lib/shop';
 import { images, productPath, sectionPath, topTerms } from '@/lib/shop';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   const s = await getSettings();

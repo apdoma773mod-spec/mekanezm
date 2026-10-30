@@ -11,7 +11,9 @@ COPY site/package.json site/
 RUN npm ci --workspace site --include-workspace-root=false --ignore-scripts
 COPY site site
 ARG SITE_URL
-ENV NEXT_PUBLIC_SITE_URL=$SITE_URL NEXT_TELEMETRY_DISABLED=1
+ARG INSTAPAY=""
+ARG WALLET=""
+ENV NEXT_PUBLIC_SITE_URL=$SITE_URL NEXT_PUBLIC_INSTAPAY=$INSTAPAY NEXT_PUBLIC_WALLET=$WALLET NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w site
 
 FROM node:22-alpine

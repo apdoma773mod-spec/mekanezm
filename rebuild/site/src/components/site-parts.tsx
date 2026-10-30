@@ -44,6 +44,7 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/fav">♥ المفضلة</Link>
           <Link href="/quick">⚡ اطلب بالكود</Link>
           <Link href="/policy">🚚 التوصيل والاستبدال</Link>
+          <Link href="/guide">📘 دليل الاختيار</Link>
           <Link href="/contact">📞 تواصل معانا</Link>
           <OpenBtn modal={{ kind: 'req' }} className="lnk">📷 اطلب منتج مش موجود</OpenBtn>
           <Link href="/orders">📦 طلباتي وتتبّع الطلب</Link>

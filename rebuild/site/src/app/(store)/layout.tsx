@@ -4,7 +4,7 @@ import { ShopProvider } from '@/components/shop-provider';
 import { TopBar } from '@/components/topbar';
 import { getSettings } from '@/lib/catalog';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export default async function StoreLayout({ children }: { children: ReactNode }) {
   const site = await getSettings();

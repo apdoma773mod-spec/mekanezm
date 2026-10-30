@@ -465,3 +465,30 @@ textarea.qo { width: 100%; font: inherit; font-size: 16px; padding: 12px; border
 .quote td:last-child { min-width: 80px; }
 .quote .note { font-size: 13px; color: #555; margin-top: 12px; }
 @media print { .noprint, .tb, .nv, .wa-fab, .go-cart { display: none !important; } .quote { padding: 0; } }
+
+/* ---- v5: prices, payment, compare, guides ---- */
+.card .prc { display: block; margin: 2px 14px 4px; font-size: 16px; font-weight: 800; color: var(--fg); }
+.citem small.prc { color: var(--fg); font-weight: 800; }
+.ctot { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #f0f9ee; }
+.ctot b { font-size: 17px; }
+.ctot small { color: var(--mut); }
+.pay { display: grid; gap: 2px; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #faf6ea; font-size: 14px; line-height: 1.8; }
+.info-cards .pay { background: none; padding: 0; margin: 0 0 6px; }
+.cmpb { display: block; width: 100%; margin: 8px 0; padding: 11px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card); font: inherit; font-weight: 800; color: var(--fg); cursor: pointer; }
+.cmpb.on { border-color: var(--accent); color: var(--accent); }
+.cmpw { overflow-x: auto; background: var(--card); border-radius: 16px; box-shadow: var(--sh); }
+.cmp table { border-collapse: collapse; width: 100%; min-width: 420px; font-size: 14px; }
+.cmp th, .cmp td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+.cmp td:first-child { font-weight: 800; color: var(--mut); white-space: nowrap; }
+.cmp th a { display: grid; gap: 6px; color: var(--fg); text-decoration: none; font-weight: 800; }
+.cmp th .im { position: relative; display: block; width: 100%; max-width: 120px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #fff; }
+.glist { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.glist a { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 14px; border-radius: 16px; background: var(--card); box-shadow: var(--sh); color: var(--fg); text-decoration: none; }
+.glist span { grid-row: span 2; font-size: 28px; }
+.glist small { color: var(--mut); line-height: 1.6; }
+.guide .lead { font-size: 17px; color: var(--mut); }
+.guide section { background: var(--card); border-radius: 18px; padding: 14px 16px; margin: 12px 0; box-shadow: var(--sh); }
+.guide h2 { font-size: 19px; margin: 0 0 6px; }
+.guide ul { margin: 0; padding-inline-start: 22px; line-height: 2; }
+.guide .row { display: flex; gap: 8px; margin: 16px 0; }
+.guide .row > * { flex: 1; text-align: center; text-decoration: none; }

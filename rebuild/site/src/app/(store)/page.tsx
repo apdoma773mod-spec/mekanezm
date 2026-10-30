@@ -1,11 +1,13 @@
 import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
 import { OpenNow } from '@/components/open-now';
 import { Footer, Header, Socials } from '@/components/site-parts';
+import Link from 'next/link';
 import { getCatalog, getSettings } from '@/lib/catalog';
+import { GUIDES } from '@/lib/guides';
 import { SITE_URL } from '@/lib/config';
 import { catalogUrl, deliveryFee, FAQ, MAP_URL, productPath, sectionPath, slidesList, waUrl } from '@/lib/shop';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 const ROW = 12;
 
@@ -72,6 +74,10 @@ export default async function Home() {
         <Finder />
         <ReqHome />
         <Works />
+        <section className="mkp" aria-labelledby="gd-h">
+          <h2 id="gd-h">📘 قبل ما تشتري: دليل الاختيار</h2>
+          <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
+        </section>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">
             <div className="sh"><h2>🚚 التوصيل والاستبدال</h2></div>

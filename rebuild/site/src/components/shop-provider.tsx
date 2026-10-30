@@ -9,7 +9,7 @@ export type Modal =
   | { kind: 'ship' }
   | { kind: 'req' }
   | { kind: 'track'; ref?: string; phone?: string }
-  | { kind: 'review' }
+  | { kind: 'review'; product?: { id: string; name: string } }
   | { kind: 'notify'; item: Item }
   | { kind: 'work'; i: number }
   | { kind: 'image'; srcs: string[]; i: number };

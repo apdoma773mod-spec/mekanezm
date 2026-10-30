@@ -1,6 +1,10 @@
 'use client';
-// Friendly message instead of a broken page if something fails while rendering.
-export default function Error({ reset }: { error: Error; reset: () => void }) {
+// Friendly message instead of a broken page if something fails while rendering (and report it).
+import { useEffect } from 'react';
+import { reportError } from '@/lib/track';
+
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => { reportError('render: ' + error.message + (error.digest ? ' #' + error.digest : ''), error.stack); }, [error]);
   return (
     <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 20 }}>
       <div>

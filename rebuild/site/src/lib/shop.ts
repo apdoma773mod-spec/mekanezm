@@ -7,7 +7,13 @@ export const norm = (s: string) => String(s || '').toLowerCase()
   .replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
   .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/\s+/g, ' ').trim();
 
-export const toItem = (p: Product, ok: boolean): Item => ({ id: p.id, name: p.name, code: p.code, desc: p.desc.slice(0, 120), img: images(p)[0] ?? '', ok });
+/** Price in EGP when the owner filled one in (number or text like "1,250"), else null → «اسأل عن السعر». */
+export function priceOf(p: { price?: number | string }): number | null {
+  const v = typeof p.price === 'number' ? p.price : Number(String(p.price ?? '').replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+export const money = (n: number) => n.toLocaleString('ar-EG', { maximumFractionDigits: 2 }) + ' ج.م';
+export const toItem = (p: Product, ok: boolean): Item => ({ id: p.id, name: p.name, code: p.code, desc: p.desc.slice(0, 120), img: images(p)[0] ?? '', ok, ...(priceOf(p) ? { price: priceOf(p)! } : {}) });
 
 export type Sort = '' | 'az' | 'av' | 'new';
 /** Filter + sort products (server side). Every search word must match name, code or description. */

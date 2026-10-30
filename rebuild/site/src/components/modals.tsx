@@ -1,10 +1,11 @@
 'use client';
 // All popups (bottom sheets). Wording and checks follow the old site's final version.
 import Image from 'next/image';
+import { PAY } from '@/lib/config';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { addNotifyMe, addReview, placeOrder, placeRequest, trackCustom, trackOrder, uploadRequestImage, type TrackedCustom, type TrackedOrder } from '@/lib/api';
 import type { Item, Ship, ShipMethod } from '@/lib/schema';
-import { deliveryFee, GOVS, orderMsg, shipBits, shipLine, waUrl } from '@/lib/shop';
+import { deliveryFee, GOVS, orderMsg, shipBits, shipLine, waUrl, money } from '@/lib/shop';
 import { ev } from '@/lib/track';
 import { shrinkImage } from '@/lib/images';
 import { saveOrder, useShop } from './shop-provider';
@@ -36,7 +37,7 @@ export function Modals() {
     case 'ship': return <ShipInfo />;
     case 'req': return <RequestSheet />;
     case 'track': return <TrackSheet ref0={modal.ref} phone0={modal.phone} />;
-    case 'review': return <ReviewSheet />;
+    case 'review': return <ReviewSheet product={modal.product} />;
     case 'notify': return <NotifySheet item={modal.item} />;
     case 'work': return <WorkView i={modal.i} />;
     case 'image': return <Lightbox srcs={modal.srcs} start={modal.i} onClose={close} />;
@@ -114,6 +115,7 @@ function CartSheet() {
         <p>رقم طلبك: <b dir="ltr">{ref}</b></p>
         <p>{shipLine(done.ship)}</p>
         <p>هنتواصل معاك لتأكيد الطلب والسعر{done.ship.method === 'pickup' ? '' : ' ومصاريف ' + (done.ship.method === 'ship' ? 'الشحن' : 'التوصيل')}. تقدر كمان تبعتلنا نسخة على الواتساب.</p>
+        <PayInfo method={done.ship.method} />
         <button className="sec" onClick={() => open({ kind: 'track', ref, phone: done.phone })}>📦 تابع طلبك وصل لفين</button>
         <div className="row">
           <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, orderMsg(done.ref, done.name, done.phone, done.lines))}>📲 ابعت على الواتساب</a>
@@ -136,7 +138,7 @@ function CartSheet() {
       {lines.length ? lines.map(({ item: p, q }) => (
         <div className="citem" key={p.id}>
           {p.img && <span className="cimg"><Image src={p.img} alt="" fill sizes="48px" style={{ objectFit: 'contain' }} /></span>}
-          <span style={{ flex: 1 }}>{p.name}{!p.ok && <b className="bo"> 📦 حجز — مش متوفر دلوقتي</b>}{p.desc && <small>{p.desc.slice(0, 80)}</small>}</span>
+          <span style={{ flex: 1 }}>{p.name}{!p.ok && <b className="bo"> 📦 حجز — مش متوفر دلوقتي</b>}{p.desc && <small>{p.desc.slice(0, 80)}</small>}{p.price ? <small className="prc">{money(p.price * q)}</small> : null}</span>
           <span className="qty">
             <button onClick={() => setQty(p.id, q - 1)} aria-label="نقص">−</button>
             <b>{q}</b>
@@ -162,6 +164,8 @@ function CartSheet() {
           </>}
         </div>
       </>}
+      {lines.length > 0 && <CartTotal lines={lines} />}
+      {lines.length > 0 && <PayInfo method={ship.method} />}
       <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg || (anyBack ? <span className="warn">في أصناف مش متوفرة دلوقتي — اطلبها عادي وهنكلمك نقولك ميعاد وصولها.</span> : '')}</p>
       {lines.length > 0 && (
         <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
@@ -175,6 +179,28 @@ function CartSheet() {
         <button className="sec" onClick={close}>إغلاق</button>
       </div>
     </Sheet>
+  );
+}
+
+/** Estimated total of the priced lines (prices are confirmed by the shop). */
+function CartTotal({ lines }: { lines: { item: Item; q: number }[] }) {
+  const priced = lines.filter(l => l.item.price);
+  if (!priced.length) return null;
+  const t = priced.reduce((s, l) => s + (l.item.price ?? 0) * l.q, 0);
+  const rest = lines.length - priced.length;
+  return <p className="ctot">الإجمالي التقريبي: <b>{money(t)}</b>{rest > 0 && <small> + {rest} صنف هنقولك سعره</small>}<small> — من غير التوصيل</small></p>;
+}
+
+/** How to pay: cash at the shop/on delivery; transfer a deposit for shipped orders. */
+export function PayInfo({ method }: { method?: ShipMethod }) {
+  const acc = [PAY.instapay && `إنستاباي: ${PAY.instapay}`, PAY.wallet && `محفظة (فودافون كاش وغيرها): ${PAY.wallet}`].filter(Boolean);
+  return (
+    <div className="pay">
+      <b>💳 الدفع</b>
+      {method === 'ship'
+        ? <span>للشحن لمحافظة تانية: بتحوّل عربون أو المبلغ كله{acc.length ? ' على ' + acc.join(' أو ') : ' بإنستاباي أو محفظة موبايل'}، وتبعت صورة التحويل على الواتساب.</span>
+        : <span>كاش {method === 'delivery' ? 'للمندوب وقت الاستلام' : 'في المحل وقت الاستلام'}، أو تحويل{acc.length ? ' على ' + acc.join(' أو ') : ' بإنستاباي أو محفظة موبايل'}.</span>}
+    </div>
   );
 }
 
@@ -390,7 +416,7 @@ function TrackSheet({ ref0, phone0 }: { ref0?: string; phone0?: string }) {
 }
 
 /* ---------------- ⭐ review ---------------- */
-function ReviewSheet() {
+function ReviewSheet({ product }: { product?: { id: string; name: string } }) {
   const { close } = useShop();
   const [r, setR] = useState(5);
   const [name, setName] = useState('');
@@ -401,12 +427,12 @@ function ReviewSheet() {
   async function go() {
     if (name.trim().length < 2) return setMsg('اكتب اسمك');
     setBusy(true); setMsg('⏳ جاري الإرسال…');
-    try { const x = await addReview(name.trim(), r, body.trim()); if (!x.ok) throw 0; setSent(true); } catch { setMsg('ماتبعتش — جرّب تاني'); setBusy(false); }
+    try { const x = await addReview(name.trim(), r, body.trim(), product?.id); if (!x.ok) throw 0; setSent(true); } catch { setMsg('ماتبعتش — جرّب تاني'); setBusy(false); }
   }
   if (sent) return <Sheet onClose={close} label="شكراً"><h3>شكراً ليك ♥</h3><p>وصلنا رأيك وهيظهر بعد المراجعة.</p><div className="row"><button className="sec" onClick={close}>إغلاق</button></div></Sheet>;
   return (
     <Sheet onClose={close} label="اكتب رأيك">
-      <h3>✍️ اكتب رأيك</h3>
+      <h3>✍️ اكتب رأيك{product ? ` في ${product.name.slice(0, 40)}` : ''}</h3>
       <div className="stars">{[1, 2, 3, 4, 5].map(i => <button type="button" key={i} className={i <= r ? 'on' : ''} onClick={() => setR(i)} aria-label={`${i} نجوم`}>★</button>)}</div>
       <label>اسمك<input value={name} onChange={e => setName(e.target.value)} maxLength={60} autoComplete="name" /></label>
       <label>رأيك (اختياري)<textarea value={body} onChange={e => setBody(e.target.value)} rows={3} maxLength={600} /></label>

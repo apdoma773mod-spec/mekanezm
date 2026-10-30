@@ -58,7 +58,7 @@ export type Stock = Record<string, boolean>;
 export type Settings = Omit<Site, 'products'> & { counts: Record<string, number> };
 
 /** A product snapshot kept in the cart / favorites / recently viewed (so the browser never needs the full catalog). */
-export type Item = { id: string; name: string; code: string; desc: string; img: string; ok: boolean };
+export type Item = { id: string; name: string; code: string; desc: string; img: string; ok: boolean; price?: number };
 
 export type ShipMethod = 'pickup' | 'delivery' | 'ship';
 export type Ship = { method: ShipMethod; gov: string; area: string; address: string };

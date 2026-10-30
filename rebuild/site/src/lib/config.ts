@@ -15,8 +15,12 @@ export const DEFAULT_PHONES = ['01042383986', '01042466087'];
 export const CUSTOM_WA = '201042383986';
 export const CUSTOM_TEL = '01042383986';
 
-// How long a built page may be served before it is rebuilt from fresh data (seconds).
-export const REVALIDATE = 300;
+// How long a built page may be served before it is rebuilt from fresh data (seconds). One small read a
+// minute, so edits in the system show within ~1 minute even without calling /api/revalidate.
+export const REVALIDATE = 60;
+
+// Payment accounts shown in the cart/policy (empty = hidden). Set them in .env.local before the build.
+export const PAY = { instapay: process.env.NEXT_PUBLIC_INSTAPAY ?? '', wallet: process.env.NEXT_PUBLIC_WALLET ?? '' };
 
 // Shop opening hours (Cairo time) for the «مفتوح دلوقتي» badge: 10 AM → midnight, Friday off.
 export const OPENING = { open: 10, close: 24, closedDays: [5] as number[] };

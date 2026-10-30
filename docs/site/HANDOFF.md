@@ -47,6 +47,17 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 `/quote?i=…&n=` printable quote request (button «عرض سعر / PDF» in the cart); search with no full match shows «نتايج قريبة» (`looseQuery`) + sections;
 «جديد» badge on the newest 12 products (only when the catalog has more than 24); «ابعته لصاحبك» WhatsApp share; WhatsApp/phone taps tracked as `contact`; preconnect to the image CDN.
 
+## v5 (ready to go live)
+- Prices: a product's `price` (number or text) shows on the card, on the product page (with the total for the chosen quantity), in the JSON-LD offer, and as an estimated total in the cart. With no price, it still shows «اسأل عن السعر» (all 7 products today).
+- «💳 الدفع» in the cart, on the success screen and on `/policy`: cash at the shop or to the courier, or a transfer for shipped orders. The account numbers come from `NEXT_PUBLIC_INSTAPAY` / `NEXT_PUBLIC_WALLET`; they are hidden while empty.
+- Reviews per product: `list_reviews(p_product)` / `add_review(…, p_product)`, which the database already supports. They show only after approval (`web_reviews.approved`).
+- `/compare?i=a,b[,c]` side-by-side table, filled from the «⚖️ قارن» button (`mk_cmp`, max 3).
+- `/guide` + 4 articles (`src/lib/guides.ts`: hinges, drawer slides, dressing room, kitchen). They have Article JSON-LD, are in the sitemap, and are linked from the home page and the footer.
+- Customer script errors are sent to `/api/log` (server log `[client-error]`, plus `LOG_WEBHOOK` if set). The error page reports too.
+- Pages refresh every 60 s (was 300), so system edits show within a minute even without `/api/revalidate`.
+- `npm run test:e2e [-- URL]`: browser smoke test of all pages (`e2e/smoke.mjs`, playwright-core). It never submits anything.
+- `docs/site/DEPLOY.md`: host, domain, env, Google Search Console/Business, monitoring.
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.
