@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { createTestApp, createUser, login, resetDb } from './helpers.js';
-import { _test, chk, mergeStrips } from '../src/modules/ai/scans.js';
+import { chk, mergeStrips } from '../src/modules/ai/scans.js';
 
 const { app, prisma }: { app: FastifyInstance; prisma: PrismaClient } = await createTestApp();
 afterAll(() => app.close());
@@ -40,7 +40,8 @@ describe('invoice photo queue', () => {
       const s = (await call('POST', '/', { pages: [{ full: JPG, strips: [JPG, JPG] }], supplier: 'الأمل' })).json();
       expect(s.status).toBe('pending');
       expect(s.strips).toEqual([2]);
-      await _test.tick(prisma, app.log);
+      // the upload starts the reader in the background
+      await vi.waitFor(async () => expect((await call('GET', '/')).json().items[0].status).toBe('done'), { timeout: 15000, interval: 300 });
       const done = (await call('GET', '/')).json().items[0];
       expect(done.status).toBe('done');
       expect(done.result.items[0].text).toBe('مفصلة');
@@ -73,8 +74,8 @@ describe('invoice photo queue', () => {
       expect(w.status).toBe('pending');
       expect(w.attempts).toBe(1);
       expect(Date.parse(w.nextAt)).toBeGreaterThan(Date.now());
-      await call('POST', `/${s.id}/retry`);
-      expect((await call('GET', '/')).json().items[0].attempts).toBe(0);
+      // «حاول دلوقتي» starts from attempt 0 again (the worker may pick it up right after)
+      expect((await call('POST', `/${s.id}/retry`)).json().scan.attempts).toBe(0);
     } finally {
 
       vi.unstubAllGlobals();
