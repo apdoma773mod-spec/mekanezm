@@ -152,9 +152,62 @@ function ToTop() {
   );
 }
 
+/**
+ * Old «أرقام عربي/إنجليزي في كل الخانات الرقمية»: with an Arabic keyboard, ٠١٢٣ typed in any box becomes 0123
+ * (number boxes become text boxes with the number keypad, like the old fixNum, because Chrome drops Arabic digits there).
+ */
+function EnglishDigits() {
+  useEffect(() => {
+    const fixNum = (el: Element) => {
+      if (el instanceof HTMLInputElement && el.type === 'number') {
+        el.type = 'text';
+        el.setAttribute('inputmode', 'decimal');
+        el.removeAttribute('min');
+        el.removeAttribute('step');
+      }
+    };
+    document.querySelectorAll('input[type=number]').forEach(fixNum);
+    const mo = new MutationObserver((ms) =>
+      ms.forEach((m) =>
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType !== 1) return;
+          fixNum(n as Element);
+          (n as Element).querySelectorAll?.('input[type=number]').forEach(fixNum);
+        }),
+      ),
+    );
+    mo.observe(document.body, { childList: true, subtree: true });
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    const onInput = (e: Event) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !/[٠-٩۰-۹]/.test(t.value)) return;
+      let v = t.value.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+      // number boxes: Arabic decimal comma too
+      if (t.getAttribute('inputmode') === 'decimal' || t.getAttribute('inputmode') === 'numeric') v = v.replace(/[٫،]/g, '.');
+      const pos = t.selectionStart;
+      // the native setter (not React's) so React still sees the change in this same event
+      setter.call(t, v);
+      if (pos != null) {
+        try {
+          t.setSelectionRange(pos, pos);
+        } catch {
+          /* some input types have no caret */
+        }
+      }
+    };
+    document.addEventListener('input', onInput, true);
+    return () => {
+      mo.disconnect();
+      document.removeEventListener('input', onInput, true);
+    };
+  }, []);
+  return null;
+}
+
 export function PowerExtras() {
   return (
     <>
+      <EnglishDigits />
       <OfflineBar />
       <Shortcuts />
       <LeaveGuard />
