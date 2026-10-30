@@ -1,0 +1,153 @@
+'use client';
+// Product page body: swipeable photos, details, order buttons and the sticky add-to-order bar.
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import type { Product } from '@/lib/schema';
+import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, shopPhones, videoEmbed, waUrl } from '@/lib/shop';
+import { evProduct } from '@/lib/track';
+import { Placeholder } from './product-card';
+import { useShop } from './shop-provider';
+
+export function ProductView({ p }: { p: Product }) {
+  const { site, ok: isOk, cart, add, fav, toggleFav, open, pushRecent, say, setCur } = useShop();
+  const router = useRouter();
+  const ok = isOk(p);
+  const im = images(p);
+  const sec = sectionOf(site, p);
+  const sim = site.products.filter(x => x.sec === p.sec && x.id !== p.id).slice(0, 10);
+  const specs = parseSpecs(p.desc);
+  const vid = videoEmbed(p.video);
+  const phone = shopPhones(site)[0] || site.phone;
+  const n = cart[p.id] ?? 0;
+  const [i, setI] = useState(0);
+  const [q, setQ] = useState(1);
+  const strip = useRef<HTMLDivElement>(null);
+  const thumbs = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    pushRecent(p.id);
+    evProduct('view_item', 'ViewContent', p);
+    const t = setTimeout(() => say('محتاج مساعدة في الاختيار؟ كلّمنا على الواتساب'), 45000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.id]);
+  useEffect(() => { thumbs.current?.children[i]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [i]);
+
+  const go = (k: number) => {
+    const s = strip.current;
+    if (!s || !im.length) return;
+    const nI = (k + im.length) % im.length;
+    // RTL scroll: positions run negative in modern browsers.
+    s.scrollTo({ left: -nI * s.clientWidth, behavior: 'smooth' });
+    setI(nI);
+  };
+  const share = async () => {
+    const url = productUrl(p.id);
+    try { if (navigator.share) { await navigator.share({ title: p.name, text: `${p.name} — ${site.name}`, url }); return; } } catch (e) { if ((e as Error).name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); say('تم نسخ رابط المنتج'); } catch { window.open(waUrl(site, p.name + '\n' + url), '_blank'); }
+  };
+  const back = () => { if (history.length > 1 && document.referrer.startsWith(location.origin)) router.back(); else router.push('/'); };
+
+  return (
+    <>
+      <div className="pvtop">
+        <button onClick={back} aria-label="رجوع">→</button>
+        <b>{sec?.name || site.name}</b>
+        <button onClick={share} aria-label="مشاركة">⤴</button>
+        <button className={fav.has(p.id) ? 'on' : ''} onClick={() => toggleFav(p.id)} aria-label="المفضلة" aria-pressed={fav.has(p.id)}>♥</button>
+      </div>
+      <div className="pvwrap">
+        <div className="pvg">
+          <div style={{ position: 'relative' }}>
+            <div className="pvs framed" ref={strip} style={{ position: 'relative' }}
+              onScroll={e => { const s = e.currentTarget; const k = Math.round(Math.abs(s.scrollLeft) / s.clientWidth); if (k !== i) setI(k); }}>
+              {im.length ? im.map((x, k) => (
+                <div key={x} onClick={() => open({ kind: 'image', src: x })}>
+                  <Image src={x} alt={`${p.name} ${k + 1}`} fill sizes="(max-width:900px) 100vw, 550px" priority={k === 0} />
+                </div>
+              )) : <div><Placeholder section={sec?.name} /></div>}
+            </div>
+            {im.length > 1 && <>
+              <button className="pvar r" onClick={() => go(i - 1)} aria-label="الصورة السابقة">›</button>
+              <button className="pvar l" onClick={() => go(i + 1)} aria-label="الصورة التالية">‹</button>
+              <span className="pvcnt" dir="ltr">{i + 1} / {im.length}</span>
+            </>}
+          </div>
+          {im.length > 1 && <>
+            <div className="pvdots" aria-hidden="true">{im.map((x, k) => <i key={x} className={k === i ? 'on' : ''} />)}</div>
+            <div className="pvth" ref={thumbs}>{im.map((x, k) => (
+              <button key={x} className={k === i ? 'on' : ''} onClick={() => go(k)} aria-label={`صورة ${k + 1}`}>
+                <Image src={x} alt="" fill sizes="64px" style={{ objectFit: 'cover' }} />
+              </button>
+            ))}</div>
+          </>}
+        </div>
+        <div className="pvi">
+          <h1>{p.name}</h1>
+          <nav className="bc" aria-label="مكانك في الموقع">
+            <Link href="/">الرئيسية</Link><span>›</span>
+            {sec && <><Link href="/#prods0" onClick={() => setCur(sec.id)}>{sec.name}</Link><span>›</span></>}
+            <span>{p.name.slice(0, 40)}</span>
+          </nav>
+          <div className="pvmeta">
+            <span className={'pvav ' + (ok ? 'ok' : 'no')}>● {ok ? 'متوفر' : 'غير متوفر حاليًا'}</span>
+            {p.code && <span>كود: {p.code}</span>}
+            {sec && <span>{sec.name}</span>}
+          </div>
+          <div className="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>
+          <div className="pvbox pvprice">
+            <div><small>السعر</small><b>اسأل عن السعر</b></div>
+            <a className="pvpbtn" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
+          </div>
+          <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>
+          {vid && (
+            <div className="pvbox pvvid">
+              <h2>🎬 فيديو</h2>
+              {vid.kind === 'youtube' ? <iframe src={`https://www.youtube-nocookie.com/embed/${vid.id}`} loading="lazy" title={p.name} allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                : vid.kind === 'file' ? <video src={vid.url} controls preload="metadata" playsInline />
+                  : <a className="pvask" target="_blank" rel="noopener" href={vid.url}>▶️ شوف الفيديو</a>}
+            </div>
+          )}
+          {p.desc && (
+            <div className="pvbox">
+              <h2>المواصفات</h2>
+              {specs.text && <div className="pvdesc" style={specs.rows.length ? { marginBottom: 8 } : undefined}>{specs.text}</div>}
+              {specs.rows.length > 0 && <table className="pvspec"><tbody>{specs.rows.map(([k, v], j) => <tr key={j}><td>{k}</td><td>{v}</td></tr>)}</tbody></table>}
+            </div>
+          )}
+          {!ok && <button className="nm" style={{ margin: '8px 0', width: '100%' }} onClick={() => open({ kind: 'notify', id: p.id })}>🔔 نبّهني لما يتوفر</button>}
+          <a className="pvask" target="_blank" rel="noopener" href={waUrl(site, orderText(p))}>📲 اطلب على الواتساب</a>
+          <div className="mkcall">
+            {phone && <a href={'tel:' + String(phone).replace(/\s/g, '')}>📞 اتصل بنا</a>}
+            <a href="#" onClick={e => { e.preventDefault(); print(); }}>🖨️ اطبع الورقة</a>
+          </div>
+          {sim.length > 0 && (
+            <div className="pvbox">
+              <h2>منتجات مشابهة</h2>
+              <div className="pvsim">{sim.map(x => (
+                <Link key={x.id} href={productPath(x.id)}>
+                  <span className="im">{images(x)[0] ? <Image src={images(x)[0]} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
+                  {x.name}
+                </Link>
+              ))}</div>
+            </div>
+          )}
+          <a className="mkstl" href={`/story?p=${encodeURIComponent(p.id)}`}>🎬 المنتج بالتفصيل</a>
+        </div>
+      </div>
+      <div className="pvbar">
+        <div className="pvq">
+          <button onClick={() => setQ(v => v + 1)} aria-label="زيادة">+</button>
+          <b aria-live="polite">{q}</b>
+          <button onClick={() => setQ(v => Math.max(1, v - 1))} aria-label="نقص">−</button>
+        </div>
+        <button className={'pvadd' + (ok ? '' : ' bo')} onClick={() => { add(p.id, q); setQ(1); evProduct('add_to_cart', 'AddToCart', p); }}>
+          {n ? `✔ في طلبك (${n}) — أضف كمان` : ok ? '➕ أضف للطلب' : '📦 اطلبه — هيوصلك لما يتوفر'}
+        </button>
+        {n > 0 && <button className="pvcart" onClick={() => open({ kind: 'cart' })}>🛒 طلبي</button>}
+      </div>
+    </>
+  );
+}

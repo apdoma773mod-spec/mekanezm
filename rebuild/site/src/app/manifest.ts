@@ -1,0 +1,20 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'ميكانيزم | Mechanism',
+    short_name: 'ميكانيزم',
+    description: 'إكسسوارات مطابخ ودريسنج روم — اطلب أونلاين',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    dir: 'rtl',
+    lang: 'ar',
+    background_color: '#10202c',
+    theme_color: '#10202c',
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    ],
+  };
+}
