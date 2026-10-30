@@ -33,15 +33,20 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
   return (
     <div className="card">
       <div className="imw lq" style={lqip(img)}>
-        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:720px) 46vw, 240px" priority={priority} /> : <Placeholder section={sec?.name} />}
-        <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
-        {fresh && <span className="newb">جديد</span>}
+        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:560px) 92vw, (max-width:900px) 46vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
         <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
-        {!ok && <button className="bell" onClick={() => open({ kind: 'notify', item })} aria-label="نبّهني لما يتوفر" title="نبّهني لما يتوفر">🔔</button>}
       </div>
       <div className="cb">
-        <div className="cmeta">{p.code && <span className="code">#{p.code}</span>}{sec && <span>{sec.name}</span>}</div>
+        <div className="cmeta">
+          {p.code && <span className="code">كود {p.code}</span>}
+          {sec && <span className="csec">{sec.name}</span>}
+          {fresh && <span className="newc">جديد</span>}
+        </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
+        <div className="cst">
+          <span className={'av' + (ok ? '' : ' no')}>{ok ? 'متوفر — جاهز للاستلام' : 'مش متوفر دلوقتي — اطلبه بالحجز'}</span>
+          {!ok && <button type="button" className="bellt" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني</button>}
+        </div>
         <div className="cf">
           {n > 0 ? (
             <div className="cstep" role="group" aria-label="الكمية في طلبك">
@@ -50,8 +55,8 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
               <button onClick={() => setQty(p.id, n - 1)} aria-label="نقص">−</button>
             </div>
           ) : <>
-            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>اسأل عن السعر</button>
-            <button className={'add' + (ok ? '' : ' bo')} onClick={addIt} aria-label={ok ? 'أضف للطلب' : 'اطلبه بالحجز'} title={ok ? 'أضف للطلب' : 'اطلبه بالحجز'}>+</button>
+            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>💬 اسأل عن السعر</button>
+            <button className={'add' + (ok ? '' : ' bo')} onClick={addIt}>{ok ? '🛒 أضف للطلب' : '📦 اطلبه بالحجز'}</button>
           </>}
         </div>
       </div>
