@@ -238,10 +238,30 @@ model Product {
   items     InvoiceItem[]
   returns   Return[]
   daybook   DaybookEntry[]
+  info      ProductInfo?
 
   @@index([name])
   @@index([category])
   @@index([company, deletedAt])
+}
+
+/// «شاشة المنتج»: الماركة والتشطيب والمقاس والمواصفات ومكانه في المحل والمجموعة والعبوات والصور (mk_product_info القديمة).
+model ProductInfo {
+  productId String   @id
+  brand     String   @default("")
+  finish    String   @default("")
+  size      String   @default("")
+  specs     String   @default("")
+  loc       String   @default("")
+  grp       String   @default("")
+  descr     String   @default("")
+  /// [{u:"علبة", n:12} | {u:"مسمار", n:0.004, x:250, small:true}]
+  packs     Json     @default("[]")
+  imgs      Json     @default("[]")
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([grp])
 }
 
 model StockMove {

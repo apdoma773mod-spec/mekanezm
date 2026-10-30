@@ -17,6 +17,7 @@ import { QuoteView } from './quote-view';
 import { ShipmentEdit, ShipPaid, ShipWho } from './shipment-modals';
 import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 import { ProductToolModal, type ProductToolSpec } from './product-tools';
+import { ProductCard, ProductCardModal, type ProductCardSpec } from './product-card';
 import { MarketModal } from './market-prices';
 import { ContactToolModal, type ContactToolSpec } from './contact-tools';
 import { CountSessions } from './count-sessions';
@@ -37,6 +38,7 @@ export type ModalSpec =
   | { kind: 'shipPaid'; s: ShipmentDto }
   | Phase4Spec
   | ProductToolSpec
+  | ProductCardSpec
   | { kind: 'market' }
   | { kind: 'countSessions' }
   | { kind: 'alerts' }
@@ -75,7 +77,15 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <QuickModal />;
         break;
       case 'product':
-        content = <ProductModal key={spec.id ?? 'new'} id={spec.id} />;
+        content = spec.id ? <ProductCard key={spec.id} id={spec.id} /> : <ProductModal key="new" />;
+        break;
+      case 'productEdit':
+        content = <ProductModal key={`e-${spec.id}`} id={spec.id} />;
+        break;
+      case 'productDetails':
+      case 'productSend':
+      case 'productVariant':
+        content = <ProductCardModal spec={spec} />;
         break;
       case 'transaction':
         content = <TransactionModal key={`${spec.type}-${spec.editId ?? spec.fromQuote ?? 'new'}`} {...spec} />;

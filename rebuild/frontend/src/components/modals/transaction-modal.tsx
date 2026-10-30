@@ -3,11 +3,13 @@
 import { CustomerBar } from '@/components/modals/customer-bar';
 import { termsFor, useTerms } from '@/lib/terms';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
+import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
-import { useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
+import { useCreateShipment, useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
+import { CameraScanner } from '../scan/camera-scanner';
+import { useAllProductInfo } from '@/lib/trade-queries';
 import { useCompany } from '../company';
 import {
   checkDuplicatePurchase,
@@ -32,8 +34,12 @@ interface Line {
   available: number | null;
   qty: string;
   price: string;
+  /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
+  un?: number;
+  unLabel?: string;
 }
 
+const r4 = (n: number) => Math.round(n * 10000) / 10000;
 const toNum = (s: string) => {
   const n = Number(normalizeDigits(s).replace(/[٫,،]/g, '.'));
   return Number.isFinite(n) ? n : 0;
@@ -129,6 +135,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
   const [sno, setSno] = useState('');
+  const [del, setDel] = useState<'' | 'DELIVERY' | 'SHIP'>('');
+  const [gov, setGov] = useState('');
+  const [area, setArea] = useState('');
+  const [autoPaid, setAutoPaid] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const shipment = useCreateShipment();
+  const infos = useAllProductInfo().data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -204,6 +217,20 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     }
   };
 
+  const delChanged = (v: '' | 'DELIVERY' | 'SHIP') => {
+    setDel(v);
+    if (v === 'DELIVERY' && !['القاهرة', 'الجيزة'].includes(gov)) setGov('الجيزة');
+    if (v && !paidTouched) {
+      setPaid('0');
+      setPaidTouched(true);
+      setAutoPaid(true);
+    } else if (!v && autoPaid) {
+      setPaidTouched(false);
+      setPaid('');
+      setAutoPaid(false);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -218,7 +245,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             address,
             note,
             shipping: toNum(shipping),
-            items: lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: toNum(l.qty), price: toNum(l.price) })),
+            items: lines.map((l) => ({ productId: l.productId, name: l.name, unit: l.unit, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
           },
         });
         toast('تم حفظ عرض السعر');
@@ -229,6 +256,12 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         toast(fe._ ?? errorMessage(err), 'bad');
       }
       return;
+    }
+    if (isSale && del) {
+      if (!person.trim()) return toast('اكتب اسم العميل — الشحنة محتاجاه', 'bad');
+      if (phone.replace(/\D/g, '').length < 8) return toast('اكتب تليفون العميل — شركة الشحن/المندوب هيكلمه', 'bad');
+      if (del === 'SHIP' && !gov) return toast('اختار المحافظة', 'bad');
+      if (del === 'SHIP' && !address.trim()) return toast('اكتب عنوان العميل', 'bad');
     }
     if (paidValue > total + 0.001) return toast('المدفوع أكبر من إجمالي الفاتورة', 'bad');
     if (total - paidValue > 0.001 && !person.trim()) {
@@ -243,7 +276,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
 تكمّل الفاتورة برضو؟`)) return;
     }
     if (isSale) {
-      const short = lines.filter((l) => l.available !== null && toNum(l.qty) > l.available).map((l) => l.name);
+      const short = lines.filter((l) => l.available !== null && toNum(l.qty) * (l.un || 1) > l.available).map((l) => l.name);
       if (short.length) toast(`⚠️ الرصيد هيبقى بالسالب: ${short.slice(0, 3).join(' • ')}`);
     }
     if (!isSale && !invoice && person.trim() && total > 0) {
@@ -258,12 +291,37 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
-      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: toNum(l.qty), price: toNum(l.price) })),
+      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
     };
     try {
       const saved = invoice
         ? await update.mutateAsync({ id: invoice.id, input: { ...body, company: invoice.company, payMethod: invoice.payMethod, discount: invoice.discount } })
         : await create.mutateAsync({ ...body, kind: type, company: co, discount: 0, payMethod: 'CASH' });
+      if (isSale && del && !invoice) {
+        try {
+          await shipment.mutateAsync({
+            kind: del,
+            invoiceNo: saved.no,
+            name: person.trim(),
+            phone,
+            phone2: '',
+            gov,
+            area: area.trim(),
+            address: address.trim(),
+            carrier: '',
+            tracking: '',
+            driver: '',
+            driverPhone: '',
+            cod: saved.remaining,
+            fee: 0,
+            pieces: 1,
+            content: saved.items.map((x) => x.name).join('، ').slice(0, 480),
+            note: '',
+          });
+        } catch (e) {
+          toast(`الفاتورة اتسجلت، بس الشحنة لأ: ${errorMessage(e)}`, 'bad');
+        }
+      }
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
       if (!invoice && preset?.onSaved) {
         try {
@@ -301,6 +359,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         <div className="form">
           <div className="field full">
             <label htmlFor="txSearch">ابحث عن الصنف واختاره</label>
+            <div className="txsrow">
             <input
               id="txSearch"
               ref={searchRef}
@@ -312,6 +371,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onSearchKey}
             />
+            <button type="button" className="secondary" id="txScan" title="امسح باركود (كل مسحة = قطعة)" aria-label="امسح باركود" onClick={() => setScanning(true)}>
+              📷
+            </button>
+            </div>
             {showBox && (
               <div className="txbox">
                 {results.isPending ? (
@@ -352,6 +415,30 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       ✕
                     </button>
                   </div>
+                  {l.productId && (infos[l.productId]?.packs.length ?? 0) > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      <small>الوحدة</small>{' '}
+                      <select
+                        value={l.un ?? 1}
+                        onChange={(e) => {
+                          const m = Number(e.target.value) || 1;
+                          const n = l.un || 1;
+                          const q = toNum(l.qty);
+                          const pr = toNum(l.price);
+                          const pk = infos[l.productId!]!.packs.find((k) => k.n === m);
+                          setLine(l.key, { un: m, unLabel: m === 1 ? '' : (pk?.u ?? ''), qty: String(+((q * n) / m).toFixed(3)), ...(l.price !== '' ? { price: String(+((pr / n) * m).toFixed(2)) } : {}) });
+                        }}
+                      >
+                        <option value={1}>{l.unit || 'قطعة'}</option>
+                        {infos[l.productId]!.packs.map((k) => (
+                          <option key={k.u} value={k.n}>
+                            {k.small ? `${k.u} سايب (${k.x} في ال${l.unit || ''})` : `${k.u} (${k.n} ${l.unit || 'قطعة'})`}
+                          </option>
+                        ))}
+                      </select>
+                      {l.unLabel && <small style={{ display: 'block', color: '#087f8c', fontWeight: 700 }}>({toNum(l.qty)} {l.unLabel})</small>}
+                    </div>
+                  )}
                   {l.available !== null && (
                     <small style={{ color: '#7a8a8f' }}>
                       المتاح: {qtyText(l.available)} {l.unit}
@@ -440,6 +527,46 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           {isSale && (
             <Input label="عنوان العميل (اختياري)" value={address} onChange={(e) => setAddress(e.target.value)} full />
           )}
+          {isSale && !asQuote && !invoice && (
+            <>
+              <div className="field full" id="txDelF">
+                <label>🚚 الاستلام</label>
+                <div className="delopt">
+                  {(
+                    [
+                      ['', '🏪 من المحل'],
+                      ['DELIVERY', '🛵 توصيل (القاهرة والجيزة)'],
+                      ['SHIP', '📦 شحن لمحافظة'],
+                    ] as const
+                  ).map(([v, t]) => (
+                    <label key={v}>
+                      <input type="radio" name="txDel" checked={del === v} onChange={() => delChanged(v)} /> {t}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {del && (
+                <>
+                  <div className="field" id="txGovF">
+                    <label>المحافظة</label>
+                    <select value={gov} onChange={(e) => setGov(e.target.value)}>
+                      <option value="">— اختار —</option>
+                      {(del === 'DELIVERY' ? GOVS.filter((g) => g === 'القاهرة' || g === 'الجيزة') : GOVS).map((g) => (
+                        <option key={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field" id="txAreaF">
+                    <label>المنطقة / المدينة</label>
+                    <input value={area} onChange={(e) => setArea(e.target.value)} />
+                  </div>
+                  <div className="field full" id="txDelHint" style={{ color: 'var(--muted)', fontSize: 13 }}>
+                    📌 الشحنة هتتسجل في «الشحن والتوصيل» وتطبع الملصق على طول. «المدفوع الآن» اتحط صفر عشان الدفع عند الاستلام — غيّره لو العميل دفع.
+                  </div>
+                </>
+              )}
+            </>
+          )}
           {!asQuote && (
             <>
               <NumberInput
@@ -475,6 +602,22 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           </button>
         </div>
       </form>
+      {scanning && (
+        <CameraScanner
+          multi
+          title="امسح الأصناف"
+          onClose={() => setScanning(false)}
+          onCode={async (code) => {
+            try {
+              const p = await lookupProduct(code);
+              addProduct(p);
+              return p.name;
+            } catch {
+              return false;
+            }
+          }}
+        />
+      )}
     </Modal>
   );
 }

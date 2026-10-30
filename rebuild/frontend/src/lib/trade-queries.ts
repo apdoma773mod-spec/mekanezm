@@ -509,3 +509,81 @@ export const useSaveInvNote = () => {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['inv-notes'] }),
   });
 };
+
+// ---------- product card (details, packs, photos, sizes/colors) ----------
+
+export interface ProductPack {
+  u: string;
+  n: number;
+  x?: number;
+  small?: boolean;
+}
+export interface ProductInfo {
+  brand: string;
+  finish: string;
+  size: string;
+  specs: string;
+  loc: string;
+  grp: string;
+  descr: string;
+  packs: ProductPack[];
+  imgs: string[];
+}
+export const useAllProductInfo = (enabled = true) =>
+  useQuery({
+    queryKey: ['product-info', 'all'],
+    queryFn: ({ signal }) => api.get<{ infos: Record<string, ProductInfo> }>('/products/info/all', undefined, signal).then((r) => r.infos),
+    enabled,
+    staleTime: 60_000,
+  });
+export const useProductInfo = (id: string | null) =>
+  useQuery({
+    queryKey: ['product-info', id],
+    queryFn: ({ signal }) => api.get<{ info: ProductInfo }>(`/products/${id}/info`, undefined, signal).then((r) => r.info),
+    enabled: !!id,
+  });
+export const useSaveProductInfo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, info }: { id: string; info: ProductInfo }) => api.put<{ info: ProductInfo }>(`/products/${id}/info`, info),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['product-info'] });
+      void qc.invalidateQueries({ queryKey: ['product-siblings'] });
+    },
+  });
+};
+export const useInfoGroups = (enabled = true) =>
+  useQuery({
+    queryKey: ['product-info', 'groups'],
+    queryFn: ({ signal }) => api.get<{ groups: string[] }>('/products/info/groups', undefined, signal).then((r) => r.groups),
+    enabled,
+  });
+export interface Sibling {
+  id: string;
+  name: string;
+  qty: number;
+  size: string;
+  finish: string;
+  price?: number;
+}
+export const useSiblings = (id: string | null) =>
+  useQuery({
+    queryKey: ['product-siblings', id],
+    queryFn: ({ signal }) => api.get<{ group: string; items: Sibling[] }>(`/products/${id}/siblings`, undefined, signal),
+    enabled: !!id,
+  });
+export interface ProductCardStats {
+  sold90: number;
+  top: { name: string; qty: number }[];
+  lastBuy: { price: number; person: string; date: string } | null;
+}
+export const useProductCard = (id: string | null, enabled: boolean) =>
+  useQuery({
+    queryKey: ['product-card', id],
+    queryFn: ({ signal }) => api.get<ProductCardStats>(`/products/${id}/card`, undefined, signal),
+    enabled: !!id && enabled,
+  });
+export const useMakeVariant = () =>
+  useTradeMutation(({ id, ...b }: { id: string; name: string; size: string; finish: string; price: number; cost: number }) =>
+    api.post<{ id: string; code: string }>(`/products/${id}/variant`, b),
+  );

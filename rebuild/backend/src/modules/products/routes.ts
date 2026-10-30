@@ -12,6 +12,7 @@ import {
 import { actorOf } from '../../lib/actor.js';
 import { parse } from '../../lib/validate.js';
 import { ProductsService } from './service.js';
+import { productInfoRoutes } from './info.js';
 
 export default async function productsRoutes(app: FastifyInstance) {
   const service = new ProductsService(app.prisma);
@@ -27,6 +28,8 @@ export default async function productsRoutes(app: FastifyInstance) {
     const { code } = parse(lookupProductQuery, request.query);
     return { product: await service.lookup(code, actorOf(request)) };
   });
+
+  productInfoRoutes(app);
 
   app.get('/:id', { preHandler: app.authenticate }, async (request) => {
     const { id } = parse(idParam, request.params);

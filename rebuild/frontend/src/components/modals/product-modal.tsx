@@ -108,7 +108,7 @@ export function ProductModal({ id }: { id?: string }) {
 }
 
 /** «🎁 هدية» «⚠️ مخربش؟ درجة تانية» «🔁 بدائل» and the alternatives line under them. */
-function ExtraButtons({ product: p }: { product: ProductDto }) {
+export function ExtraButtons({ product: p }: { product: ProductDto }) {
   const { open } = useModal();
   const alts = useAlts();
   const ids = alts.data?.[p.id] ?? [];
