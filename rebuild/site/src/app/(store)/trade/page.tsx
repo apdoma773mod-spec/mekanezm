@@ -27,6 +27,14 @@ export default async function Trade() {
               <li>توصيل للورشة في القاهرة والجيزة، وشحن لكل المحافظات.</li>
             </ul>
           </div>
+          <div>
+            <h2>بيمشي إزاي؟</h2>
+            <ol className="tsteps">
+              <li><b>سجّل وابعت إثبات</b><span>صور الورشة أو المحل، أو ورق رسمي، أو فواتيرك معانا</span></li>
+              <li><b>بنراجع</b><span>بنشوف الإثبات ونكلمك على الواتساب</span></li>
+              <li><b>حسابك يتفعّل</b><span>وتاخد أسعار الجملة على رقمك</span></li>
+            </ol>
+          </div>
         </div>
         <TradeForm />
         <p className="mut" style={{ marginTop: 12 }}>عندك الأكواد؟ <Link href="/quick">اطلب بالكود على طول</Link>.</p>

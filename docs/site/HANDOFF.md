@@ -69,6 +69,10 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 - All old links redirect correctly (shop.html, ?p=, p/X.html, custom/story/portal.html, shop3.html, /products).
 - The test order `8bafdf3c` («تجربة الموقع الجديد — تجاهله») is still in `web_orders`; the owner deletes it from the system.
 
+## v7
+- New product card: square photo in a rounded frame with an availability dot badge, a heart, and 🔔 (notify me) on the photo; the code chip (#1248) + section; a fixed two-line name; one action row: «اسأل عن السعر» pill + round ➕ (amber when the product is on back-order). After adding, the row turns into the − n + stepper. The description is no longer on the card (it is on the product page). All cards have the same height.
+- Wholesale sign-up needs proof: photos of the workshop/shop/current work (up to 3, uploaded like «مش لاقي» photos), or papers (commercial register / tax card / workshop card), or past invoices ( in , checked by phone number). Customers must accept the terms (manual review, review every  months, prices tied to the registered phone). It arrives as «🧰 طلب حساب جملة — محتاج مراجعة» with the photos. Nothing is granted automatically. The numbers are in  → .
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.

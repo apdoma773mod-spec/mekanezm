@@ -24,3 +24,6 @@ export const PAY = { instapay: process.env.NEXT_PUBLIC_INSTAPAY ?? '01010741015'
 
 // Shop opening hours (Cairo time) for the «مفتوح دلوقتي» badge: 10 AM → midnight, Friday off.
 export const OPENING = { open: 10, close: 24, closedDays: [5] as number[] };
+
+// Wholesale (جملة) sign-up: how a carpenter/trader proves it. Change the numbers here.
+export const TRADE = { minInvoices: 5, months: 3, reviewDays: 1 };

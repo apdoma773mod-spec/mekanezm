@@ -37,22 +37,24 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
         <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
         {fresh && <span className="newb">جديد</span>}
         <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
+        {!ok && <button className="bell" onClick={() => open({ kind: 'notify', item })} aria-label="نبّهني لما يتوفر" title="نبّهني لما يتوفر">🔔</button>}
       </div>
-      <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
-      {p.desc && <p>{p.desc}</p>}
-      <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: n || 1 }] })}>💰 اسأل عن السعر</button>
-      {n > 0 ? (
-        <div className="cstep" role="group" aria-label="الكمية في طلبك">
-          <button onClick={() => setQty(p.id, n + 1)} aria-label="زيادة">+</button>
-          <b>{n} في طلبك</b>
-          <button onClick={() => setQty(p.id, n - 1)} aria-label="نقص">−</button>
+      <div className="cb">
+        <div className="cmeta">{p.code && <span className="code">#{p.code}</span>}{sec && <span>{sec.name}</span>}</div>
+        <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
+        <div className="cf">
+          {n > 0 ? (
+            <div className="cstep" role="group" aria-label="الكمية في طلبك">
+              <button onClick={() => setQty(p.id, n + 1)} aria-label="زيادة">+</button>
+              <b>{n} في طلبك</b>
+              <button onClick={() => setQty(p.id, n - 1)} aria-label="نقص">−</button>
+            </div>
+          ) : <>
+            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>اسأل عن السعر</button>
+            <button className={'add' + (ok ? '' : ' bo')} onClick={addIt} aria-label={ok ? 'أضف للطلب' : 'اطلبه بالحجز'} title={ok ? 'أضف للطلب' : 'اطلبه بالحجز'}>+</button>
+          </>}
         </div>
-      ) : ok ? (
-        <button className="add" onClick={addIt}>➕ أضف للطلب</button>
-      ) : (
-        <button className="add bo" onClick={addIt}>📦 اطلبه بالحجز</button>
-      )}
-      {!ok && <button className="nm" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
+      </div>
     </div>
   );
 }
