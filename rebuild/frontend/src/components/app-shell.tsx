@@ -72,6 +72,7 @@ const COMPANIES: NavItem[] = [
   { href: '/work?k=disp', label: 'بضاعة العرض', icon: '🏬', adminOnly: true },
   { href: '/work?k=off', label: 'الفضل', icon: '🧰', adminOnly: true },
   { href: '/keywords', label: 'كلمات الواتساب المفتاحية', icon: '🔑', adminOnly: true, pro: 'mkSideKw' },
+  { href: '/biz', label: 'تحليلات ذكية', icon: '📈', adminOnly: true },
 ];
 const SYSTEM: NavItem[] = [{ href: '/account', label: 'حسابي', icon: '👤', staffOnly: true, mobile: true }];
 /** «الإعدادات والخروج»: «ميكانيزم برو» moved theme, settings and logout to the end of the sidebar. */
