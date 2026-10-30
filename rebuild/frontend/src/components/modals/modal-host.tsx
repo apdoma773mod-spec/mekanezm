@@ -27,6 +27,7 @@ import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
 import { SiteAdmin, SiteProduct } from './site-admin';
 import { PortalLink, PortalNew } from './portal-modals';
+import { PhoneImport } from './phone-import';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
@@ -53,6 +54,7 @@ export type ModalSpec =
   | { kind: 'siteProduct'; id: string }
   | { kind: 'portal'; id: string }
   | { kind: 'portalNew' }
+  | { kind: 'phoneImport' }
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
   | { kind: 'contact'; id?: string; type?: ContactType }
@@ -155,6 +157,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'portalNew':
         content = <PortalNew />;
+        break;
+      case 'phoneImport':
+        content = <PhoneImport onClose={close} />;
         break;
       case 'siteProduct':
         content = <SiteProduct key={spec.id} id={spec.id} onClose={close} />;

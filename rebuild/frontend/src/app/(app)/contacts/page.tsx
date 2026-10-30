@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { phoneImportCount } from '@/components/modals/phone-import';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { useModal } from '@/components/modals/modal-host';
 import { TableState } from '@/components/ui/states';
@@ -20,6 +21,9 @@ function ContactsScreen() {
   const [q, setQ] = useState<Record<string, string>>({});
   const [bf, setBf] = useState<Bal>('all');
   const list = useAllContacts(mode);
+  // names still waiting in the phone-import list (kept on this device)
+  const [waiting, setWaiting] = useState(0);
+  useEffect(() => setWaiting(phoneImportCount()), [open]);
   const L = list.data ?? [];
 
   const pos = L.reduce((a, c) => a + Math.max(0, c.balance), 0);
@@ -57,9 +61,14 @@ function ContactsScreen() {
         title={isC ? '👥 العملاء' : '🏭 الموردين'}
         subtitle={isC ? 'رصيد كل عميل (الآجل)، كشف حساب، تحصيل دفعة، وفواتير البيع' : 'رصيد كل مورد (اللي علينا)، كشف حساب، سداد دفعة، وفواتير الشراء'}
         action={
-          <button type="button" className="primary" onClick={() => open({ kind: 'contact', type: mode })}>
-            {isC ? '➕ إضافة عميل' : '➕ إضافة مورد'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="secondary" style={{ whiteSpace: 'nowrap' }} onClick={() => open({ kind: 'phoneImport' })}>
+              📇 من التليفون {waiting > 0 && <span className="badge red">{waiting}</span>}
+            </button>
+            <button type="button" className="primary" onClick={() => open({ kind: 'contact', type: mode })}>
+              {isC ? '➕ إضافة عميل' : '➕ إضافة مورد'}
+            </button>
+          </div>
         }
       />
       <div id="ctTabs" className="toolbar">
