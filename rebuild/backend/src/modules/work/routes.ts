@@ -13,7 +13,7 @@ import { parse } from '../../lib/validate.js';
  * «🛠️ أنظمة الشغل» keeps its documents as JSON, as the old system did in mk_settings (wk_*):
  * orders with their stages, config, display goods, show-room expenses, offcuts and forged-rod work.
  */
-const KEYS = ['count_sessions', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
+const KEYS = ['count_sessions', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
 const keyParam = z.object({ key: z.enum(KEYS) });
 
 const UPLOADS = path.resolve(process.cwd(), 'uploads');
