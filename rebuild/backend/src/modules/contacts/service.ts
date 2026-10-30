@@ -10,6 +10,7 @@ import type {
   ZeroAccountInput,
 } from '@mk/shared';
 import type { Actor } from '../../lib/actor.js';
+import { arContains } from '../../lib/ar-search.js';
 import { writeAudit } from '../../lib/audit.js';
 import { dateToDay, dayToDate, todayYmd } from '../../lib/dates.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -94,7 +95,7 @@ export class ContactsService {
       ...(query.type ? { type: query.type } : {}),
       ...(query.withBalance ? { balance: { not: 0 } } : {}),
       ...(q
-        ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { phone: { contains: q } }] }
+        ? { OR: [...arContains('name', q), { phone: { contains: q } }] }
         : {}),
     };
     const orderBy: Prisma.ContactOrderByWithRelationInput =

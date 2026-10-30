@@ -56,6 +56,16 @@ describe('bulk price', () => {
   });
 });
 
+describe('search spelling', () => {
+  it('finds a product whatever the ة/ه, ى/ي and أ/ا spelling', async () => {
+    await product('مفصلة أوروبي', 10, 5, 1);
+    const find = async (q: string) => (await call(admin, 'GET', `/products?q=${encodeURIComponent(q)}`)).json().items.length;
+    expect(await find('مفصله')).toBe(1);
+    expect(await find('اوروبي')).toBe(1);
+    expect(await find('اوروبى')).toBe(1);
+  });
+});
+
 describe('re-categorise', () => {
   it('moves the sent products to their new category, owner only', async () => {
     const a = await product('مفصلة عدل', 10, 5, 1);

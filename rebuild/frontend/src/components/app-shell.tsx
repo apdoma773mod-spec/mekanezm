@@ -10,6 +10,7 @@ import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
 import { useInboxCounts } from '@/lib/inbox-queries';
 import { useWebCounts } from '@/lib/web-queries';
+import { PowerExtras } from './power-extras';
 import { BgFx, NotifyBar, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
@@ -216,6 +217,7 @@ function Shell({ children }: { children: ReactNode }) {
       </Suspense>
       {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} web={webCounts.data} />}
       <PunchCatcher />
+      <PowerExtras />
       <header className="top">
         <div className="brand">
           {!pro && navBtn}

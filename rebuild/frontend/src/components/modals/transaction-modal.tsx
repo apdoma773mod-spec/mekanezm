@@ -5,8 +5,8 @@ import { termsFor, useTerms } from '@/lib/terms';
 import { useCreditLimits } from '@/lib/kv';
 import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
-import { errorMessage } from '@/lib/api';
+import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type InvoiceListResult, type ProductDto, type QuoteDto } from '@mk/shared';
+import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
 import { useCreateShipment, useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
@@ -290,6 +290,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     if (!isSale && !invoice && person.trim() && total > 0) {
       const dup = await checkDuplicatePurchase({ person: person.trim(), total, sno: sno.trim() || undefined }).catch(() => null);
       if (dup && !window.confirm(`⚠️ فيه فاتورة شراء بنفس المورد ${sno.trim() ? 'ونفس رقم الفاتورة ' : 'ونفس الإجمالي النهارده '}(${dup.no} — ${money(total)}). تحفظ تاني برضه؟`)) return;
+    }
+    if (isSale && !invoice && !asQuote && total > 0) {
+      // 🧾 same customer + same total in the last 3 minutes = probably saved twice (double tap)
+      const recent = await api
+        .get<InvoiceListResult>('/invoices', { kind: 'SALE', ...(person.trim() ? { person: person.trim() } : {}), pageSize: 5 })
+        .catch(() => null);
+      const twin = recent?.items.find((r) => r.status !== 'VOID' && Math.abs(r.total - total) < 0.01 && Date.now() - new Date(r.createdAt).getTime() < 3 * 60_000);
+      if (twin && !window.confirm(`⚠️ لسه متسجلة فاتورة ${twin.no} بنفس ${person.trim() ? 'العميل و' : ''}الإجمالي (${money(total)}) من دقايق. تسجّلها تاني برضه؟`)) return;
     }
     const noteOut = !isSale && !invoice && sno.trim() && !/فاتورة المورد:/.test(note) ? `فاتورة المورد: ${sno.trim()}${note ? ` — ${note}` : ''}` : note;
     const body = {

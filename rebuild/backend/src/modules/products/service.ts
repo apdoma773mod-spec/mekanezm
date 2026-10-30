@@ -10,6 +10,7 @@ import type {
   UpdateProductInput,
 } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
+import { arContains } from '../../lib/ar-search.js';
 import { writeAudit } from '../../lib/audit.js';
 import { COUNTER, nextNumber } from '../../lib/counters.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -89,7 +90,7 @@ export class ProductsService {
         ? {
             AND: words.map((w) => ({
               OR: [
-                { name: { contains: w, mode: 'insensitive' as const } },
+                ...arContains('name', w),
                 { code: { startsWith: w.toUpperCase() } },
                 { barcode: w },
                 { category: { contains: w, mode: 'insensitive' as const } },
@@ -269,7 +270,7 @@ export class ProductsService {
         ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
         AND: words.map((w) => ({
           OR: [
-            { name: { contains: w, mode: 'insensitive' as const } },
+            ...arContains('name', w),
             { code: { contains: w, mode: 'insensitive' as const } },
             { barcode: { contains: w, mode: 'insensitive' as const } },
             { category: { contains: w, mode: 'insensitive' as const } },

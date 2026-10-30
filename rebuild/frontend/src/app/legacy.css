@@ -919,6 +919,12 @@ body.mk-fast #mkLogo svg *{animation:none!important}
  body.mk-tcards main table.mkTc tr{background:var(--tint2,#f1f8f9);border:1.5px solid var(--tintb,#b9dadd);border-inline-start:5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.07);color:var(--text,#18343a)}
 }
 main .card .card,.modal .card{background:var(--tint2,#f1f8f9);border:1.5px solid var(--tintb,#b9dadd);border-inline-start:5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.06);color:var(--text,#18343a)}
+/* 👆 على الموبايل: الزراير والخانات أكبر عشان الصباع مايدوسش غلط، والكتابة مايصغرش عشان الآيفون مايعملش زووم */
+@media(max-width:700px){
+ main button,main .primary,main .secondary,.modal button,.modal .primary,.modal .secondary{min-height:44px}
+ main input,main select,main textarea,.modal input,.modal select,.modal textarea{min-height:44px;font-size:16px}
+ main input[type=checkbox],main input[type=radio],.modal input[type=checkbox],.modal input[type=radio]{min-height:0}
+}
 main .card .card .card,.modal .card .card{background:var(--card,#fff);border-inline-start-width:1.5px}
 
 
