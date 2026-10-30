@@ -27,6 +27,7 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
 
 interface Line {
   key: string;
@@ -373,6 +374,24 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     <Modal title={title} onClose={close}>
       <form onSubmit={submit} noValidate>
         <div className="form">
+          {!isSale && !invoice && !asQuote && (
+            <InvoicePhotoButtons
+              onRead={async (r) => {
+                const all = await api.get<{ items: ProductDto[] }>('/products/all').then((x) => x.items).catch(() => [] as ProductDto[]);
+                const read: Line[] = r.items
+                  .filter((it) => String(it.text ?? '').trim())
+                  .map((it) => {
+                    const p = matchProduct(String(it.text), it.code, all);
+                    const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
+                    const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
+                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)) };
+                  });
+                setLines((ls) => [...ls.filter((l) => l.name.trim()), ...read]);
+                if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
+                if (r.invoice_no && !sno.trim()) setSno(String(r.invoice_no));
+              }}
+            />
+          )}
           <div className="field full">
             <label htmlFor="txSearch">ابحث عن الصنف واختاره</label>
             <div className="txsrow">

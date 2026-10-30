@@ -40,6 +40,7 @@ import marketRoutes from './modules/market/routes.js';
 import analyticsRoutes from './modules/analytics/routes.js';
 import alertsRoutes from './modules/alerts/routes.js';
 import webRoutes from './modules/web/routes.js';
+import aiRoutes from './modules/ai/routes.js';
 import portalRoutes from './modules/portal/routes.js';
 import { daybookImportRoutes } from './modules/daybook/import.js';
 
@@ -112,6 +113,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(analyticsRoutes, { prefix: '/analytics' });
       await api.register(alertsRoutes, { prefix: '/alerts' });
       await api.register(webRoutes, { prefix: '/web' });
+      await api.register(aiRoutes, { prefix: '/ai' });
       await api.register(portalRoutes, { prefix: '/portal' });
     },
     { prefix: '/api/v1' },
