@@ -186,6 +186,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Link
         key={i.href}
         href={i.href}
+        prefetch={i.href === '/site-content' ? false : undefined}
         data-page={k}
         className={isActive(pathname, i.href) ? 'active' : ''}
         onClick={(e) => {
