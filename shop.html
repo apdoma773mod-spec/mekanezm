@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ميكانيزم | Mechanism</title>
 <meta name="description" content="ميكانيزم | Mechanism: إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. مفصلات ومجر ومقابض وجرار. اطلب من الموقع أو على الواتساب.">
-<meta name="theme-color" content="#0f1a14"><link rel="manifest" href="shop.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ميكانيزم"><link rel="preconnect" href="https://tkzfjeizvanfptnqvrmr.supabase.co" crossorigin><link rel="canonical" href="https://apdoma773mod-spec.github.io/mekanezm/shop.html">
+<meta name="theme-color" content="#0f1a14"><link rel="manifest" href="shop.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="ميكانيزم"><link rel="preconnect" href="https://tkzfjeizvanfptnqvrmr.supabase.co" crossorigin><link rel="canonical" href="https://apdoma773mod-spec.github.io/mekanezm/shop.html">
 <meta property="og:type" content="website"><meta property="og:locale" content="ar_EG"><meta property="og:site_name" content="ميكانيزم | Mechanism">
 <meta property="og:title" content="ميكانيزم | Mechanism"><meta property="og:description" content="إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. اطلب الآن من الموقع أو على الواتساب.">
 <meta property="og:image" content="https://apdoma773mod-spec.github.io/mekanezm/og.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
@@ -130,7 +130,7 @@ nav#nav{background:#fff!important;color:var(--fg)!important}.top .nm{color:#1420
 .ask{display:block;margin:2px 14px 10px;font-size:13px;color:var(--accent);font-weight:700;text-decoration:none}.fc span{display:block;opacity:.9}
 </style>
 </head>
-<body>
+<body><noscript><div class="mkns">لازم تشغّل الجافاسكريبت في المتصفح عشان تشوف المنتجات — أو كلّمنا واتساب على <a href="https://wa.me/201119199659">01119199659</a></div></noscript>
 <nav id="nav"></nav>
 <header id="hd"></header>
 <main id="main"><p style="padding:60px 20px;text-align:center;color:#777;font-family:system-ui,sans-serif">جاري التحميل…</p></main>
@@ -149,13 +149,15 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9);
 function applyTheme(){const r=document.documentElement.style;for(const k in D){S.theme[k]?r.setProperty('--'+k,S.theme[k]):r.removeProperty('--'+k)}}
-function gal(p){const im=p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]);if(!im.length)return'<div class="ph">🔧</div>';return `<img class="mainimg" src="${im[0]}" alt="${esc(p.name)}">`+(im.length>1?`<div class="th">${im.map((x,i)=>`<img src="${x}" data-a="th" data-id="${p.id}" data-i="${i}" alt="">`).join('')}</div>`:'')}
+const imgW=(u,w)=>/^https:\/\/tkzfjeizvanfptnqvrmr\.supabase\.co\/storage\/v1\/object\/public\/[^?]+\.(jpe?g|png|webp)$/i.test(u||'')?u.replace('/storage/v1/object/public/','/storage/v1/render/image/public/')+'?width='+w+'&quality=75&resize=contain':u;
+function gal(p){const im=p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]);if(!im.length)return'<div class="ph">🔧</div>';const sm=imgW(im[0],480);return `<img class="mainimg" src="${sm}"${sm!==im[0]?` onerror="this.onerror=null;this.src='${im[0]}'"`:''} alt="${esc(p.name)}">`}
 function card(p){
  const ok=stockOk(p),fv=fav.has(p.id);
  const bt=ok?'<button class="btn g" data-a="ad" data-id="'+p.id+'">➕ أضف للطلب</button>':'<button class="btn g" data-a="ad" data-id="'+p.id+'" style="border-style:dashed">📦 اطلبه بالحجز</button>';
- return `<div class="card"><div class="imw">${gal(p)}<button class="hrt${fv?' on':''}" data-a="fv" data-id="${p.id}" aria-label="المفضلة">♥</button></div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="av ${ok?'ok':'no'}">● ${ok?'متوفر':'غير متوفر'}</div><a class="ask" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، لو سمحت ده بكام؟\n'+p.name+(p.code?' (كود '+p.code+')':'')+'\n'+location.href.split('#')[0]+'#p='+p.id)}">💬 اسأل عن السعر</a>${bt}${admin?`<div class="row"><button data-a="star" data-id="${p.id}">${p.top?'★':'☆'} مميز</button><button data-a="ep" data-id="${p.id}">تعديل</button><button data-a="dp" data-id="${p.id}">حذف</button></div>`:''}</div>`}
+ return `<div class="card"><div class="imw">${gal(p)}<button class="hrt${fv?' on':''}" data-a="fv" data-id="${p.id}" aria-label="المفضلة">♥</button></div><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p><div class="av ${ok?'ok':'no'}">● ${ok?'متوفر':'غير متوفر'}</div><a class="ask" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، لو سمحت ده بكام؟\n'+p.name+(p.code?' (كود '+p.code+')':'')+'\n'+pLink(p.id))}">💬 اسأل عن السعر</a>${bt}${admin?`<div class="row"><button data-a="star" data-id="${p.id}">${p.top?'★':'☆'} مميز</button><button data-a="ep" data-id="${p.id}">تعديل</button><button data-a="dp" data-id="${p.id}">حذف</button></div>`:''}</div>`}
 let fav=new Set(),favOn=false;
 try{fav=new Set(JSON.parse(localStorage.getItem('mkfav')||'[]'))}catch(e){}
+const pLink=id=>new URL('p/'+encodeURIComponent(id)+'.html',location.href).href;
 function waUrl(t){let ph=(S.phone||'').replace(/\D/g,'');if(ph[0]==='0')ph='20'+ph.slice(1);return ph?'https://wa.me/'+ph+(t?'?text='+encodeURIComponent(t):''):'#'}
 let cart={};
 const cartN=()=>Object.values(cart).reduce((a,b)=>a+b,0);
@@ -470,7 +472,7 @@ body.pvon{overflow:hidden}
 <script>
 /* ===== صفحة المنتج: صور تتقلب يمين وشمال + المواصفات + أزرار الطلب ===== */
 let PV={id:null,q:1,i:0};
-const pvPriceUrl=p=>waUrl('السلام عليكم، لو سمحت ده بكام؟\n'+p.name+(p.code?' (كود '+p.code+')':'')+'\n'+location.href.split('#')[0]+'#p='+p.id);
+const pvPriceUrl=p=>waUrl('السلام عليكم، لو سمحت ده بكام؟\n'+p.name+(p.code?' (كود '+p.code+')':'')+'\n'+pLink(p.id));
 const pvImgs=p=>p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[]);
 function pvSpecs(d){d=String(d||'').trim();if(!d)return '';
  const L=d.split(/\r?\n|[•●]/).map(x=>x.trim()).filter(Boolean),kv=L.filter(x=>/^[^:：]{1,30}[:：]\s*\S/.test(x));
@@ -513,7 +515,7 @@ document.addEventListener('click',async e=>{
   if(a==='add'){cart[p.id]=(cart[p.id]||0)+PV.q;PV.q=1;cartUI();pvBar();return}
   if(a==='cart'){cartOpen();return}
   if(a==='fv'){fav.has(p.id)?fav.delete(p.id):fav.add(p.id);try{localStorage.setItem('mkfav',JSON.stringify([...fav]))}catch(x){}b.classList.toggle('on',fav.has(p.id));nvDraw();return}
-  if(a==='sh'){const url=location.href.split('#')[0]+'#p='+p.id,d={title:p.name,text:p.name+' — '+S.name,url};
+  if(a==='sh'){const url=pLink(p.id),d={title:p.name,text:p.name+' — '+S.name,url};
    try{if(navigator.share){await navigator.share(d);return}}catch(x){if(x&&x.name==='AbortError')return}
    try{await navigator.clipboard.writeText(url);alert('تم نسخ رابط المنتج')}catch(x){window.open(waUrl(p.name+'\n'+url),'_blank')}return}
   return}
@@ -718,13 +720,13 @@ function reqOpen(){RQ=[];
    if(!r.ok||typeof j!=='string'){const em=(j&&j.message)||'';m.textContent=em==='invalid_phone'?'رقم الموبايل مش صحيح':em==='too_many_requests'?'في ضغط دلوقتي، جرّب بعد شوية':'ماتبعتش — جرّب تاني أو كلمنا على الواتساب';b.disabled=false;return}
    $('modal').innerHTML=`<div class="mb"><div class="mc"><h3>وصلنا طلبك ✔</h3><p>هنشوف المنتج ونرد عليك على الواتساب على رقم <b dir="ltr">${esc(ph)}</b> قريب.</p><div class="row"><a class="btn g" target="_blank" rel="noopener" href="${waUrl('السلام عليكم، بعتلكم صورة منتج من الموقع باسم '+nm+' — عايز أعرف تقدروا توفّروه؟')}">💬 كلّمنا على الواتساب كمان</a><button data-a="cc">إغلاق</button></div></div></div>`}
   catch(e){m.textContent='مفيش اتصال أو الصورة كبيرة — جرّب تاني';b.disabled=false}}}
-document.addEventListener('click',e=>{if(e.target.closest('[data-req]'))reqOpen()});
+window.reqOpen=reqOpen;document.addEventListener('click',e=>{if(e.target.closest('[data-req]'))window.reqOpen()});
 const _pm2=pubMain;pubMain=function(){_pm2();const c=document.getElementById('cats');if(c&&!document.getElementById('reqHome'))c.insertAdjacentHTML('afterend','<section id="reqHome">'+REQ_BTN+'</section>');
  setTimeout(()=>{const fl=document.querySelector('#ft .fl');if(fl&&!fl.dataset.rq){fl.dataset.rq=1;fl.insertAdjacentHTML('beforeend','<a href="#" data-req onclick="return false">📷 اطلب منتج مش موجود</a>')}},0)};
 const _dp=drawProds;drawProds=function(){_dp();const e=document.querySelector('#prods .empty');if(e&&!e.querySelector('[data-req]'))e.insertAdjacentHTML('beforeend','<div style="margin-top:12px">'+REQ_BTN+'</div>')};
 
 /* ---------- 📞 أرقام المحل + 📒 كتالوج الواتساب ---------- */
-const PH2=()=>(Array.isArray(S.phones)?S.phones:['01042383986','01042466087']).filter(x=>String(x||'').trim());
+const PH2=()=>(Array.isArray(S.phones)?S.phones:['01042383986','01042466087']).filter(x=>String(x||'').trim());window.PH2=PH2;
 const catUrl=()=>{if(S.catalog===false)return '';let ph=String(S.phone||'').replace(/\D/g,'');if(ph[0]==='0')ph='20'+ph.slice(1);return ph?'https://wa.me/c/'+ph:''};
 document.head.insertAdjacentHTML('beforeend','<style>.catbtn{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 16px 10px;background:#25D366;color:#fff;text-decoration:none;font-weight:800;border-radius:16px;padding:12px}.fc .ph2 a{display:block}</style>');
 function contactBits(){const fc=document.querySelector('#ft .fc');if(fc&&!fc.querySelector('.ph2')){const nums=PH2();let blk=[...fc.children].find(c=>c.querySelector('b')&&/تواصل/.test(c.querySelector('b').textContent));
@@ -939,7 +941,7 @@ const _c=card;card=function(p){const k=pick((byId(S.sections,p.sec)||{}).name),o
 const _po=pvOpen;pvOpen=function(id,np){_po(id,np);const m=document.querySelector('#pv .pvi .pvmeta');if(m&&!document.querySelector('#pv .mktr'))m.insertAdjacentHTML('afterend','<div class="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>')};
 /* فيديو شرح مصغّر */
 const VID='<div class="rqv" aria-hidden="true"><h4>إزاي تطلب منتج مش موجود؟ 3 خطوات بس</h4><div class="rqs"><div><i>📷</i><b>١) صوّره</b>صوّر المنتج أو اختار صورة من موبايلك</div><div><i>📤</i><b>٢) ابعته</b>اكتب اسمك ورقمك واضغط إرسال</div><div><i>💬</i><b>٣) هنرد عليك</b>على الواتساب نقولك متوفر ولا لأ وبكام</div></div><div class="rqbar"></div></div>';
-const _rq=reqOpen;reqOpen=function(){_rq();const mc=document.querySelector('#modal .mc h3');if(mc&&!document.querySelector('#modal .rqv'))mc.insertAdjacentHTML('afterend',VID)};
+const _rq=window.reqOpen;if(_rq)window.reqOpen=function(){_rq();const mc=document.querySelector('#modal .mc h3');if(mc&&!document.querySelector('#modal .rqv'))mc.insertAdjacentHTML('afterend',VID)};
 const _pm=pubMain;pubMain=function(){_pm();const r=document.getElementById('reqHome');if(r&&!r.querySelector('.rqv'))r.insertAdjacentHTML('afterbegin',VID)};
 setTimeout(()=>{try{const r=document.getElementById('reqHome');if(r&&!r.querySelector('.rqv'))r.insertAdjacentHTML('afterbegin',VID)}catch(e){}},900);
 })();
@@ -1187,7 +1189,7 @@ const RK='mk_recent';const getR=()=>{try{return JSON.parse(localStorage.getItem(
 function pushR(id){try{const a=[id].concat(getR().filter(x=>x!==id)).slice(0,10);localStorage.setItem(RK,JSON.stringify(a))}catch(e){}}
 function pLD(p){let s=document.getElementById('mk-ld-p');if(!p){if(s)s.remove();return}if(!s){s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld-p';document.head.appendChild(s)}
  const im=(p.imgs&&p.imgs.length?p.imgs:(p.img?[p.img]:[])).filter(x=>/^https?:/.test(x)||x.indexOf('pw/')===0).map(x=>/^https?:/.test(x)?x:location.origin+location.pathname.replace(/[^/]*$/,'')+x);
- s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'Product',name:p.name,description:String(p.desc||p.name).slice(0,300),sku:p.code||p.id,image:im.slice(0,4),brand:{'@type':'Brand',name:'ميكانيزم'},offers:{'@type':'Offer',availability:stockOk(p)?'https://schema.org/InStock':'https://schema.org/BackOrder',url:location.href.split('#')[0]+'#p='+p.id,priceCurrency:'EGP',seller:{'@type':'Organization',name:'ميكانيزم'}}})}
+ s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'Product',name:p.name,description:String(p.desc||p.name).slice(0,300),sku:p.code||p.id,image:im.slice(0,4),brand:{'@type':'Brand',name:'ميكانيزم'},offers:{'@type':'Offer',availability:stockOk(p)?'https://schema.org/InStock':'https://schema.org/BackOrder',url:pLink(p.id),priceCurrency:'EGP',seller:{'@type':'Organization',name:'ميكانيزم'}}})}
 const _poZ=pvOpen;let _t0=document.title;pvOpen=function(a,b){_poZ(a,b);const p=byId(S.products,a);if(!p)return;pushR(a);pLD(p);document.title=p.name+' | ميكانيزم';
  if(!stockOk(p)){const acts=$q('#pv .pvacts');if(acts&&!$q('#pv .mknm'))acts.insertAdjacentHTML('beforebegin','<button class="mknm" data-nm="'+a+'" style="margin:8px 0">🔔 نبّهني لما يتوفر</button>')}};
 const _pcl=window.addEventListener;addEventListener('popstate',()=>{if(!/#p=/.test(location.hash)){pLD(null);document.title=_t0}});
@@ -1248,17 +1250,18 @@ document.body.insertAdjacentHTML('beforeend','<div id="mkToast" role="status"><s
 let tt;function toast(msg,undo){const t=$q('#mkToast');t.querySelector('span').textContent=msg;const b=t.querySelector('button');if(undo){b.hidden=false;b.textContent='تراجع';b.onclick=()=>{undo();t.classList.remove('on')}}else b.hidden=true;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3500)}
 /* ===== ٤) حفظ السلة بين الزيارات ===== */
 const CK='mk_cart';
-function saveCart(){try{localStorage.setItem(CK,JSON.stringify(cart))}catch(e){}}
-function restoreCart(){try{const c=JSON.parse(localStorage.getItem(CK)||'{}');let n=0;Object.keys(c).forEach(id=>{if(byId(S.products,id)&&c[id]>0){cart[id]=c[id];n++}});if(n)cartUI()}catch(e){}}
-const _cu=cartUI;cartUI=function(){_cu();saveCart()};
-setTimeout(restoreCart,1200);
+let restored=false,rTry=0;
+function saveCart(){if(!restored)return;try{localStorage.setItem(CK,JSON.stringify(cart))}catch(e){}}
+function restoreCart(){if(restored)return;if(!(S.products||[]).length&&rTry++<20){setTimeout(restoreCart,500);return}try{const c=JSON.parse(localStorage.getItem(CK)||'{}');let n=0;Object.keys(c).forEach(id=>{if(byId(S.products,id)&&c[id]>0&&!cart[id]){cart[id]=c[id];n++}});restored=true;if(n)cartUI();else saveCart()}catch(e){restored=true}}
+const _cu=cartUI;cartUI=function(){_cu();if(!restored)restoreCart();saveCart()};
+setTimeout(restoreCart,400);
 /* ===== ٥) إضافة للطلب: تراجع + اهتزاز ===== */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a="ad"]');if(!b)return;const id=b.dataset.id,p=byId(S.products,id);
  setTimeout(()=>{try{navigator.vibrate&&navigator.vibrate(18)}catch(x){}const ct=$q('#ct');if(ct){ct.classList.remove('mkbump');void ct.offsetWidth;ct.classList.add('mkbump')}
   toast('✔ اتضاف للطلب: '+(p?p.name.slice(0,32):''),()=>{cart[id]=(cart[id]||1)-1;if(cart[id]<=0)delete cart[id];cartUI()})},20)},true);
 /* ===== ٦) إرسال الطلب كله على واتساب ===== */
-const _co=cartOpen;cartOpen=function(){_co();const row=$q('#modal .mc .row');if(!row||!Object.keys(cart).length||$q('#mkSendAll'))return;
- row.insertAdjacentHTML('afterbegin','<button class="btn g" id="mkSendAll" type="button">💬 ابعت الطلب كله واتساب</button>');
+const _co=cartOpen;cartOpen=function(){_co();const cs=$q('#modal [data-a="cs"]'),row=cs&&cs.closest('.row');if(!row||!Object.keys(cart).length||$q('#mkSendAll'))return;
+ row.insertAdjacentHTML('beforebegin','<button class="btn g" id="mkSendAll" type="button">💬 ابعت الطلب كله واتساب</button>');
  $q('#mkSendAll').onclick=()=>{const nm=(($q('#cn')||{}).value||'').trim();const L=Object.keys(cart).map(id=>byId(S.products,id)).filter(Boolean).map(p=>'• '+p.name+(p.code?' (كود '+p.code+')':'')+' × '+cart[p.id]);
   window.open(waUrl('السلام عليكم، عايز أطلب:\n'+L.join('\n')+(nm?'\nالاسم: '+nm:'')),'_blank','noopener')}};
 /* ===== ٧) شريط أقسام لاصق + تتبّع القسم الحالي ===== */
@@ -1283,7 +1286,7 @@ addEventListener('scroll',()=>{$q('#mkSug').style.display='none'},{passive:true}
 /* ===== ٩) صفحة المنتج: فتات خبز + اتصال + نصيحة لو سكت ===== */
 let idle;const _pvY=pvOpen;pvOpen=function(a,b){_pvY(a,b);const p=byId(S.products,a);if(!p)return;const sec=byId(S.sections,p.sec)||{};
  const meta=$q('#pv .pvmeta');if(meta&&!$q('#pv .mkbc'))meta.insertAdjacentHTML('beforebegin','<div class="mkbc"><a data-pv="x">الرئيسية</a><span>›</span>'+(sec.name?'<a data-pv="x">'+esc(sec.name)+'</a><span>›</span>':'')+'<span>'+esc(p.name.slice(0,40))+'</span></div>');
- const ph=(typeof PH2==='function'?PH2():[])[0];const acts=$q('#pv .pvacts');if(ph&&acts&&!$q('#pv .mkcall'))acts.insertAdjacentHTML('afterend','<div class="mkcall"><a href="tel:'+esc(String(ph).replace(/\s/g,''))+'">📞 اتصل بنا</a><a href="#" onclick="window.print();return false">🖨️ اطبع الورقة</a></div>');
+ const ph=(typeof PH2==='function'?PH2():[])[0]||S.phone;const acts=$q('#pv .pvacts');if(ph&&acts&&!$q('#pv .mkcall'))acts.insertAdjacentHTML('afterend','<div class="mkcall"><a href="tel:'+esc(String(ph).replace(/\s/g,''))+'">📞 اتصل بنا</a><a href="#" onclick="window.print();return false">🖨️ اطبع الورقة</a></div>');
  ld2(p,sec);clearTimeout(idle);idle=setTimeout(()=>{if($q('#pv')&&$q('#pv').offsetParent!==null)toast('محتاج مساعدة في الاختيار؟ كلّمنا على الواتساب',null)},45000)};
 function ld2(p,sec){let s=document.getElementById('mk-ld-b');if(!s){s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld-b';document.head.appendChild(s)}
  s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[{'@type':'ListItem',position:1,name:'الرئيسية',item:location.origin+location.pathname},{'@type':'ListItem',position:2,name:sec.name||'المنتجات',item:location.origin+location.pathname+'#cats'},{'@type':'ListItem',position:3,name:p.name,item:location.href}]})}
@@ -1292,7 +1295,7 @@ addEventListener('popstate',()=>{clearTimeout(idle);const s=document.getElementB
 function faqLD(){if(document.getElementById('mk-ld-f')||!document.getElementById('mkFaq'))return;const Q=[...document.querySelectorAll('#mkFaq details')].map(d=>({'@type':'Question',name:d.querySelector('summary').textContent.replace(/[+−]\s*$/,'').trim(),acceptedAnswer:{'@type':'Answer',text:d.querySelector('p').textContent}}));if(!Q.length)return;const s=document.createElement('script');s.type='application/ld+json';s.id='mk-ld-f';s.textContent=JSON.stringify({'@context':'https://schema.org','@type':'FAQPage',mainEntity:Q});document.head.appendChild(s)}
 /* ===== ١١) مشاركة المفضلة واتساب ===== */
 function favShare(){const f=$q('#mkChips');if(!f||f.querySelector('[data-favsh]')||!fav||!fav.size)return;f.insertAdjacentHTML('afterbegin','<button type="button" data-favsh>♥ ابعت مفضلتي</button>')}
-document.addEventListener('click',e=>{if(!e.target.closest('[data-favsh]'))return;const L=[...fav].map(id=>byId(S.products,id)).filter(Boolean).map(p=>'• '+p.name+' — '+location.href.split('#')[0]+'#p='+p.id);if(!L.length)return;window.open(waUrl('المنتجات اللي عجبتني من ميكانيزم:\n'+L.join('\n')),'_blank','noopener')});
+document.addEventListener('click',e=>{if(!e.target.closest('[data-favsh]'))return;const L=[...fav].map(id=>byId(S.products,id)).filter(Boolean).map(p=>'• '+p.name+' — '+pLink(p.id));if(!L.length)return;window.open(waUrl('المنتجات اللي عجبتني من ميكانيزم:\n'+L.join('\n')),'_blank','noopener')});
 /* ===== ١٢) ثبّت الموقع (PWA) ===== */
 let dp=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;const b=$q('#mkInst');if(b)b.style.display='block'});
 document.body.insertAdjacentHTML('beforeend','<button id="mkInst" type="button">⬇️ ثبّت التطبيق</button>');
@@ -1303,6 +1306,46 @@ try{const ios=/iphone|ipad/i.test(navigator.userAgent),sa=navigator.standalone;i
 /* ===== تشغيل ===== */
 function all(){stick();faqLD();favShare()}
 const _pmY=pubMain;pubMain=function(){_pmY();setTimeout(all,320)};setTimeout(all,1100);setTimeout(all,3000);
+})();
+</script>
+<style>
+/* دفعة ٣: موبايل أخف وأسرع — زرار واتساب صغير وقت التمرير، النوافذ تطلع من تحت، الأقسام اللي تحت تترسم لما توصلها */
+#wa{transition:all .25s}
+#wa.mini{width:56px;height:56px;padding:0;justify-content:center;font-size:0;border-radius:50%}
+#wa.mini::before{content:'💬';font-size:26px}
+#mkTop{bottom:calc(212px + env(safe-area-inset-bottom,0px))!important}
+#prods section[id^="s-"]{content-visibility:auto;contain-intrinsic-size:auto 900px}
+@media (max-width:640px){
+ .mb{align-items:flex-end;padding:0}
+ .mb>.mc{max-width:none;border-radius:22px 22px 0 0;max-height:90vh;max-height:90dvh;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));animation:mkup .28s ease-out}
+ .mb>.mc::before{content:'';display:block;width:44px;height:5px;border-radius:9px;background:#0002;margin:-6px auto 4px;flex:0 0 auto}
+}
+@keyframes mkup{from{transform:translateY(40%);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.mb>.mc{animation:none}#wa{transition:none}}
+#mkSendAll{width:100%;padding:13px;border-radius:14px;font:800 15px Cairo,Tahoma,sans-serif;background:#25D366;color:#fff;border:0}
+#modal .mc>.row>span:first-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;min-width:0;line-height:1.5}
+#modal .mc>.row>span:first-child small{display:none}
+#modal .mc>.row>span:last-child{flex:0 0 auto;white-space:nowrap}
+body:has(#modal .mb) #mkToast{bottom:auto;top:calc(12px + env(safe-area-inset-top,0px))}
+body:has(#modal .mb) #mkTop,body:has(#modal .mb) #wa,body:has(#modal .mb) #mkInst{display:none!important}
+.mkns{background:#fff3cd;color:#5c4400;padding:12px 16px;text-align:center;font:700 15px Cairo,Tahoma,sans-serif}
+</style>
+<script>
+(function(){
+/* ١) الصور: أي صورة مش في أول الشاشة تتحمّل لما الزبون يوصلها */
+const lazy=im=>{if(im.dataset.mkl||im.closest('#hd,.hero,header'))return;im.dataset.mkl=1;if(!im.hasAttribute('loading'))im.loading='lazy';if(!im.hasAttribute('decoding'))im.decoding='async'};
+const scan=r=>{if(r.tagName==='IMG')lazy(r);else if(r.querySelectorAll)r.querySelectorAll('img').forEach(lazy)};
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>n.nodeType===1&&scan(n)))).observe(document.body,{childList:true,subtree:true});
+/* ٢) زرار الواتساب العايم يصغر لدايرة أول ما الزبون ينزل، عشان مايغطيش المنتجات */
+let tk=0;const wa=()=>{const w=document.getElementById('wa');if(w)w.classList.toggle('mini',scrollY>260||!!document.querySelector('#pv.on'))};
+addEventListener('scroll',()=>{if(tk)return;tk=requestAnimationFrame(()=>{tk=0;wa()})},{passive:true});
+document.getElementById('pv')&&document.getElementById('pv').addEventListener('scroll',wa,{passive:true});
+setInterval(wa,1500);
+/* ٣) الاسم والموبايل والعنوان يتملوا لوحدهم من الموبايل */
+const AC={cn:'name',rqName:'name',nmN:'name',rvN:'name',cph:'tel',rqPhone:'tel',nmP:'tel',tkPh:'tel',shAddr:'street-address'};
+document.addEventListener('focusin',e=>{const t=e.target,a=t&&AC[t.id];if(a&&!t.getAttribute('autocomplete')){t.setAttribute('autocomplete',a);if(a==='tel'){t.setAttribute('inputmode','tel');t.name=t.name||'tel'}else if(a==='name')t.name=t.name||'name'}},true);
+const acAll=()=>Object.keys(AC).forEach(id=>{const t=document.getElementById(id);if(t&&!t.getAttribute('autocomplete'))t.setAttribute('autocomplete',AC[id])});
+new MutationObserver(acAll).observe(document.body,{childList:true,subtree:true});acAll();
 })();
 </script>
 </body></html>

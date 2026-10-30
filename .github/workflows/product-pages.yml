@@ -1,0 +1,30 @@
+# صفحات المنتجات الثابتة (p/<id>.html) لمعاينة لينك المنتج على واتساب: بتتبني من بيانات الموقع كل ٣ ساعات أو بإيدك.
+name: Product pages
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+concurrency:
+  group: product-pages
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/build-product-pages.mjs
+      - name: رفع لو في تغيير
+        run: |
+          git add p sitemap.xml
+          if git diff --cached --quiet; then echo "مفيش تغيير"; exit 0; fi
+          git config user.name "mekanizm-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "صفحات المنتجات: تحديث تلقائي"
+          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && exit 0; sleep 5; done
+          exit 1
