@@ -71,7 +71,7 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 
 ## v7
 - New product card: square photo in a rounded frame with an availability dot badge, a heart, and 🔔 (notify me) on the photo; the code chip (#1248) + section; a fixed two-line name; one action row: «اسأل عن السعر» pill + round ➕ (amber when the product is on back-order). After adding, the row turns into the − n + stepper. The description is no longer on the card (it is on the product page). All cards have the same height.
-- Wholesale sign-up needs proof: photos of the workshop/shop/current work (up to 3, uploaded like «مش لاقي» photos), or papers (commercial register / tax card / workshop card), or past invoices ( in , checked by phone number). Customers must accept the terms (manual review, review every  months, prices tied to the registered phone). It arrives as «🧰 طلب حساب جملة — محتاج مراجعة» with the photos. Nothing is granted automatically. The numbers are in  → .
+- Wholesale sign-up needs proof: photos of the workshop/shop/current work (up to 3, uploaded like «مش لاقي» photos), or papers (commercial register / tax card / workshop card), or past invoices (`TRADE.minInvoices` in `TRADE.months` months, checked by phone number). Customers must accept the terms (manual review, a review every `TRADE.months` months, prices tied to the registered phone). It arrives as «🧰 طلب حساب جملة — محتاج مراجعة» with the photos. Nothing is granted automatically. The numbers are in `src/lib/config.ts` → `TRADE` (now 5 invoices in 3 months, answer within 1 working day).
 
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
