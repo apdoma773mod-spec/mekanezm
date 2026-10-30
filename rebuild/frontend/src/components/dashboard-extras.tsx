@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { money } from '@/lib/format';
 import { useCharts, useDebts, useReorderCount } from '@/lib/trade-queries';
+import { useWebOrderCount } from '@/lib/web-queries';
 
 const num = (n: number) => Number(n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 1 });
 
@@ -162,10 +163,16 @@ const banner = { width: '100%', marginBottom: 14, borderRadius: 14, padding: 14,
 export function DashboardBanners() {
   const debts = useDebts().data;
   const reorder = useReorderCount(30).data ?? 0;
+  const web = useWebOrderCount().data ?? 0;
   const o30 = (debts?.debtors ?? []).filter((x) => x.old || (x.days ?? 0) >= 30);
   const sum = o30.reduce((a, x) => a + x.balance, 0);
   return (
     <>
+      {web > 0 && (
+        <Link href="/weborders" style={{ ...banner, background: '#fff4e5', color: '#8a4b00', border: '1px solid #f0b46a' }}>
+          🛒 عندك <b>{web}</b> طلب جديد من الموقع — اضغط للعرض
+        </Link>
+      )}
       {o30.length > 0 && (
         <Link href="/debts" style={{ ...banner, background: '#fdecea', color: '#8c1d18', border: '1px solid #f1a9a3' }}>
           💰 عندك <b>{o30.length}</b> عميل عليهم فلوس من أكتر من 30 يوم ({money(sum)}) — اضغط للتذكير

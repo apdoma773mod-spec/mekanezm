@@ -9,6 +9,7 @@ import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
 import { useInboxCounts } from '@/lib/inbox-queries';
+import { useWebOrderCount } from '@/lib/web-queries';
 import { BgFx, NotifyBar, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
@@ -28,7 +29,7 @@ interface NavItem {
   /** «ميكانيزم برو» icon key when it differs from the page id. */
   pro?: string;
   /** Live count shown as a badge (the inbox screens). */
-  badge?: 'sms' | 'waOrders' | 'waPhotos';
+  badge?: 'sms' | 'waOrders' | 'waPhotos' | 'web';
 }
 
 /** Same groups, names, order and icons as the old sidebar. */
@@ -45,6 +46,8 @@ const MAIN: NavItem[] = [
   { href: '/work?k=steel', label: 'حاسبة الاستانلس', icon: '🔩', adminOnly: true, pro: 'mkSideSt' },
   { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true, pro: 'mkSideFf' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
+  { href: '/weborders', label: 'طلبات الموقع', icon: 'file', adminOnly: true, badge: 'web' },
+  { href: '/site-content', label: 'محتوى الموقع', icon: '🌐', adminOnly: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
   { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
@@ -135,6 +138,7 @@ function Shell({ children }: { children: ReactNode }) {
   const { open } = useModal();
   const router = useRouter();
   const counts = useInboxCounts(!!me.data && me.data.role === 'ADMIN');
+  const webCount = useWebOrderCount(!!me.data && me.data.role === 'ADMIN');
   const logout = useLogout();
   const T = settings.data?.theme;
   useApplyTheme(T);
@@ -187,11 +191,16 @@ function Shell({ children }: { children: ReactNode }) {
             e.preventDefault();
             open({ kind: 'ctChooser' });
           }
+          // «محتوى الموقع» is a window, not a page
+          if (i.href === '/site-content') {
+            e.preventDefault();
+            open({ kind: 'siteAdmin' });
+          }
         }}
       >
         {pro && I[k] ? <ProIcon k={k} /> : <NavIcon icon={i.icon} />} {short ? null : ' '}
         <span>{short ? (i.short ?? i.label) : !admin && i.staffLabel ? i.staffLabel : i.label}</span>
-        {i.badge && counts.data?.[i.badge] ? <span className="badge">{counts.data[i.badge]}</span> : null}
+        {i.badge === 'web' ? webCount.data ? <span className="badge">{webCount.data}</span> : null : i.badge && counts.data?.[i.badge] ? <span className="badge">{counts.data[i.badge]}</span> : null}
       </Link>
     );
   };

@@ -25,6 +25,7 @@ import { AlertsModal, DayReportModal } from './alerts-modals';
 import { TodayDetail, type TodayKind } from './today-detail';
 import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
+import { SiteAdmin, SiteProduct } from './site-admin';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
@@ -47,6 +48,8 @@ export type ModalSpec =
   | { kind: 'contactReport'; name: string; type: ContactType; from?: string; to?: string }
   | ContactToolSpec
   | { kind: 'purchImport' }
+  | { kind: 'siteAdmin'; tab?: 'works' | 'reviews' | 'delivery' | 'contact' | 'seo' }
+  | { kind: 'siteProduct'; id: string }
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
   | { kind: 'contact'; id?: string; type?: ContactType }
@@ -140,6 +143,12 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'contactReport':
         content = <ContactReportModal key={`${spec.type}-${spec.name}-${spec.from}-${spec.to}`} name={spec.name} type={spec.type} from={spec.from} to={spec.to} />;
+        break;
+      case 'siteAdmin':
+        content = <SiteAdmin key={spec.tab ?? 'works'} tab={spec.tab} onClose={close} />;
+        break;
+      case 'siteProduct':
+        content = <SiteProduct key={spec.id} id={spec.id} onClose={close} />;
         break;
       case 'todayDetail':
         content = <TodayDetail key={spec.k} k={spec.k} />;

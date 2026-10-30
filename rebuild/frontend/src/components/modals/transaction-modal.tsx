@@ -68,7 +68,7 @@ export interface SalePreset {
   note?: string;
   paid?: number;
   lines: { productId?: string; name: string; qty: number; price: number }[];
-  onSaved?: () => Promise<void> | void;
+  onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
 }
 
 export function TransactionModal(props: Props) {
@@ -325,7 +325,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
       if (!invoice && preset?.onSaved) {
         try {
-          await preset.onSaved();
+          await preset.onSaved({ id: saved.id, no: saved.no });
         } catch (e) {
           window.alert(`⚠️ الفاتورة اتحفظت ✔ بس الخطوة اللي بعدها ماكملتش:\n${errorMessage(e)}`);
         }

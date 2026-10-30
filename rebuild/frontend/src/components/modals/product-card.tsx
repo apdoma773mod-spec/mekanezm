@@ -206,6 +206,9 @@ export function ProductCard({ id }: { id: string }) {
               <button type="button" className="secondary" onClick={() => open({ kind: 'productEdit', id })}>
                 📋 حركة الصنف
               </button>
+              <button type="button" className="secondary" onClick={() => open({ kind: 'siteProduct', id })}>
+                🌐 انشر على الموقع
+              </button>
             </>
           )}
         </div>

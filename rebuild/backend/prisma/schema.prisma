@@ -895,6 +895,24 @@ model Contract {
 }
 
 /// WhatsApp messages waiting for the shop PC's bridge (wa_out in the old system).
+/// «طلبات الموقع»: an order a customer sent from the public shop page (items are {code, qty, backorder?}).
+model WebOrder {
+  id           String    @id @default(cuid())
+  customerName String
+  phone        String    @default("")
+  items        Json
+  /// new | done | cancelled
+  status       String    @default("new")
+  /// What the customer was told about pickup («بكره إن شاء الله»…).
+  eta          String    @default("")
+  invoiceNo    String?
+  repliedAt    DateTime? @db.Timestamptz(3)
+  handledAt    DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
 model OutboundMessage {
   id        String    @id @default(cuid())
   toPhone   String

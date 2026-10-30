@@ -31,7 +31,7 @@ export async function resetDb(prisma: PrismaClient): Promise<void> {
       "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount",
       "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem",
       "Partner", "PartnerMove", "Vehicle", "VehicleLog", "FieldOrder", "VanStock", "VanMove", "VanClose", "Contract", "OutboundMessage",
-      "SmsIn", "WaOrder", "WaPhoto", "Backup"
+      "SmsIn", "WaOrder", "WaPhoto", "Backup", "WebOrder"
       RESTART IDENTITY CASCADE`,
   );
 }
