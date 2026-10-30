@@ -31,10 +31,12 @@ interface Offer extends MarketOffer {
   src: 'manual' | 'buy';
 }
 
-export function useMarket(enabled = true) {
+export function useMarket(enabled = true, full = false) {
   const data = useMarketPrices(enabled);
-  const products = useAllProducts({}, enabled).data;
   const m = data.data;
+  // with no typed prices and no purchases there is nothing to compare, so skip downloading the whole stock
+  const hasOffers = !!m && (Object.keys(m.prices ?? {}).length > 0 || (m.buys ?? []).length > 0);
+  const products = useAllProducts({}, enabled && (full || hasOffers)).data;
   const api = useMemo(() => {
     const offers = (p: ProductDto): Offer[] => {
       const key = p.code || p.id;
@@ -68,7 +70,7 @@ export function MarketModal() {
   const { close } = useModal();
   const toast = useToast();
   const isAdmin = useIsAdmin();
-  const mk = useMarket(isAdmin);
+  const mk = useMarket(isAdmin, true);
   const save = useSaveMarketPrices();
   const suppliers = useContacts({ type: 'SUPPLIER', pageSize: 200 }, isAdmin).data?.items ?? [];
   const [view, setView] = useState<View>({ k: 'list' });
