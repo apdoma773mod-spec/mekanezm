@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getCatalog } from '@/lib/catalog';
-import { images, money, parseSpecs, priceOf, productPath, sectionOf } from '@/lib/shop';
+import { images, parseSpecs, productPath, sectionOf } from '@/lib/shop';
 import { ClearCompare } from './clear';
 
 export const metadata: Metadata = { title: 'قارن بين المنتجات | ميكانيزم', robots: { index: false } };
@@ -23,7 +23,6 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
     ['القسم', L.map(p => sectionOf(site, p)?.name ?? '')],
     ['الكود', L.map(p => p.code)],
     ['الحالة', L.map(p => (ok(p) ? '✅ متوفر' : '📦 بالحجز'))],
-    ['السعر', L.map(p => { const v = priceOf(p); return v ? money(v) : 'اسأل عن السعر'; })],
     ...keys.map(k => [k, specs.map(m => m.get(k) ?? '—')] as [string, string[]]),
   ];
   return (

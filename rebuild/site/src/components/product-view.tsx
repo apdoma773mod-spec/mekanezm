@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
-import { askPriceText, images, money, orderText, parseSpecs, priceOf, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
+import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
 import { CompareBtn, ProductReviews } from './extras';
 import { lqip, Placeholder } from './product-card';
@@ -21,7 +21,6 @@ export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product;
   const vid = videoEmbed(p.video);
   const phone = shopPhones(site)[0] || site.phone;
   const n = cart[p.id]?.q ?? 0;
-  const price = priceOf(p);
   const [i, setI] = useState(0);
   const [q, setQ] = useState(1);
   const strip = useRef<HTMLDivElement>(null);
@@ -99,8 +98,8 @@ export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product;
           </div>
           <div className="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>
           <div className="pvbox pvprice">
-            <div><small>السعر</small><b>{price ? money(price) : 'اسأل عن السعر'}</b>{price && q > 1 && <small> — {q} قطع = {money(price * q)}</small>}</div>
-            <a className="pvpbtn" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 {price ? 'اسأل عن الكميات' : 'اسأل عن السعر'}</a>
+            <div><small>السعر</small><b>اسأل عن السعر</b></div>
+            <a className="pvpbtn" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
           </div>
           <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>
           {vid && (

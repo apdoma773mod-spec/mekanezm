@@ -48,8 +48,8 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 «جديد» badge on the newest 12 products (only when the catalog has more than 24); «ابعته لصاحبك» WhatsApp share; WhatsApp/phone taps tracked as `contact`; preconnect to the image CDN.
 
 ## v5 (ready to go live)
-- Prices: a product's `price` (number or text) shows on the card, on the product page (with the total for the chosen quantity), in the JSON-LD offer, and as an estimated total in the cart. With no price, it still shows «اسأل عن السعر» (all 7 products today).
-- «💳 الدفع» in the cart, on the success screen and on `/policy`: cash at the shop or to the courier, or a transfer for shipped orders. The account numbers come from `NEXT_PUBLIC_INSTAPAY` / `NEXT_PUBLIC_WALLET`; they are hidden while empty.
+- **No prices on the site, by the owner's decision (competitors).** `price` is left out of the zod schema, so even if the shop data has one, it never reaches a page, the browser or JSON-LD. Everything says «اسأل عن السعر».
+- «💳 الدفع» in the cart, on the success screen and on `/policy`: cash at the shop or to the courier, or a transfer for shipped orders. InstaPay 01010741015 and wallet 01119199659 (defaults in config.ts; `NEXT_PUBLIC_INSTAPAY` / `NEXT_PUBLIC_WALLET` override them, and an empty value hides one).
 - Reviews per product: `list_reviews(p_product)` / `add_review(…, p_product)`, which the database already supports. They show only after approval (`web_reviews.approved`).
 - `/compare?i=a,b[,c]` side-by-side table, filled from the «⚖️ قارن» button (`mk_cmp`, max 3).
 - `/guide` + 4 articles (`src/lib/guides.ts`: hinges, drawer slides, dressing room, kitchen). They have Article JSON-LD, are in the sitemap, and are linked from the home page and the footer.

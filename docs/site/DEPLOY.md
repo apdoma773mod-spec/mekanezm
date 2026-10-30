@@ -35,8 +35,8 @@ Keep the old GitHub Pages site running until the new one works. Old links (`shop
 |---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | `https://mekanezm.com` | yes (canonical, sitemap and share links; set before the build) |
 | `REVALIDATE_SECRET` | any long random text | yes, for instant refresh |
-| `NEXT_PUBLIC_INSTAPAY` | InstaPay address, e.g. `mekanezm@instapay` | optional, shown under «💳 الدفع» |
-| `NEXT_PUBLIC_WALLET` | mobile-wallet number (Vodafone Cash…) | optional |
+| `NEXT_PUBLIC_INSTAPAY` | InstaPay number (default 01010741015) | no, shown under «💳 الدفع» |
+| `NEXT_PUBLIC_WALLET` | mobile-wallet number (default 01119199659) | no |
 | `LOG_WEBHOOK` | a webhook URL that accepts `{"text": …}` (Slack, Discord with `/slack`, Google Chat…) | optional, alerts on customer errors |
 | `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_FB_PIXEL` | already set to the old site's ids | no |
 

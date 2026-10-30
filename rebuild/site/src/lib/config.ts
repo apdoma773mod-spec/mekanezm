@@ -19,8 +19,8 @@ export const CUSTOM_TEL = '01042383986';
 // minute, so edits in the system show within ~1 minute even without calling /api/revalidate.
 export const REVALIDATE = 60;
 
-// Payment accounts shown in the cart/policy (empty = hidden). Set them in .env.local before the build.
-export const PAY = { instapay: process.env.NEXT_PUBLIC_INSTAPAY ?? '', wallet: process.env.NEXT_PUBLIC_WALLET ?? '' };
+// Payment accounts shown in the cart/policy (env overrides; empty string hides one).
+export const PAY = { instapay: process.env.NEXT_PUBLIC_INSTAPAY ?? '01010741015', wallet: process.env.NEXT_PUBLIC_WALLET ?? '01119199659' };
 
 // Shop opening hours (Cairo time) for the «مفتوح دلوقتي» badge: 10 AM → midnight, Friday off.
 export const OPENING = { open: 10, close: 24, closedDays: [5] as number[] };

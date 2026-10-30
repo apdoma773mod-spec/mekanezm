@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/schema';
-import { askPriceText, images, money, priceOf, productPath, sectionOf, toItem, waUrl } from '@/lib/shop';
+import { askPriceText, images, productPath, sectionOf, toItem, waUrl } from '@/lib/shop';
 import loader from '@/lib/image-loader';
 import { evProduct } from '@/lib/track';
 import { useShop } from './shop-provider';
@@ -29,7 +29,6 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
   const img = images(p)[0];
   const sec = sectionOf(site, p);
   const item = toItem(p, ok);
-  const price = priceOf(p);
   const addIt = () => { add(item); evProduct('add_to_cart', 'AddToCart', p); };
   return (
     <div className="card">
@@ -41,8 +40,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
       </div>
       <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
       {p.desc && <p>{p.desc}</p>}
-      {price ? <b className="prc">{money(price)}</b>
-        : <a className="ask" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>}
+      <a className="ask" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
       {n > 0 ? (
         <div className="cstep" role="group" aria-label="الكمية في طلبك">
           <button onClick={() => setQty(p.id, n + 1)} aria-label="زيادة">+</button>

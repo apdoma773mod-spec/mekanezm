@@ -466,12 +466,7 @@ textarea.qo { width: 100%; font: inherit; font-size: 16px; padding: 12px; border
 .quote .note { font-size: 13px; color: #555; margin-top: 12px; }
 @media print { .noprint, .tb, .nv, .wa-fab, .go-cart { display: none !important; } .quote { padding: 0; } }
 
-/* ---- v5: prices, payment, compare, guides ---- */
-.card .prc { display: block; margin: 2px 14px 4px; font-size: 16px; font-weight: 800; color: var(--fg); }
-.citem small.prc { color: var(--fg); font-weight: 800; }
-.ctot { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #f0f9ee; }
-.ctot b { font-size: 17px; }
-.ctot small { color: var(--mut); }
+/* ---- v5: payment, compare, guides ---- */
 .pay { display: grid; gap: 2px; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #faf6ea; font-size: 14px; line-height: 1.8; }
 .info-cards .pay { background: none; padding: 0; margin: 0 0 6px; }
 .cmpb { display: block; width: 100%; margin: 8px 0; padding: 11px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card); font: inherit; font-weight: 800; color: var(--fg); cursor: pointer; }
