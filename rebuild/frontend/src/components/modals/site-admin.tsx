@@ -486,6 +486,7 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
   const [doc, setDoc] = useState<SiteDoc | null>(null);
   const [f, setF] = useState<{ on: boolean; name: string; desc: string; sec: string; imgs: string[]; top: boolean; video: string; spid?: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [specRows, setSpecRows] = useState<[string, string][] | null>(null);
   const p = prod.data;
 
   useEffect(() => {
@@ -494,7 +495,7 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
       .then((s) => {
         setDoc(s);
         const sp = s.data.products.find((x) => String(x.code || '') === String(p.code));
-        setF({ on: !!sp, name: sp?.name ?? p.name, desc: sp?.desc ?? '', sec: sp?.sec ?? '', imgs: sp ? (sp.imgs?.length ? [...sp.imgs] : sp.img ? [sp.img] : []) : [], top: !!sp?.top, video: sp?.video ?? '', spid: sp?.id });
+        setF({ on: true, name: sp?.name ?? p.name, desc: sp?.desc ?? '', sec: sp?.sec ?? '', imgs: sp ? (sp.imgs?.length ? [...sp.imgs] : sp.img ? [sp.img] : []) : [], top: !!sp?.top, video: sp?.video ?? '', spid: sp?.id });
       })
       .catch((e) => toast(`محتاج نت عشان تفتح بيانات الموقع: ${errorMessage(e)}`, 'bad'));
   }, [p, toast]);
@@ -521,7 +522,8 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
 
   const go = async () => {
     if (f.on && !f.sec) return toast('اختار القسم', 'bad');
-    if (f.on && !f.name.trim()) return toast('اكتب الاسم', 'bad');
+    if (f.on && !f.name.trim()) return toast('اكتب اسم المنتج', 'bad');
+    if (f.on && !f.imgs.length && !window.confirm('المنتج من غير صور — تكمّل؟')) return;
     setBusy(true);
     try {
       await saveSite((d) => {
@@ -537,7 +539,7 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
         if (i > -1) d.products[i] = o;
         else d.products.push(o);
       });
-      toast(f.on ? '✔ اتنشر على الموقع' : '✔ اتشال من الموقع');
+      toast(f.on ? '✔ اتحفظ واتنشر على الموقع' : '✔ اتشال من الموقع');
       onClose();
     } catch (e) {
       setBusy(false);
@@ -545,15 +547,42 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
     }
   };
 
+  // old splitDesc/joinDesc: lines «المقاس: 50 سم» are specs, the rest is the short description
+  const split = (() => {
+    const txt: string[] = [];
+    const sp: [string, string][] = [];
+    f.desc.split('\n').forEach((l) => {
+      const s = l.trim();
+      if (!s) return;
+      const m = s.match(/^([^:：]{1,30})[:：]\s*(.+)$/);
+      if (m) sp.push([m[1]!.trim(), m[2]!.trim()]);
+      else txt.push(s);
+    });
+    return { txt: txt.join('\n'), sp };
+  })();
+  const specs = specRows ?? (split.sp.length ? split.sp : ([['المقاس', ''], ['الخامة', '']] as [string, string][]));
+  const join = (txt: string, sp: [string, string][]) =>
+    [txt.trim()]
+      .concat(sp.filter((x) => x[0].trim() && x[1].trim()).map((x) => `${x[0].trim()}: ${x[1].trim()}`))
+      .filter(Boolean)
+      .join('\n');
+  const setSpecs = (sp: [string, string][]) => {
+    setSpecRows(sp);
+    setF({ ...f, desc: join(split.txt, sp) });
+  };
+  const sec = { border: '1px solid var(--border)', borderRadius: 14, padding: 12, marginBottom: 10 } as const;
+
   return (
-    <Modal title="🌐 على الموقع" onClose={onClose}>
-      <label className="chk" style={{ fontSize: 16, marginBottom: 10 }}>
-        <input type="checkbox" checked={f.on} onChange={(e) => setF({ ...f, on: e.target.checked })} /> <b>يظهر على الموقع</b>
-      </label>
-      <div className="form">
+    <Modal title={`🌐 ${p.name}`} onClose={onClose}>
+      <span className={`pill ${f.spid ? 'on' : 'off'}`} style={{ display: 'inline-block', marginBottom: 10 }}>
+        {f.spid ? '● منشور على الموقع' : '○ مش على الموقع'}
+      </span>
+      <div style={sec}>
+        <h3 style={{ margin: '0 0 8px' }}>📝 البيانات الأساسية</h3>
+        <div className="form">
         <div className="field full">
-          <label>الاسم على الموقع</label>
-          <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <label>اسم المنتج على الموقع</label>
+          <input value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={(e) => setF({ ...f, name: e.target.value })} />
         </div>
         <div className="field">
           <label>القسم</label>
@@ -575,29 +604,69 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
         </div>
         <div className="field">
           <label>الكود</label>
-          <input value={code} disabled />
+          <input value={code} disabled dir="ltr" />
         </div>
-        <div className="field full">
-          <label>الوصف / المواصفات (كل معلومة في سطر، مثلاً «المقاس: 45 سم»)</label>
-          <textarea rows={4} value={f.desc} style={{ padding: 11, border: '1px solid var(--border)', borderRadius: 10 }} onChange={(e) => setF({ ...f, desc: e.target.value })} />
         </div>
-        <div className="field full">
-          <label>رابط فيديو (اختياري — يوتيوب أو غيره)</label>
-          <input dir="ltr" value={f.video} placeholder="https://..." onChange={(e) => setF({ ...f, video: e.target.value })} />
-        </div>
-        <div className="field full">
-          <label className="chk">
-            <input type="checkbox" checked={f.top} onChange={(e) => setF({ ...f, top: e.target.checked })} /> ⭐ مميز (يظهر في «الأكثر طلباً»)
-          </label>
-        </div>
-        <div className="field full">
-          <label>الصور (أول صورة هي اللي بتظهر في الكارت)</label>
-          <ImgsEditor imgs={f.imgs} onChange={(imgs) => setF((x) => (x ? { ...x, imgs } : x))} />
-        </div>
+        <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+          في المخزن: <b>{p.qty} {p.unit}</b> — الموقع بيعرض «متوفر» أو «اطلبه» بس، من غير أسعار.
+        </p>
+      </div>
+      <div style={sec}>
+        <h3 style={{ margin: '0 0 8px' }}>
+          📷 الصور <small style={{ fontWeight: 400, color: 'var(--muted)' }}>أول صورة هي اللي بتظهر في الكارت — رتّبهم بالأسهم</small>
+        </h3>
+        <ImgsEditor imgs={f.imgs} onChange={(imgs) => setF((x) => (x ? { ...x, imgs } : x))} />
+      </div>
+      <div style={sec}>
+        <h3 style={{ margin: '0 0 8px' }}>📋 الوصف والمواصفات</h3>
+        <label>وصف قصير (بيظهر في صفحة المنتج)</label>
+        <textarea
+          rows={3}
+          value={split.txt}
+          placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج"
+          style={{ width: '100%', padding: 11, border: '1px solid var(--border)', borderRadius: 10 }}
+          onChange={(e) => setF({ ...f, desc: join(e.target.value, specs) })}
+        />
+        <label style={{ display: 'block', marginTop: 8 }}>المواصفات</label>
+        {specs.map((x, i) => (
+          <div key={i} className="spec" style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+            <input style={{ flex: 1, minWidth: 0 }} value={x[0]} placeholder="مثلاً: المقاس" onChange={(e) => setSpecs(specs.map((y, j) => (j === i ? [e.target.value, y[1]] : y)))} />
+            <input style={{ flex: 1, minWidth: 0 }} value={x[1]} placeholder="مثلاً: 50 سم" onChange={(e) => setSpecs(specs.map((y, j) => (j === i ? [y[0], e.target.value] : y)))} />
+            <button type="button" className="secondary" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}>
+              ✕
+            </button>
+          </div>
+        ))}
+        <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setSpecs([...specs, ['', '']])}>
+          ＋ مواصفة
+        </button>
+      </div>
+      <div style={sec}>
+        <h3 style={{ margin: '0 0 8px' }}>
+          🎬 فيديو <small style={{ fontWeight: 400, color: 'var(--muted)' }}>اختياري — يوتيوب أو لينك فيديو</small>
+        </h3>
+        <input dir="ltr" style={{ width: '100%' }} value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => setF({ ...f, video: e.target.value })} />
+      </div>
+      <div style={sec}>
+        <h3 style={{ margin: '0 0 8px' }}>👁️ الظهور</h3>
+        <label className="chk" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+          <input type="checkbox" checked={f.on} onChange={(e) => setF({ ...f, on: e.target.checked })} />
+          <span>
+            <b>يظهر على الموقع</b>
+            <small style={{ display: 'block', color: 'var(--muted)' }}>لو قفلته المنتج بيختفي من الموقع ويفضل في السيستم</small>
+          </span>
+        </label>
+        <label className="chk" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" checked={f.top} onChange={(e) => setF({ ...f, top: e.target.checked })} />
+          <span>
+            <b>⭐ منتج مميز</b>
+            <small style={{ display: 'block', color: 'var(--muted)' }}>يظهر في «الأكثر طلباً» في أول الموقع</small>
+          </span>
+        </label>
       </div>
       <div className="modal-foot">
         <button type="button" className="primary" disabled={busy} onClick={go}>
-          {busy ? 'جاري الحفظ…' : 'حفظ على الموقع'}
+          {busy ? '⏳ بنحفظ…' : f.spid ? '💾 حفظ ونشر' : '💾 حفظ وانشر على الموقع'}
         </button>
         <button type="button" className="secondary" onClick={onClose}>
           إلغاء

@@ -61,6 +61,12 @@ export default async function webRoutes(app: FastifyInstance) {
     return { items: rows };
   });
 
+  /** «🗑️ مسح الملغي»: cancelled orders go for good; new ones and the ones made into invoices stay. */
+  app.post('/orders/purge-cancelled', { preHandler: app.requireAdmin }, async () => {
+    const r = await db.webOrder.deleteMany({ where: { status: 'cancelled' } });
+    return { count: r.count };
+  });
+
   app.get('/orders/count', { preHandler: app.requireAdmin }, async () => ({ count: await db.webOrder.count({ where: { status: 'new' } }) }));
 
   app.patch('/orders/:id', { preHandler: app.requireAdmin }, async (request) => {

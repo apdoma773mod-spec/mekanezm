@@ -226,6 +226,8 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
 function OrdersList() {
   const [tab, setTab] = useState<Tab>('new');
   const [eta, setEta] = useState<WebOrderRow | null>(null);
+  const [purging, setPurging] = useState(false);
+  const toast = useToast();
   const list = useWebOrders();
   const products = useAllProducts({}, !!list.data?.length).data;
   const byCode = useMemo(() => new Map((products ?? []).map((p) => [String(p.code), p])), [products]);
@@ -247,6 +249,29 @@ function OrdersList() {
             {label}
           </button>
         ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-4px 0 10px' }}>
+        <button
+          type="button"
+          className="secondary"
+          style={{ color: 'var(--danger,#c0392b)' }}
+          disabled={purging}
+          onClick={async () => {
+            if (!window.confirm('مسح كل الطلبات الملغية من «طلبات الموقع» نهائياً؟\nالطلبات الجديدة واللي اتعملها فاتورة مش هتتلمس، والفواتير نفسها مش هتتمسح.')) return;
+            setPurging(true);
+            try {
+              const r = await api.post<{ count: number }>('/web/orders/purge-cancelled', {});
+              toast(`🗑️ اتمسح ${r.count} طلب ملغي`);
+              void list.refetch();
+            } catch (e) {
+              toast(errorMessage(e), 'bad');
+            } finally {
+              setPurging(false);
+            }
+          }}
+        >
+          🗑️ مسح الملغي
+        </button>
       </div>
       {list.isPending && <Loading />}
       {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
