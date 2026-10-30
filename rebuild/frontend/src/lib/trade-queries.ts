@@ -350,6 +350,13 @@ export const useReorder = (days: number) =>
     placeholderData: keepPreviousData,
   });
 
+export const useReorderCount = (days: number) =>
+  useQuery<number>({
+    queryKey: ['reports', 'reorder-count', days],
+    queryFn: ({ signal }) => api.get<{ count: number }>('/insights/reorder/count', { days }, signal).then((r) => r.count),
+    staleTime: 60_000,
+  });
+
 export const useCharts = (top: number, stag: number, enabled = true) =>
   useQuery<DashboardCharts>({
     queryKey: ['reports', 'charts', top, stag],

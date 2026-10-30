@@ -8,8 +8,10 @@ import { useAllProducts, useMarketPrices } from '@/lib/trade-queries';
 /** 🔎 استعلام عن سعر صنف (priceLookup القديمة): سعر الشراء والبيع والمكسب والمتاح وآخر شراء، للمدير. */
 export function PriceLookupCard() {
   const [q, setQ] = useState('');
-  const products = useAllProducts({}).data;
-  const market = useMarketPrices().data;
+  // the whole stock list is only fetched once someone starts typing (it is ~400 KB on a big shop)
+  const typing = q.trim().length > 0;
+  const products = useAllProducts({}, typing).data;
+  const market = useMarketPrices(typing).data;
   const L = useMemo(() => {
     const w = vn(q).split(' ').filter(Boolean);
     if (!w.length) return [];

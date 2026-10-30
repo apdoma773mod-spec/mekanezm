@@ -9,7 +9,6 @@ afterAll(() => app.close());
 let admin: string;
 let staff: string;
 let a: string;
-let b: string;
 beforeEach(async () => {
   await resetDb(prisma);
   await createUser(prisma, '01000000001', 'ADMIN');
@@ -17,7 +16,7 @@ beforeEach(async () => {
   admin = await login(app, '01000000001');
   staff = await login(app, '01100000001');
   a = (await call(admin, 'POST', '/products', { name: 'ماشي', price: 100, cost: 60, qty: 100, minQty: 5 })).json().product.id;
-  b = (await call(admin, 'POST', '/products', { name: 'راكد', price: 100, cost: 40, qty: 10 })).json().product.id;
+  await call(admin, 'POST', '/products', { name: 'راكد', price: 100, cost: 40, qty: 10 });
 });
 
 const call = (cookie: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) =>

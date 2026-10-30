@@ -23,6 +23,12 @@ export default async function insightsRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  // only the number, for the dashboard banner (the full list is hundreds of KB on a big shop)
+  app.get('/reorder/count', async (request) => {
+    const { days } = parse(reorderQuery, request.query);
+    return { count: (await service.reorder(days)).length };
+  });
+
   app.get('/reorder', async (request) => {
     const { days } = parse(reorderQuery, request.query);
     return { suggestions: await service.reorder(days) };

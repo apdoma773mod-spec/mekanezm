@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { money } from '@/lib/format';
-import { useCharts, useDebts, useReorder } from '@/lib/trade-queries';
+import { useCharts, useDebts, useReorderCount } from '@/lib/trade-queries';
 
 const num = (n: number) => Number(n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 1 });
 
@@ -161,7 +161,7 @@ const banner = { width: '100%', marginBottom: 14, borderRadius: 14, padding: 14,
 /** The old red «💰 ...من أكتر من 30 يوم» and orange «📦 ...قرّب يخلص» banners. */
 export function DashboardBanners() {
   const debts = useDebts().data;
-  const reorder = useReorder(30).data;
+  const reorder = useReorderCount(30).data ?? 0;
   const o30 = (debts?.debtors ?? []).filter((x) => x.old || (x.days ?? 0) >= 30);
   const sum = o30.reduce((a, x) => a + x.balance, 0);
   return (
@@ -171,9 +171,9 @@ export function DashboardBanners() {
           💰 عندك <b>{o30.length}</b> عميل عليهم فلوس من أكتر من 30 يوم ({money(sum)}) — اضغط للتذكير
         </Link>
       )}
-      {(reorder?.length ?? 0) > 0 && (
+      {reorder > 0 && (
         <Link href="/reorder" style={{ ...banner, background: '#fff4e5', color: '#8a4b00', border: '1px solid #f0cf9b' }}>
-          📦 <b>{reorder!.length}</b> صنف قرّب يخلص — اضغط تشوف اقتراحات الطلب من الموردين
+          📦 <b>{reorder}</b> صنف قرّب يخلص — اضغط تشوف اقتراحات الطلب من الموردين
         </Link>
       )}
     </>
