@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { readRises } from '../modules/products/cost-rises.js';
 import { alertConfig, n2, raiseAlert, userName } from './alerts.js';
 
 interface Who {
@@ -24,6 +25,12 @@ export async function alertInvoiceSaved(db: PrismaClient, invoiceId: string, act
         }`,
         actor,
       );
+    }
+    if (inv.kind === 'PURCHASE' && !edit) {
+      const rises = (await readRises(db)).filter((x) => x.invoiceNo === inv.no);
+      if (rises.length) {
+        await raiseAlert(db, 'costup', [`📈 تكلفة ${rises.length} صنف غلت في فاتورة الشراء ${inv.no}${inv.person ? ` (${inv.person})` : ''}`, ...rises.slice(0, 6).map((x) => `• ${x.name}: ${n2(x.oldCost)} ← ${n2(x.newCost)} (+${Math.round(((x.newCost - x.oldCost) / x.oldCost) * 100)}%) — سعر البيع ${n2(x.sell)}`), 'راجع الأسعار من الرئيسية.'].join('\n'), actor);
+      }
     }
     if (inv.kind !== 'SALE') return;
     const d = (await alertConfig(db)).disc;

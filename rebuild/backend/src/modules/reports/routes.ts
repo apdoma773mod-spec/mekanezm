@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { contactReport, topCustomers } from './contact-report.js';
 import { ReportsService } from './service.js';
 import { onlineReport } from './online.js';
+import { returnsAnalysis } from './returns-analysis.js';
+import { accountantExport } from './accountant.js';
 
 export default async function reportsRoutes(app: FastifyInstance) {
   const service = new ReportsService(app.prisma);
@@ -26,6 +28,16 @@ export default async function reportsRoutes(app: FastifyInstance) {
   app.get('/online', async (request) => {
     const q = parse(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }), request.query);
     return { report: await onlineReport(app.prisma, q) };
+  });
+
+  app.get('/returns-analysis', async (request) => {
+    const q = parse(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }), request.query);
+    return { report: await returnsAnalysis(app.prisma, q) };
+  });
+
+  app.get('/accountant', async (request) => {
+    const { month } = parse(z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) }), request.query);
+    return { month, sheets: await accountantExport(app.prisma, month) };
   });
 
   app.get('/periods', async () => ({ periods: await service.periods() }));

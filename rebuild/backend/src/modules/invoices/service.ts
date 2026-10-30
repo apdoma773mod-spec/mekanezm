@@ -165,6 +165,8 @@ async function prepareLines(
  * Writes the lines and moves stock. A sale snapshots the product cost; a purchase records its price as cost.
  * `skipStock` is for the daybook, whose lines already took their goods out of stock.
  */
+import { noteCostRise } from '../products/cost-rises.js';
+
 async function writeLines(
   tx: Prisma.TransactionClient,
   invoice: Invoice,
@@ -200,6 +202,7 @@ async function writeLines(
     }
     if (!sale && !l.price.isZero() && (!l.product.cost.equals(l.price) || l.product.costEst)) {
       // Latest purchase price becomes the product cost, as in the old system.
+      await noteCostRise(tx, l.product, l.price, invoice.no);
       await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price, costEst: false } });
     }
   }
