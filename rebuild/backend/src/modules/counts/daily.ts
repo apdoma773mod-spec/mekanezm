@@ -46,7 +46,8 @@ const write = (db: PrismaClient, s: State) => db.setting.upsert({ where: { key: 
 async function ensureToday(db: PrismaClient): Promise<State> {
   const d = today();
   const s = await read(db);
-  if (s.day === d && s.ids.length) return s;
+  // a list made while the shop had few products is topped up (only while nobody has counted yet)
+  if (s.day === d && s.ids.length && (s.ids.length >= SIZE || s.status !== 'open')) return s;
   const prods = await db.product.findMany({ where: { deletedAt: null, qty: { gt: 0 } }, select: { id: true } });
   const ids = prods
     .map((p) => p.id)
