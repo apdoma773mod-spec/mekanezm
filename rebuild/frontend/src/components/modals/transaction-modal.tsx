@@ -2,6 +2,8 @@
 
 import { CustomerBar } from '@/components/modals/customer-bar';
 import { termsFor, useTerms } from '@/lib/terms';
+import { useCreditLimits } from '@/lib/kv';
+import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
 import { errorMessage } from '@/lib/api';
@@ -157,6 +159,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const termsQ = useTerms(isSale);
   const cterm = isSale ? termsFor(termsQ.data, person) : null;
   const contactNow = contacts.data?.items.find((c) => c.name === person.trim());
+  // 🚦 حد الآجل من «تحليلات ذكية»: حد لكل عميل أو حد افتراضي — بيتحط في نفس الشريط والتحذير (لو مفيش حد في «أسعار وحدود العملاء»)
+  const isAdmin = useIsAdmin();
+  const credit = useCreditLimits(isSale && isAdmin);
+  const creditLimit = isSale && person.trim() ? +(credit.data?.lim[person.trim()] ?? credit.data?.def ?? 0) || 0 : 0;
+  const limit = cterm?.t.limit || creditLimit || 0;
   const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * toNum(l.price), 0)), [lines]);
   const total = r2(subtotal + toNum(shipping));
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
@@ -267,11 +274,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     if (total - paidValue > 0.001 && !person.trim()) {
       return toast(isSale ? 'اكتب اسم العميل عشان نسجل الباقي عليه' : 'اكتب اسم المورد عشان نسجل الباقي ليه', 'bad');
     }
-    if (isSale && !invoice && cterm?.t.limit && remaining > 0) {
+    if (isSale && !invoice && limit && remaining > 0) {
       const bal = contactNow?.balance ?? 0;
-      if (bal + remaining > cterm.t.limit && !window.confirm(`⚠️ ${person.trim()}
+      if (bal + remaining > limit && !window.confirm(`⚠️ ${person.trim()}
 عليه دلوقتي ${money(bal)} + الباقي في الفاتورة دي ${money(remaining)} = ${money(bal + remaining)}
-وحد دينه ${money(cterm.t.limit)}.
+وحد دينه ${money(limit)}.
 
 تكمّل الفاتورة برضو؟`)) return;
     }
@@ -511,8 +518,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => pickPerson(e.target.value)}
             error={errors.person}
           />
-          {cterm || (isSale && contactNow && contactNow.balance) ? (
-            <CustomerBar name={person.trim()} term={cterm?.t} balance={contactNow?.balance ?? 0} />
+          {cterm || limit || (isSale && contactNow && contactNow.balance) ? (
+            <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} />
           ) : null}
           <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
           <Input

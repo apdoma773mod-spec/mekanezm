@@ -9,7 +9,7 @@ import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
 import { useInboxCounts } from '@/lib/inbox-queries';
-import { useWebOrderCount } from '@/lib/web-queries';
+import { useWebCounts } from '@/lib/web-queries';
 import { BgFx, NotifyBar, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
@@ -139,7 +139,8 @@ function Shell({ children }: { children: ReactNode }) {
   const { open } = useModal();
   const router = useRouter();
   const counts = useInboxCounts(!!me.data && me.data.role === 'ADMIN');
-  const webCount = useWebOrderCount(!!me.data && me.data.role === 'ADMIN');
+  const webCounts = useWebCounts(!!me.data && me.data.role === 'ADMIN');
+  const webCount = { data: webCounts.data ? webCounts.data.orders + webCounts.data.requests + webCounts.data.custom : 0 };
   const logout = useLogout();
   const T = settings.data?.theme;
   useApplyTheme(T);

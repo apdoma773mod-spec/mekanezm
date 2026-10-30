@@ -44,6 +44,33 @@ describe('website orders', () => {
   });
 });
 
+describe('photo requests and custom orders', () => {
+  it('a customer sends a photo request, the owner replies, then closes it', async () => {
+    expect((await call(null, 'POST', '/web/public/requests', { name: 'سمير', phone: '01001112223' })).statusCode).toBe(400);
+    expect((await call(null, 'POST', '/web/public/requests', { name: 'سمير', imgs: ['http://evil.example/x.jpg'] })).statusCode).toBe(400);
+    const sent = await call(null, 'POST', '/web/public/requests', { name: 'سمير', phone: '01001112223', imgs: ['/api/v1/work/files/abcdef123456.jpg'], note: 'مجرى زي ده' });
+    expect(sent.statusCode).toBe(200);
+    expect((await call(staff, 'GET', '/web/requests')).statusCode).toBe(403);
+    expect((await call(admin, 'GET', '/web/counts')).json()).toMatchObject({ orders: 0, requests: 1, custom: 0 });
+    const id = (await call(admin, 'GET', '/web/requests')).json().items[0].id;
+    const r = await call(admin, 'PATCH', `/web/requests/${id}`, { reply: 'هنوفّره لك' });
+    expect(r.json().request).toMatchObject({ status: 'replied', reply: 'هنوفّره لك' });
+    expect((await call(admin, 'PATCH', `/web/requests/${id}`, { status: 'closed' })).json().request.status).toBe('closed');
+    expect((await call(admin, 'GET', '/web/counts')).json().requests).toBe(0);
+  });
+
+  it('a custom order from the site is listed and can be opened or closed', async () => {
+    expect((await call(null, 'POST', '/web/public/custom', { name: 'عمرو', kind: 'wood', summary: 'x' })).statusCode).toBe(400);
+    expect((await call(null, 'POST', '/web/public/custom', { name: 'عمرو', phone: '01007778889', kind: 'steel', summary: 'حماية باب ٦٠×٢٠٠', spec: { w: 60, h: 200, q: 2 } })).statusCode).toBe(200);
+    expect((await call(admin, 'GET', '/web/counts')).json().custom).toBe(1);
+    const row = (await call(admin, 'GET', '/web/custom')).json().items[0];
+    expect(row).toMatchObject({ kind: 'steel', status: 'new' });
+    expect(row.spec).toEqual({ w: 60, h: 200, q: 2 });
+    expect((await call(admin, 'PATCH', `/web/custom/${row.id}`, { status: 'opened' })).json().custom.status).toBe('opened');
+    expect((await call(admin, 'GET', '/web/counts')).json().custom).toBe(0);
+  });
+});
+
 describe('site content', () => {
   it('is public to read, saved by the owner with a version check', async () => {
     expect((await call(null, 'GET', '/web/public/site')).json().site.version).toBe(0);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { money } from '@/lib/format';
 import { useCharts, useDebts, useReorderCount } from '@/lib/trade-queries';
-import { useWebOrderCount } from '@/lib/web-queries';
+import { useWebCounts } from '@/lib/web-queries';
 import { usePortalNewCount } from '@/lib/portal-queries';
 import { useModal } from '@/components/modals/modal-host';
 
@@ -165,7 +165,10 @@ const banner = { width: '100%', marginBottom: 14, borderRadius: 14, padding: 14,
 export function DashboardBanners() {
   const debts = useDebts().data;
   const reorder = useReorderCount(30).data ?? 0;
-  const web = useWebOrderCount().data ?? 0;
+  const wc = useWebCounts().data;
+  const web = wc?.orders ?? 0;
+  const rq = wc?.requests ?? 0;
+  const cu = wc?.custom ?? 0;
   const msgs = usePortalNewCount().data ?? 0;
   const { open } = useModal();
   const o30 = (debts?.debtors ?? []).filter((x) => x.old || (x.days ?? 0) >= 30);
@@ -176,6 +179,16 @@ export function DashboardBanners() {
         <button type="button" onClick={() => open({ kind: 'portalNew' })} style={{ ...banner, background: '#e8f5ff', color: '#0b4a7a', border: '1px solid #9ccdf0', width: '100%', textAlign: 'right', font: 'inherit' }}>
           🔗 عندك <b>{msgs}</b> طلب جديد من العملاء (من رابطهم) — اضغط للعرض
         </button>
+      )}
+      {rq > 0 && (
+        <Link href="/weborders#rqBody" style={{ ...banner, background: '#eef6ff', color: '#0b4a8b', border: '1px solid #9cc3ef' }}>
+          📷 عندك <b>{rq}</b> طلب بالصور (منتج مش في الموقع) — اضغط للعرض
+        </Link>
+      )}
+      {cu > 0 && (
+        <Link href="/weborders#cuBody" style={{ ...banner, background: '#fff4e5', color: '#8a4b00', border: '1px solid #f0b46a' }}>
+          🛠️ عندك <b>{cu}</b> طلب تجهيز من الموقع — اضغط للعرض
+        </Link>
       )}
       {web > 0 && (
         <Link href="/weborders" style={{ ...banner, background: '#fff4e5', color: '#8a4b00', border: '1px solid #f0b46a' }}>

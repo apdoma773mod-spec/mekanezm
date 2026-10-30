@@ -4,6 +4,15 @@ import { api } from './api';
 /** The old mk_settings documents (points, follow, reservations, combos, usd, plists, credit…): one JSON value per key. */
 export type KvKey = 'points' | 'follow' | 'reservations' | 'combos' | 'usd' | 'plists' | 'credit';
 
+/** 🚦 حد الآجل (تبويب «حد الآجل» في تحليلات ذكية): حد لكل عميل وحد افتراضي، للمدير. */
+export const useCreditLimits = (enabled: boolean) =>
+  useQuery({
+    enabled,
+    queryKey: ['kv', 'credit'],
+    queryFn: ({ signal }) => api.get<{ value: { def: number; lim: Record<string, number> } | null }>('/work/kv/credit', undefined, signal).then((r) => r.value ?? { def: 0, lim: {} }),
+    staleTime: 60_000,
+  });
+
 export function useKv<T>(key: KvKey, def: T) {
   const qc = useQueryClient();
   const q = useQuery<T>({

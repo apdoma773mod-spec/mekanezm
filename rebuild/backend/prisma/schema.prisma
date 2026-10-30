@@ -913,6 +913,41 @@ model WebOrder {
   @@index([status, createdAt])
 }
 
+/// «📷 طلبات بالصور»: a customer sent a photo of a product he could not find on the site.
+model WebRequest {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String    @default("")
+  imgs      Json      @default("[]")
+  note      String    @default("")
+  /// new | replied | closed
+  status    String    @default("new")
+  reply     String    @default("")
+  repliedAt DateTime? @db.Timestamptz(3)
+  repliedBy String    @default("")
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+/// «🛠️ طلبات تجهيز من الموقع»: sizes for stainless, bamboo drawers or cabinet doors chosen on the site.
+model WebCustom {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @default("")
+  /// steel | bamboo | delf
+  kind      String
+  summary   String   @default("")
+  note      String   @default("")
+  img       String   @default("")
+  spec      Json     @default("{}")
+  /// new | opened | closed | cancelled
+  status    String   @default("new")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
 /// 🔗 رابط العميل (mk_portal القديمة): a private link per customer; the page reads his account live.
 model Portal {
   token     String   @id
