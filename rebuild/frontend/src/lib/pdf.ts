@@ -1,5 +1,7 @@
 'use client';
 
+import { withAppFonts } from './fonts';
+
 /** «تحويل إلى PDF» (buildInvoicePdf القديمة): الفاتورة كصورة داخل PDF بعرض A4، من نفس html2canvas + jsPDF. */
 const H2C = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 const JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -32,7 +34,7 @@ export async function renderFrame(fullHtml: string, width = 794): Promise<{ fram
   frame.setAttribute('aria-hidden', 'true');
   frame.style.cssText = `position:fixed;left:0;top:0;width:${width}px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-1`;
   const loaded = new Promise<void>((ok) => (frame.onload = () => ok()));
-  frame.srcdoc = fullHtml;
+  frame.srcdoc = withAppFonts(fullHtml);
   document.body.appendChild(frame);
   await withTimeout(loaded, 8000);
   const doc = frame.contentDocument;

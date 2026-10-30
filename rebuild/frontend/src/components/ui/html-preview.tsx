@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { withAppFonts } from '@/lib/fonts';
 
 /**
  * previewInvoice() القديمة: الفاتورة بعرض A4 (794px) متصغّرة على عرض الشاشة جوه شباك، من غير PDF ولا طباعة.
@@ -29,7 +30,7 @@ export function HtmlPreview({ html, width = 794 }: { html: string; width?: numbe
       <iframe
         ref={frame}
         title="معاينة الفاتورة"
-        srcDoc={html}
+        srcDoc={withAppFonts(html)}
         onLoad={() => {
           measure();
           // fonts and the logo can still change the height after load

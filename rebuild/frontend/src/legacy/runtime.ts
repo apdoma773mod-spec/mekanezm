@@ -40,15 +40,17 @@ const toOld = (p: ProductDto): OldProduct => {
 };
 const coOf = (v: unknown) => (String(v ?? '').toUpperCase() === 'HY' ? 'HY' : 'MK');
 
+/** Whole list in ONE request (`/products/all`, `/contacts/all`) instead of 200-row pages one after another. */
 async function pages<T>(path: string): Promise<T[]> {
-  const out: T[] = [];
-  for (let page = 1; page < 100; page++) {
-    const r = await api.get<Paginated<T>>(path, { page, pageSize: 200 });
-    out.push(...r.items);
-    if (out.length >= r.total || !r.items.length) break;
-  }
-  return out;
+  return (await api.get<{ items: T[] }>(`${path}/all`)).items;
 }
+
+// The list is kept for a minute: opening another work screen (or coming back) no longer downloads the shop again.
+// Any save in the app clears it through changed().
+let cache: { at: number; products: ProductDto[]; contacts: ContactDto[]; settings: Record<string, any> } | null = null;
+export const dropWorkCache = () => {
+  cache = null;
+};
 
 /** Same as the old waNum(): Egyptian local numbers to 20XXXXXXXXXX. */
 function waNum(ph: unknown) {
@@ -260,13 +262,25 @@ function blobToB64(b: Blob): Promise<string> {
 }
 
 /** Loads products, contacts and the shop name, then puts every global work.js reads on window. */
-export async function installRuntime(h: LegacyHooks) {
+export async function installRuntime(hooks: LegacyHooks) {
   const w = W();
-  const [products, contacts, settings] = await Promise.all([
-    pages<ProductDto>('/products'),
-    h.user.admin ? pages<ContactDto>('/contacts') : Promise.resolve([] as ContactDto[]),
-    api.get<{ settings: Record<string, any> }>('/settings').then((r) => r.settings).catch(() => ({}) as Record<string, any>),
-  ]);
+  // anything the work screens save makes the kept list stale
+  const h: LegacyHooks = {
+    ...hooks,
+    changed: () => {
+      cache = null;
+      hooks.changed();
+    },
+  };
+  if (!cache || Date.now() - cache.at > 60_000) {
+    const [products, contacts, settings] = await Promise.all([
+      pages<ProductDto>('/products'),
+      h.user.admin ? pages<ContactDto>('/contacts') : Promise.resolve([] as ContactDto[]),
+      api.get<{ settings: Record<string, any> }>('/settings').then((r) => r.settings).catch(() => ({}) as Record<string, any>),
+    ]);
+    cache = { at: Date.now(), products, contacts, settings };
+  }
+  const { products, contacts, settings } = cache;
   const prevLen = new Map<string, number>(((w.db?.products ?? []) as OldProduct[]).filter((p) => p.len).map((p) => [p.id, p.len!]));
   w.db = {
     products: products.map((p) => ({ ...toOld(p), ...(prevLen.has(p.id) ? { len: prevLen.get(p.id) } : {}) })),
