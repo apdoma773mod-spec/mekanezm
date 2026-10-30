@@ -200,7 +200,7 @@ export function Works() {
   if (!W.length) return null;
   return (
     <section className="blk" id="works">
-      <div className="sh"><h2>🏗️ من أعمالنا</h2></div>
+      <div className="sh"><h2>🏗️ من أعمالنا</h2><Link href="/works" className="all">شوف كل شغلنا ←</Link></div>
       <div className="works">{W.map((w, i) => (
         <button key={i} onClick={() => open({ kind: 'work', i })}>
           <span className="im"><Image src={w.imgs[0]} alt={w.title} fill sizes="280px" style={{ objectFit: 'cover' }} /></span>

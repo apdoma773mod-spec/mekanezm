@@ -27,3 +27,7 @@ export const OPENING = { open: 10, close: 24, closedDays: [5] as number[] };
 
 // Wholesale (جملة) sign-up: how a carpenter/trader proves it. Change the numbers here.
 export const TRADE = { minInvoices: 5, months: 3, reviewDays: 1 };
+
+// «يوصلك إمتى؟» on product pages: working days after the order (Friday off), and the hour after which
+// an order counts from the next day. Change these to the shop's real times.
+export const ETA = { cutoff: 16, local: [1, 2] as [number, number], gov: [2, 4] as [number, number] };

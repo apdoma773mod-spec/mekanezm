@@ -1,5 +1,6 @@
 import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
 import { OpenNow } from '@/components/open-now';
+import { Subscribe } from '@/components/subscribe';
 import { Footer, Header, Socials } from '@/components/site-parts';
 import Link from 'next/link';
 import { getCatalog, getSettings } from '@/lib/catalog';
@@ -47,6 +48,12 @@ export default async function Home() {
       <Header site={site} slides={slides} />
       <main id="main">
         <Categories />
+        <nav className="qtools" aria-label="أدوات">
+          <Link href="/kits"><span>🧰</span><b>أطقم جاهزة</b><small>جهّز مطبخك أو دولابك</small></Link>
+          <Link href="/tools"><span>🧮</span><b>حاسبات النجار</b><small>مفصلات، مجرى، درج</small></Link>
+          <Link href="/works"><span>🏗️</span><b>من شغلنا</b><small>صور حقيقية</small></Link>
+          <Link href="/brands"><span>🏷️</span><b>البراندات</b><small>بلوم، جراس، هيتتش، ويل ماكس</small></Link>
+        </nav>
         {top.length > 0 && <ProductRow id="top-row" title="⭐ الأكثر طلباً" href="/search?top=1" items={top.slice(0, ROW).map(card)} total={top.length} priority />}
         {rows.map(({ s, ps }, i) => (
           <ProductRow key={s.id} id={'r-' + s.id} title={s.name} href={sectionPath(s.id)} items={ps.slice(0, ROW).map(card)} total={ps.length} priority={!top.length && i === 0} />
@@ -78,6 +85,7 @@ export default async function Home() {
           <h2 id="gd-h">📘 قبل ما تشتري: دليل الاختيار</h2>
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
+        <Subscribe />
         <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">

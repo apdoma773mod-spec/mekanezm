@@ -40,7 +40,7 @@ export function Modals() {
     case 'track': return <TrackSheet ref0={modal.ref} phone0={modal.phone} />;
     case 'review': return <ReviewSheet product={modal.product} />;
     case 'notify': return <NotifySheet item={modal.item} />;
-    case 'price': return <PriceSheet lines={modal.lines} />;
+    case 'price': return <PriceSheet lines={modal.lines} extra={modal.extra} />;
     case 'work': return <WorkView i={modal.i} />;
     case 'image': return <Lightbox srcs={modal.srcs} start={modal.i} onClose={close} />;
   }
@@ -465,7 +465,7 @@ function NotifySheet({ item: p }: { item: Item }) {
 }
 
 /* ---------------- 💰 price request (no prices on the site) ---------------- */
-function PriceSheet({ lines }: { lines: Line[] }) {
+function PriceSheet({ lines, extra = '' }: { lines: Line[]; extra?: string }) {
   const { site, close } = useShop();
   const [L, setL] = useState(lines);
   const [name, setName] = useState('');
@@ -476,12 +476,12 @@ function PriceSheet({ lines }: { lines: Line[] }) {
   const [sent, setSent] = useState(false);
   useEffect(() => { const m = getMe(); setName(m.name); setPhone(m.phone); }, []);
   const itemsText = L.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n');
-  const waText = `السلام عليكم، عايز أعرف سعر:\n${itemsText}${note.trim() ? '\n' + note.trim() : ''}`;
+  const waText = `السلام عليكم، عايز أعرف سعر:\n${[extra, itemsText].filter(Boolean).join('\n')}${note.trim() ? '\n' + note.trim() : ''}`;
   async function go() {
     if (name.trim().length < 2) return setMsg('اكتب اسمك');
     if (digits(phone) < 8) return setMsg('اكتب رقم موبايلك عشان نبعتلك السعر');
     setBusy(true); setMsg('⏳ جاري الإرسال…');
-    const body = (`💰 طلب سعر من الموقع\n${itemsText}${note.trim() ? '\nملاحظة: ' + note.trim() : ''}`).slice(0, 1000);
+    const body = (`💰 طلب سعر من الموقع\n${[extra, itemsText].filter(Boolean).join('\n')}${note.trim() ? '\nملاحظة: ' + note.trim() : ''}`).slice(0, 1000);
     try {
       const r = await placeRequest(name.trim(), phone.trim(), body, []);
       if (!r.ok) throw 0;
@@ -501,6 +501,7 @@ function PriceSheet({ lines }: { lines: Line[] }) {
     <Sheet onClose={close} label="ابعتلي السعر">
       <h3>💰 ابعتلي السعر</h3>
       <p className="mut">سيب رقمك وهنبعتلك السعر على الواتساب.</p>
+      {extra && <p className="pextra">{extra}</p>}
       {L.map(({ item: p, q }) => (
         <div className="citem" key={p.id}>
           {p.img && <span className="cimg"><Image src={p.img} alt="" fill sizes="48px" style={{ objectFit: 'contain' }} /></span>}

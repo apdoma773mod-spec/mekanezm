@@ -541,3 +541,68 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 .tsteps li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 0 10px; align-items: center; }
 .tsteps li::before { content: counter(s); grid-row: span 2; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--gd); color: #2a1c04; font-weight: 800; }
 .tsteps span { color: var(--mut); font-size: 13px; }
+.pextra { white-space: pre-line; font-size: 13px; background: var(--bg); border-radius: 12px; padding: 10px 12px; margin: 0 0 8px; }
+.kin { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.kin label { margin: 0; }
+.kstep { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); }
+.kstep button { flex: none; width: 42px; height: 44px; border: 0; background: none; font-size: 20px; font-weight: 800; color: var(--accent); }
+.form .kstep input { border: 0; border-radius: 0; text-align: center; padding: 0; height: 44px; min-width: 0; background: none; -moz-appearance: textfield; }
+.kstep input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.form label.kyes { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; border: 1.5px solid var(--line); border-radius: 14px; font-weight: 700; }
+.form label.kyes:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, #fff); }
+.form label.kyes input { width: 20px; height: 20px; accent-color: var(--accent); }
+.sec-h { font-size: 19px; margin: 18px 0 10px; }
+.krows { display: grid; gap: 10px; }
+.krow { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; padding: 10px; border-radius: 16px; background: var(--card); box-shadow: var(--sh); }
+.krow.miss { background: #fffaf0; border: 1px dashed #d99a2b; box-shadow: none; }
+.kim { position: relative; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: #fff; display: grid; place-items: center; font-size: 28px; }
+.kt { display: grid; gap: 2px; min-width: 0; }
+.kt a { color: var(--fg); text-decoration: none; font-size: 14px; }
+.kt small { font-size: 12.5px; }
+.kq { font-size: 18px; font-weight: 800; color: var(--accent); }
+.kact { display: flex; gap: 8px; margin: 14px 0 6px; }
+.kact > * { flex: 1; }
+.calcs { display: grid; gap: 14px; }
+.calc { background: var(--card); border-radius: 18px; padding: 16px; box-shadow: var(--sh); scroll-margin-top: 80px; }
+.calc h2 { margin: 0 0 10px; font-size: 18px; }
+.cin { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.calc label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.calc input:not([type=checkbox]) { font: inherit; font-size: 18px; font-weight: 800; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); width: 100%; text-align: center; }
+.calc .ck { flex-direction: row; align-items: center; gap: 8px; margin-top: 10px; }
+.calc .ck input { width: 20px; height: 20px; accent-color: var(--accent); }
+.ans { margin: 12px 0 8px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 10%, #fff); font-size: 16px; }
+.ans b { font-size: 22px; color: color-mix(in srgb, var(--accent) 80%, #000); }
+.ans small { display: block; color: var(--mut); font-size: 12.5px; margin-top: 2px; }
+.ans.no { background: #fff4f2; color: #b03a2e; }
+.cmeta .vidc { flex: none; font-weight: 800; color: #6d28d9; background: #f3efff; border-radius: 8px; padding: 1px 8px; }
+.brandl { color: var(--accent); font-weight: 800; text-decoration: none; }
+.instl { display: block; text-align: center; margin: 8px 0; padding: 12px; border-radius: 14px; background: var(--card); border: 1.5px solid var(--line); color: var(--fg); font-weight: 800; text-decoration: none; }
+.eta h2 { margin-bottom: 8px; }
+.eta .chips { margin-bottom: 8px; }
+.eta p { margin: 0; }
+.eta small { display: block; color: var(--mut); font-size: 12.5px; }
+.subx { max-width: 1100px; margin: 22px 14px; padding: 18px; border-radius: 20px; background: linear-gradient(135deg, #0f1a14, #1d3326); color: #fff; }
+.subx h2 { margin: 0 0 4px; color: var(--gold-l); font-size: 20px; }
+.subx p { margin: 0 0 10px; color: #d8e0db; }
+.subx .chips button { background: #ffffff14; color: #fff; border-color: #ffffff33; }
+.subx .chips button.on { background: var(--gold-l); color: #2a1c04; border-color: var(--gold-l); }
+.subf { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.subf input { font: inherit; padding: 12px; border-radius: 12px; border: 0; min-width: 0; }
+.subf button { grid-column: 1 / -1; }
+@media (min-width: 720px) { .subx { margin: 22px auto; } .subf { grid-template-columns: 1fr 1fr auto; } .subf button { grid-column: auto; } }
+.wks { display: grid; gap: 16px; }
+.wk { background: var(--card); border-radius: 20px; overflow: hidden; box-shadow: var(--sh); }
+.wkg { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 4px; scrollbar-width: none; }
+.wkg button { position: relative; flex: 0 0 88%; aspect-ratio: 4 / 3; border: 0; padding: 0; scroll-snap-align: start; background: #eee; }
+.wkg button:only-child { flex-basis: 100%; }
+.wkb { padding: 14px 16px; }
+.wkb h2 { margin: 0 0 4px; font-size: 18px; }
+.wkb p { margin: 0 0 8px; color: var(--mut); white-space: pre-line; }
+.wku { display: block; margin: 6px 0; }
+.qtools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 1100px; margin: 16px auto 0; padding: 0 14px; }
+.qtools a { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: center; padding: 12px; border-radius: 16px; background: var(--card); box-shadow: var(--sh); color: var(--fg); text-decoration: none; }
+.qtools span { grid-row: span 2; font-size: 26px; }
+.qtools b { font-size: 14px; }
+.qtools small { color: var(--mut); font-size: 12px; }
+@media (min-width: 720px) { .qtools { grid-template-columns: repeat(4, 1fr); } }
+.sh .all { color: var(--accent); font-weight: 800; font-size: 13px; text-decoration: none; padding: 10px 2px; }

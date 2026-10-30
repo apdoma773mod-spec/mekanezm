@@ -11,7 +11,7 @@ export type Modal =
   | { kind: 'track'; ref?: string; phone?: string }
   | { kind: 'review'; product?: { id: string; name: string } }
   | { kind: 'notify'; item: Item }
-  | { kind: 'price'; lines: Line[] }
+  | { kind: 'price'; lines: Line[]; extra?: string }
   | { kind: 'work'; i: number }
   | { kind: 'image'; srcs: string[]; i: number };
 

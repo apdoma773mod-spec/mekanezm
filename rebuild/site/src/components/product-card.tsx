@@ -40,6 +40,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
         <div className="cmeta">
           {p.code && <span className="code">كود {p.code}</span>}
           {sec && <span className="csec">{sec.name}</span>}
+          {p.video && <span className="vidc">🎬 فيديو</span>}
           {fresh && <span className="newc">جديد</span>}
         </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>

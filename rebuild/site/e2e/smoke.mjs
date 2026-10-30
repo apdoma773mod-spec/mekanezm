@@ -48,7 +48,7 @@ await check('category page', async () => {
   const c = await page.locator('a[href^="/c/"]').first().getAttribute('href');
   must(!!c, 'no category link'); await go(c);
 });
-for (const p of ['/guide', '/guide/hinges', '/trade', '/about', '/privacy', '/terms', '/policy', '/contact', '/quick', '/orders', '/fav', '/custom', '/story', '/compare']) await check(p, () => go(p));
+for (const p of ['/kits', '/kits/kitchen', '/kits/dressing', '/tools', '/brands', '/works', '/guide/install-hinge', '/guide', '/guide/hinges', '/trade', '/about', '/privacy', '/terms', '/policy', '/contact', '/quick', '/orders', '/fav', '/custom', '/story', '/compare']) await check(p, () => go(p));
 await check('old links redirect', async () => { await page.goto(base + '/shop.html'); must(new URL(page.url()).pathname === '/', 'shop.html did not go home'); });
 await check('404 page', async () => { const r = await page.goto(base + '/no-such-page'); must(r?.status() === 404, 'status ' + r?.status()); });
 await check('sitemap / robots / health', async () => {

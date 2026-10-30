@@ -7,11 +7,15 @@ import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
 import { images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
+import { DeliveryEta } from './delivery-eta';
 import { CompareBtn, ProductReviews } from './extras';
 import { lqip, Placeholder } from './product-card';
 import { useShop } from './shop-provider';
 
-export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product; ok: boolean; sim: Item[]; comp?: Item[]; prev?: Item; next?: Item }) {
+export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = [], install }: {
+  p: Product; ok: boolean; sim: Item[]; comp?: Item[]; prev?: Item; next?: Item;
+  brand?: { slug: string; name: string }; works?: { i: number; title: string; img: string }[]; install?: { href: string; ext: boolean };
+}) {
   const { site, cart, add, fav, toggleFav, open, pushRecent, say } = useShop();
   const router = useRouter();
   const item = toItem(p, ok);
@@ -95,12 +99,14 @@ export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product;
             <span className={'pvav ' + (ok ? 'ok' : 'no')}>● {ok ? 'متوفر' : 'غير متوفر حاليًا'}</span>
             {p.code && <span>كود: {p.code}</span>}
             {sec && <span>{sec.name}</span>}
+            {brand && <Link className="brandl" href={`/brand/${brand.slug}`}>🏷️ {brand.name}</Link>}
           </div>
           <div className="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>
           <div className="pvbox pvprice">
             <div><small>السعر</small><b>اسأل عن السعر</b></div>
             <button type="button" className="pvpbtn" onClick={() => open({ kind: 'price', lines: [{ item, q }] })}>💰 ابعتلي السعر</button>
           </div>
+          <DeliveryEta ok={ok} />
           <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>
           {vid && (
             <div className="pvbox pvvid">
@@ -125,6 +131,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product;
           </div>
           <a className="friend" target="_blank" rel="noopener" href={'https://wa.me/?text=' + encodeURIComponent(`شوف ده من ميكانيزم: ${p.name}
 ${productUrl(p.id)}`)}>📤 ابعته لصاحبك أو للنجار على الواتساب</a>
+          {install && <a className="instl" href={install.href} {...(install.ext ? { target: '_blank', rel: 'noopener' } : {})}>🔧 إزاي يتركّب؟ {install.ext ? 'دليل التركيب' : 'خطوات التركيب'}</a>}
           <CompareBtn id={p.id} />
           <ProductReviews id={p.id} name={p.name} />
           {sim.length > 0 && (
@@ -145,6 +152,17 @@ ${productUrl(p.id)}`)}>📤 ابعته لصاحبك أو للنجار على ا�
                 <Link key={x.id} href={productPath(x.id)}>
                   <span className="im">{x.img ? <Image src={x.img} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
                   {x.name}
+                </Link>
+              ))}</div>
+            </div>
+          )}
+          {works.length > 0 && (
+            <div className="pvbox">
+              <h2>🏗️ اتركّب في شغلنا</h2>
+              <div className="pvsim">{works.map(w => (
+                <Link key={w.i} href="/works">
+                  <span className="im">{w.img && <Image src={w.img} alt="" fill sizes="130px" style={{ objectFit: 'cover' }} />}</span>
+                  {w.title}
                 </Link>
               ))}</div>
             </div>
