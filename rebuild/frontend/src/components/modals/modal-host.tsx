@@ -189,6 +189,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
       case 'oldGoods':
       case 'importFile':
       case 'split':
+      case 'recat':
         content = <ProductToolModal spec={spec} />;
         break;
       default:

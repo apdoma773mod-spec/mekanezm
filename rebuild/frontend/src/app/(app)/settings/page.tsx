@@ -117,6 +117,9 @@ function SettingsScreen() {
             <Link className="secondary" href="/account">
               🔑 حسابي وتغيير كلمة السر
             </Link>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'recat' })}>
+              إعادة تصنيف الأصناف
+            </button>
             <button
               type="button"
               className="secondary danger"

@@ -240,6 +240,23 @@ export class ProductsService {
     });
   }
 
+  /** «إعادة تصنيف الأصناف»: the settings screen sends the new category of each product it decided to move. */
+  async recat(items: { id: string; category: string }[], actor: Actor): Promise<number> {
+    return withTx(this.prisma, async (tx) => {
+      const rows = await tx.product.findMany({ where: { id: { in: items.map((x) => x.id) }, deletedAt: null } });
+      const to = new Map(items.map((x) => [x.id, x.category]));
+      let n = 0;
+      for (const p of rows) {
+        const category = to.get(p.id)!;
+        if (p.category === category) continue;
+        const updated = await tx.product.update({ where: { id: p.id }, data: { category } });
+        await writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'Product', entityId: p.id, before: snapshot(p), after: snapshot(updated), ip: actor.ip });
+        n++;
+      }
+      return n;
+    });
+  }
+
   /** Every live product in one go (print lists, labels, bulk price, pickers) with the same filters as the screen. */
   async all(query: { q?: string; category?: string; company?: 'MK' | 'HY'; stock?: 'all' | 'low' | 'out' }, actor: Actor): Promise<ProductDto[]> {
     const admin = isAdmin(actor);

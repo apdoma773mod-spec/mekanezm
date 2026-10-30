@@ -143,7 +143,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [autoPaid, setAutoPaid] = useState(false);
   const [scanning, setScanning] = useState(false);
   const shipment = useCreateShipment();
-  const infos = useAllProductInfo().data ?? {};
+  // the packs (كرتونة/دستة) list is only needed once a stock item is in the invoice
+  const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
 

@@ -17,6 +17,7 @@ import {
   useEstimateCosts,
   useImportNames,
   useProducts,
+  useRecat,
   useSplitProduct,
   useUpdateProduct,
   useZeroCost,
@@ -33,7 +34,8 @@ export type ProductToolSpec =
   | { kind: 'linkBarcode'; code: string }
   | { kind: 'oldGoods' }
   | { kind: 'importFile' }
-  | { kind: 'split' };
+  | { kind: 'split' }
+  | { kind: 'recat' };
 
 const num = (v: unknown) => {
   const n = parseFloat(String(v ?? '').replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٬,]/g, '').replace(/٫/g, '.'));
@@ -868,8 +870,114 @@ function Split() {
   );
 }
 
+// ---------- إعادة تصنيف الأصناف (openRecat القديمة) ----------
+
+const RC_DEF = 'إكسسوارات مطابخ';
+const RC_H = 'مفصلات';
+const RC_R = 'مجرى الادراج';
+const reHinge = /(^| )عدل|باكم|3d|ثري دي|مفصل/;
+const reRunS = /مجري|مجار/;
+const reRunW = /جانبي|سفلي/;
+function classify(name: string) {
+  const t = vn(name);
+  const h = reHinge.test(t);
+  const rs = reRunS.test(t);
+  const rw = reRunW.test(t);
+  return { cat: rs ? RC_R : h ? RC_H : rw ? RC_R : '', conflict: h && (rs || rw) };
+}
+
+function Recat() {
+  const { close } = useModal();
+  const toast = useToast();
+  const all = useAllProducts({}).data;
+  const recat = useRecat();
+  const [forceAll, setForceAll] = useState(false);
+  const res = useMemo(
+    () =>
+      (all ?? []).map((p) => {
+        const c = classify(p.name);
+        return { p, to: c.cat, conflict: c.conflict, manual: !!p.category && p.category !== RC_DEF && p.category !== c.cat };
+      }),
+    [all],
+  );
+  if (!all)
+    return (
+      <Modal title="إعادة تصنيف الأصناف" onClose={close}>
+        <Loading />
+      </Modal>
+    );
+  const H = res.filter((x) => x.to === RC_H);
+  const R = res.filter((x) => x.to === RC_R);
+  const M = res.filter((x) => x.to && x.manual);
+  const eff = res.filter((x) => x.to && (forceAll || !x.manual) && x.p.category !== x.to);
+  const rows = (list: typeof res, n: number) => (
+    <>
+      {list.slice(0, n).map((x) => (
+        <div key={x.p.id} style={{ fontSize: 13, padding: '2px 0' }}>
+          {x.p.name}
+          {x.conflict && (
+            <>
+              {' '}
+              <span className="badge red">تعارض</span>
+            </>
+          )}
+        </div>
+      ))}
+      {list.length > n && <div style={{ fontSize: 12, color: 'var(--muted)' }}>و {list.length - n} غيرهم…</div>}
+    </>
+  );
+  const go = () => {
+    if (!eff.length) {
+      close();
+      return toast('مفيش حاجة اتغيرت');
+    }
+    recat.mutate(
+      eff.map((x) => ({ id: x.p.id, category: x.to })),
+      {
+        onSuccess: (n) => {
+          close();
+          toast(`تم تغيير تصنيف ${n} صنف`);
+        },
+        onError: (e) => toast(errorMessage(e), 'bad'),
+      },
+    );
+  };
+  return (
+    <Modal title="إعادة تصنيف الأصناف" onClose={close}>
+      <div className="card" style={{ lineHeight: 1.9 }}>
+        <b>{H.length}</b> صنف → <b>{RC_H}</b>
+        <br />
+        <b>{R.length}</b> صنف → <b>{RC_R}</b>
+        <br />
+        باقي الأصناف (<b>{res.length - H.length - R.length}</b>) هتفضل زي ما هي.
+      </div>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '10px 0', fontSize: 14 }}>
+        <input type="checkbox" checked={forceAll} onChange={(e) => setForceAll(e.target.checked)} /> غيّر كمان الأصناف اللي تصنيفها اتعدل يدوي ({M.length} صنف)
+      </label>
+      <div className="card" style={{ marginBottom: 8 }}>
+        <b>{RC_H}</b>
+        {rows(H, 10)}
+      </div>
+      <div className="card" style={{ marginBottom: 8 }}>
+        <b>{RC_R}</b>
+        {rows(R, 10)}
+      </div>
+      <div className="modal-foot">
+        <button type="button" className="primary" disabled={recat.isPending} onClick={go}>
+          تطبيق على {eff.length} صنف
+        </button>
+        <button type="button" className="secondary" onClick={close}>
+          إلغاء
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export function ProductToolModal({ spec }: { spec: ProductToolSpec }) {
   switch (spec.kind) {
+    case 'recat':
+      return <Recat />;
     case 'bulkPrice':
       return <BulkPrice />;
     case 'printProducts':

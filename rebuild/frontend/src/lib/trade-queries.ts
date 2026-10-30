@@ -391,6 +391,9 @@ export const useAllProducts = (q: AllProductsQuery = {}, enabled = true) =>
     placeholderData: keepPreviousData,
   });
 
+export const useRecat = () =>
+  useTradeMutation((items: { id: string; category: string }[]) => api.post<{ updated: number }>('/products/recat', { items }).then((r) => r.updated));
+
 export const useBulkPrice = () =>
   useTradeMutation((v: { ids: string[]; field: 'price' | 'cost' | 'both'; pct: number; round: number }) =>
     api.post<{ updated: number }>('/products/bulk-price', v).then((r) => r.updated),

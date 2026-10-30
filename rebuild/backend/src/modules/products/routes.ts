@@ -118,6 +118,14 @@ export default async function productsRoutes(app: FastifyInstance) {
     return { updated: await service.bulkPrice(b, actorOf(request)) };
   });
 
+  app.post('/recat', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(
+      z.object({ items: z.array(z.object({ id: z.string().min(1).max(64), category: z.string().trim().min(1).max(80) })).min(1).max(5000) }),
+      request.body,
+    );
+    return { updated: await service.recat(b.items, actorOf(request)) };
+  });
+
   app.post('/split', { preHandler: app.requireAdmin }, async (request) => {
     const b = parse(
       z.object({ sourceId: z.string().min(1).max(64), targetId: z.string().min(1).max(64), ratio: z.number().gt(0), qty: z.number().gt(0) }),
