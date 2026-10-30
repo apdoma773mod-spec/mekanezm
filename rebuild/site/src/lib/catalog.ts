@@ -73,7 +73,7 @@ export async function getProduct(id: string) {
 export const PAGE = 24;
 
 /** One page-range of products for a section / search (pages are cumulative: page 2 = first 48). */
-export async function listProducts(o: { sec?: string; q?: string; sort?: Sort; av?: boolean; page?: number }) {
+export async function listProducts(o: { sec?: string; q?: string; sort?: Sort; av?: boolean; f?: string; page?: number }) {
   const { site, ok, fresh } = await getCatalog();
   const all = queryProducts(site.products, ok, o);
   const n = Math.max(1, o.page ?? 1) * PAGE;

@@ -78,6 +78,7 @@ export default async function Home() {
           <h2 id="gd-h">📘 قبل ما تشتري: دليل الاختيار</h2>
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
+        <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">
             <div className="sh"><h2>🚚 التوصيل والاستبدال</h2></div>

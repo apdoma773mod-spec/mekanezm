@@ -5,15 +5,17 @@ import type { Item, Product, Settings, Ship, Site, Stock } from './schema';
 /** Arabic-friendly search text: أ/إ/آ→ا، ة→ه، ى→ي، no diacritics, Arabic digits → Latin. */
 export const norm = (s: string) => String(s || '').toLowerCase()
   .replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
-  .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/\s+/g, ' ').trim();
+  .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+  // Common spellings of the same word, so «ألومنيوم» finds «المنيوم» and «دريسينج» finds «دريسنج».
+  .replace(/دريسينج/g, 'دريسنج').replace(/الومنيوم|المونيوم/g, 'المنيوم').replace(/\s+/g, ' ').trim();
 
 export const toItem = (p: Product, ok: boolean): Item => ({ id: p.id, name: p.name, code: p.code, desc: p.desc.slice(0, 120), img: images(p)[0] ?? '', ok });
 
 export type Sort = '' | 'az' | 'av' | 'new';
 /** Filter + sort products (server side). Every search word must match name, code or description. */
-export function queryProducts(products: Product[], ok: (p: Product) => boolean, o: { sec?: string; q?: string; sort?: Sort; av?: boolean }) {
+export function queryProducts(products: Product[], ok: (p: Product) => boolean, o: { sec?: string; q?: string; sort?: Sort; av?: boolean; f?: string }) {
   const words = norm(o.q ?? '').split(' ').filter(Boolean);
-  let L = products.filter(p => (!o.sec || p.sec === o.sec) && (!o.av || ok(p)) &&
+  let L = products.filter(p => (!o.sec || p.sec === o.sec) && (!o.av || ok(p)) && (!o.f || hasSpec(p, o.f)) &&
     (!words.length || (h => words.every(w => h.includes(w)))(norm(`${p.name} ${p.code} ${p.desc}`))));
   if (words.length && !o.sort) {
     // Name matches first.
@@ -132,23 +134,38 @@ export function slidesList(site: Site) {
 }
 
 /** Description → either free text or a key/value spec table (when most lines look like «key: value»). */
+/** Lines like «المقاس: 45 سم» → spec rows (short key, short value); the rest stays as text.
+ *  Intro/heading lines («اسم المنتج:», «المميزات الأساسية:») are not specs. */
+const NOT_SPEC = /^(اسم المنتج|التصنيف|نبذة( عن المنتج)?|المميزات( الأساسية)?|المواصفات( الفنية)?|المقاسات والمواصفات الفنية|ملحوظة|ملاحظة|تحذير.*)$/;
 export function parseSpecs(d: string): { text: string; rows: [string, string][] } {
   d = String(d || '').trim();
   if (!d) return { text: '', rows: [] };
-  const L = d.split(/\r?\n|[•●]/).map(x => x.trim()).filter(Boolean);
-  const kv = L.filter(x => /^[^:：]{1,30}[:：]\s*\S/.test(x));
-  if (kv.length >= 2 && kv.length >= L.length / 2) {
-    const rest = L.filter(x => !kv.includes(x));
-    return {
-      text: rest.join('\n'),
-      rows: kv.map(x => {
-        const i = x.search(/[:：]/);
-        return [x.slice(0, i).trim(), x.slice(i + 1).trim()];
-      }),
-    };
+  const L = d.split(/\r?\n|[•●]/).map(x => x.replace(/^[\s\-–*✔✅◀▪️🔹🔸]+/u, '').trim()).filter(Boolean);
+  const rows: [string, string][] = [];
+  const text: string[] = [];
+  for (const x of L) {
+    const m = /^([^:：]{2,30})[:：]\s*(.+)$/.exec(x);
+    const k = m?.[1].replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+    if (m && k && !NOT_SPEC.test(k) && m[2].length <= 70) rows.push([k, m[2].trim()]);
+    else text.push(x);
   }
-  return { text: d, rows: [] };
+  // Keep the old behaviour for free text with a single «x: y» in it.
+  if (rows.length < 2) return { text: d, rows: [] };
+  // Drop headings left with nothing under them («المواصفات الفنية:» whose lines all became rows).
+  return { text: text.filter(x => !/^[^:：]{2,40}[:：]$/.test(x)).join('\n'), rows };
 }
+
+/** Spec filters for a list of products: keys found in ≥2 products with 2–8 short values. */
+export function specFilters(products: Product[]) {
+  const by = new Map<string, Map<string, number>>();
+  for (const p of products) for (const [k, v] of parseSpecs(p.desc).rows) {
+    if (v.length > 24) continue;
+    const m = by.get(k) ?? new Map<string, number>(); m.set(v, (m.get(v) ?? 0) + 1); by.set(k, m);
+  }
+  return [...by].map(([k, m]) => ({ k, vals: [...m].sort((x, y) => y[1] - x[1]).map(([v]) => v) }))
+    .filter(f => f.vals.length >= 2 && f.vals.length <= 8 && [...by.get(f.k)!.values()].reduce((a, b) => a + b, 0) >= 2).slice(0, 4);
+}
+export const hasSpec = (p: Product, f: string) => { const i = f.indexOf('|'); return i > 0 && parseSpecs(p.desc).rows.some(([k, v]) => k === f.slice(0, i) && v === f.slice(i + 1)); };
 
 export type Embed = { kind: 'youtube'; id: string } | { kind: 'file'; url: string } | { kind: 'link'; url: string };
 export function videoEmbed(u: string): Embed | null {

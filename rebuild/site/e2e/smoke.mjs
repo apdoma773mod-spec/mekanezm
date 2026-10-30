@@ -37,13 +37,18 @@ await check('product page', async () => {
   must(await page.locator('h1').count() === 1, 'no title');
   must(await page.locator('.cmpb').count() === 1, 'no compare button');
 });
+await check('price request sheet opens', async () => {
+  await page.locator('.pvpbtn').click();
+  await page.locator('h3', { hasText: 'ابعتلي السعر' }).waitFor({ timeout: 5000 });
+  await page.keyboard.press('Escape');
+});
 await check('search', async () => { await go('/search?q=' + encodeURIComponent('درج')); must(await page.locator('h1, .card, .empty').count() > 0, 'empty page'); });
 await check('category page', async () => {
   await go('/');
   const c = await page.locator('a[href^="/c/"]').first().getAttribute('href');
   must(!!c, 'no category link'); await go(c);
 });
-for (const p of ['/guide', '/guide/hinges', '/policy', '/contact', '/quick', '/orders', '/fav', '/custom', '/story', '/compare']) await check(p, () => go(p));
+for (const p of ['/guide', '/guide/hinges', '/trade', '/about', '/privacy', '/terms', '/policy', '/contact', '/quick', '/orders', '/fav', '/custom', '/story', '/compare']) await check(p, () => go(p));
 await check('old links redirect', async () => { await page.goto(base + '/shop.html'); must(new URL(page.url()).pathname === '/', 'shop.html did not go home'); });
 await check('404 page', async () => { const r = await page.goto(base + '/no-such-page'); must(r?.status() === 404, 'status ' + r?.status()); });
 await check('sitemap / robots / health', async () => {

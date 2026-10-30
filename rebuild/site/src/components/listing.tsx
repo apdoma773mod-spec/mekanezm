@@ -6,12 +6,13 @@ import { PAGE } from '@/lib/catalog';
 import { AutoMore } from './auto-more';
 import { ProductCard } from './product-card';
 
-export type ListParams = { q?: string; sort?: string; av?: string; page?: string; top?: string };
+export type ListParams = { q?: string; sort?: string; av?: string; page?: string; top?: string; f?: string };
 
 const SORTS: [string, string][] = [['', 'الافتراضي'], ['new', 'الأحدث'], ['az', 'الاسم أ ← ي'], ['av', 'المتوفر الأول']];
 
-export function Listing({ base, params, total, items, empty, terms }: {
+export function Listing({ base, params, total, items, empty, terms, specs }: {
   base: string; params: ListParams; total: number; items: { p: Product; ok: boolean; fresh?: boolean }[]; empty: React.ReactNode; terms?: string[];
+  specs?: { k: string; vals: string[] }[];
 }) {
   const href = (o: Partial<ListParams>) => {
     const sp = new URLSearchParams();
@@ -29,6 +30,12 @@ export function Listing({ base, params, total, items, empty, terms }: {
           {terms.filter(t => t !== params.q).map(t => <Link key={t} href={href({ q: t, page: '' })} scroll={false}>{t}</Link>)}
         </div>
       )}
+      {specs?.map(({ k, vals }) => (
+        <div key={k} className="chips spec" role="toolbar" aria-label={k}>
+          <b>{k}:</b>
+          {vals.map(v => { const f = k + '|' + v, on = params.f === f; return <Link key={v} className={on ? 'on' : ''} href={href({ f: on ? '' : f, page: '' })} scroll={false}>{on ? '✕ ' : ''}{v}</Link>; })}
+        </div>
+      ))}
       <div className="chips" role="toolbar" aria-label="ترتيب وفلترة">
         <Link className={params.av ? '' : 'on'} href={href({ av: '', page: '' })} scroll={false}>الكل</Link>
         <Link className={params.av ? 'on' : ''} href={href({ av: '1', page: '' })} scroll={false}>✔ المتوفر فقط</Link>

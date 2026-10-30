@@ -24,6 +24,14 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
   const [i, setI] = useState(0);
   const [tick, setTick] = useState(0);
   const x0 = useRef(0);
+  // Only the first photo loads with the page; the next one after the page has loaded, the rest as they come up.
+  const [far, setFar] = useState(0);
+  useEffect(() => {
+    const f = () => setFar(v => Math.max(v, 1));
+    if (document.readyState === 'complete') f(); else addEventListener('load', f, { once: true });
+    return () => removeEventListener('load', f);
+  }, []);
+  useEffect(() => { setFar(v => Math.max(v, i + 1)); }, [i]);
   useEffect(() => {
     if (L.length < 2) return;
     const t = setInterval(() => setI(v => (v + 1) % L.length), 4500);
@@ -38,7 +46,7 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
         <div className="trk" style={{ transform: `translateX(${-i * 100}%)` }}>
           {L.map((s, k) => (
             <div className="slide" key={k} aria-hidden={k !== i}>
-              <Image className="bg" src={s.img} alt="" fill sizes="(max-width:1100px) 100vw, 1100px" priority={k === 0} />
+              {k <= far && <Image className="bg" src={s.img} alt="" fill sizes="(max-width:1100px) 100vw, 1100px" priority={k === 0} />}
               <div>
                 <p className="h">{s.t}</p>
                 <p>{s.s}</p>

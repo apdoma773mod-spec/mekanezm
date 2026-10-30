@@ -13,13 +13,13 @@ import { FB_PIXEL, GA_ID, SB_URL, SITE_URL } from '@/lib/config';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'ميكانيزم | Mechanism',
-  description: 'ميكانيزم | Mechanism: إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. مفصلات ومجر ومقابض وجرار. اطلب من الموقع أو على الواتساب.',
+  description: 'ميكانيزم | Mechanism: إكسسوارات الدريسنج روم والمطابخ وأبواب الخشب. مفصلات ومجر ومقابض وجرار. اطلب من الموقع أو على الواتساب.',
   applicationName: 'ميكانيزم',
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
   appleWebApp: { capable: true, title: 'ميكانيزم' },
   openGraph: {
     type: 'website', locale: 'ar_EG', siteName: 'ميكانيزم | Mechanism',
-    title: 'ميكانيزم | Mechanism', description: 'إكسسوارات الدريسينج روم والمطابخ وأبواب الخشب. اطلب الآن من الموقع أو على الواتساب.',
+    title: 'ميكانيزم | Mechanism', description: 'إكسسوارات الدريسنج روم والمطابخ وأبواب الخشب. اطلب الآن من الموقع أو على الواتساب.',
     images: [{ url: '/og.jpg', width: 1200, height: 630 }],
   },
   twitter: { card: 'summary_large_image' },

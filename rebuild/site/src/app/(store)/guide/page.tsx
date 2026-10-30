@@ -5,8 +5,8 @@ import { getSettings } from '@/lib/catalog';
 import { GUIDES } from '@/lib/guides';
 
 export const metadata: Metadata = {
-  title: 'دليل الاختيار: مفصلات ومجر ودريسينج ومطابخ | ميكانيزم',
-  description: 'مقالات قصيرة تساعدك تختار المفصلة والمجرى وإكسسوارات الدريسينج والمطبخ بالمقاس الصح قبل ما تشتري.',
+  title: 'دليل الاختيار: مفصلات ومجر ودريسنج ومطابخ | ميكانيزم',
+  description: 'مقالات قصيرة تساعدك تختار المفصلة والمجرى وإكسسوارات الدريسنج والمطبخ بالمقاس الصح قبل ما تشتري.',
   alternates: { canonical: '/guide' },
 };
 

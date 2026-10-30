@@ -58,6 +58,17 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 - `npm run test:e2e [-- URL]`: browser smoke test of all pages (`e2e/smoke.mjs`, playwright-core). It never submits anything.
 - `docs/site/DEPLOY.md`: host, domain, env, Google Search Console/Business, monitoring.
 
+## v6 (before launch)
+- «💰 اسأل عن السعر» on cards, product page and cart («ابعتلي سعر الطلب كله») opens a sheet: name, phone, quantities, note → `place_request` with note «💰 طلب سعر من الموقع …». So every price question leaves a lead in the system, and WhatsApp stays as a second option. The name/phone are remembered on the phone (`mk_me`, `src/lib/me.ts`) and prefill the cart and the forms.
+- `/trade` wholesale sign-up (carpenter / shop / contractor / designer, shop name, area, what they buy) → `place_request` «🧰 تسجيل جملة». Linked from a home strip and the footer.
+- Product codes stay visible (they are the system's own codes; the owner wants customers to order by them).
+- `/about` (shop info from settings, sections, custom work, map/phones, works). The owner's shop photos go in `public/about/` + the `PHOTOS` list in the page. Also `/privacy`, `/terms` (needed for Facebook/Google ads). All of these are in the footer and the sitemap.
+- Spec table: any short «key: value» line in a description becomes a row, wherever it is (headings like «اسم المنتج:» and «المميزات:» are skipped). Category pages get spec filter chips (`?f=key|value`) when ≥2 products share a key. `docs/site/PRODUCT-TEXT.md` explains how to write descriptions and has drafts for the 7 products.
+- Copy: «دريسنج» everywhere. Search treats دريسينج/دريسنج and ألومنيوم/المنيوم/المونيوم as the same word.
+- Checked at 360/375 px: no sideways scroll, no tap target under 32 px (footer links, «عرض الكل», «اسأل عن السعر» were enlarged), no text under 12 px, all images have alt. Slider loads the first photo only, then the rest. Home on slow 3G + 6× CPU through the tunnel: LCP 13.1 s → 10.9 s (the product page is 1.4 s). It will be faster on a real host.
+- All old links redirect correctly (shop.html, ?p=, p/X.html, custom/story/portal.html, shop3.html, /products).
+- The test order `8bafdf3c` («تجربة الموقع الجديد — تجاهله») is still in `web_orders`; the owner deletes it from the system.
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.

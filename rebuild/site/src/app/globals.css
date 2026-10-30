@@ -487,3 +487,26 @@ textarea.qo { width: 100%; font: inherit; font-size: 16px; padding: 12px; border
 .guide ul { margin: 0; padding-inline-start: 22px; line-height: 2; }
 .guide .row { display: flex; gap: 8px; margin: 16px 0; }
 .guide .row > * { flex: 1; text-align: center; text-decoration: none; }
+button.ask { background: none; border: 0; font: inherit; font-size: 13px; text-align: right; cursor: pointer; padding: 0; }
+button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; margin: 0 0 10px; }
+.form input, .form select { font: inherit; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); width: 100%; }
+.form .err { color: #c0392b; }
+.trade-strip { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; align-items: center; margin: 14px; padding: 16px; border-radius: 18px; background: var(--dk); color: #fff; text-decoration: none; box-shadow: var(--sh); }
+.trade-strip span { grid-row: span 2; font-size: 32px; }
+.trade-strip b { color: var(--gold-l); font-size: 18px; }
+.trade-strip small { color: #d8e0db; }
+.about-hero { position: relative; aspect-ratio: 16/9; border-radius: 18px; overflow: hidden; margin: 0 0 12px; }
+.about-ph { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.about-ph span { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; }
+.chips.spec { align-items: center; }
+.chips.spec b { flex: none; font-size: 13px; color: var(--mut); }
+
+/* ---- easier to read and tap on small phones (checked at 360px) ---- */
+.mkhow small, .tile small, .recent a { font-size: 12px; }
+.avb, .newb { font-size: 12px; }
+.fc a { padding: 8px 0; }
+.prow-h .all { padding: 10px 2px; }
+.card .ask { padding: 8px 0; }
+.tb-brand { padding: 6px 0; }
+.info-cards a { display: inline-block; padding: 6px 0; }

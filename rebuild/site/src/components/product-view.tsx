@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
-import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
+import { images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
 import { CompareBtn, ProductReviews } from './extras';
 import { lqip, Placeholder } from './product-card';
@@ -99,7 +99,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next }: { p: Product;
           <div className="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>
           <div className="pvbox pvprice">
             <div><small>السعر</small><b>اسأل عن السعر</b></div>
-            <a className="pvpbtn" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
+            <button type="button" className="pvpbtn" onClick={() => open({ kind: 'price', lines: [{ item, q }] })}>💰 ابعتلي السعر</button>
           </div>
           <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>
           {vid && (

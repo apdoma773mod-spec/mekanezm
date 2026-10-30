@@ -7,7 +7,7 @@ import { Footer } from '@/components/site-parts';
 import { getCatalog, getSettings, listProducts, PAGE } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
 import type { Sort } from '@/lib/shop';
-import { images, productPath, sectionPath, topTerms } from '@/lib/shop';
+import { images, productPath, sectionPath, specFilters, topTerms } from '@/lib/shop';
 
 export const revalidate = 60;
 
@@ -35,9 +35,12 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
   const sec = site.sections.find(x => x.id === id);
   if (!sec || !site.counts[id]) notFound();
   const q = (sp.q ?? '').slice(0, 40);
-  const { total, items } = await listProducts({ sec: id, q, sort: (sp.sort ?? '') as Sort, av: !!sp.av, page: Number(sp.page) || 1 });
+  const f = (sp.f ?? '').slice(0, 80);
+  const { total, items } = await listProducts({ sec: id, q, f, sort: (sp.sort ?? '') as Sort, av: !!sp.av, page: Number(sp.page) || 1 });
   const { site: full } = await getCatalog();
-  const terms = topTerms(full.products.filter(p => p.sec === id));
+  const inSec = full.products.filter(p => p.sec === id);
+  const terms = topTerms(inSec);
+  const specs = specFilters(inSec);
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'CollectionPage', name: sec.name, url: SITE_URL + sectionPath(id),
@@ -56,7 +59,7 @@ export default async function SectionPage({ params, searchParams }: { params: Pr
       <main id="main" className="page">
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><span>{sec.name}</span></nav>
         <h1 className="page-h">{sec.name}</h1>
-        <Listing base={sectionPath(id)} params={{ ...sp, q }} total={total} items={items} terms={terms}
+        <Listing base={sectionPath(id)} params={{ ...sp, q, f }} total={total} items={items} terms={terms} specs={specs}
           empty={<div className="empty"><p>مفيش منتجات متوفرة دلوقتي في القسم ده.</p><Link className="btn-wa" href={sectionPath(id)}>شوف كل منتجات القسم</Link></div>} />
         <div style={{ marginTop: 18 }}>
           <OpenBtn modal={{ kind: 'req' }} className="reqbtn">📷 مش لاقي اللي بتدوّر عليه؟<small>صوّر المنتج وابعتهولنا — هنرد عليك ونقولك نوفّره إمتى</small></OpenBtn>

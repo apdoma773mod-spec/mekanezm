@@ -50,6 +50,10 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/orders">📦 طلباتي وتتبّع الطلب</Link>
           <Link href="/story">🎬 المنتجات بالتفصيل</Link>
           <Link href="/custom">🛠️ تجهيز المنتجات</Link>
+          <Link href="/trade">🧰 أسعار الجملة للنجارين والتجار</Link>
+          <Link href="/about">👋 مين إحنا</Link>
+          <Link href="/privacy">🔒 الخصوصية</Link>
+          <Link href="/terms">📄 الشروط</Link>
         </div>
         <div><b>{site.name}</b>{site.tagline}</div>
         <div>

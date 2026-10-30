@@ -8,7 +8,8 @@ import type { Item, Ship, ShipMethod } from '@/lib/schema';
 import { deliveryFee, GOVS, orderMsg, shipBits, shipLine, waUrl } from '@/lib/shop';
 import { ev } from '@/lib/track';
 import { shrinkImage } from '@/lib/images';
-import { saveOrder, useShop } from './shop-provider';
+import { getMe, saveMe } from '@/lib/me';
+import { saveOrder, useShop, type Line } from './shop-provider';
 
 function Sheet({ children, onClose, label }: { children: ReactNode; onClose: () => void; label: string }) {
   useEffect(() => {
@@ -39,6 +40,7 @@ export function Modals() {
     case 'track': return <TrackSheet ref0={modal.ref} phone0={modal.phone} />;
     case 'review': return <ReviewSheet product={modal.product} />;
     case 'notify': return <NotifySheet item={modal.item} />;
+    case 'price': return <PriceSheet lines={modal.lines} />;
     case 'work': return <WorkView i={modal.i} />;
     case 'image': return <Lightbox srcs={modal.srcs} start={modal.i} onClose={close} />;
   }
@@ -59,6 +61,7 @@ function CartSheet() {
 
   useEffect(() => {
     try { const p = JSON.parse(localStorage.getItem(SHK) || '{}'); if (p && p.method) setShip(s => ({ ...s, ...p })); } catch { /* */ }
+    const m = getMe(); setName(m.name); setPhone(m.phone);
   }, []);
   const upd = (o: Partial<Ship>) => setShip(s => {
     const n = { ...s, ...o };
@@ -92,6 +95,7 @@ function CartSheet() {
       if (r.ok && typeof r.data === 'string') {
         const ref = r.data.slice(0, 8);
         if (phone.trim()) saveLast(ref, phone.trim());
+        saveMe({ name, phone });
         saveOrder({ ref, at: new Date().toISOString(), phone: phone.trim(), lines: lines.map(l => [l.item.name, l.q]), ship: shipLine(sh) });
         setDone({ ref: r.data, ship: sh, lines: text, back: anyBack, name: name.trim(), phone: phone.trim() });
         clearCart();
@@ -169,6 +173,7 @@ function CartSheet() {
       {lines.length > 0 && (
         <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
       )}
+      {lines.length > 0 && <button type="button" className="sec" style={{ width: '100%', marginTop: 8 }} onClick={() => open({ kind: 'price', lines })}>💰 ابعتلي سعر الطلب كله</button>}
       {lines.length > 0 && <div className="row">
         <button type="button" className="sec" onClick={shareCart}>📤 ابعت السلة كلينك</button>
         <a className="sec" style={{ textAlign: 'center', textDecoration: 'none' }} target="_blank" rel="noopener" href={'/quote?i=' + lines.map(l => `${encodeURIComponent(l.item.id)}.${l.q}`).join(',') + (name.trim() ? '&n=' + encodeURIComponent(name.trim()) : '')}>🧾 عرض سعر / PDF</a>
@@ -455,6 +460,64 @@ function NotifySheet({ item: p }: { item: Item }) {
       <label>رقم موبايلك<input value={phone} onChange={e => setPhone(e.target.value)} type="tel" inputMode="tel" maxLength={20} placeholder="01xxxxxxxxx" autoComplete="tel" /></label>
       <p className="mut">{msg}</p>
       <div className="row"><button className="pri" onClick={go} disabled={busy}>تمام</button><button className="sec" onClick={close}>إغلاق</button></div>
+    </Sheet>
+  );
+}
+
+/* ---------------- 💰 price request (no prices on the site) ---------------- */
+function PriceSheet({ lines }: { lines: Line[] }) {
+  const { site, close } = useShop();
+  const [L, setL] = useState(lines);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { const m = getMe(); setName(m.name); setPhone(m.phone); }, []);
+  const itemsText = L.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n');
+  const waText = `السلام عليكم، عايز أعرف سعر:\n${itemsText}${note.trim() ? '\n' + note.trim() : ''}`;
+  async function go() {
+    if (name.trim().length < 2) return setMsg('اكتب اسمك');
+    if (digits(phone) < 8) return setMsg('اكتب رقم موبايلك عشان نبعتلك السعر');
+    setBusy(true); setMsg('⏳ جاري الإرسال…');
+    const body = (`💰 طلب سعر من الموقع\n${itemsText}${note.trim() ? '\nملاحظة: ' + note.trim() : ''}`).slice(0, 1000);
+    try {
+      const r = await placeRequest(name.trim(), phone.trim(), body, []);
+      if (!r.ok) throw 0;
+      saveMe({ name, phone });
+      ev('generate_lead', 'Lead', { method: 'price_request' });
+      setSent(true);
+    } catch { setMsg('ماتبعتش — جرّب تاني أو ابعت على الواتساب'); setBusy(false); }
+  }
+  if (sent) return (
+    <Sheet onClose={close} label="وصلنا طلبك">
+      <h3>وصلنا طلبك ✔</h3>
+      <p>هنبعتلك السعر على الواتساب على رقم <b dir="ltr">{phone.trim()}</b> في أقرب وقت{L.length > 1 ? '، ولو الكمية كبيرة هنعملك سعر خاص' : ''}.</p>
+      <div className="row"><button className="sec" onClick={close}>تمام</button></div>
+    </Sheet>
+  );
+  return (
+    <Sheet onClose={close} label="ابعتلي السعر">
+      <h3>💰 ابعتلي السعر</h3>
+      <p className="mut">سيب رقمك وهنبعتلك السعر على الواتساب.</p>
+      {L.map(({ item: p, q }) => (
+        <div className="citem" key={p.id}>
+          {p.img && <span className="cimg"><Image src={p.img} alt="" fill sizes="48px" style={{ objectFit: 'contain' }} /></span>}
+          <span style={{ flex: 1 }}>{p.name}{p.code && <small>كود {p.code}</small>}</span>
+          <span className="qty">
+            <button onClick={() => setL(x => x.map(l => l.item.id === p.id ? { ...l, q: Math.max(1, l.q - 1) } : l))} aria-label="نقص">−</button>
+            <b>{q}</b>
+            <button onClick={() => setL(x => x.map(l => l.item.id === p.id ? { ...l, q: l.q + 1 } : l))} aria-label="زيادة">+</button>
+          </span>
+        </div>
+      ))}
+      <label>اسمك<input value={name} onChange={e => setName(e.target.value)} maxLength={80} autoComplete="name" /></label>
+      <label>رقم موبايلك (واتساب)<input value={phone} onChange={e => setPhone(e.target.value)} type="tel" inputMode="tel" maxLength={20} placeholder="01xxxxxxxxx" autoComplete="tel" /></label>
+      <label>ملاحظة (اختياري)<input value={note} onChange={e => setNote(e.target.value)} maxLength={200} placeholder="مثلاً: نجار — محتاج كمية" /></label>
+      <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg}</p>
+      <div className="row"><button className="pri" onClick={go} disabled={busy}>ابعتلي السعر</button><button className="sec" onClick={close}>إغلاق</button></div>
+      <a className="btn-g" style={{ marginTop: 8 }} target="_blank" rel="noopener" href={waUrl(site, waText)}>💬 أو اسأل على الواتساب على طول</a>
     </Sheet>
   );
 }

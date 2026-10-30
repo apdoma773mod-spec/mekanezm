@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/schema';
-import { askPriceText, images, productPath, sectionOf, toItem, waUrl } from '@/lib/shop';
+import { images, productPath, sectionOf, toItem } from '@/lib/shop';
 import loader from '@/lib/image-loader';
 import { evProduct } from '@/lib/track';
 import { useShop } from './shop-provider';
@@ -40,7 +40,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
       </div>
       <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
       {p.desc && <p>{p.desc}</p>}
-      <a className="ask" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
+      <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: n || 1 }] })}>💰 اسأل عن السعر</button>
       {n > 0 ? (
         <div className="cstep" role="group" aria-label="الكمية في طلبك">
           <button onClick={() => setQty(p.id, n + 1)} aria-label="زيادة">+</button>
