@@ -330,6 +330,8 @@ model Invoice {
   source      String         @default("")
   /// Sale to an online customer (Facebook / WhatsApp / site) — «🌐 عميل أونلاين» in the sale window.
   online      Boolean        @default(false)
+  /// Where the online sale came from: SITE | WA | FB | IG | OTHER ("" = not said).
+  onlineFrom  String         @default("")
   /// Inter-company deal: the other company, and the id shared by the sale and the purchase.
   ic          Company?
   icRef       String?

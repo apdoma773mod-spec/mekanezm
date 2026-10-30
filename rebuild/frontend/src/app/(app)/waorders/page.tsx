@@ -24,6 +24,7 @@ function OrderCard({ o, tab }: { o: WaOrderRow; tab: InboxTab }) {
   const toInvoice = useOrderSale();
   const makeInvoice = () =>
     toInvoice({
+      online: true,
       text: o.body,
       person: o.customerName,
       phone: o.phone,

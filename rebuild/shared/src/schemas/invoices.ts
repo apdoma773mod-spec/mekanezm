@@ -14,6 +14,10 @@ export const invoiceItemInput = z
   .refine((v) => v.productId || v.name, { message: 'اختار صنف أو اكتب اسمه', path: ['name'] });
 export type InvoiceItemInput = z.infer<typeof invoiceItemInput>;
 
+/** Where an online sale came from ("" = not said). */
+export const ONLINE_FROM = ['', 'SITE', 'WA', 'FB', 'IG', 'OTHER'] as const;
+export const ONLINE_FROM_LABELS: Record<(typeof ONLINE_FROM)[number], string> = { '': 'مش محدد', SITE: '🛒 الموقع', WA: '💬 واتساب', FB: '📘 فيسبوك', IG: '📸 انستجرام', OTHER: '📱 تاني' };
+
 export const invoiceInput = z.object({
   kind: z.enum(INVOICE_KINDS),
   company: z.enum(COMPANIES).default('MK'),
@@ -31,6 +35,8 @@ export const invoiceInput = z.object({
   payMethod: z.enum(PAY_METHODS).default('CASH'),
   /** «🌐 عميل أونلاين» (sales). Left out when editing = unchanged. */
   online: z.boolean().optional(),
+  /** «جه منين»: الموقع / واتساب / فيسبوك / انستجرام / تاني. */
+  onlineFrom: z.enum(ONLINE_FROM).optional(),
   items: z.array(invoiceItemInput).min(1, 'الفاتورة لازم يكون فيها صنف واحد على الأقل').max(500),
 });
 export type InvoiceInput = z.infer<typeof invoiceInput>;
@@ -95,6 +101,7 @@ export interface InvoiceDto {
   remaining: number;
   payMethod: (typeof PAY_METHODS)[number];
   online: boolean;
+  onlineFrom: string;
   /** Only present for admins: total − cost of goods. */
   profit?: number;
   items: InvoiceItemDto[];

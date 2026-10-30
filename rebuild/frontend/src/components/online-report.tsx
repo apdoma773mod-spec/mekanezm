@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api, errorMessage } from '@/lib/api';
 import { money, todayYmd } from '@/lib/format';
 import { esc, printHtml } from '@/lib/print';
+import { ONLINE_FROM_LABELS } from '@mk/shared';
+const fromLabel = (k: string) => ONLINE_FROM_LABELS[k as keyof typeof ONLINE_FROM_LABELS] ?? k;
 import { useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
 
@@ -19,9 +21,10 @@ interface Side {
 interface OnlineReport {
   online: Side;
   shop: Side;
-  customers: { name: string; phone: string; invoices: number; total: number; remaining: number; profit: number; first: string; last: string }[];
+  bySource: (Side & { from: string })[];
+  customers: { name: string; phone: string; from: string; invoices: number; total: number; remaining: number; profit: number; first: string; last: string }[];
   items: { name: string; qty: number; total: number }[];
-  invoices: { id: string; no: string; date: string; person: string; total: number; remaining: number }[];
+  invoices: { id: string; no: string; date: string; person: string; from: string; total: number; remaining: number }[];
 }
 
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -53,6 +56,7 @@ export function OnlineReportCard() {
       `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>العملاء الأونلاين</title><style>body{font-family:Cairo,Tahoma,sans-serif;padding:14px}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{border-bottom:1px solid #ccc;padding:6px;text-align:right}</style></head><body>` +
         `<h2>🌐 العملاء الأونلاين — ${esc(label)}</h2>` +
         `<p>عدد العملاء: <b>${o.customers}</b> — عدد الفواتير: <b>${o.invoices}</b> — المبيعات: <b>${money(o.total)}</b> — اتدفع: <b>${money(o.paid)}</b> — باقي: <b>${money(o.remaining)}</b> — المكسب: <b>${money(o.profit)}</b></p>` +
+        `<p>${r.bySource.map((x) => `${esc(fromLabel(x.from))}: ${x.customers} عميل — ${money(x.total)}`).join(' • ')}</p>` +
         `<table><tr><th>العميل</th><th>التليفون</th><th>فواتير</th><th>اشترى بـ</th><th>باقي عليه</th><th>أول مرة</th><th>آخر مرة</th></tr>` +
         r.customers.map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.phone)}</td><td>${c.invoices}</td><td>${money(c.total)}</td><td>${money(c.remaining)}</td><td>${c.first}</td><td>${c.last}</td></tr>`).join('') +
         `</table></body></html>`,
@@ -119,6 +123,36 @@ export function OnlineReportCard() {
             للمقارنة — المحل (عميل عادي): {r.shop.customers} عميل، {r.shop.invoices} فاتورة، {money(r.shop.total)}.
             {r.online.total + r.shop.total > 0 ? ` الأونلاين = ${Math.round((r.online.total / (r.online.total + r.shop.total)) * 100)}% من المبيعات.` : ''}
           </p>
+          {r.bySource.length > 0 && (
+            <div className="table-wrap" style={{ marginBottom: 10 }} id="onlineBySource">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>جه منين</th>
+                    <th>عملاء</th>
+                    <th>فواتير</th>
+                    <th>بعت بـ</th>
+                    <th>المكسب</th>
+                    <th>باقي</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.bySource.map((x) => (
+                    <tr key={x.from}>
+                      <td>
+                        <b>{fromLabel(x.from)}</b>
+                      </td>
+                      <td>{x.customers}</td>
+                      <td>{x.invoices}</td>
+                      <td>{money(x.total)}</td>
+                      <td>{money(x.profit)}</td>
+                      <td>{money(x.remaining)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {(
               [
@@ -142,6 +176,7 @@ export function OnlineReportCard() {
                     <tr>
                       <th>العميل</th>
                       <th>التليفون</th>
+                      <th>جه منين</th>
                       <th>فواتير</th>
                       <th>اشترى بـ</th>
                       <th>المكسب</th>
@@ -156,6 +191,7 @@ export function OnlineReportCard() {
                           <b>{c.name}</b>
                         </td>
                         <td dir="ltr">{c.phone}</td>
+                        <td>{fromLabel(c.from)}</td>
                         <td>{c.invoices}</td>
                         <td>{money(c.total)}</td>
                         <td>{money(c.profit)}</td>
@@ -193,6 +229,7 @@ export function OnlineReportCard() {
                       <th>الرقم</th>
                       <th>التاريخ</th>
                       <th>العميل</th>
+                      <th>جه منين</th>
                       <th>الإجمالي</th>
                       <th>الباقي</th>
                     </tr>
@@ -203,6 +240,7 @@ export function OnlineReportCard() {
                         <td>{x.no}</td>
                         <td>{x.date}</td>
                         <td>{x.person}</td>
+                        <td>{fromLabel(x.from)}</td>
                         <td>{money(x.total)}</td>
                         <td>{money(x.remaining)}</td>
                       </tr>

@@ -20,20 +20,24 @@ beforeEach(async () => {
 
 const call = (cookie: string, method: 'GET' | 'POST' | 'PUT', url: string, payload?: unknown) =>
   app.inject({ method, url: `/api/v1${url}`, headers: { cookie }, ...(payload !== undefined ? { payload: payload as object } : {}) });
-const sale = (cookie: string, person: string, qty: number, online?: boolean, paid?: number) =>
-  call(cookie, 'POST', '/invoices', { kind: 'SALE', person, items: [{ productId: pid, name: 'مفصلة', qty, price: 100 }], ...(online !== undefined ? { online } : {}), ...(paid !== undefined ? { paid } : {}) });
+const sale = (cookie: string, person: string, qty: number, online?: boolean, paid?: number, onlineFrom?: string) =>
+  call(cookie, 'POST', '/invoices', { kind: 'SALE', person, items: [{ productId: pid, name: 'مفصلة', qty, price: 100 }], ...(online !== undefined ? { online } : {}), ...(paid !== undefined ? { paid } : {}), ...(onlineFrom ? { onlineFrom } : {}) });
 
 describe('online customers', () => {
   it('a sale can be marked online, and the report counts online customers apart from the shop', async () => {
-    const a = (await sale(staff, 'منى أونلاين', 2, true)).json().invoice;
+    const a = (await sale(staff, 'منى أونلاين', 2, true, undefined, 'SITE')).json().invoice;
+    expect(a.onlineFrom).toBe('SITE');
     expect(a.online).toBe(true);
-    await sale(staff, 'منى أونلاين', 1, true, 0);
-    await sale(staff, 'كريم فيسبوك', 2, true);
+    await sale(staff, 'منى أونلاين', 1, true, 0, 'SITE');
+    await sale(staff, 'كريم فيسبوك', 2, true, undefined, 'WA');
+    // a shop sale never keeps a source
+    expect((await sale(staff, 'زبون', 1, false, undefined, 'FB')).json().invoice.onlineFrom).toBe('');
     await sale(staff, 'زبون المحل', 5);
     expect((await call(staff, 'GET', '/reports/online')).statusCode).toBe(403);
     const r = (await call(admin, 'GET', '/reports/online')).json().report;
     expect(r.online).toMatchObject({ invoices: 3, customers: 2, total: 500, remaining: 100, profit: 200 });
-    expect(r.shop).toMatchObject({ invoices: 1, customers: 1, total: 500 });
+    expect(r.shop).toMatchObject({ invoices: 2, customers: 2, total: 600 });
+    expect(r.bySource).toEqual([expect.objectContaining({ from: 'SITE', invoices: 2, total: 300 }), expect.objectContaining({ from: 'WA', invoices: 1, total: 200 })]);
     expect(r.customers[0]).toMatchObject({ name: 'منى أونلاين', invoices: 2, total: 300, remaining: 100 });
     expect(r.items[0]).toMatchObject({ name: 'مفصلة', qty: 5 });
   });

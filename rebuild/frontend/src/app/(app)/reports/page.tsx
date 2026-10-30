@@ -412,7 +412,8 @@ function ReportsScreen() {
           🖨️ طباعة التقرير
         </button>
       </div>
-      <div className="card" style={{ marginBottom: 14 }}>
+      <OnlineReportCard />
+      <div className="card" style={{ marginBottom: 14, marginTop: 14 }}>
         <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
         {chips}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, margin: '6px 0 12px' }}>
@@ -513,7 +514,6 @@ function ReportsScreen() {
           </table>
         </div>
       </div>
-      <OnlineReportCard />
       <ContactReportCard />
       <div className="stats" style={{ marginTop: 14 }}>
         <div className="stat">

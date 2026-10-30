@@ -16,9 +16,11 @@ interface Side {
 export interface OnlineReport {
   online: Side;
   shop: Side;
-  customers: { name: string; phone: string; invoices: number; total: number; remaining: number; profit: number; first: string; last: string }[];
+  /** «جه منين»: الموقع / واتساب / فيسبوك … */
+  bySource: (Side & { from: string })[];
+  customers: { name: string; phone: string; from: string; invoices: number; total: number; remaining: number; profit: number; first: string; last: string }[];
   items: { name: string; qty: number; total: number }[];
-  invoices: { id: string; no: string; date: string; person: string; total: number; remaining: number }[];
+  invoices: { id: string; no: string; date: string; person: string; from: string; total: number; remaining: number }[];
 }
 
 /** «🌐 العملاء الأونلاين»: sales marked online in a period — how many customers, how much, profit — next to the shop's sales. */
@@ -34,6 +36,7 @@ export async function onlineReport(prisma: PrismaClient, q: { from?: string; to?
       phone: true,
       contactId: true,
       online: true,
+      onlineFrom: true,
       subtotal: true,
       discount: true,
       total: true,
@@ -59,7 +62,7 @@ export async function onlineReport(prisma: PrismaClient, q: { from?: string; to?
   const byI = new Map<string, OnlineReport['items'][number]>();
   for (const i of on) {
     const d = dateToDay(i.date);
-    const c = byC.get(who(i)) ?? { name: i.person.trim() || 'بدون اسم', phone: i.phone, invoices: 0, total: 0, remaining: 0, profit: 0, first: d, last: d };
+    const c = byC.get(who(i)) ?? { name: i.person.trim() || 'بدون اسم', phone: i.phone, from: i.onlineFrom, invoices: 0, total: 0, remaining: 0, profit: 0, first: d, last: d };
     c.invoices++;
     c.total = r2(c.total + num(i.total));
     c.remaining = r2(c.remaining + num(i.remaining));
@@ -78,8 +81,9 @@ export async function onlineReport(prisma: PrismaClient, q: { from?: string; to?
   return {
     online: side(on),
     shop: side(invs.filter((i) => !i.online)),
+    bySource: [...new Set(on.map((i) => i.onlineFrom))].map((from) => ({ from, ...side(on.filter((i) => i.onlineFrom === from)) })).sort((a, b) => b.total - a.total),
     customers: [...byC.values()].sort((a, b) => b.total - a.total),
     items: [...byI.values()].sort((a, b) => b.total - a.total).slice(0, 50),
-    invoices: on.slice(0, 300).map((i) => ({ id: i.id, no: i.no, date: dateToDay(i.date), person: i.person, total: num(i.total), remaining: num(i.remaining) })),
+    invoices: on.slice(0, 300).map((i) => ({ id: i.id, no: i.no, date: dateToDay(i.date), person: i.person, from: i.onlineFrom, total: num(i.total), remaining: num(i.remaining) })),
   };
 }

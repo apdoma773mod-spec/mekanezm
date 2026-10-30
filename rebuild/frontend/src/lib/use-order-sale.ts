@@ -15,7 +15,7 @@ export function useOrderSale() {
   const qc = useQueryClient();
   const { open } = useModal();
   const toast = useToast();
-  return async (o: { text: string; person: string; contactId?: string; phone?: string; note?: string; onSaved?: () => Promise<void> | void }) => {
+  return async (o: { text: string; person: string; contactId?: string; phone?: string; note?: string; online?: boolean; onSaved?: () => Promise<void> | void }) => {
     try {
       const products = await qc.fetchQuery({ queryKey: ['products', 'all', {}], queryFn: () => api.get<{ items: ProductDto[] }>('/products/all').then((r) => r.items), staleTime: 30_000 });
       let phone = o.phone ?? '';
@@ -32,6 +32,7 @@ export function useOrderSale() {
         kind: 'transaction',
         type: 'SALE',
         preset: {
+          ...(o.online ? { online: true, onlineFrom: 'WA' as const } : {}),
           person,
           phone,
           note: [o.note ?? 'من رسالة العميل', o.text.trim(), missing.length ? `⚠️ ناقص يتضاف بالبحث: ${missing.join('، ')}` : ''].filter(Boolean).join('\n'),

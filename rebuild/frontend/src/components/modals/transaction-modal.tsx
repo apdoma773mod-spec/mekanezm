@@ -6,6 +6,8 @@ import { useCreditLimits } from '@/lib/kv';
 import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { ONLINE_FROM, ONLINE_FROM_LABELS } from '@mk/shared';
+type OnlineFrom = (typeof ONLINE_FROM)[number];
 import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type InvoiceListResult, type ProductDto, type QuoteDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
@@ -77,6 +79,7 @@ export interface SalePreset {
   onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
   /** «🌐 عميل أونلاين» already chosen (orders that came from the site). */
   online?: boolean;
+  onlineFrom?: OnlineFrom;
   /** «👀 راجعها»: a purchase from a read invoice photo of the queue. */
   scanId?: string;
 }
@@ -145,6 +148,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
   const [online, setOnline] = useState(invoice?.online ?? preset?.online ?? false);
+  const [onlineFrom, setOnlineFrom] = useState<OnlineFrom>((invoice?.onlineFrom as OnlineFrom) || preset?.onlineFrom || '');
   const [sno, setSno] = useState('');
   const [del, setDel] = useState<'' | 'DELIVERY' | 'SHIP'>('');
   const [gov, setGov] = useState('');
@@ -318,7 +322,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
-      ...(isSale ? { online } : {}),
+      ...(isSale ? { online, onlineFrom: online ? onlineFrom : '' } : {}),
       items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
     };
     try {
@@ -570,6 +574,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                   🌐 عميل أونلاين
                 </button>
               </div>
+              {online && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }} id="txOnlineFrom">
+                  <small style={{ width: '100%', color: 'var(--muted)' }}>جه منين؟</small>
+                  {ONLINE_FROM.filter((k) => k).map((k) => (
+                    <button key={k} type="button" className={onlineFrom === k ? 'primary' : 'secondary'} style={{ padding: '6px 12px', borderRadius: 99 }} onClick={() => setOnlineFrom(k)}>
+                      {ONLINE_FROM_LABELS[k]}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
