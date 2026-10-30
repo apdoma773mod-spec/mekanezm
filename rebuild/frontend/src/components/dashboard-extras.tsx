@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { money } from '@/lib/format';
 import { useCharts, useDebts, useReorderCount } from '@/lib/trade-queries';
 import { useWebOrderCount } from '@/lib/web-queries';
+import { usePortalNewCount } from '@/lib/portal-queries';
+import { useModal } from '@/components/modals/modal-host';
 
 const num = (n: number) => Number(n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 1 });
 
@@ -164,10 +166,17 @@ export function DashboardBanners() {
   const debts = useDebts().data;
   const reorder = useReorderCount(30).data ?? 0;
   const web = useWebOrderCount().data ?? 0;
+  const msgs = usePortalNewCount().data ?? 0;
+  const { open } = useModal();
   const o30 = (debts?.debtors ?? []).filter((x) => x.old || (x.days ?? 0) >= 30);
   const sum = o30.reduce((a, x) => a + x.balance, 0);
   return (
     <>
+      {msgs > 0 && (
+        <button type="button" onClick={() => open({ kind: 'portalNew' })} style={{ ...banner, background: '#e8f5ff', color: '#0b4a7a', border: '1px solid #9ccdf0', width: '100%', textAlign: 'right', font: 'inherit' }}>
+          🔗 عندك <b>{msgs}</b> طلب جديد من العملاء (من رابطهم) — اضغط للعرض
+        </button>
+      )}
       {web > 0 && (
         <Link href="/weborders" style={{ ...banner, background: '#fff4e5', color: '#8a4b00', border: '1px solid #f0b46a' }}>
           🛒 عندك <b>{web}</b> طلب جديد من الموقع — اضغط للعرض

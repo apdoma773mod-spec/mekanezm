@@ -913,6 +913,27 @@ model WebOrder {
   @@index([status, createdAt])
 }
 
+/// 🔗 رابط العميل (mk_portal القديمة): a private link per customer; the page reads his account live.
+model Portal {
+  token     String   @id
+  contactId String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+/// What the customer wrote (and the photos/videos he sent) from his link.
+model PortalMsg {
+  id        String   @id @default(cuid())
+  contactId String
+  body      String
+  /// [{ u: url, t: "i" | "v" }]
+  media     Json     @default("[]")
+  seen      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([seen, createdAt])
+  @@index([contactId, createdAt])
+}
+
 model OutboundMessage {
   id        String    @id @default(cuid())
   toPhone   String

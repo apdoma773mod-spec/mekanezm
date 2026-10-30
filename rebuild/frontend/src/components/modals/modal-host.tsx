@@ -26,6 +26,7 @@ import { TodayDetail, type TodayKind } from './today-detail';
 import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
 import { SiteAdmin, SiteProduct } from './site-admin';
+import { PortalLink, PortalNew } from './portal-modals';
 
 /** Every window the old system opened with openModal(), by name. */
 export type ModalSpec =
@@ -50,6 +51,8 @@ export type ModalSpec =
   | { kind: 'purchImport' }
   | { kind: 'siteAdmin'; tab?: 'works' | 'reviews' | 'delivery' | 'contact' | 'seo' }
   | { kind: 'siteProduct'; id: string }
+  | { kind: 'portal'; id: string }
+  | { kind: 'portalNew' }
   | { kind: 'invoice'; id: string }
   | { kind: 'return'; type: ReturnKind }
   | { kind: 'contact'; id?: string; type?: ContactType }
@@ -146,6 +149,12 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'siteAdmin':
         content = <SiteAdmin key={spec.tab ?? 'works'} tab={spec.tab} onClose={close} />;
+        break;
+      case 'portal':
+        content = <PortalLink key={spec.id} id={spec.id} />;
+        break;
+      case 'portalNew':
+        content = <PortalNew />;
         break;
       case 'siteProduct':
         content = <SiteProduct key={spec.id} id={spec.id} onClose={close} />;

@@ -161,6 +161,11 @@ export function ContactFile({ id }: { id: string }) {
         <button type="button" className="secondary" onClick={() => open({ kind: 'contactReport', name: c.name, type: c.type })}>
           📄 كشف حساب
         </button>
+        {isC && (
+          <button type="button" className="secondary" onClick={() => open({ kind: 'portal', id })}>
+            🔗 رابط العميل
+          </button>
+        )}
         <button type="button" className="secondary" onClick={() => open({ kind: 'contact', id })}>
           ✏️ تعديل البيانات
         </button>

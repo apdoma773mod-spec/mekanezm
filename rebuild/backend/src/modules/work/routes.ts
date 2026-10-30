@@ -17,8 +17,8 @@ const KEYS = ['count_sessions', 'points', 'follow', 'reservations', 'combos', 'u
 const keyParam = z.object({ key: z.enum(KEYS) });
 
 const UPLOADS = path.resolve(process.cwd(), 'uploads');
-const fileName = z.string().regex(/^[a-z0-9-]{8,64}\.(jpg|jpeg|png|webp|pdf)$/);
-const MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
+const fileName = z.string().regex(/^[a-z0-9-]{8,64}\.(jpg|jpeg|png|webp|pdf|mp4)$/);
+const MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf', mp4: 'video/mp4' };
 
 export default async function workRoutes(app: FastifyInstance) {
   const db = app.prisma;
