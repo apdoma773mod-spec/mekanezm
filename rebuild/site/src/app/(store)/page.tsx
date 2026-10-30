@@ -1,4 +1,5 @@
 import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
+import { OpenNow } from '@/components/open-now';
 import { Footer, Header, Socials } from '@/components/site-parts';
 import { getCatalog, getSettings } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
@@ -26,7 +27,8 @@ export default async function Home() {
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'HardwareStore', name: site.name, description: site.tagline, telephone: site.phone,
-      image: site.logo || undefined, url: SITE_URL + '/', openingHours: site.hours || undefined,
+      image: site.logo || undefined, logo: SITE_URL + '/icon-512.png', url: SITE_URL + '/', priceRange: '$$',
+      openingHoursSpecification: { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'], opens: '10:00', closes: '23:59' },
       address: site.address ? { '@type': 'PostalAddress', streetAddress: site.address, addressLocality: 'الجيزة', addressCountry: 'EG' } : undefined,
       sameAs: Object.values(site.socials).filter(Boolean),
     },
@@ -103,7 +105,7 @@ export default async function Home() {
         </Reveal>
         <Reveal className="mkp" id="mkLoc" label="تعالى زورنا">
           <h2>📍 تعالى زورنا</h2>
-          <p className="s">أرض اللواء – الجيزة</p>
+          <p className="s">أرض اللواء – الجيزة • <OpenNow /></p>
           <div className="mkl">
             <a href={MAP_URL} target="_blank" rel="noopener">🗺️ افتح الموقع على الخريطة</a>
             <a className="g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أسأل عن مكان المحل')}>💬 كلّمنا واتساب</a>

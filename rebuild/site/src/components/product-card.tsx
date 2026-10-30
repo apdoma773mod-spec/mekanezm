@@ -20,7 +20,8 @@ export function Placeholder({ section }: { section?: string }) {
 }
 
 export function ProductCard({ p, ok, priority }: { p: Product; ok: boolean; priority?: boolean }) {
-  const { site, fav, toggleFav, add, open } = useShop();
+  const { site, fav, toggleFav, add, open, cart, setQty } = useShop();
+  const n = cart[p.id]?.q ?? 0;
   const img = images(p)[0];
   const sec = sectionOf(site, p);
   const item = toItem(p, ok);
@@ -35,14 +36,18 @@ export function ProductCard({ p, ok, priority }: { p: Product; ok: boolean; prio
       <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
       {p.desc && <p>{p.desc}</p>}
       <a className="ask" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
-      {ok ? (
+      {n > 0 ? (
+        <div className="cstep" role="group" aria-label="الكمية في طلبك">
+          <button onClick={() => setQty(p.id, n + 1)} aria-label="زيادة">+</button>
+          <b>{n} في طلبك</b>
+          <button onClick={() => setQty(p.id, n - 1)} aria-label="نقص">−</button>
+        </div>
+      ) : ok ? (
         <button className="add" onClick={addIt}>➕ أضف للطلب</button>
       ) : (
-        <>
-          <button className="add bo" onClick={addIt}>📦 اطلبه بالحجز</button>
-          <button className="nm" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>
-        </>
+        <button className="add bo" onClick={addIt}>📦 اطلبه بالحجز</button>
       )}
+      {!ok && <button className="nm" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type { Settings } from '@/lib/schema';
 import { catalogUrl, shopPhones, waUrl } from '@/lib/shop';
 import { SOCIAL_ICONS, SOCIAL_NAMES } from '@/lib/social-icons';
 import { OpenBtn, Slider, type Slide } from './home';
+import { OpenNow } from './open-now';
 
 export function Socials({ site }: { site: Settings }) {
   const keys = (['fb', 'ig', 'tt', 'yt'] as const).filter(k => /^https?:\/\//i.test(site.socials[k] ?? ''));
@@ -41,7 +42,9 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/#cats">الأقسام</Link>
           <Link href="/search">كل المنتجات</Link>
           <Link href="/fav">♥ المفضلة</Link>
-          <Link href="/#info">التوصيل والاستبدال</Link>
+          <Link href="/quick">⚡ اطلب بالكود</Link>
+          <Link href="/policy">🚚 التوصيل والاستبدال</Link>
+          <Link href="/contact">📞 تواصل معانا</Link>
           <OpenBtn modal={{ kind: 'req' }} className="lnk">📷 اطلب منتج مش موجود</OpenBtn>
           <OpenBtn modal={{ kind: 'track' }} className="lnk">📦 تتبّع طلبك</OpenBtn>
           <Link href="/story">🎬 المنتجات بالتفصيل</Link>
@@ -55,7 +58,7 @@ export function Footer({ site }: { site: Settings }) {
           {cat && <a href={cat} target="_blank" rel="noopener">📒 كتالوج الواتساب</a>}
         </div>
         {site.address && <div><b>العنوان</b><a href={site.mapUrl || '#'} target="_blank" rel="noopener">📍 {site.address}</a></div>}
-        {site.hours && <div><b>مواعيد الشغل</b><span>🕒 {site.hours}</span></div>}
+        {site.hours && <div><b>مواعيد الشغل</b><span>🕒 {site.hours}</span><OpenNow /></div>}
         <div><b>تابعنا</b><Socials site={site} /></div>
       </div>
       <div className="cp">© {site.name}</div>

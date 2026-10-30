@@ -25,6 +25,21 @@ Analytics: GA4 + Facebook Pixel (load lazily). Visit counter `bump_visit`.
 
 Not copied on purpose: the old shop.html admin editor (login/edit/save site) — the shop data is edited from the system. `shop3.html` was an old duplicate (redirects to `/`).
 
+## v2 (built for thousands of products)
+- Home: products first — category tiles, then one swipeable row per section (12 cards + «عرض الكل»), «الأكثر طلباً», «وصل حديثاً», recently viewed; service blocks after.
+- `/c/[id]` category pages (sort, available-only, «عرض المزيد» 24 per step, plain links), `/search` (Arabic-normalized: أ/ا، ة/ه، ى/ي; `?top=1` = featured), `/fav`.
+- Fixed top bar (search with server suggestions from `/api/suggest`, recent searches, section chips, cart count).
+- The browser never gets the full catalog: cart/favorites/recent keep product snapshots (`Item`) in localStorage (`mk_cart2`, `mk_fav2`, `mk_recent2`); availability is decided on the server.
+- Empty sections are hidden everywhere.
+- `/api/revalidate?secret=REVALIDATE_SECRET` → refresh site + stock immediately (call it from the system after saving).
+- `output: 'standalone'`, `rebuild/site/Dockerfile`, security + cache headers, `public/sw.js` (offline pages, cached photos), loading skeleton, error page.
+
+## v3
+Card turns into a − n + stepper after adding; `/quick` order by codes (`/api/items?codes=`); cart shared as a link `/cart?i=ID.Q,…` (button in the cart);
+swipeable photo viewer; previous/next product in section; «مفتوح دلوقتي» badge (`OPENING` in config.ts: 10→24, Friday off);
+`/contact`, `/policy`; WhatsApp button is a small circle off the home top and mentions the open product/section;
+`/api/health` for uptime monitoring; richer HardwareStore JSON-LD, category share images, favicon.
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.

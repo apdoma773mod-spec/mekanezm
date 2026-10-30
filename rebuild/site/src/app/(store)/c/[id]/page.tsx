@@ -4,10 +4,10 @@ import { notFound } from 'next/navigation';
 import { Categories, OpenBtn, Recent } from '@/components/home';
 import { Listing, type ListParams } from '@/components/listing';
 import { Footer } from '@/components/site-parts';
-import { getSettings, listProducts, PAGE } from '@/lib/catalog';
+import { getCatalog, getSettings, listProducts, PAGE } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
 import type { Sort } from '@/lib/shop';
-import { productPath, sectionPath } from '@/lib/shop';
+import { images, productPath, sectionPath } from '@/lib/shop';
 
 export const revalidate = 300;
 
@@ -22,7 +22,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const sec = s.sections.find(x => x.id === id);
   if (!sec) return {};
   const d = `${sec.name} من ميكانيزم — ${s.counts[id] ?? 0} منتج. ${s.tagline}. اطلب أونلاين أو على الواتساب، توصيل وشحن لكل المحافظات.`;
-  return { title: `${sec.name} | ميكانيزم`, description: d, alternates: { canonical: sectionPath(id) }, openGraph: { title: `${sec.name} | ميكانيزم`, description: d, images: ['/og.jpg'] } };
+  // Share preview: the section's first product photo (falls back to the shop image).
+  const { site } = await getCatalog();
+  const img = site.products.filter(p => p.sec === id).map(p => images(p).find(u => /^https?:/.test(u))).find(Boolean);
+  return { title: `${sec.name} | ميكانيزم`, description: d, alternates: { canonical: sectionPath(id) }, openGraph: { title: `${sec.name} | ميكانيزم`, description: d, images: [img || '/og.jpg'] } };
 }
 
 export default async function SectionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<ListParams> }) {

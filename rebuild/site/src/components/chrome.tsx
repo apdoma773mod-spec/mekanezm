@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { bumpVisit } from '@/lib/api';
 import { waUrl } from '@/lib/shop';
 import { Modals } from './modals';
-import { useShop } from './shop-provider';
+import { useMounted, useShop } from './shop-provider';
 
 const useScrollY = () => {
   const [y, setY] = useState(0);
@@ -23,8 +23,10 @@ const useScrollY = () => {
 type BIP = Event & { prompt: () => void; userChoice: Promise<unknown> };
 
 export function Chrome() {
-  const { site, cartCount, fav, open, toast, say } = useShop();
-  const favN = Object.keys(fav).length;
+  const { site, cartCount: cc, fav, open, toast, say } = useShop();
+  const mounted = useMounted();
+  const cartCount = mounted ? cc : 0;
+  const favN = mounted ? Object.keys(fav).length : 0;
   const path = usePathname();
   const qs = useSearchParams();
   const y = useScrollY();
@@ -63,8 +65,14 @@ export function Chrome() {
     <>
       <div className="prog" aria-hidden="true"><i style={{ width: prog + '%' }} /></div>
       {offline && <div className="offline" role="status">⚠️ مفيش إنترنت — بعض الحاجات ممكن ماتشتغلش</div>}
-      <a className={'wa-fab' + (y > 260 || onProduct ? ' mini' : '')} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined}
-        target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب من ميكانيزم')}>💬 اطلب على الواتساب</a>
+      <a className={'wa-fab' + (y > 120 || path !== '/' ? ' mini' : '')} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
+        target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب من ميكانيزم')}
+        onClick={e => {
+          // Mention what the customer is looking at (product or section).
+          const h = document.querySelector('main h1, .pvi h1')?.textContent?.trim();
+          if (h && (onProduct || path.startsWith('/c/'))) e.currentTarget.href = waUrl(site, `السلام عليكم، بسأل عن: ${h}
+${location.href}`);
+        }}>💬 اطلب على الواتساب</a>
       {!onProduct && <button className={'to-top' + (y > 700 ? ' on' : '')} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} aria-label="لفوق">↑</button>}
       {!onProduct && cartCount > 0 && (
         <button className="go-cart" onClick={() => open({ kind: 'cart' })}><span>🛒 عندك {cartCount} في طلبك</span><span>كمّل الطلب ←</span></button>

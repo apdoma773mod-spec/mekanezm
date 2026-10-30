@@ -12,7 +12,7 @@ export type Modal =
   | { kind: 'review' }
   | { kind: 'notify'; item: Item }
   | { kind: 'work'; i: number }
-  | { kind: 'image'; src: string };
+  | { kind: 'image'; srcs: string[]; i: number };
 
 type Toast = { msg: string; undo?: () => void; n: number } | null;
 export type Line = { item: Item; q: number };
@@ -114,4 +114,12 @@ export function ShopProvider({ site, children }: { site: Settings; children: Rea
     say,
   };
   return <C.Provider value={value}>{children}</C.Provider>;
+}
+
+/** False during hydration: parts rendered inside Suspense must not show saved-cart numbers before they mount
+ *  (the server HTML has none), or React reports a mismatch. */
+export function useMounted() {
+  const [m, setM] = useState(false);
+  useEffect(() => setM(true), []);
+  return m;
 }

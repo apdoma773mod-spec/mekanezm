@@ -10,7 +10,7 @@ import { evProduct } from '@/lib/track';
 import { Placeholder } from './product-card';
 import { useShop } from './shop-provider';
 
-export function ProductView({ p, ok, sim }: { p: Product; ok: boolean; sim: Item[] }) {
+export function ProductView({ p, ok, sim, prev, next }: { p: Product; ok: boolean; sim: Item[]; prev?: Item; next?: Item }) {
   const { site, cart, add, fav, toggleFav, open, pushRecent, say } = useShop();
   const router = useRouter();
   const item = toItem(p, ok);
@@ -63,7 +63,7 @@ export function ProductView({ p, ok, sim }: { p: Product; ok: boolean; sim: Item
             <div className="pvs framed" ref={strip} style={{ position: 'relative' }}
               onScroll={e => { const s = e.currentTarget; const k = Math.round(Math.abs(s.scrollLeft) / s.clientWidth); if (k !== i) setI(k); }}>
               {im.length ? im.map((x, k) => (
-                <div key={x} onClick={() => open({ kind: 'image', src: x })}>
+                <div key={x} onClick={() => open({ kind: 'image', srcs: im, i: k })}>
                   <Image src={x} alt={`${p.name} ${k + 1}`} fill sizes="(max-width:900px) 100vw, 550px" priority={k === 0} />
                 </div>
               )) : <div><Placeholder section={sec?.name} /></div>}
@@ -132,6 +132,12 @@ export function ProductView({ p, ok, sim }: { p: Product; ok: boolean; sim: Item
                 </Link>
               ))}</div>
             </div>
+          )}
+          {(prev || next) && (
+            <nav className="pnx" aria-label="منتجات القسم">
+              {prev ? <Link href={productPath(prev.id)} rel="prev"><small>› اللي قبله</small>{prev.name}</Link> : <span />}
+              {next ? <Link href={productPath(next.id)} rel="next"><small>اللي بعده ‹</small>{next.name}</Link> : <span />}
+            </nav>
           )}
           <a className="mkstl" href={`/story?p=${encodeURIComponent(p.id)}`}>🎬 المنتج بالتفصيل</a>
         </div>

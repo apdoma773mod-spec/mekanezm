@@ -36,6 +36,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { site, product: p, ok } = r;
   const sim = site.products.filter(x => x.sec === p.sec && x.id !== p.id).slice(0, 12).map(x => toItem(x, ok(x)));
   const sec = sectionOf(site, p);
+  const same = site.products.filter(x => x.sec === p.sec), k = same.findIndex(x => x.id === p.id);
+  const prev = k > 0 ? toItem(same[k - 1], ok(same[k - 1])) : undefined;
+  const next = k >= 0 && k < same.length - 1 ? toItem(same[k + 1], ok(same[k + 1])) : undefined;
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'Product', name: p.name, description: (p.desc || p.name).slice(0, 300), sku: p.code || p.id,
@@ -57,7 +60,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <ProductView p={p} ok={ok(p)} sim={sim} />
+      <ProductView p={p} ok={ok(p)} sim={sim} prev={prev} next={next} />
       <Recent exclude={p.id} />
     </>
   );

@@ -39,14 +39,14 @@ export function Modals() {
     case 'review': return <ReviewSheet />;
     case 'notify': return <NotifySheet item={modal.item} />;
     case 'work': return <WorkView i={modal.i} />;
-    case 'image': return <Lightbox src={modal.src} onClose={close} />;
+    case 'image': return <Lightbox srcs={modal.srcs} start={modal.i} onClose={close} />;
   }
 }
 
 /* ---------------- 🛒 cart + send order ---------------- */
 const SHK = 'mk_ship_pref';
 function CartSheet() {
-  const { site, cart, setQty, close, clearCart, open } = useShop();
+  const { site, cart, setQty, close, clearCart, open, say } = useShop();
   const lines = Object.values(cart);
   const anyBack = lines.some(l => !l.item.ok);
   const [name, setName] = useState('');
@@ -122,6 +122,11 @@ function CartSheet() {
     );
   }
 
+  const shareCart = async () => {
+    const url = location.origin + '/cart?i=' + lines.map(l => `${encodeURIComponent(l.item.id)}.${l.q}`).join(',');
+    try { if (navigator.share) { await navigator.share({ title: 'طلب من ميكانيزم', url }); return; } } catch (e) { if ((e as Error).name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); say('✔ اتنسخ لينك السلة — ابعته لأي حد'); } catch { window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank'); }
+  };
   const L = site.shipLocal ?? {}, G = site.shipGov ?? {};
   const govs = ship.method === 'delivery' ? ['القاهرة', 'الجيزة'] : GOVS;
   return (
@@ -160,6 +165,7 @@ function CartSheet() {
       {lines.length > 0 && (
         <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
       )}
+      {lines.length > 0 && <button type="button" className="sec" onClick={shareCart}>📤 ابعت السلة كلينك (لنجار أو زبون)</button>}
       <div className="row">
         {lines.length > 0 && <button className="pri" onClick={send} disabled={busy}>إرسال الطلب</button>}
         <button className="sec" onClick={close}>إغلاق</button>
@@ -449,13 +455,30 @@ function WorkView({ i }: { i: number }) {
 }
 
 /* ---------------- 🔍 zoom a photo ---------------- */
-function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
-  const [z, setZ] = useState(false);
-  useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => removeEventListener('keydown', k); }, [onClose]);
+function Lightbox({ srcs, start, onClose }: { srcs: string[]; start: number; onClose: () => void }) {
+  const [i, setI] = useState(start);
+  const strip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const s = strip.current;
+    if (s) s.scrollLeft = -start * s.clientWidth;
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', k);
+    const o = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { removeEventListener('keydown', k); document.body.style.overflow = o; };
+  }, [onClose, start]);
+  const go = (n: number) => { const s = strip.current; if (!s) return; const k = (n + srcs.length) % srcs.length; s.scrollTo({ left: -k * s.clientWidth, behavior: 'smooth' }); };
   return (
-    <div className={'lb' + (z ? ' z' : '')} role="dialog" aria-label="تكبير الصورة">
-      <button onClick={onClose} aria-label="إغلاق">✕</button>
-      <img src={src} alt="" onClick={() => setZ(v => !v)} />
+    <div className="lb" role="dialog" aria-modal="true" aria-label="الصور">
+      <button className="lb-x" onClick={onClose} aria-label="إغلاق">✕</button>
+      <div className="lb-s" ref={strip} onScroll={e => setI(Math.round(Math.abs(e.currentTarget.scrollLeft) / e.currentTarget.clientWidth))}>
+        {srcs.map(u => <div key={u}><img src={u} alt="" /></div>)}
+      </div>
+      {srcs.length > 1 && <>
+        <button className="lb-a r" onClick={() => go(i - 1)} aria-label="السابقة">›</button>
+        <button className="lb-a l" onClick={() => go(i + 1)} aria-label="التالية">‹</button>
+        <span className="lb-n" dir="ltr">{i + 1} / {srcs.length}</span>
+      </>}
     </div>
   );
 }

@@ -17,3 +17,6 @@ export const CUSTOM_TEL = '01042383986';
 
 // How long a built page may be served before it is rebuilt from fresh data (seconds).
 export const REVALIDATE = 300;
+
+// Shop opening hours (Cairo time) for the «مفتوح دلوقتي» badge: 10 AM → midnight, Friday off.
+export const OPENING = { open: 10, close: 24, closedDays: [5] as number[] };
