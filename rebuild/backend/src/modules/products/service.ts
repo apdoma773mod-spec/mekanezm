@@ -6,7 +6,8 @@ import type {
   Paginated,
   ProductDto,
   ProductInput,
-  StockMoveDto,
+  StockMoveSummary,
+  StockMovesResult,
   UpdateProductInput,
 } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
@@ -46,6 +47,15 @@ async function liveProduct(tx: Prisma.TransactionClient, id: string): Promise<Pr
   const p = await tx.product.findUnique({ where: { id } });
   if (!p || p.deletedAt) throw notFound('الصنف ده مش موجود');
   return p;
+}
+
+/** Old submitProduct: «الباركود ده متسجل على: <name>». */
+async function assertBarcodeFree(tx: Prisma.TransactionClient, barcode: string | null | undefined, exceptId?: string) {
+  if (!barcode) return;
+  const used = await tx.product.findUnique({ where: { barcode }, select: { id: true, name: true } });
+  if (used && used.id !== exceptId) {
+    throw conflict('الباركود ده متسجل على: ' + used.name, [{ path: 'barcode', message: 'الباركود ده متسجل على: ' + used.name }]);
+  }
 }
 
 async function assertCodeFree(tx: Prisma.TransactionClient, code: string, exceptId?: string) {
@@ -147,6 +157,7 @@ export class ProductsService {
     const product = await withTx(this.prisma, async (tx) => {
       const code = input.code ? input.code : await generateCode(tx);
       if (input.code) await assertCodeFree(tx, code);
+      await assertBarcodeFree(tx, emptyToNull(input.barcode));
       const created = await tx.product.create({
         data: {
           code,
@@ -194,6 +205,7 @@ export class ProductsService {
         await assertCodeFree(tx, input.code, id);
       }
       const { barcode, code, ...rest } = input;
+      if (barcode !== undefined) await assertBarcodeFree(tx, emptyToNull(barcode), id);
       const updated = await tx.product.update({
         where: { id },
         data: {
@@ -433,7 +445,7 @@ export class ProductsService {
     });
   }
 
-  async moves(id: string, page: number, pageSize: number): Promise<Paginated<StockMoveDto>> {
+  async moves(id: string, page: number, pageSize: number): Promise<StockMovesResult> {
     const where = { productId: id };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.stockMove.findMany({
@@ -447,19 +459,29 @@ export class ProductsService {
     ]);
     const invoiceIds = rows.filter((r) => r.refType === 'Invoice' && r.refId).map((r) => r.refId!);
     const returnIds = rows.filter((r) => r.refType === 'Return' && r.refId).map((r) => r.refId!);
-    const [invoices, returns] = await Promise.all([
+    const [invoices, returns, summary] = await Promise.all([
       invoiceIds.length
-        ? this.prisma.invoice.findMany({ where: { id: { in: invoiceIds } }, select: { id: true, no: true } })
+        ? this.prisma.invoice.findMany({
+            where: { id: { in: invoiceIds } },
+            select: { id: true, no: true, person: true, contact: { select: { name: true } }, items: { where: { productId: id }, select: { price: true }, take: 1 } },
+          })
         : [],
       returnIds.length
-        ? this.prisma.return.findMany({ where: { id: { in: returnIds } }, select: { id: true, person: true } })
+        ? this.prisma.return.findMany({ where: { id: { in: returnIds } }, select: { id: true, person: true, price: true } })
         : [],
+      page === 1 ? this.moveSummary(id) : Promise.resolve(undefined),
     ]);
     const labels = new Map<string, string>([
       ...invoices.map((i) => [i.id, i.no] as [string, string]),
       ...returns.map((r) => [r.id, r.person ? `مرتجع ${r.person}` : 'مرتجع'] as [string, string]),
     ]);
+    // «📋 كارت الصنف» columns: الجهة and السعر of the document behind each move
+    const extra = new Map<string, { party: string; price: number | null }>([
+      ...invoices.map((i) => [i.id, { party: i.contact?.name || i.person, price: i.items[0] ? num(i.items[0].price) : null }] as const),
+      ...returns.map((r) => [r.id, { party: r.person, price: num(r.price) }] as const),
+    ]);
     return {
+      summary,
       items: rows.map((m) => ({
         id: m.id,
         qtyChange: num(m.qtyChange),
@@ -468,6 +490,8 @@ export class ProductsService {
         refType: m.refType,
         refId: m.refId,
         refLabel: m.refId ? (labels.get(m.refId) ?? null) : null,
+        party: m.refId ? (extra.get(m.refId)?.party ?? '') : (m.user?.name ?? ''),
+        price: m.refId ? (extra.get(m.refId)?.price ?? null) : null,
         note: m.note,
         user: m.user,
         createdAt: m.createdAt.toISOString(),
@@ -475,6 +499,28 @@ export class ProductsService {
       total,
       page,
       pageSize,
+    };
+  }
+
+  /** Old itemCard() header: total bought, total sold, average buy price, last buy, last sale (active invoices only). */
+  private async moveSummary(id: string): Promise<StockMoveSummary> {
+    const lines = await this.prisma.invoiceItem.findMany({
+      where: { productId: id, invoice: { status: 'ACTIVE', kind: { in: ['SALE', 'PURCHASE'] } } },
+      select: { qty: true, price: true, invoice: { select: { kind: true, date: true, createdAt: true, person: true, contact: { select: { name: true } } } } },
+      orderBy: [{ invoice: { date: 'desc' } }, { invoice: { createdAt: 'desc' } }],
+    });
+    const buys = lines.filter((l) => l.invoice.kind === 'PURCHASE');
+    const sells = lines.filter((l) => l.invoice.kind === 'SALE');
+    const bq = buys.reduce((a, l) => a + num(l.qty), 0);
+    const bv = buys.reduce((a, l) => a + num(l.qty) * num(l.price), 0);
+    const lb = buys[0];
+    const ls = sells[0];
+    return {
+      boughtQty: Math.round(bq * 1000) / 1000,
+      soldQty: Math.round(sells.reduce((a, l) => a + num(l.qty), 0) * 1000) / 1000,
+      avgBuy: bq ? Math.round((bv / bq) * 100) / 100 : 0,
+      lastBuy: lb ? { price: num(lb.price), who: lb.invoice.contact?.name || lb.invoice.person } : null,
+      lastSale: ls ? ls.invoice.date.toISOString().slice(0, 10) : null,
     };
   }
 }

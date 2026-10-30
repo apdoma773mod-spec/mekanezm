@@ -203,7 +203,7 @@ export function ProductCard({ id }: { id: string }) {
               <button type="button" className="secondary" onClick={() => open({ kind: 'productEdit', id })}>
                 ✏️ الاسم والسعر والكمية
               </button>
-              <button type="button" className="secondary" onClick={() => open({ kind: 'productEdit', id })}>
+              <button type="button" className="secondary" onClick={() => open({ kind: 'itemCard', id })}>
                 📋 حركة الصنف
               </button>
               <button type="button" className="secondary" onClick={() => open({ kind: 'siteProduct', id })}>

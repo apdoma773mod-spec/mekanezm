@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { ContactType, InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
-import { ProductModal, type ProductPreset } from './product-modal';
+import { ItemCard, ProductModal, type ProductPreset } from './product-modal';
 import { TransactionModal, type SalePreset } from './transaction-modal';
 import { InvoiceView } from './invoice-view';
 import { ReturnModal, type ReturnPreset } from './return-modal';
@@ -59,6 +59,7 @@ export type ModalSpec =
   | { kind: 'portalNew' }
   | { kind: 'phoneImport' }
   | { kind: 'invoice'; id: string }
+  | { kind: 'itemCard'; id: string }
   | { kind: 'return'; type: ReturnKind; preset?: ReturnPreset }
   | { kind: 'contact'; id?: string; type?: ContactType; preset?: { name?: string; phone?: string } }
   | { kind: 'contactFile'; id: string }
@@ -95,6 +96,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'voiceCfg':
         content = <VoiceCfg />;
+        break;
+      case 'itemCard':
+        content = <ItemCard id={spec.id} />;
         break;
       case 'productEdit':
         content = <ProductModal key={`e-${spec.id}`} id={spec.id} />;

@@ -65,10 +65,28 @@ export function InvoiceView({ id }: { id: string }) {
       }),
     );
 
+  // old cancelInv() wording
+  const nm = (r.person || '').trim();
+  const voidMsg =
+    `إلغاء الفاتورة ${r.no} نهائياً؟\n` +
+    (isSale ? 'الأصناف هترجع للمخزون.' : 'الأصناف هتتخصم من المخزون.') +
+    (r.paid > 0
+      ? nm
+        ? isSale
+          ? `\nالمدفوع (${money(r.paid)}) هيتسجل رصيد لـ ${nm} يتخصم من فاتورة جاية.`
+          : `\nالمدفوع للمورد (${money(r.paid)}) هيتسجل رصيد ليك عند ${nm}.`
+        : isSale
+          ? `\nالمدفوع (${money(r.paid)}) هيتخصم من الخزنة على إنه اترجع للعميل (مفيش اسم عميل على الفاتورة).`
+          : `\nالمدفوع (${money(r.paid)}) هيرجع للخزنة.`
+      : '') +
+    (r.remaining > 0
+      ? isSale
+        ? `\nوالمتبقي (${money(r.remaining)}) هيتشال من حساب العميل.`
+        : `\nوالمتبقي للمورد (${money(r.remaining)}) هيتشال من حسابه.`
+      : '');
   const doVoid = async () => {
-    if (!reason.trim()) return toast('اكتب سبب الإلغاء', 'bad');
     try {
-      await voidInv.mutateAsync({ id: r.id, reason: reason.trim() });
+      await voidInv.mutateAsync({ id: r.id, reason: reason.trim() || 'إلغاء من شاشة الفاتورة' });
       toast('تم إلغاء الفاتورة');
       setVoiding(false);
     } catch (err) {
@@ -163,14 +181,12 @@ export function InvoiceView({ id }: { id: string }) {
         <div className="form" style={{ marginTop: 10 }}>
           <div className="field full">
             <label htmlFor="voidReason">سبب الإلغاء</label>
-            <input id="voidReason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="مثال: الفاتورة اتسجلت غلط" />
+            <input id="voidReason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="اختياري — مثال: الفاتورة اتسجلت غلط" />
           </div>
           <div className="field full">
-            <span className="hint">
-              البضاعة هترجع المخزن{r.contactId && r.paid > 0 ? '، واللي اتدفع هيتسجل رصيد للعميل' : ''}.
-            </span>
+            <span className="hint" style={{ whiteSpace: 'pre-line' }}>{voidMsg}</span>
             <button type="button" className="primary" style={{ background: 'var(--danger)' }} disabled={voidInv.isPending} onClick={doVoid}>
-              {voidInv.isPending ? '⏳' : 'تأكيد الإلغاء'}
+              {voidInv.isPending ? '⏳' : 'إلغاء الفاتورة'}
             </button>
           </div>
         </div>

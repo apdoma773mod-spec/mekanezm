@@ -46,6 +46,7 @@ import type {
   ReturnDto,
   ReturnInput,
   StockMoveDto,
+  StockMovesResult,
   TodaySummary,
   UpdateContactInput,
   UpdateExpenseInput,
@@ -98,7 +99,7 @@ export const useCategories = () =>
 export const useProductMoves = (id: string | null, page: number) =>
   useQuery({
     queryKey: ['moves', id, page],
-    queryFn: ({ signal }) => api.get<Paginated<StockMoveDto>>(`/products/${id}/moves`, { page, pageSize: 20 }, signal),
+    queryFn: ({ signal }) => api.get<StockMovesResult>(`/products/${id}/moves`, { page, pageSize: 20 }, signal),
     enabled: !!id,
     placeholderData: keepPreviousData,
   });

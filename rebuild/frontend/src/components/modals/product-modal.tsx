@@ -23,6 +23,9 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { useIsAdmin } from '../use-role';
+import { CameraScanner } from '../scan/camera-scanner';
+import type { StockMoveSummary } from '@mk/shared';
 
 const UNITS = ['قطعة', 'كرتونة', 'متر', 'طقم', 'لفة', 'رول', 'علبة', 'كيس', 'زوج', 'دستة', 'عبوة', 'كيلو', 'لتر', 'لوح'];
 
@@ -41,40 +44,94 @@ const REASON_LABELS: Record<string, string> = {
   SAMPLE: 'عينة',
 };
 
-function Moves({ id }: { id: string }) {
+/** Old itemCard(): «📋 كارت الصنف» — header numbers, then every move with its document, party, in/out, balance after and price. */
+export function Moves({ id, product }: { id: string; product?: ProductDto }) {
   const [page, setPage] = useState(1);
+  const [sum, setSum] = useState<StockMoveSummary | null>(null);
   const moves = useProductMoves(id, page);
+  const { open } = useModal();
+  if (moves.data?.summary && moves.data.summary !== sum) setSum(moves.data.summary);
   if (moves.isPending) return <Loading />;
   if (moves.isError) return <ErrorBox message={errorMessage(moves.error)} />;
-  if (!moves.data.items.length) return <div className="empty">لا توجد حركات.</div>;
+  const s = sum;
   return (
     <>
+      {s && (
+        <div className="cstats">
+          {product && (
+            <div>
+              <small>الرصيد دلوقتي</small>
+              <b>
+                {qtyText(product.qty)} {product.unit}
+              </b>
+            </div>
+          )}
+          <div>
+            <small>إجمالي الوارد (شراء)</small>
+            <b>{qtyText(s.boughtQty)}</b>
+          </div>
+          <div>
+            <small>إجمالي المباع</small>
+            <b>{qtyText(s.soldQty)}</b>
+          </div>
+          <div>
+            <small>متوسط سعر الشراء</small>
+            <b>{money(s.avgBuy)}</b>
+          </div>
+          <div>
+            <small>آخر شراء</small>
+            <b>{s.lastBuy ? `${money(s.lastBuy.price)} — ${s.lastBuy.who}` : '—'}</b>
+          </div>
+          <div>
+            <small>آخر بيع</small>
+            <b>{s.lastSale ?? '—'}</b>
+          </div>
+        </div>
+      )}
       <div className="table-wrap">
-        <table className="table" style={{ minWidth: 420 }}>
+        <table className="table" style={{ minWidth: 560 }}>
           <thead>
             <tr>
               <th>التاريخ</th>
               <th>الحركة</th>
-              <th>الكمية</th>
+              <th>المستند</th>
+              <th>الجهة</th>
+              <th>وارد</th>
+              <th>صادر</th>
               <th>الرصيد بعدها</th>
+              <th>السعر</th>
             </tr>
           </thead>
           <tbody>
-            {moves.data.items.map((m) => (
-              <tr key={m.id}>
-                <td>{formatDateTime(m.createdAt)}</td>
-                <td>
-                  {REASON_LABELS[m.reason] ?? m.reason}
-                  {m.refLabel ? ` ${m.refLabel}` : ''}
-                  {m.note ? <small style={{ color: 'var(--muted)' }}> — {m.note}</small> : null}
+            {moves.data.items.length ? (
+              moves.data.items.map((m) => (
+                <tr
+                  key={m.id}
+                  className={m.refType === 'Invoice' && m.refId ? 'prow' : undefined}
+                  onClick={m.refType === 'Invoice' && m.refId ? () => open({ kind: 'invoice', id: m.refId! }) : undefined}
+                >
+                  <td>{formatDateTime(m.createdAt)}</td>
+                  <td>
+                    {REASON_LABELS[m.reason] ?? m.reason}
+                    {m.note ? <small style={{ color: 'var(--muted)' }}> {m.note}</small> : null}
+                  </td>
+                  <td>{m.refType === 'Invoice' ? (m.refLabel ?? '') : ''}</td>
+                  <td>{m.party}</td>
+                  <td style={{ color: 'var(--green)' }}>{m.qtyChange > 0 ? qtyText(m.qtyChange) : ''}</td>
+                  <td style={{ color: 'var(--danger)' }}>{m.qtyChange < 0 ? qtyText(-m.qtyChange) : ''}</td>
+                  <td>
+                    <b>{qtyText(m.qtyAfter)}</b>
+                  </td>
+                  <td>{m.price != null ? money(m.price) : ''}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8}>
+                  <div className="empty">مفيش حركات للصنف ده لسه</div>
                 </td>
-                <td dir="ltr" style={{ textAlign: 'right', color: m.qtyChange < 0 ? 'var(--danger)' : 'var(--green)' }}>
-                  {m.qtyChange > 0 ? '+' : ''}
-                  {qtyText(m.qtyChange)}
-                </td>
-                <td>{qtyText(m.qtyAfter)}</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -165,7 +222,7 @@ export interface ProductPreset {
 }
 
 function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnType<typeof useProduct>['data']>; preset?: ProductPreset }) {
-  const { close } = useModal();
+  const { close, open } = useModal();
   const toast = useToast();
   const categories = useCategories();
   const create = useCreateProduct();
@@ -174,6 +231,8 @@ function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnT
   const remove = useDeleteProduct();
   const { co } = useCompany();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [scan, setScan] = useState(false);
+  const isAdmin = useIsAdmin();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
     code: p?.code ?? pr?.code?.toUpperCase() ?? '',
@@ -248,6 +307,16 @@ function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnT
             dir="ltr"
             error={errors.code}
           />
+          <div className="field">
+            <label>الباركود (اختياري)</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input value={f.barcode} onChange={set('barcode')} dir="ltr" inputMode="numeric" placeholder="امسح أو اكتب" style={{ flex: 1, minWidth: 0 }} />
+              <button type="button" className="secondary" style={{ flex: 'none' }} onClick={() => setScan(true)}>
+                📷
+              </button>
+            </div>
+            {errors.barcode && <span className="err">{errors.barcode}</span>}
+          </div>
           <Input label="اسم المنتج" value={f.name} onChange={set('name')} error={errors.name} />
           <Input label="التصنيف" value={f.category} onChange={set('category')} list="mk-cats" error={errors.category} />
           <datalist id="mk-cats">{categories.data?.map((c) => <option key={c} value={c} />)}</datalist>
@@ -261,7 +330,6 @@ function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnT
             onChange={set('unit')}
             options={[...new Set([...UNITS, f.unit])].map((u) => ({ value: u, label: u }))}
           />
-          <Input label="الباركود (اختياري)" value={f.barcode} onChange={set('barcode')} dir="ltr" inputMode="numeric" error={errors.barcode} full />
           <FormError message={errors._} />
         </div>
         <div className="modal-foot">
@@ -278,21 +346,37 @@ function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnT
                 حذف الصنف
               </button>
             ))}
+          {p && isAdmin && (
+            <button type="button" className="secondary" onClick={() => open({ kind: 'itemCard', id: p.id })}>
+              📋 كارت الصنف
+            </button>
+          )}
           <button type="button" className="secondary" onClick={close}>
             إلغاء
           </button>
         </div>
       </form>
-      {p && <ExtraButtons product={p} />}
-      {p && (
-        <>
-          <h3 style={{ margin: '18px 0 8px' }}>حركة الصنف</h3>
-          <p style={{ color: 'var(--muted)', margin: '0 0 8px', fontSize: 13 }}>
-            المتاح: {qtyText(p.qty)} {p.unit} — قيمة المخزون: {money(p.qty * (p.cost ?? 0))}
-          </p>
-          <Moves id={p.id} />
-        </>
+      {scan && (
+        <CameraScanner
+          title="امسح باركود الصنف"
+          onClose={() => setScan(false)}
+          onCode={(c) => {
+            setF((x) => ({ ...x, barcode: c }));
+            setScan(false);
+          }}
+        />
       )}
+      {p && <ExtraButtons product={p} />}
+    </Modal>
+  );
+}
+
+export function ItemCard({ id }: { id: string }) {
+  const { close } = useModal();
+  const p = useProduct(id);
+  return (
+    <Modal title={`📋 كارت الصنف: ${p.data?.name ?? ''}`} onClose={close} wide>
+      <Moves id={id} product={p.data} />
     </Modal>
   );
 }

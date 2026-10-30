@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { COMPANIES, STOCK_REASONS } from '../enums.js';
 import { normalizeDigits } from '../digits.js';
-import { moneySchema, paginationQuery, qtySchema } from './common.js';
+import { moneySchema, paginationQuery, qtySchema, type Paginated } from './common.js';
 
 const text = (max: number) => z.string().trim().max(max);
 
@@ -89,7 +89,22 @@ export interface StockMoveDto {
   refType: string | null;
   refId: string | null;
   refLabel: string | null;
+  /** «الجهة»: customer/supplier of the document, or who made a manual change. */
+  party: string;
+  /** Unit price on the document, when there is one. */
+  price: number | null;
   note: string;
   user: { id: string; name: string } | null;
   createdAt: string;
 }
+
+/** Header of «📋 كارت الصنف». */
+export interface StockMoveSummary {
+  boughtQty: number;
+  soldQty: number;
+  avgBuy: number;
+  lastBuy: { price: number; who: string } | null;
+  lastSale: string | null;
+}
+
+export type StockMovesResult = Paginated<StockMoveDto> & { summary?: StockMoveSummary };
