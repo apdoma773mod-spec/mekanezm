@@ -1,5 +1,6 @@
 'use client';
 
+import { ScanQueueCard } from './modals/invoice-photo';
 import { useEffect, useState } from 'react';
 import type { InvoiceDto, InvoiceListItem } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
@@ -132,6 +133,7 @@ export function PurchasesScreen() {
           </div>
         }
       />
+      <ScanQueueCard />
       <div id="pvx">
         <div className="card">
           <input

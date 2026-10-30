@@ -7,6 +7,8 @@ import { useCharts, useDebts, useReorderCount } from '@/lib/trade-queries';
 import { useWebCounts } from '@/lib/web-queries';
 import { usePortalNewCount } from '@/lib/portal-queries';
 import { useModal } from '@/components/modals/modal-host';
+import { ScanBanner } from '@/components/modals/invoice-photo';
+import { useRouter } from 'next/navigation';
 
 const num = (n: number) => Number(n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 1 });
 
@@ -163,6 +165,7 @@ const banner = { width: '100%', marginBottom: 14, borderRadius: 14, padding: 14,
 
 /** The old red «💰 ...من أكتر من 30 يوم» and orange «📦 ...قرّب يخلص» banners. */
 export function DashboardBanners() {
+  const router = useRouter();
   const debts = useDebts().data;
   const reorder = useReorderCount(30).data ?? 0;
   const wc = useWebCounts().data;
@@ -180,6 +183,7 @@ export function DashboardBanners() {
           🔗 عندك <b>{msgs}</b> طلب جديد من العملاء (من رابطهم) — اضغط للعرض
         </button>
       )}
+      <ScanBanner onGo={() => router.push('/purchases')} />
       {rq > 0 && (
         <Link href="/weborders#rqBody" style={{ ...banner, background: '#eef6ff', color: '#0b4a8b', border: '1px solid #9cc3ef' }}>
           📷 عندك <b>{rq}</b> طلب بالصور (منتج مش في الموقع) — اضغط للعرض

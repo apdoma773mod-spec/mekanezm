@@ -5,6 +5,7 @@ import { termsFor, useTerms } from '@/lib/terms';
 import { useCreditLimits } from '@/lib/kv';
 import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type InvoiceListResult, type ProductDto, type QuoteDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
@@ -37,6 +38,8 @@ interface Line {
   available: number | null;
   qty: string;
   price: string;
+  /** Came from this invoice photo (a finer re-read replaces these lines). */
+  fromScan?: string;
   /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
   un?: number;
   unLabel?: string;
@@ -72,6 +75,8 @@ export interface SalePreset {
   paid?: number;
   lines: { productId?: string; name: string; qty: number; price: number }[];
   onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
+  /** «👀 راجعها»: a purchase from a read invoice photo of the queue. */
+  scanId?: string;
 }
 
 export function TransactionModal(props: Props) {
@@ -148,6 +153,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
+  const scanRef = useRef<string | null>(null);
+  const qc = useQueryClient();
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 120);
@@ -340,6 +347,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         }
       }
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
+      // the photo became this invoice: «🧾 اتعملت فاتورة SH-…» in the queue, its pictures are dropped
+      if (!invoice && scanRef.current) {
+        await api.post(`/ai/scans/${scanRef.current}/used`, { pno: saved.no }).catch(() => undefined);
+        scanRef.current = null;
+        void qc.invalidateQueries({ queryKey: ['ai-scans'] });
+        toast(`✔ اتعملت فاتورة ${saved.no}`);
+      }
       if (!invoice && preset?.onSaved) {
         try {
           await preset.onSaved({ id: saved.id, no: saved.no });
@@ -376,7 +390,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         <div className="form">
           {!isSale && !invoice && !asQuote && (
             <InvoicePhotoButtons
-              onRead={async (r) => {
+              supplier={person}
+              autoScan={preset?.scanId}
+              onRead={async (r, scanId) => {
+                if (scanId) scanRef.current = scanId;
                 const all = await api.get<{ items: ProductDto[] }>('/products/all').then((x) => x.items).catch(() => [] as ProductDto[]);
                 const read: Line[] = r.items
                   .filter((it) => String(it.text ?? '').trim())
@@ -384,9 +401,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                     const p = matchProduct(String(it.text), it.code, all);
                     const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
                     const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
-                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)) };
+                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
                   });
-                setLines((ls) => [...ls.filter((l) => l.name.trim()), ...read]);
+                setLines((ls) => [...ls.filter((l) => l.name.trim() && !(scanId && l.fromScan === scanId)), ...read]);
                 if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
                 if (r.invoice_no && !sno.trim()) setSno(String(r.invoice_no));
               }}
