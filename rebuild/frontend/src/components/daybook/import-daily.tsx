@@ -43,20 +43,13 @@ export function ImportDailyButton({ children }: { children: React.ReactNode }) {
   const toast = useToast();
   const file = useRef<HTMLInputElement>(null);
   const [sheets, setSheets] = useState<ImpSheet[] | null>(null);
+  // the library loads ahead, so the tap opens the file picker straight away (iPhone drops the picker after an await)
+  useEffect(() => {
+    loadXlsx().catch(() => undefined);
+  }, []);
   return (
     <>
-      <button
-        type="button"
-        className="secondary"
-        onClick={async () => {
-          try {
-            await loadXlsx();
-            file.current?.click();
-          } catch (e) {
-            toast(errorMessage(e), 'bad');
-          }
-        }}
-      >
+      <button type="button" className="secondary" onClick={() => file.current?.click()}>
         {children}
       </button>
       <input
@@ -68,8 +61,13 @@ export function ImportDailyButton({ children }: { children: React.ReactNode }) {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (!f) return;
+          let X: Xlsx;
           try {
-            const X = await loadXlsx();
+            X = await loadXlsx();
+          } catch (err) {
+            return toast(errorMessage(err), 'bad');
+          }
+          try {
             const wb = X.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
             const list: ImpSheet[] = [];
             for (const n of wb.SheetNames) {
@@ -98,17 +96,22 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const [mode, setMode] = useState<'each' | 'one'>('one');
   const [rows, setRows] = useState<ImpRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    void Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts', { type: 'CUSTOMER' })]).then(([p, c]) => {
-      setProducts(p);
-      setCustomers(c.filter((x) => x.type === 'CUSTOMER'));
-    });
-  }, []);
+    Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts', { type: 'CUSTOMER' })])
+      .then(([p, c]) => {
+        setProducts(p);
+        setCustomers(c.filter((x) => x.type === 'CUSTOMER'));
+      })
+      .catch((e) => toast(`ما قدرتش أجيب الأصناف للمطابقة: ${errorMessage(e)}`, 'bad'))
+      .finally(() => setLoaded(true));
+  }, [toast]);
 
   // pick a sheet: copy its rows, match registered customers by name, then match the products
+  // (runs even when the shop has no products yet: every row then shows «➕ صنف جديد»)
   useEffect(() => {
-    if (!products.length && !customers.length) return;
+    if (!loaded) return;
     const s = sheets[cur];
     const R = s.rows.map((r) => ({ ...r }));
     R.forEach((r) => {
@@ -122,7 +125,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
     setIso(s.iso || todayYmd());
     setRows(R);
     setMode('one');
-  }, [cur, sheets, products, customers]);
+  }, [cur, sheets, products, customers, loaded]);
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const G: ImpGroup[] = useMemo(() => groupRows(rows, mode), [rows, mode]);
@@ -243,6 +246,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
           </select>
         </div>
       </div>
+      {!loaded && <div className="empty">جاري تحميل الأصناف للمطابقة...</div>}
       <div className="card" style={{ margin: '10px 0', lineHeight: 1.9, fontSize: 14 }}>
         <b>{G.length}</b> فاتورة • <b>{rows.length}</b> صنف • الإجمالي <b>{money(tot)}</b>
         <br />
@@ -252,7 +256,16 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
             <br />
           </>
         )}
-        {bad ? <span style={{ color: '#c0392b' }}>{bad} صنف مش متطابق (هيتخطى لو سبته)</span> : <span style={{ color: '#159447' }}>كل الأصناف متطابقة</span>}
+        {bad ? (
+          <>
+            <span style={{ color: '#c0392b' }}>{bad} صنف مش متطابق (هيتخطى لو سبته)</span>{' '}
+            <button type="button" className="secondary" style={btnSm} onClick={() => setRows((R) => R.map((r) => (r.pid ? r : { ...r, isNew: true })))}>
+              ➕ ضيفهم كلهم أصناف جديدة
+            </button>
+          </>
+        ) : (
+          <span style={{ color: '#159447' }}>كل الأصناف متطابقة</span>
+        )}
         <br />
         {warn.length > 0 && (
           <span style={{ color: '#b9770e' }}>

@@ -478,6 +478,7 @@ export const useAllContacts = (type: 'CUSTOMER' | 'SUPPLIER', enabled = true) =>
     queryKey: ['contacts', 'all', type],
     queryFn: ({ signal }) => api.get<{ items: ContactDto[] }>('/contacts/all', { type }, signal).then((r) => r.items),
     enabled,
+    staleTime: 30_000,
     placeholderData: keepPreviousData,
   });
 

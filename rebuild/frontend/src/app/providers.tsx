@@ -15,6 +15,10 @@ export function Providers({ children }: { children: ReactNode }) {
             retry: (count, err) =>
               count < 2 && !(err instanceof ApiClientError && err.status >= 400 && err.status < 500),
             refetchOnWindowFocus: true,
+            // a screen opened again within 15 s shows what it has without asking the server again
+            // (saves one round trip through the tunnel per list; every save still invalidates its lists)
+            staleTime: 15_000,
+            gcTime: 10 * 60_000,
           },
         },
       }),

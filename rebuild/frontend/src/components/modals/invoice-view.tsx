@@ -10,6 +10,7 @@ import { useSettings } from '@/lib/queries';
 import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
 import { useShipments } from '@/lib/phase4-queries';
 import { kindIc, stLabel, useShipActions } from './shipment-modals';
+import { HtmlPreview } from '../ui/html-preview';
 import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
@@ -251,7 +252,7 @@ function PdfBox({ inv, settings, wa }: { inv: InvoiceDto; settings: SettingsMap 
       setState(await htmlToPdf(invoiceA4Html(inv, settings)));
     } catch (e) {
       const m = (e as Error).message;
-      setState({ err: m === 'lib' ? 'مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت وجرب تاني.' : m === 'timeout' ? 'التحويل أخد وقت طويل وتوقف. اضغط إعادة المحاولة.' : `حصل خطأ أثناء إنشاء الـ PDF (${m})` });
+      setState({ err: m === 'lib' ? 'مكتبة الـ PDF لم تتحمل، تأكد من الإنترنت وجرب تاني.' : m === 'timeout' ? 'التحويل أخد وقت طويل وتوقف. اضغط إعادة المحاولة.' : m === 'empty' || m === 'frame' ? 'المتصفح ده ما عرفش يحوّلها صورة — استخدم زرار الطباعة تحت واختار «حفظ PDF».' : `حصل خطأ أثناء إنشاء الـ PDF (${m})` });
     }
   };
   const ready = typeof state === 'object' && 'blob' in state ? state : null;
@@ -300,15 +301,26 @@ function PdfBox({ inv, settings, wa }: { inv: InvoiceDto; settings: SettingsMap 
         </>
       ) : failed ? (
         <>
+          {settings && <HtmlPreview html={invoiceA4Html(inv, settings)} />}
           <p style={{ color: 'var(--danger)' }}>{failed.err}</p>
-          <button type="button" className="primary" style={{ width: '100%' }} onClick={() => setState('idle')}>
-            إعادة المحاولة
-          </button>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <button type="button" className="primary" style={{ width: '100%' }} onClick={() => void convert()}>
+              إعادة المحاولة
+            </button>
+            {settings && (
+              <button type="button" className="secondary" style={{ width: '100%' }} onClick={() => printHtml(invoiceA4Html(inv, settings))}>
+                🖨️ اطبعها أو احفظها PDF من الطباعة
+              </button>
+            )}
+          </div>
         </>
       ) : (
+        <>
+        {state === 'busy' && settings && <HtmlPreview html={invoiceA4Html(inv, settings)} />}
         <button id="invBtn" type="button" className="primary" style={{ width: '100%', padding: 14 }} disabled={state === 'busy' || !settings} onClick={() => void convert()}>
           {state === 'busy' ? 'جاري تجهيز الفاتورة...' : 'تحويل إلى PDF'}
         </button>
+        </>
       )}
     </div>
   );

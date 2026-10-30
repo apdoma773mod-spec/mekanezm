@@ -2,7 +2,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // Rewrites are fixed at build time, so Docker passes BACKEND_URL as a build argument.
-const backend = process.env.BACKEND_URL ?? 'http://localhost:4000';
+// 127.0.0.1, not "localhost": on Windows "localhost" tries IPv6 first and every new proxied
+// connection waited up to ~2 s before falling back to the IPv4-only backend.
+const backend = process.env.BACKEND_URL ?? 'http://127.0.0.1:4000';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

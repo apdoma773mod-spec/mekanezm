@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { ProThemeCard, ProUiCard } from '@/components/pro';
+import { HtmlPreview } from '@/components/ui/html-preview';
+import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
@@ -58,6 +60,7 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
   const toast = useToast();
   const save = useSaveSetting('theme');
   const [T, setT] = useState<ThemeSettings>(settings.theme);
+  const [preview, setPreview] = useState(false);
   const dirty = useRef(false);
 
   // Live preview like the old system: the whole app re-colors while you pick, then it saves by itself.
@@ -254,9 +257,14 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
               </div>
             </div>
           )}
-          <button type="button" className="primary" onClick={() => printHtml(invoiceA4Html(SAMPLE, { ...settings, theme: T }))}>
+          <button type="button" className="primary" onClick={() => setPreview(true)}>
             معاينة الفاتورة
           </button>
+          {preview && (
+            <Modal title="معاينة الفاتورة" onClose={() => setPreview(false)}>
+              <HtmlPreview html={invoiceA4Html(SAMPLE, { ...settings, theme: T })} />
+            </Modal>
+          )}
         </div>
       </div>
     </>
