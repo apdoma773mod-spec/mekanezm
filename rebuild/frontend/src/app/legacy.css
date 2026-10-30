@@ -910,6 +910,16 @@ body.mk-fast #mkLogo svg *{animation:none!important}
  body.mk-tcards main table.mkTc td:first-child{font-weight:800;font-size:16px}
  body.mk-tcards main table.mkTc td:empty{display:none}
 }
+/* طلب صاحب المحل: الكارت يبان كله على عرض الموبايل من غير يمين وشمال، وكل مربع مفصول بلون عن اللي حواليه */
+@media(max-width:700px){
+ body.mk-tcards main table.mkTc{min-width:0!important}
+ body.mk-tcards main .table-wrap:has(table.mkTc){overflow-x:visible}
+ body.mk-tcards main table.mkTc td{flex-wrap:wrap;overflow-wrap:anywhere;word-break:break-word;min-width:0}
+ body.mk-tcards main table.mkTc td>*{min-width:0;max-width:100%}
+ body.mk-tcards main table.mkTc tr{background:var(--tint2,#f1f8f9);border:1.5px solid var(--tintb,#b9dadd);border-inline-start:5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.07);color:var(--text,#18343a)}
+}
+main .card .card,.modal .card{background:var(--tint2,#f1f8f9);border:1.5px solid var(--tintb,#b9dadd);border-inline-start:5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.06);color:var(--text,#18343a)}
+main .card .card .card,.modal .card .card{background:var(--card,#fff);border-inline-start-width:1.5px}
 
 
 /* ---- index.html 10904-10923 ---- */

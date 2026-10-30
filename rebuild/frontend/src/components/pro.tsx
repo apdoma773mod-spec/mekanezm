@@ -189,7 +189,8 @@ function uiApply() {
 /** On phones, tables become cards: each cell gets its column name as data-l (the CSS shows it). */
 function cardify() {
   if (!uiGet().tc || window.innerWidth > 700) return;
-  document.querySelectorAll<HTMLTableElement>('main table:not(.mkTc):not([data-nc])').forEach((t) => {
+  // every pass, not only the first: rows that arrive after loading (or on the next page) need their names too
+  document.querySelectorAll<HTMLTableElement>('main table:not([data-nc])').forEach((t) => {
     const hs = Array.from(t.querySelectorAll('thead th')).map((h) => h.textContent?.trim() ?? '');
     if (!hs.length) {
       t.setAttribute('data-nc', '1');
@@ -649,14 +650,23 @@ export function ProUiCard() {
 
 /**
  * 🔔 شريط التنبيهات الدايم فوق أي شاشة (index.html 2880): بيزق المحتوى لتحت ومايختفيش غير لما الحاجة تتعالج.
- * القديم كان فيه كمان طلبات الموقع (طلب من الموقع / طلب تجهيز / طلب بالصور) — دي هتتضاف مع شاشة طلبات الموقع.
+ * نفس ترتيب القديم: طلب من الموقع، طلب تجهيز، طلب بالصور، صورة واتساب، فلوس واصلة.
  */
-export function NotifyBar({ waPhotos, sms }: { waPhotos: number; sms: number }) {
+export function NotifyBar({ waPhotos, sms, web }: { waPhotos: number; sms: number; web?: { orders: number; custom: number; requests: number } }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const L: [string, number, string][] = [];
+  if (web?.orders) L.push(['🛒 طلب من الموقع', web.orders, '/weborders']);
+  if (web?.custom) L.push(['🛠️ طلب تجهيز', web.custom, '/weborders#cuBody']);
+  if (web?.requests) L.push(['📷 طلب بالصور', web.requests, '/weborders#rqBody']);
   if (waPhotos) L.push(['💬 صورة واتساب', waPhotos, '/transfers']);
   if (sms) L.push(['📲 فلوس واصلة', sms, '/vodafone']);
+  const go = (href: string) => {
+    const [path, id] = href.split('#');
+    router.push(path!);
+    // like the old: open the screen, then slide down to the section
+    if (id) [400, 1200].forEach((ms) => setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), ms));
+  };
   const sig = L.map((x) => x[0] + x[1]).join('|');
   useEffect(() => {
     const B = document.body;
@@ -673,7 +683,7 @@ export function NotifyBar({ waPhotos, sms }: { waPhotos: number; sms: number }) 
   return (
     <div id="mkNb" ref={ref} style={{ display: 'flex' }}>
       {L.map(([t, n, href]) => (
-        <button key={t} type="button" onClick={() => router.push(href)}>
+        <button key={t} type="button" onClick={() => go(href)}>
           {t}
           <b>{n}</b>
         </button>

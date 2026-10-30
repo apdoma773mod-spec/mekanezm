@@ -214,7 +214,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <ProBody />
       </Suspense>
-      {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} />}
+      {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} web={webCounts.data} />}
       <PunchCatcher />
       <header className="top">
         <div className="brand">
