@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { storeSettings, type StoreSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { BackupCard } from '@/components/backup/backup-card';
+import { AutoMessagesCard } from '@/components/auto-messages-card';
 import { useModal } from '@/components/modals/modal-host';
 import { Input } from '@/components/ui/field';
 import { ErrorBox, FormError, Loading } from '@/components/ui/states';
@@ -153,6 +154,7 @@ export default function SettingsPage() {
   return (
     <AdminOnly>
       <SettingsScreen />
+      <AutoMessagesCard />
       <BackupCard />
     </AdminOnly>
   );

@@ -20,6 +20,7 @@ import cashRoutes from './modules/cash/routes.js';
 import daybookRoutes from './modules/daybook/routes.js';
 import closingRoutes from './modules/closing/routes.js';
 import countsRoutes from './modules/counts/routes.js';
+import autoRoutes from './modules/alerts/auto.js';
 import dailyCountRoutes from './modules/counts/daily.js';
 import reportsRoutes from './modules/reports/routes.js';
 import insightsRoutes from './modules/insights/routes.js';
@@ -94,6 +95,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(daybookImportRoutes, { prefix: '/daybook-import' });
       await api.register(closingRoutes, { prefix: '/closings' });
       await api.register(countsRoutes, { prefix: '/counts' });
+      await api.register(autoRoutes, { prefix: '/autosend' });
       await api.register(dailyCountRoutes, { prefix: '/daily-count' });
       await api.register(reportsRoutes, { prefix: '/reports' });
       await api.register(insightsRoutes, { prefix: '/insights' });
