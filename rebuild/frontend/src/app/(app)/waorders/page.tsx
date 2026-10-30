@@ -7,6 +7,7 @@ import { InboxCard, InboxTabs } from '@/components/inbox/inbox-tabs';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
+import { useOrderSale } from '@/lib/use-order-sale';
 import { useInboxCounts, useWaOrderStatus, useWaOrders, type InboxTab, type WaOrderRow } from '@/lib/inbox-queries';
 
 /** 💬 طلبات الواتساب: الرسايل اللي فيها كلمة «طلب». بتفتح فاتورة بيع جاهزة بالعميل والنص، وحط الأسعار واحفظ. */
@@ -20,18 +21,15 @@ function OrderCard({ o, tab }: { o: WaOrderRow; tab: InboxTab }) {
       { id: o.id, status: s },
       { onError: (e) => toast(`ماتحفظتش: ${errorMessage(e)}`, 'bad') },
     );
+  const toInvoice = useOrderSale();
   const makeInvoice = () =>
-    open({
-      kind: 'transaction',
-      type: 'SALE',
-      preset: {
-        person: o.customerName,
-        phone: o.phone,
-        note: `من طلب واتساب\n${o.body}`,
-        lines: [],
-        onSaved: async () => {
-          await status.mutateAsync({ id: o.id, status: 'done' });
-        },
+    toInvoice({
+      text: o.body,
+      person: o.customerName,
+      phone: o.phone,
+      note: 'من طلب واتساب',
+      onSaved: async () => {
+        await status.mutateAsync({ id: o.id, status: 'done' });
       },
     });
 
