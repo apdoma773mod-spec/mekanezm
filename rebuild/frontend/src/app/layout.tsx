@@ -21,7 +21,8 @@ export const metadata: Metadata = {
   title: 'MEKANIZM | نظام المخزون',
   description: 'سيستم إدارة محل ميكانيزم',
   robots: { index: false, follow: false },
-  appleWebApp: { title: 'ميكانيزم', statusBarStyle: 'default' },
+  appleWebApp: { title: 'ميكانيزم', statusBarStyle: 'default', capable: true },
+  icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {

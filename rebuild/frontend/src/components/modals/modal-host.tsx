@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import type { ContactType, InvoiceKind, ReturnKind, ShipmentDto, ShipStatus, StockCountDto } from '@mk/shared';
 import { QuickModal } from './quick-modal';
 import { DailyCountModal } from './daily-count';
+import { CostRisesModal } from './cost-rises';
 import { ItemCard, ProductModal, type ProductPreset } from './product-modal';
 import { TransactionModal, type SalePreset } from './transaction-modal';
 import { InvoiceView } from './invoice-view';
@@ -62,6 +63,7 @@ export type ModalSpec =
   | { kind: 'invoice'; id: string }
   | { kind: 'itemCard'; id: string }
   | { kind: 'dailyCount' }
+  | { kind: 'costRises' }
   | { kind: 'return'; type: ReturnKind; preset?: ReturnPreset }
   | { kind: 'contact'; id?: string; type?: ContactType; preset?: { name?: string; phone?: string } }
   | { kind: 'contactFile'; id: string }
@@ -98,6 +100,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'voiceCfg':
         content = <VoiceCfg />;
+        break;
+      case 'costRises':
+        content = <CostRisesModal />;
         break;
       case 'dailyCount':
         content = <DailyCountModal />;

@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
 import { MarketBanner } from '@/components/modals/market-prices';
 import { DailyCountCard } from '@/components/modals/daily-count';
+import { CostRisesCard } from '@/components/modals/cost-rises';
 import { PriceLookupCard } from '@/components/price-lookup';
 import { useCompany } from '@/components/company';
 import { useInboxCounts } from '@/lib/inbox-queries';
@@ -96,6 +97,7 @@ export default function DashboardPage() {
         }
       />
       <MarketBanner />
+      <CostRisesCard />
       <DailyCountCard />
       {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
       <div id="mkToday">

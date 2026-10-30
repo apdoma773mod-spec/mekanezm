@@ -5,6 +5,7 @@ import { REPORTS, type ReportCell, type ReportColType, type ReportId, type Repor
 import { AdminOnly } from '@/components/app-shell';
 import { ContactReportCard, ReportsStatsRow, StockStatusCard } from '@/components/reports-extras';
 import { OnlineReportCard } from '@/components/online-report';
+import { AccountantExportCard, ReturnsAnalysisCard } from '@/components/pro-reports';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -413,6 +414,8 @@ function ReportsScreen() {
         </button>
       </div>
       <OnlineReportCard />
+      <ReturnsAnalysisCard />
+      <AccountantExportCard />
       <div className="card" style={{ marginBottom: 14, marginTop: 14 }}>
         <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
         {chips}
