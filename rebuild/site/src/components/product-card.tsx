@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/schema';
-import { askPriceText, images, productPath, sectionOf, waUrl } from '@/lib/shop';
+import { askPriceText, images, productPath, sectionOf, toItem, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
 import { useShop } from './shop-provider';
 
@@ -19,18 +19,18 @@ export function Placeholder({ section }: { section?: string }) {
   return <div className="ph" style={{ ['--g1' as string]: k[2], ['--g2' as string]: k[3] }}>{k[1]}<small>الصورة قريباً</small></div>;
 }
 
-export function ProductCard({ p, priority }: { p: Product; priority?: boolean }) {
-  const { site, ok: isOk, fav, toggleFav, add, open } = useShop();
-  const ok = isOk(p);
+export function ProductCard({ p, ok, priority }: { p: Product; ok: boolean; priority?: boolean }) {
+  const { site, fav, toggleFav, add, open } = useShop();
   const img = images(p)[0];
-  const addIt = () => { add(p.id); evProduct('add_to_cart', 'AddToCart', p); };
   const sec = sectionOf(site, p);
+  const item = toItem(p, ok);
+  const addIt = () => { add(item); evProduct('add_to_cart', 'AddToCart', p); };
   return (
     <div className="card">
       <div className="imw">
-        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:720px) 50vw, 240px" priority={priority} /> : <Placeholder section={sec?.name} />}
+        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:720px) 46vw, 240px" priority={priority} /> : <Placeholder section={sec?.name} />}
         <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
-        <button className={'hrt' + (fav.has(p.id) ? ' on' : '')} onClick={() => toggleFav(p.id)} aria-label="المفضلة" aria-pressed={fav.has(p.id)}>♥</button>
+        <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
       </div>
       <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
       {p.desc && <p>{p.desc}</p>}
@@ -40,9 +40,19 @@ export function ProductCard({ p, priority }: { p: Product; priority?: boolean })
       ) : (
         <>
           <button className="add bo" onClick={addIt}>📦 اطلبه بالحجز</button>
-          <button className="nm" onClick={() => open({ kind: 'notify', id: p.id })}>🔔 نبّهني لما يتوفر</button>
+          <button className="nm" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>
         </>
       )}
     </div>
+  );
+}
+
+/** Small card from a snapshot (favorites, recently viewed). */
+export function ItemCard({ it }: { it: { id: string; name: string; img: string } }) {
+  return (
+    <Link className="mini" href={productPath(it.id)}>
+      <span className="im framed">{it.img && <Image src={it.img} alt="" fill sizes="140px" style={{ objectFit: 'contain' }} />}</span>
+      <span>{it.name}</span>
+    </Link>
   );
 }

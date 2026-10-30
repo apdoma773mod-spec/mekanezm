@@ -1,13 +1,14 @@
 'use client';
-// Interactive parts of the home page. They render on the server too (full HTML for Google),
+// Interactive parts of the store pages. They render on the server too (full HTML for Google),
 // then become interactive in the browser.
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { listReviews, type Review } from '@/lib/api';
 import { ART_DEFS, sectionArt } from '@/lib/art';
-import { images, productPath, productUrl, slidesList, waUrl } from '@/lib/shop';
-import { ProductCard } from './product-card';
+import type { Product } from '@/lib/schema';
+import { productPath, sectionPath, visibleSections, waUrl } from '@/lib/shop';
+import { ItemCard, ProductCard } from './product-card';
 import { HowToRequest } from './modals';
 import { useShop, type Modal } from './shop-provider';
 
@@ -18,9 +19,8 @@ export function OpenBtn({ modal, className, children }: { modal: Modal; classNam
 }
 
 /* ---------- header slider ---------- */
-export function Slider() {
-  const { site } = useShop();
-  const L = useMemo(() => slidesList(site), [site]);
+export type Slide = { img: string; t: string; s: string; c: boolean; href: string };
+export function Slider({ slides: L }: { slides: Slide[] }) {
   const [i, setI] = useState(0);
   const [tick, setTick] = useState(0);
   const x0 = useRef(0);
@@ -42,7 +42,7 @@ export function Slider() {
               <div>
                 <p className="h">{s.t}</p>
                 <p>{s.s}</p>
-                <a className="btn" href="#prods0" tabIndex={k === i ? 0 : -1}>{s.c ? 'اطلب الآن' : 'تصفح المنتجات'} ➜</a>
+                <Link className="btn" href={s.href} tabIndex={k === i ? 0 : -1}>{s.c ? 'اطلب الآن' : 'تصفح المنتجات'} ➜</Link>
               </div>
             </div>
           ))}
@@ -53,40 +53,31 @@ export function Slider() {
   );
 }
 
-/* ---------- "الأكثر طلباً" carousel ---------- */
-export function Featured() {
-  const { site } = useShop();
-  const top = site.products.filter(p => p.top);
-  const fp = (top.length ? top : site.products).slice(0, 10);
+/* ---------- a swipeable row of product cards (يمين وشمال) ---------- */
+export function ProductRow({ title, href, items, total, id, priority }: { title: string; href: string; items: { p: Product; ok: boolean }[]; total: number; id?: string; priority?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [on, setOn] = useState(0);
-  if (!fp.length) return null;
-  const onScroll = () => {
+  const [edge, setEdge] = useState({ start: true, end: items.length < 3 });
+  const check = () => {
     const c = ref.current;
     if (!c) return;
-    let b = 0, m = 1e9;
-    [...c.children].forEach((e, j) => {
-      const el = e as HTMLElement;
-      const d = Math.abs(el.offsetLeft + el.clientWidth / 2 - c.scrollLeft - c.clientWidth / 2);
-      if (d < m) { m = d; b = j; }
-    });
-    setOn(b);
+    const x = Math.abs(c.scrollLeft); // RTL: scrollLeft runs negative
+    setEdge({ start: x < 8, end: x + c.clientWidth >= c.scrollWidth - 8 });
   };
+  const move = (dir: 1 | -1) => { const c = ref.current; if (c) c.scrollBy({ left: -dir * c.clientWidth * 0.85, behavior: 'smooth' }); };
   return (
-    <section className="ftr" aria-labelledby="ftr-h">
-      <span className="bdg">اختيارات مميزة</span>
-      <h2 id="ftr-h">الأكثر طلباً</h2>
-      <p>اكتشف المنتجات الأعلى طلباً، بجودة وأداء يومي.</p>
-      <a className="btn-big" href="#prods0">تسوق الآن ➜</a>
-      <div className="cr" ref={ref} onScroll={onScroll}>
-        {fp.map(p => (
-          <Link className="pc" key={p.id} href={productPath(p.id)}>
-            <span className="im framed" style={{ display: 'block' }}>{images(p)[0] && <Image src={images(p)[0]} alt={p.name} fill sizes="260px" style={{ objectFit: 'contain' }} />}</span>
-            <h3>{p.name}</h3>
-          </Link>
-        ))}
+    <section className="prow" id={id} aria-labelledby={id ? id + '-h' : undefined}>
+      <div className="prow-h">
+        <h2 id={id ? id + '-h' : undefined}><Link href={href}>{title}</Link></h2>
+        <Link className="all" href={href}>عرض الكل{total > items.length ? ` (${total})` : ''} ←</Link>
       </div>
-      <div className="cdt">{fp.map((p, k) => <i key={p.id} className={k === on ? 'on' : ''} />)}</div>
+      <div className="prow-w">
+        <div className="prow-s" ref={ref} onScroll={check}>
+          {items.map(({ p, ok }, k) => <ProductCard key={p.id} p={p} ok={ok} priority={priority && k < 2} />)}
+          {total > items.length && <Link className="more-card" href={href}><b>+{total - items.length}</b>شوف باقي القسم ←</Link>}
+        </div>
+        {!edge.start && <button className="rarr r" onClick={() => move(-1)} aria-label="السابق">›</button>}
+        {!edge.end && <button className="rarr l" onClick={() => move(1)} aria-label="التالي">‹</button>}
+      </div>
     </section>
   );
 }
@@ -98,9 +89,9 @@ const SP: [string, RegExp][] = [
   ['🚪 دولاب / غرفة نوم', /دولاب|جرار|مفصل|مقبض|اوكر|جزام/],
 ];
 export function Finder() {
-  const { site, setCur } = useShop();
+  const { site } = useShop();
   const [k, setK] = useState(-1);
-  const secs = k < 0 ? [] : site.sections.filter(x => SP[k][1].test(x.name) && site.products.some(p => p.sec === x.id));
+  const secs = k < 0 ? [] : visibleSections(site).filter(x => SP[k][1].test(x.name));
   return (
     <section className="find" aria-labelledby="find-h">
       <h2 id="find-h">مساعد الاختيار</h2>
@@ -108,7 +99,7 @@ export function Finder() {
       <div className="o">{SP.map((s, i) => <button key={i} className={i === k ? 'on' : ''} onClick={() => setK(i)}>{s[0]}</button>)}</div>
       {k >= 0 && (
         <div className="r">
-          {secs.map(x => <button key={x.id} onClick={() => { setCur(x.id); document.getElementById('prods0')?.scrollIntoView({ behavior: 'smooth' }); }}>{x.name}</button>)}
+          {secs.map(x => <Link key={x.id} href={sectionPath(x.id)}>{x.name}</Link>)}
           <a className="w" target="_blank" rel="noopener" href={waUrl(site, `السلام عليكم، بجهّز ${SP[k][0].replace(/^\S+\s/, '')} ومحتاج مساعدة في اختيار الإكسسوارات`)}>💬 مش متأكد؟ كلّمنا</a>
         </div>
       )}
@@ -116,134 +107,37 @@ export function Finder() {
   );
 }
 
-/* ---------- categories ---------- */
-export function Categories() {
-  const { site, cur, setCur } = useShop();
+/* ---------- category tiles (only sections that have products) ---------- */
+export function Categories({ current }: { current?: string }) {
+  const { site } = useShop();
   return (
     <section className="blk" id="cats">
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" dangerouslySetInnerHTML={{ __html: ART_DEFS }} />
       <div className="sh"><h2>تسوق حسب التصنيف</h2></div>
       <div className="tiles">
-        {site.sections.map(s => {
-          const n = site.products.filter(p => p.sec === s.id).length;
-          return (
-            <button key={s.id} className={'tile' + (cur === s.id ? ' on' : '')} aria-pressed={cur === s.id}
-              onClick={() => { setCur(cur === s.id ? '' : s.id); document.getElementById('prods0')?.scrollIntoView({ behavior: 'smooth' }); }}>
-              <span className="im">
-                {s.img ? <Image src={s.img} alt="" fill sizes="132px" /> : <svg viewBox="0 0 200 150" role="img" aria-label={s.name} dangerouslySetInnerHTML={{ __html: sectionArt(s.id, s.name) }} />}
-              </span>
-              {s.name}{n > 0 && <small>{n} منتج</small>}
-            </button>
-          );
-        })}
+        {visibleSections(site).map(s => (
+          <Link key={s.id} href={sectionPath(s.id)} className={'tile' + (current === s.id ? ' on' : '')} aria-current={current === s.id ? 'page' : undefined}>
+            <span className="im">
+              {s.img ? <Image src={s.img} alt="" fill sizes="132px" /> : <svg viewBox="0 0 200 150" role="img" aria-label={s.name} dangerouslySetInnerHTML={{ __html: sectionArt(s.id, s.name) }} />}
+            </span>
+            {s.name}<small>{site.counts[s.id]} منتج</small>
+          </Link>
+        ))}
       </div>
     </section>
   );
 }
 
-/* ---------- all products: search, chips, sticky sections, grid ---------- */
-function hl(t: string, q: string) {
-  const i = t.toLowerCase().indexOf(q);
-  return i < 0 ? t : <>{t.slice(0, i)}<mark>{t.slice(i, i + q.length)}</mark>{t.slice(i + q.length)}</>;
-}
-
-export function Catalog() {
-  const { site, ok, fav, favOn, cur, setCur, recent, product, open } = useShop();
-  const [q, setQ] = useState('');
-  const [sugOpen, setSugOpen] = useState(false);
-  const [avOnly, setAvOnly] = useState(false);
-  const [sort, setSort] = useState('');
-  const [active, setActive] = useState('');
-  const bar = useRef<HTMLDivElement>(null);
-  const ql = q.trim().toLowerCase();
-
-  const sections = useMemo(() => site.sections.filter(s => !cur || s.id === cur).map(s => {
-    let ps = site.products.filter(p => p.sec === s.id && (!favOn || fav.has(p.id)) && (!ql || (p.name + ' ' + p.desc).toLowerCase().includes(ql)) && (!avOnly || ok(p)));
-    if (sort) ps = [...ps].sort((a, b) => (sort === 'av' && ok(a) !== ok(b) ? (ok(a) ? -1 : 1) : a.name.localeCompare(b.name, 'ar')));
-    return { s, ps };
-  }).filter(x => x.ps.length), [site, cur, favOn, fav, ql, avOnly, sort, ok]);
-
-  const stickSecs = site.sections.filter(s => site.products.some(p => p.sec === s.id));
-  const sug = ql.length >= 2 ? site.products.filter(p => (p.name + ' ' + p.code).toLowerCase().includes(ql)).slice(0, 6) : [];
-
-  // Highlight the section being read in the sticky bar.
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) setActive(en.target.id.slice(2)); }), { rootMargin: '-30% 0px -60% 0px' });
-    document.querySelectorAll('#prods section[id^=s-]').forEach(s => io.observe(s));
-    return () => io.disconnect();
-  }, [sections]);
-  useEffect(() => { bar.current?.querySelector('.on')?.scrollIntoView({ inline: 'center', block: 'nearest' }); }, [active]);
-
-  const favList = [...fav].map(id => product(id)).filter(p => !!p);
-  const recentList = recent.map(id => product(id)).filter(p => !!p).slice(0, 8);
-
+/* ---------- recently viewed (from this browser) ---------- */
+export function Recent({ exclude }: { exclude?: string }) {
+  const { recent } = useShop();
+  const L = recent.filter(x => x.id !== exclude).slice(0, 10);
+  if (!L.length) return null;
   return (
-    <>
-      <section className="blk tools" id="prods0">
-        <div className="sh"><h2>كل المنتجات</h2></div>
-        <div style={{ position: 'relative' }}>
-          <label className="vh" htmlFor="q">ابحث عن منتج</label>
-          <input id="q" type="search" placeholder="ابحث عن منتج…" value={q} autoComplete="off"
-            onChange={e => { setQ(e.target.value); setSugOpen(true); }} onBlur={() => setTimeout(() => setSugOpen(false), 200)} />
-          {sugOpen && sug.length > 0 && (
-            <div className="sug" role="listbox">
-              {sug.map(p => (
-                <Link key={p.id} role="option" aria-selected={false} href={productPath(p.id)}>
-                  {images(p)[0] && <img src={images(p)[0]} alt="" loading="lazy" />}<b>{hl(p.name, ql)}</b>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-      {recentList.length > 0 && (
-        <section className="recent" aria-label="شوفته قبل كده">
-          <h3>👀 شوفته قبل كده</h3>
-          <div className="rw">{recentList.map(p => (
-            <Link key={p.id} href={productPath(p.id)}>
-              <span className="im">{images(p)[0] && <Image src={images(p)[0]} alt="" fill sizes="92px" style={{ objectFit: 'contain' }} />}</span>
-              <span>{p.name.slice(0, 30)}</span>
-            </Link>
-          ))}</div>
-        </section>
-      )}
-      <div className="chips" role="toolbar" aria-label="فلترة">
-        {favList.length > 0 && (
-          <button onClick={() => window.open(waUrl(site, 'المنتجات اللي عجبتني من ميكانيزم:\n' + favList.map(p => `• ${p.name} — ${productUrl(p.id)}`).join('\n')), '_blank', 'noopener')}>♥ ابعت مفضلتي</button>
-        )}
-        <button className={!avOnly ? 'on' : ''} onClick={() => setAvOnly(false)}>كل المنتجات</button>
-        <button className={avOnly ? 'on' : ''} onClick={() => setAvOnly(true)}>✔ المتوفر فقط</button>
-        <select aria-label="ترتيب" value={sort} onChange={e => setSort(e.target.value)}>
-          <option value="">ترتيب: الافتراضي</option><option value="az">الاسم أ ← ي</option><option value="av">المتوفر الأول</option>
-        </select>
-        {cur && <button className="on" onClick={() => setCur('')}>✕ {site.sections.find(s => s.id === cur)?.name}</button>}
-      </div>
-      {stickSecs.length >= 2 && (
-        <div id="stick" ref={bar}>
-          {stickSecs.map(s => (
-            <button key={s.id} className={active === s.id ? 'on' : ''} onClick={() => {
-              if (cur && cur !== s.id) setCur('');
-              setTimeout(() => { const t = document.getElementById('s-' + s.id); if (t) scrollTo({ top: t.getBoundingClientRect().top + scrollY - (bar.current?.offsetHeight ?? 0) - 8, behavior: 'smooth' }); }, 30);
-            }}>{s.name}</button>
-          ))}
-        </div>
-      )}
-      <div id="prods" className="blk" style={{ maxWidth: 1100, margin: 'auto', padding: '0 16px' }}>
-        {sections.length ? sections.map(({ s, ps }) => (
-          <section id={'s-' + s.id} key={s.id} aria-labelledby={'h-' + s.id}>
-            <h2 className="sec-h" id={'h-' + s.id}>{s.name}</h2>
-            <div className="grid">{ps.map(p => <ProductCard key={p.id} p={p} />)}</div>
-          </section>
-        )) : (
-          <div className="empty">
-            <p>{favOn ? 'مفيش منتجات في المفضلة لسه' : site.products.length ? 'مفيش منتجات مطابقة' : 'المنتجات بتتضاف قريباً'}</p>
-            <a className="btn-wa" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أستفسر عن منتجات ميكانيزم')}>اسأل على الواتساب</a>
-            <div style={{ marginTop: 12 }}><button type="button" className="reqbtn" onClick={() => open({ kind: 'req' })}>📷 مش لاقي اللي بتدوّر عليه؟<small>صوّر المنتج وابعتهولنا — هنرد عليك ونقولك نوفّره إمتى</small></button></div>
-          </div>
-        )}
-      </div>
-    </>
+    <section className="recent" aria-label="شوفته قبل كده">
+      <h3>👀 شوفته قبل كده</h3>
+      <div className="rw">{L.map(it => <ItemCard key={it.id} it={it} />)}</div>
+    </section>
   );
 }
 
@@ -310,5 +204,19 @@ export function Works() {
         </button>
       ))}</div>
     </section>
+  );
+}
+
+/* ---------- favorites page body ---------- */
+export function FavList() {
+  const { fav, site } = useShop();
+  const L = Object.values(fav);
+  if (!L.length) return <div className="empty"><p>مفيش منتجات في المفضلة لسه — دوس ♥ على أي منتج وهيتحفظ هنا.</p><Link className="btn-wa" href="/">تصفح المنتجات</Link></div>;
+  return (
+    <>
+      <div className="mini-grid">{L.map(it => <ItemCard key={it.id} it={it} />)}</div>
+      <a className="btn-g" style={{ marginTop: 14 }} target="_blank" rel="noopener"
+        href={waUrl(site, 'المنتجات اللي عجبتني من ميكانيزم:\n' + L.map(p => `• ${p.name} — ${location.origin}${productPath(p.id)}`).join('\n'))}>♥ ابعت مفضلتي واتساب</a>
+    </>
   );
 }

@@ -1,17 +1,24 @@
-import { Catalog, Categories, Featured, Finder, OpenBtn, ReqHome, Reveal, Reviews, Works } from '@/components/home';
-import { ProductCard } from '@/components/product-card';
+import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
 import { Footer, Header, Socials } from '@/components/site-parts';
-import { getSite } from '@/lib/catalog';
+import { getCatalog, getSettings } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
-import { catalogUrl, deliveryFee, FAQ, MAP_URL, waUrl } from '@/lib/shop';
+import { catalogUrl, deliveryFee, FAQ, MAP_URL, productPath, sectionPath, slidesList, waUrl } from '@/lib/shop';
 
 export const revalidate = 300;
 
+const ROW = 12;
+
 export default async function Home() {
-  const site = await getSite();
+  const [{ site: full, ok }, site] = await Promise.all([getCatalog(), getSettings()]);
+  const P = full.products;
   const cat = catalogUrl(site);
-  const latest = site.products.slice(-8).reverse();
   const D = site.delivery.filter(x => x.area);
+  const top = P.filter(p => p.top);
+  const latest = P.slice(-ROW).reverse();
+  const rows = site.sections.map(s => ({ s, ps: P.filter(p => p.sec === s.id) })).filter(r => r.ps.length);
+  const card = (p: (typeof P)[number]) => ({ p, ok: ok(p) });
+  const byId = new Map(P.map(p => [p.img, p.id]));
+  const slides: Slide[] = slidesList(full).map(s => ({ ...s, href: s.c && byId.get(s.img) ? productPath(byId.get(s.img)!) : '/search' }));
   const trust = site.trust?.filter(Boolean).length ? site.trust : [
     ...(site.delivery.length ? ['🚚 توصيل'] : []), ...(site.policy.trim() ? ['🔁 استبدال'] : []),
     ...(site.works.length ? ['🏗️ أعمال حقيقية'] : []),
@@ -19,8 +26,13 @@ export default async function Home() {
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'HardwareStore', name: site.name, description: site.tagline, telephone: site.phone,
-      image: site.logo || undefined, url: SITE_URL,
-      address: site.address ? { '@type': 'PostalAddress', streetAddress: site.address, addressCountry: 'EG' } : undefined,
+      image: site.logo || undefined, url: SITE_URL + '/', openingHours: site.hours || undefined,
+      address: site.address ? { '@type': 'PostalAddress', streetAddress: site.address, addressLocality: 'الجيزة', addressCountry: 'EG' } : undefined,
+      sameAs: Object.values(site.socials).filter(Boolean),
+    },
+    {
+      '@context': 'https://schema.org', '@type': 'WebSite', name: site.name, url: SITE_URL + '/', inLanguage: 'ar',
+      potentialAction: { '@type': 'SearchAction', target: SITE_URL + '/search?q={search_term_string}', 'query-input': 'required name=search_term_string' },
     },
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
   ];
@@ -28,8 +40,16 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <Header site={site} />
+      <Header site={site} slides={slides} />
       <main id="main">
+        <Categories />
+        {top.length > 0 && <ProductRow id="top-row" title="⭐ الأكثر طلباً" href="/search?top=1" items={top.slice(0, ROW).map(card)} total={top.length} priority />}
+        {rows.map(({ s, ps }, i) => (
+          <ProductRow key={s.id} id={'r-' + s.id} title={s.name} href={sectionPath(s.id)} items={ps.slice(0, ROW).map(card)} total={ps.length} priority={!top.length && i === 0} />
+        ))}
+        {P.length > 0 && <ProductRow id="new-row" title="🆕 وصل حديثاً" href="/search?sort=new" items={latest.map(card)} total={P.length} />}
+        <Recent />
+
         {trust.length > 0 && <div className="trust">{trust.map(t => <span key={t}>{t}</span>)}</div>}
         {cat && <a className="catbtn" href={cat} target="_blank" rel="noopener">📒 شوف كتالوجنا على واتساب</a>}
         <OpenBtn modal={{ kind: 'ship' }} className="homebtn">
@@ -38,8 +58,6 @@ export default async function Home() {
         <OpenBtn modal={{ kind: 'track' }} className="homebtn trk">
           <span className="i">📦</span><span><b>تتبّع طلبك</b><small>اعرف طلبك وصل لفين برقم موبايلك</small></span>
         </OpenBtn>
-        <div className="soc-home"><b>تابعنا</b><Socials site={site} /></div>
-        <Featured />
         <div className="mkhow">
           <div><b>🛒</b><span>اختار</span><small>ضيف للطلب</small></div>
           <div><b>💬</b><span>أكّد</span><small>على الواتساب</small></div>
@@ -50,15 +68,7 @@ export default async function Home() {
           <div><b>تجهيز المنتجات بمقاسك</b><span>استانلس حماية الباب • درج بامبو • دلف دريسنج روم — اكتب المقاسات واشوف الرسمة واطلب</span></div>
         </a>
         <Finder />
-        <Categories />
         <ReqHome />
-        {latest.length > 0 && (
-          <section className="blk">
-            <div className="sh"><h2>أحدث المنتجات</h2></div>
-            <div className="grid">{latest.map((p, i) => <ProductCard key={p.id} p={p} priority={i < 2} />)}</div>
-          </section>
-        )}
-        <Catalog />
         <Works />
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">
@@ -79,11 +89,9 @@ export default async function Home() {
             <div><i>🚚</i><b>توصيل وشحن</b><span>القاهرة والجيزة وكل المحافظات</span></div>
             <div><i>🧰</i><b>مساعدة في الاختيار</b><span>نساعدك تختار المقاس والنوع المناسب</span></div>
           </div>
-        </Reveal>
-        <Reveal className="mkp" label="أرقام">
-          <div className="mks">
-            <div><b data-n={site.products.length}>{site.products.length}</b><span>منتج</span></div>
-            <div><b data-n={site.sections.length}>{site.sections.length}</b><span>قسم</span></div>
+          <div className="mks" style={{ marginTop: 12 }}>
+            <div><b data-n={P.length}>{P.length}</b><span>منتج</span></div>
+            <div><b data-n={rows.length}>{rows.length}</b><span>قسم</span></div>
             <div><b>📲</b><span>اطلب من موبايلك</span></div>
           </div>
         </Reveal>
@@ -100,6 +108,7 @@ export default async function Home() {
             <a href={MAP_URL} target="_blank" rel="noopener">🗺️ افتح الموقع على الخريطة</a>
             <a className="g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أسأل عن مكان المحل')}>💬 كلّمنا واتساب</a>
           </div>
+          <div className="soc-home" style={{ marginTop: 14 }}><b>تابعنا</b><Socials site={site} /></div>
         </Reveal>
       </main>
       <Footer site={site} />

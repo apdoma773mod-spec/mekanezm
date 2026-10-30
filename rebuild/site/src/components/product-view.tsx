@@ -4,30 +4,29 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import type { Product } from '@/lib/schema';
-import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, shopPhones, videoEmbed, waUrl } from '@/lib/shop';
+import type { Item, Product } from '@/lib/schema';
+import { askPriceText, images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
 import { Placeholder } from './product-card';
 import { useShop } from './shop-provider';
 
-export function ProductView({ p }: { p: Product }) {
-  const { site, ok: isOk, cart, add, fav, toggleFav, open, pushRecent, say, setCur } = useShop();
+export function ProductView({ p, ok, sim }: { p: Product; ok: boolean; sim: Item[] }) {
+  const { site, cart, add, fav, toggleFav, open, pushRecent, say } = useShop();
   const router = useRouter();
-  const ok = isOk(p);
+  const item = toItem(p, ok);
   const im = images(p);
   const sec = sectionOf(site, p);
-  const sim = site.products.filter(x => x.sec === p.sec && x.id !== p.id).slice(0, 10);
   const specs = parseSpecs(p.desc);
   const vid = videoEmbed(p.video);
   const phone = shopPhones(site)[0] || site.phone;
-  const n = cart[p.id] ?? 0;
+  const n = cart[p.id]?.q ?? 0;
   const [i, setI] = useState(0);
   const [q, setQ] = useState(1);
   const strip = useRef<HTMLDivElement>(null);
   const thumbs = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    pushRecent(p.id);
+    pushRecent(item);
     evProduct('view_item', 'ViewContent', p);
     const t = setTimeout(() => say('محتاج مساعدة في الاختيار؟ كلّمنا على الواتساب'), 45000);
     return () => clearTimeout(t);
@@ -56,7 +55,7 @@ export function ProductView({ p }: { p: Product }) {
         <button onClick={back} aria-label="رجوع">→</button>
         <b>{sec?.name || site.name}</b>
         <button onClick={share} aria-label="مشاركة">⤴</button>
-        <button className={fav.has(p.id) ? 'on' : ''} onClick={() => toggleFav(p.id)} aria-label="المفضلة" aria-pressed={fav.has(p.id)}>♥</button>
+        <button className={!!fav[p.id] ? 'on' : ''} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
       </div>
       <div className="pvwrap">
         <div className="pvg">
@@ -88,7 +87,7 @@ export function ProductView({ p }: { p: Product }) {
           <h1>{p.name}</h1>
           <nav className="bc" aria-label="مكانك في الموقع">
             <Link href="/">الرئيسية</Link><span>›</span>
-            {sec && <><Link href="/#prods0" onClick={() => setCur(sec.id)}>{sec.name}</Link><span>›</span></>}
+            {sec && <><Link href={sectionPath(sec.id)}>{sec.name}</Link><span>›</span></>}
             <span>{p.name.slice(0, 40)}</span>
           </nav>
           <div className="pvmeta">
@@ -117,7 +116,7 @@ export function ProductView({ p }: { p: Product }) {
               {specs.rows.length > 0 && <table className="pvspec"><tbody>{specs.rows.map(([k, v], j) => <tr key={j}><td>{k}</td><td>{v}</td></tr>)}</tbody></table>}
             </div>
           )}
-          {!ok && <button className="nm" style={{ margin: '8px 0', width: '100%' }} onClick={() => open({ kind: 'notify', id: p.id })}>🔔 نبّهني لما يتوفر</button>}
+          {!ok && <button className="nm" style={{ margin: '8px 0', width: '100%' }} onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
           <a className="pvask" target="_blank" rel="noopener" href={waUrl(site, orderText(p))}>📲 اطلب على الواتساب</a>
           <div className="mkcall">
             {phone && <a href={'tel:' + String(phone).replace(/\s/g, '')}>📞 اتصل بنا</a>}
@@ -128,7 +127,7 @@ export function ProductView({ p }: { p: Product }) {
               <h2>منتجات مشابهة</h2>
               <div className="pvsim">{sim.map(x => (
                 <Link key={x.id} href={productPath(x.id)}>
-                  <span className="im">{images(x)[0] ? <Image src={images(x)[0]} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
+                  <span className="im">{x.img ? <Image src={x.img} alt="" fill sizes="130px" style={{ objectFit: 'contain' }} /> : <Placeholder />}</span>
                   {x.name}
                 </Link>
               ))}</div>
@@ -143,7 +142,7 @@ export function ProductView({ p }: { p: Product }) {
           <b aria-live="polite">{q}</b>
           <button onClick={() => setQ(v => Math.max(1, v - 1))} aria-label="نقص">−</button>
         </div>
-        <button className={'pvadd' + (ok ? '' : ' bo')} onClick={() => { add(p.id, q); setQ(1); evProduct('add_to_cart', 'AddToCart', p); }}>
+        <button className={'pvadd' + (ok ? '' : ' bo')} onClick={() => { add(item, q); setQ(1); evProduct('add_to_cart', 'AddToCart', p); }}>
           {n ? `✔ في طلبك (${n}) — أضف كمان` : ok ? '➕ أضف للطلب' : '📦 اطلبه — هيوصلك لما يتوفر'}
         </button>
         {n > 0 && <button className="pvcart" onClick={() => open({ kind: 'cart' })}>🛒 طلبي</button>}

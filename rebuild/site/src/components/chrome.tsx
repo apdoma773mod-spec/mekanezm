@@ -1,7 +1,8 @@
 'use client';
 // Things that float over every store page: bottom nav, WhatsApp button, "continue order" bar,
 // back-to-top, scroll progress, toast, offline notice, install-app button.
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { bumpVisit } from '@/lib/api';
 import { waUrl } from '@/lib/shop';
@@ -22,9 +23,9 @@ const useScrollY = () => {
 type BIP = Event & { prompt: () => void; userChoice: Promise<unknown> };
 
 export function Chrome() {
-  const { site, cartCount, fav, favOn, setFavOn, open, toast, say } = useShop();
+  const { site, cartCount, fav, open, toast, say } = useShop();
+  const favN = Object.keys(fav).length;
   const path = usePathname();
-  const router = useRouter();
   const qs = useSearchParams();
   const y = useScrollY();
   const onProduct = path.startsWith('/p/');
@@ -36,7 +37,11 @@ export function Chrome() {
     const h = document.documentElement, m = h.scrollHeight - innerHeight;
     setProg(m > 0 ? (y / m) * 100 : 0);
   }, [y]);
-  useEffect(() => { bumpVisit('shop'); }, []);
+  useEffect(() => {
+    bumpVisit('shop');
+    // Offline support + fast repeat visits (see public/sw.js).
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }, []);
   useEffect(() => {
     const f = () => setOffline(!navigator.onLine);
     f(); addEventListener('online', f); addEventListener('offline', f);
@@ -53,10 +58,6 @@ export function Chrome() {
   // ?track=REF opens tracking (links from the custom-order page and old shop.html?track=).
   useEffect(() => { if (qs.has('track')) open({ kind: 'track', ref: qs.get('track') ?? '' }); }, [qs, open]);
 
-  const go = (hash: string) => {
-    if (path === '/') document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-    else router.push('/#' + hash);
-  };
 
   return (
     <>
@@ -75,11 +76,11 @@ export function Chrome() {
       </div>
       {!onProduct && (
         <nav className="nv" aria-label="التنقل">
-          <button onClick={() => { setFavOn(false); if (path === '/') scrollTo({ top: 0, behavior: 'smooth' }); else router.push('/'); }}><b>🏠</b>الرئيسية</button>
-          <button onClick={() => go('cats')}><b>▦</b>الأقسام</button>
-          <button onClick={() => { setFavOn(false); go('prods0'); }}><b>🛍</b>المنتجات</button>
-          <button className={favOn ? 'on' : ''} onClick={() => { setFavOn(!favOn); go('prods0'); }}><b>♥</b>المفضلة{fav.size > 0 && <i>{fav.size}</i>}</button>
-          <button onClick={() => open({ kind: 'cart' })}><b>🛒</b>السلة{cartCount > 0 && <i>{cartCount}</i>}</button>
+          <Link href="/" className={path === "/" ? "on" : ""} onClick={() => path === "/" && scrollTo({ top: 0, behavior: "smooth" })}><b>🏠</b>الرئيسية</Link>
+          <Link href="/#cats" className={path.startsWith("/c/") ? "on" : ""}><b>▦</b>الأقسام</Link>
+          <Link href="/search" className={path === "/search" ? "on" : ""}><b>🛍</b>المنتجات</Link>
+          <Link href="/fav" className={path === "/fav" ? "on" : ""}><b>♥</b>المفضلة{favN > 0 && <i>{favN}</i>}</Link>
+          <button onClick={() => open({ kind: "cart" })}><b>🛒</b>السلة{cartCount > 0 && <i>{cartCount}</i>}</button>
         </nav>
       )}
       <Modals />

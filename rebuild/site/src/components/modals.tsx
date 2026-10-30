@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { addNotifyMe, addReview, placeOrder, placeRequest, trackCustom, trackOrder, uploadRequestImage, type TrackedCustom, type TrackedOrder } from '@/lib/api';
-import type { Ship, ShipMethod } from '@/lib/schema';
+import type { Item, Ship, ShipMethod } from '@/lib/schema';
 import { deliveryFee, GOVS, orderMsg, shipBits, shipLine, waUrl } from '@/lib/shop';
 import { ev } from '@/lib/track';
 import { shrinkImage } from '@/lib/images';
@@ -37,7 +37,7 @@ export function Modals() {
     case 'req': return <RequestSheet />;
     case 'track': return <TrackSheet ref0={modal.ref} phone0={modal.phone} />;
     case 'review': return <ReviewSheet />;
-    case 'notify': return <NotifySheet id={modal.id} />;
+    case 'notify': return <NotifySheet item={modal.item} />;
     case 'work': return <WorkView i={modal.i} />;
     case 'image': return <Lightbox src={modal.src} onClose={close} />;
   }
@@ -46,9 +46,9 @@ export function Modals() {
 /* ---------------- 🛒 cart + send order ---------------- */
 const SHK = 'mk_ship_pref';
 function CartSheet() {
-  const { site, cart, setQty, product, ok, close, clearCart, refreshStock, open } = useShop();
-  const items = Object.keys(cart).map(id => product(id)).filter(p => !!p);
-  const anyBack = items.some(p => !ok(p));
+  const { site, cart, setQty, close, clearCart, open } = useShop();
+  const lines = Object.values(cart);
+  const anyBack = lines.some(l => !l.item.ok);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [ship, setShip] = useState<Ship>({ method: 'pickup', gov: '', area: '', address: '' });
@@ -67,7 +67,7 @@ function CartSheet() {
   });
 
   async function send() {
-    if (!items.length) return;
+    if (!lines.length) return;
     if (name.trim().length < 2) return setMsg('اكتب اسمك الأول');
     const sh: Ship = ship.method === 'pickup' ? { method: 'pickup', gov: '', area: '', address: '' } : { ...ship, area: ship.area.trim(), address: ship.address.trim() };
     if (sh.method !== 'pickup') {
@@ -75,15 +75,15 @@ function CartSheet() {
       if (!sh.gov) return setMsg('اختار المحافظة');
       if (sh.address.length < 5) return setMsg('اكتب العنوان بالتفصيل');
     }
-    const lines: string[] = [];
+    const text: string[] = [];
     const body: { code: string; qty: number }[] = [];
-    for (const p of items) {
+    for (const { item: p, q } of lines) {
       if (!p.code) return setMsg('المنتج ده مش متاح للطلب من الموقع، كلمنا على الواتساب');
-      body.push({ code: p.code, qty: cart[p.id] });
-      lines.push(`• كود:${p.code} | ${(p.name + (p.desc ? ` (${p.desc})` : '')).replace(/\|/g, '/')} | × ${cart[p.id]}`);
+      body.push({ code: p.code, qty: q });
+      text.push(`• كود:${p.code} | ${(p.name + (p.desc ? ` (${p.desc})` : '')).replace(/\|/g, '/')} | × ${q}`);
     }
-    lines.push('', shipLine(sh));
-    if (sh.address) lines.push('📍 ' + sh.address);
+    text.push('', shipLine(sh));
+    if (sh.address) text.push('📍 ' + sh.address);
     setBusy(true);
     setMsg('جاري إرسال الطلب…');
     try {
@@ -91,10 +91,9 @@ function CartSheet() {
       if (r.ok && typeof r.data === 'string') {
         const ref = r.data.slice(0, 8);
         if (phone.trim()) saveLast(ref, phone.trim());
-        setDone({ ref: r.data, ship: sh, lines, back: anyBack, name: name.trim(), phone: phone.trim() });
+        setDone({ ref: r.data, ship: sh, lines: text, back: anyBack, name: name.trim(), phone: phone.trim() });
         clearCart();
         ev('generate_lead', 'Lead');
-        setTimeout(refreshStock, 800);
         return;
       }
       const em = r.message;
@@ -128,17 +127,18 @@ function CartSheet() {
   return (
     <Sheet onClose={close} label="طلبي">
       <h3>طلبي</h3>
-      {items.length ? items.map(p => (
+      {lines.length ? lines.map(({ item: p, q }) => (
         <div className="citem" key={p.id}>
-          <span>{p.name}{!ok(p) && <b className="bo"> 📦 حجز — مش متوفر دلوقتي</b>}{p.desc && <small>{p.desc.slice(0, 80)}</small>}</span>
+          {p.img && <span className="cimg"><Image src={p.img} alt="" fill sizes="48px" style={{ objectFit: 'contain' }} /></span>}
+          <span style={{ flex: 1 }}>{p.name}{!p.ok && <b className="bo"> 📦 حجز — مش متوفر دلوقتي</b>}{p.desc && <small>{p.desc.slice(0, 80)}</small>}</span>
           <span className="qty">
-            <button onClick={() => setQty(p.id, cart[p.id] - 1)} aria-label="نقص">−</button>
-            <b>{cart[p.id]}</b>
-            <button onClick={() => setQty(p.id, cart[p.id] + 1)} aria-label="زيادة">+</button>
+            <button onClick={() => setQty(p.id, q - 1)} aria-label="نقص">−</button>
+            <b>{q}</b>
+            <button onClick={() => setQty(p.id, q + 1)} aria-label="زيادة">+</button>
           </span>
         </div>
       )) : <p>الطلب فاضي</p>}
-      {items.length > 0 && <>
+      {lines.length > 0 && <>
         <label>اسمك<input value={name} onChange={e => setName(e.target.value)} maxLength={80} autoComplete="name" name="name" /></label>
         <label>{ship.method === 'pickup' ? 'رقم موبايلك (اختياري)' : 'رقم موبايلك (مطلوب عشان المندوب يكلمك)'}
           <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" inputMode="tel" maxLength={20} autoComplete="tel" name="tel" /></label>
@@ -157,11 +157,11 @@ function CartSheet() {
         </div>
       </>}
       <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg || (anyBack ? <span className="warn">في أصناف مش متوفرة دلوقتي — اطلبها عادي وهنكلمك نقولك ميعاد وصولها.</span> : '')}</p>
-      {items.length > 0 && (
-        <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + items.map(p => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${cart[p.id]}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
+      {lines.length > 0 && (
+        <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
       )}
       <div className="row">
-        {items.length > 0 && <button className="pri" onClick={send} disabled={busy}>إرسال الطلب</button>}
+        {lines.length > 0 && <button className="pri" onClick={send} disabled={busy}>إرسال الطلب</button>}
         <button className="sec" onClick={close}>إغلاق</button>
       </div>
     </Sheet>
@@ -407,19 +407,17 @@ function ReviewSheet() {
 }
 
 /* ---------------- 🔔 notify me when back ---------------- */
-function NotifySheet({ id }: { id: string }) {
-  const { product, close } = useShop();
-  const p = product(id);
+function NotifySheet({ item: p }: { item: Item }) {
+  const { close } = useShop();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
-  if (!p) return null;
   async function go() {
     if (digits(phone) < 8) return setMsg('اكتب رقم موبايلك');
     setBusy(true); setMsg('⏳…');
-    try { const r = await addNotifyMe(id, p!.name, name.trim(), phone.trim()); if (!r.ok) throw 0; setSent(true); } catch { setMsg('ماتبعتش — جرّب تاني'); setBusy(false); }
+    try { const r = await addNotifyMe(p.id, p.name, name.trim(), phone.trim()); if (!r.ok) throw 0; setSent(true); } catch { setMsg('ماتبعتش — جرّب تاني'); setBusy(false); }
   }
   if (sent) return <Sheet onClose={close} label="تمام"><h3>تمام ✔</h3><p>هنكلمك أول ما المنتج يتوفر.</p><div className="row"><button className="sec" onClick={close}>إغلاق</button></div></Sheet>;
   return (

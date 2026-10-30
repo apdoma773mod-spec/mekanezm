@@ -1,10 +1,8 @@
 'use client';
-// Browser-side shop state: cart, favorites, live stock, recently viewed, popups and toasts.
-// Cart/favorites persist in localStorage with the same keys the old site used.
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { fetchStock } from '@/lib/api';
-import type { Product, Site, Stock } from '@/lib/schema';
-import { stockOk } from '@/lib/shop';
+// Browser-side shop state: cart, favorites, recently viewed, popups and toasts.
+// The browser never loads the full catalog: cart/favorites keep a small snapshot of each product.
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { Item, Settings } from '@/lib/schema';
 
 export type Modal =
   | { kind: 'cart' }
@@ -12,37 +10,29 @@ export type Modal =
   | { kind: 'req' }
   | { kind: 'track'; ref?: string; phone?: string }
   | { kind: 'review' }
-  | { kind: 'notify'; id: string }
+  | { kind: 'notify'; item: Item }
   | { kind: 'work'; i: number }
   | { kind: 'image'; src: string };
 
 type Toast = { msg: string; undo?: () => void; n: number } | null;
+export type Line = { item: Item; q: number };
 
 type Ctx = {
-  site: Site;
-  stock: Stock;
-  ok: (p: Product) => boolean;
-  product: (id: string) => Product | undefined;
-  cart: Record<string, number>;
+  site: Settings;
+  cart: Record<string, Line>;
   cartCount: number;
-  add: (id: string, q?: number) => void;
+  add: (item: Item, q?: number) => void;
   setQty: (id: string, q: number) => void;
   clearCart: () => void;
-  fav: Set<string>;
-  toggleFav: (id: string) => void;
-  favOn: boolean;
-  setFavOn: (v: boolean) => void;
-  /** Section the home page is filtered to ('' = all). */
-  cur: string;
-  setCur: (id: string) => void;
-  recent: string[];
-  pushRecent: (id: string) => void;
+  fav: Record<string, Item>;
+  toggleFav: (item: Item) => void;
+  recent: Item[];
+  pushRecent: (item: Item) => void;
   modal: Modal | null;
   open: (m: Modal) => void;
   close: () => void;
   toast: Toast;
   say: (msg: string, undo?: () => void) => void;
-  refreshStock: () => void;
 };
 
 const C = createContext<Ctx | null>(null);
@@ -56,32 +46,31 @@ const read = <T,>(k: string, d: T): T => {
   try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : d; } catch { return d; }
 };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
+const K = { cart: 'mk_cart2', fav: 'mk_fav2', recent: 'mk_recent2' };
 
-export function ShopProvider({ site, stock: stock0, children }: { site: Site; stock: Stock; children: ReactNode }) {
-  const [stock, setStock] = useState<Stock>(stock0);
-  const [cart, setCart] = useState<Record<string, number>>({});
-  const [fav, setFav] = useState<Set<string>>(new Set());
-  const [favOn, setFavOn] = useState(false);
-  const [cur, setCur] = useState('');
-  const [recent, setRecent] = useState<string[]>([]);
+export function ShopProvider({ site, children }: { site: Settings; children: ReactNode }) {
+  const [cart, setCart] = useState<Record<string, Line>>({});
+  const [fav, setFav] = useState<Record<string, Item>>({});
+  const [recent, setRecent] = useState<Item[]>([]);
   const [modal, setModal] = useState<Modal | null>(null);
   const [toast, setToast] = useState<Toast>(null);
   const loaded = useRef(false);
-  const byId = useMemo(() => new Map(site.products.map(p => [p.id, p])), [site.products]);
 
-  // Restore saved state once (only products that still exist).
   useEffect(() => {
-    const c = read<Record<string, number>>('mk_cart', {});
-    setCart(Object.fromEntries(Object.entries(c).filter(([id, q]) => byId.has(id) && q > 0)));
-    setFav(new Set(read<string[]>('mkfav', [])));
-    setRecent(read<string[]>('mk_recent', []).filter(id => byId.has(id)));
+    setCart(read(K.cart, {}));
+    setFav(read(K.fav, {}));
+    setRecent(read(K.recent, []));
     loaded.current = true;
-  }, [byId]);
-  useEffect(() => { if (loaded.current) write('mk_cart', cart); }, [cart]);
-  useEffect(() => { if (loaded.current) write('mkfav', [...fav]); }, [fav]);
-
-  const refreshStock = useCallback(() => { fetchStock().then(s => s && setStock(s)); }, []);
-  useEffect(refreshStock, [refreshStock]);
+    // Keep tabs in sync (cart changed in another tab).
+    const s = (e: StorageEvent) => {
+      if (e.key === K.cart) setCart(read(K.cart, {}));
+      if (e.key === K.fav) setFav(read(K.fav, {}));
+    };
+    addEventListener('storage', s);
+    return () => removeEventListener('storage', s);
+  }, []);
+  useEffect(() => { if (loaded.current) write(K.cart, cart); }, [cart]);
+  useEffect(() => { if (loaded.current) write(K.fav, fav); }, [fav]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const say = useCallback((msg: string, undo?: () => void) => {
@@ -92,46 +81,37 @@ export function ShopProvider({ site, stock: stock0, children }: { site: Site; st
 
   const setQty = useCallback((id: string, q: number) => setCart(c => {
     const n = { ...c };
-    if (q > 0) n[id] = q; else delete n[id];
+    if (q > 0 && n[id]) n[id] = { ...n[id], q }; else delete n[id];
     return n;
   }), []);
 
-  const add = useCallback((id: string, q = 1) => {
-    setCart(c => ({ ...c, [id]: (c[id] ?? 0) + q }));
+  const add = useCallback((item: Item, q = 1) => {
+    setCart(c => ({ ...c, [item.id]: { item, q: (c[item.id]?.q ?? 0) + q } }));
     try { navigator.vibrate?.(18); } catch { /* not supported */ }
-    const p = byId.get(id);
-    say('✔ اتضاف للطلب: ' + (p ? p.name.slice(0, 32) : ''), () => setCart(c => {
+    say('✔ اتضاف للطلب: ' + item.name.slice(0, 32), () => setCart(c => {
       const n = { ...c };
-      n[id] = (n[id] ?? 1) - q;
-      if (n[id] <= 0) delete n[id];
+      const left = (n[item.id]?.q ?? q) - q;
+      if (left > 0) n[item.id] = { ...n[item.id], q: left }; else delete n[item.id];
       return n;
     }));
-  }, [byId, say]);
+  }, [say]);
 
   const value: Ctx = {
     site,
-    stock,
-    ok: p => stockOk(p, stock),
-    product: id => byId.get(id),
     cart,
-    cartCount: Object.values(cart).reduce((a, b) => a + b, 0),
+    cartCount: Object.values(cart).reduce((a, b) => a + b.q, 0),
     add,
     setQty,
     clearCart: () => setCart({}),
     fav,
-    toggleFav: id => setFav(f => { const n = new Set(f); if (n.has(id)) n.delete(id); else n.add(id); return n; }),
-    favOn,
-    setFavOn,
-    cur,
-    setCur,
+    toggleFav: item => setFav(f => { const n = { ...f }; if (n[item.id]) delete n[item.id]; else n[item.id] = item; return n; }),
     recent,
-    pushRecent: id => setRecent(r => { const a = [id, ...r.filter(x => x !== id)].slice(0, 10); write('mk_recent', a); return a; }),
+    pushRecent: item => setRecent(r => { const a = [item, ...r.filter(x => x.id !== item.id)].slice(0, 10); write(K.recent, a); return a; }),
     modal,
     open: setModal,
-    close: () => setModal(null),
+    close: useCallback(() => setModal(null), []),
     toast,
     say,
-    refreshStock,
   };
   return <C.Provider value={value}>{children}</C.Provider>;
 }

@@ -1,6 +1,32 @@
 // Pure helpers shared by server and browser code (no data fetching here).
 import { DEFAULT_PHONES, SITE_URL } from './config';
-import type { Product, Ship, Site, Stock } from './schema';
+import type { Item, Product, Settings, Ship, Site, Stock } from './schema';
+
+/** Arabic-friendly search text: أ/إ/آ→ا، ة→ه، ى→ي، no diacritics, Arabic digits → Latin. */
+export const norm = (s: string) => String(s || '').toLowerCase()
+  .replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+  .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/\s+/g, ' ').trim();
+
+export const toItem = (p: Product, ok: boolean): Item => ({ id: p.id, name: p.name, code: p.code, desc: p.desc.slice(0, 120), img: images(p)[0] ?? '', ok });
+
+export type Sort = '' | 'az' | 'av' | 'new';
+/** Filter + sort products (server side). Every search word must match name, code or description. */
+export function queryProducts(products: Product[], ok: (p: Product) => boolean, o: { sec?: string; q?: string; sort?: Sort; av?: boolean }) {
+  const words = norm(o.q ?? '').split(' ').filter(Boolean);
+  let L = products.filter(p => (!o.sec || p.sec === o.sec) && (!o.av || ok(p)) &&
+    (!words.length || (h => words.every(w => h.includes(w)))(norm(`${p.name} ${p.code} ${p.desc}`))));
+  if (words.length && !o.sort) {
+    // Name matches first.
+    const inName = (p: Product) => words.every(w => norm(p.name).includes(w));
+    L = [...L.filter(inName), ...L.filter(p => !inName(p))];
+  }
+  if (o.sort === 'new') L = [...L].reverse();
+  if (o.sort === 'az' || o.sort === 'av') L = [...L].sort((a, b) => (o.sort === 'av' && ok(a) !== ok(b) ? (ok(a) ? -1 : 1) : a.name.localeCompare(b.name, 'ar')));
+  return L;
+}
+
+export const sectionPath = (id: string) => `/c/${encodeURIComponent(id)}`;
+export const visibleSections = (s: Pick<Settings, 'sections' | 'counts'>) => s.sections.filter(x => (s.counts[x.id] ?? 0) > 0);
 
 /** Products that have a clean white-background cover photo in /public/pw. */
 const COVERS = new Set(['1szsarn', '8gcncur', '8q3slf8', 'ib1jif9', 'ixm6cp4']);
@@ -27,10 +53,10 @@ export const waUrl = (site: Pick<Site, 'phone'>, text?: string) => {
   return ph ? `https://wa.me/${ph}${text ? '?text=' + encodeURIComponent(text) : ''}` : '#';
 };
 
-export const shopPhones = (site: Site) => (site.phones ?? DEFAULT_PHONES).filter(x => String(x || '').trim());
+export const shopPhones = (site: Pick<Site, 'phones'>) => (site.phones ?? DEFAULT_PHONES).filter(x => String(x || '').trim());
 
 /** WhatsApp Business catalog link (unless the owner turned it off). */
-export const catalogUrl = (site: Site) => {
+export const catalogUrl = (site: Pick<Site, 'catalog' | 'phone'>) => {
   if (site.catalog === false) return '';
   const ph = intl(site.phone);
   return ph ? `https://wa.me/c/${ph}` : '';
@@ -39,7 +65,7 @@ export const catalogUrl = (site: Site) => {
 export const productPath = (id: string) => `/p/${encodeURIComponent(id)}`;
 export const productUrl = (id: string) => SITE_URL + productPath(id);
 
-export const sectionOf = (site: Site, p: Product) => site.sections.find(s => s.id === p.sec);
+export const sectionOf = (site: Pick<Site, 'sections'>, p: Product) => site.sections.find(s => s.id === p.sec);
 
 export const askPriceText = (p: Product) =>
   `السلام عليكم، لو سمحت ده بكام؟\n${p.name}${p.code ? ` (كود ${p.code})` : ''}\n${productUrl(p.id)}`;

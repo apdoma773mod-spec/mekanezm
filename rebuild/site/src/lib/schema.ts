@@ -54,5 +54,11 @@ export type Site = z.infer<typeof siteSchema>;
 /** code → in stock? (from the system's live stock) */
 export type Stock = Record<string, boolean>;
 
+/** Shop settings without the product list (what every page needs; small even with thousands of products). */
+export type Settings = Omit<Site, 'products'> & { counts: Record<string, number> };
+
+/** A product snapshot kept in the cart / favorites / recently viewed (so the browser never needs the full catalog). */
+export type Item = { id: string; name: string; code: string; desc: string; img: string; ok: boolean };
+
 export type ShipMethod = 'pickup' | 'delivery' | 'ship';
 export type Ship = { method: ShipMethod; gov: string; area: string; address: string };
