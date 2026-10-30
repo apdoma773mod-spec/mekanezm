@@ -43,6 +43,7 @@ const SAMPLE: InvoiceDto = {
   paid: 300,
   remaining: 150,
   payMethod: 'CASH',
+  online: false,
   items: [
     { id: '1', productId: null, code: null, name: 'مفصلة هيدروليك', unit: 'قطعة', qty: 10, price: 30, total: 300 },
     { id: '2', productId: null, code: null, name: 'مقبض ألومنيوم', unit: 'قطعة', qty: 5, price: 30, total: 150 },

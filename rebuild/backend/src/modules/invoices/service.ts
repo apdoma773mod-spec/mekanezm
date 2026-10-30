@@ -38,6 +38,7 @@ function header(i: Invoice & { createdBy: InvoiceWithRels['createdBy']; updatedB
     no: i.no,
     status: i.status,
     company: i.company,
+    online: i.online,
     date: dateToDay(i.date),
     contactId: i.contactId,
     person: i.person,
@@ -310,6 +311,7 @@ export async function createInvoiceInTx(
       payMethod: input.payMethod,
       ...(opts.paidSplit ? { paidSplit: opts.paidSplit } : {}),
       source: opts.source ?? '',
+      online: input.kind === 'SALE' && !!input.online,
       ...(opts.ic ? { ic: opts.ic, icRef: opts.icRef ?? null } : {}),
       createdById: actor.id,
     },
@@ -434,6 +436,7 @@ export class InvoicesService {
         where: { id },
         data: {
           company: input.company,
+          ...(input.online !== undefined && before.kind === 'SALE' ? { online: input.online } : {}),
           contactId: contact?.id ?? null,
           person: contact?.name ?? input.person,
           phone: input.phone || contact?.phone || '',

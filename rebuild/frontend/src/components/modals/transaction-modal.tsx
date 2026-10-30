@@ -75,6 +75,8 @@ export interface SalePreset {
   paid?: number;
   lines: { productId?: string; name: string; qty: number; price: number }[];
   onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
+  /** «🌐 عميل أونلاين» already chosen (orders that came from the site). */
+  online?: boolean;
   /** «👀 راجعها»: a purchase from a read invoice photo of the queue. */
   scanId?: string;
 }
@@ -142,6 +144,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paid, setPaid] = useState(invoice ? String(invoice.paid) : preset?.paid !== undefined ? String(preset.paid) : '');
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
+  const [online, setOnline] = useState(invoice?.online ?? preset?.online ?? false);
   const [sno, setSno] = useState('');
   const [del, setDel] = useState<'' | 'DELIVERY' | 'SHIP'>('');
   const [gov, setGov] = useState('');
@@ -315,6 +318,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
+      ...(isSale ? { online } : {}),
       items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
     };
     try {
@@ -552,6 +556,20 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           {asQuote && (
             <div className="field full" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, fontSize: 13 }}>
               📝 عرض السعر مش بيخصم من المخزون ومش بيدخل في المبيعات أو التقارير. تقدر تحوّله لفاتورة بيع بعدين بضغطة.
+            </div>
+          )}
+
+          {isSale && !asQuote && (
+            <div className="field full" id="txOnline">
+              <label>نوع العميل</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className={online ? 'secondary' : 'primary'} style={{ flex: 1 }} onClick={() => setOnline(false)}>
+                  🏪 عميل عادي
+                </button>
+                <button type="button" className={online ? 'primary' : 'secondary'} style={{ flex: 1 }} onClick={() => setOnline(true)}>
+                  🌐 عميل أونلاين
+                </button>
+              </div>
             </div>
           )}
 

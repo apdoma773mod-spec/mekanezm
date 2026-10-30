@@ -117,6 +117,7 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
         person: o.customerName,
         phone: o.phone,
         note: `من طلب الموقع ${sid}`,
+        online: true,
         lines: rows.flatMap((r) => (r.p ? [{ productId: r.p.id, name: r.p.name, qty: r.x.qty, price: r.p.price }] : [])),
         onSaved: async (inv) => {
           await patch.mutateAsync({ id: o.id, status: 'done', invoiceNo: inv.no });

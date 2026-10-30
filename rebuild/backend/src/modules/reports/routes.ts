@@ -4,6 +4,7 @@ import { parse } from '../../lib/validate.js';
 import { z } from 'zod';
 import { contactReport, topCustomers } from './contact-report.js';
 import { ReportsService } from './service.js';
+import { onlineReport } from './online.js';
 
 export default async function reportsRoutes(app: FastifyInstance) {
   const service = new ReportsService(app.prisma);
@@ -21,6 +22,11 @@ export default async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get('/top-customers', async () => ({ customers: await topCustomers(app.prisma) }));
+
+  app.get('/online', async (request) => {
+    const q = parse(z.object({ from: z.string().max(10).optional(), to: z.string().max(10).optional() }), request.query);
+    return { report: await onlineReport(app.prisma, q) };
+  });
 
   app.get('/periods', async () => ({ periods: await service.periods() }));
 

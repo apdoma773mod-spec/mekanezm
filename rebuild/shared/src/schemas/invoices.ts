@@ -29,6 +29,8 @@ export const invoiceInput = z.object({
   /** Amount paid now. Defaults to the full total (cash sale). */
   paid: moneySchema.optional(),
   payMethod: z.enum(PAY_METHODS).default('CASH'),
+  /** «🌐 عميل أونلاين» (sales). Left out when editing = unchanged. */
+  online: z.boolean().optional(),
   items: z.array(invoiceItemInput).min(1, 'الفاتورة لازم يكون فيها صنف واحد على الأقل').max(500),
 });
 export type InvoiceInput = z.infer<typeof invoiceInput>;
@@ -92,6 +94,7 @@ export interface InvoiceDto {
   paid: number;
   remaining: number;
   payMethod: (typeof PAY_METHODS)[number];
+  online: boolean;
   /** Only present for admins: total − cost of goods. */
   profit?: number;
   items: InvoiceItemDto[];

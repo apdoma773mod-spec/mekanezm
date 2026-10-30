@@ -328,6 +328,8 @@ model Invoice {
   paidSplit   Json?
   /// "" for invoices typed in directly, "DAYBOOK" when made by settling the daybook.
   source      String         @default("")
+  /// Sale to an online customer (Facebook / WhatsApp / site) — «🌐 عميل أونلاين» in the sale window.
+  online      Boolean        @default(false)
   /// Inter-company deal: the other company, and the id shared by the sale and the purchase.
   ic          Company?
   icRef       String?

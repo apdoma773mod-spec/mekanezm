@@ -95,7 +95,7 @@ export function InvoiceView({ id }: { id: string }) {
   };
 
   return (
-    <Modal title={`${isSale ? 'فاتورة' : 'فاتورة شراء'} ${r.no}`} onClose={close}>
+    <Modal title={`${isSale ? 'فاتورة' : 'فاتورة شراء'} ${r.no}${r.online ? ' — 🌐 أونلاين' : ''}`} onClose={close}>
       {voided && (
         <div className="form-error" style={{ marginBottom: 12 }}>
           الفاتورة دي ملغية — {r.voidReason} ({formatDateTime(r.voidedAt)})

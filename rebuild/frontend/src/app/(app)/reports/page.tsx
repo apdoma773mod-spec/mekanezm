@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { REPORTS, type ReportCell, type ReportColType, type ReportId, type ReportResult, type ReportRow, type ReportTone } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { ContactReportCard, ReportsStatsRow, StockStatusCard } from '@/components/reports-extras';
+import { OnlineReportCard } from '@/components/online-report';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -512,6 +513,7 @@ function ReportsScreen() {
           </table>
         </div>
       </div>
+      <OnlineReportCard />
       <ContactReportCard />
       <div className="stats" style={{ marginTop: 14 }}>
         <div className="stat">
