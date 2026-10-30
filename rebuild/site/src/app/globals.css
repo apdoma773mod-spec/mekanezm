@@ -36,7 +36,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .skip { position: absolute; right: 8px; top: -60px; background: var(--navy); color: #fff; padding: 10px 14px; border-radius: 0 0 10px 10px; z-index: 9000; text-decoration: none; font-weight: 700; }
 .skip:focus { top: 0; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; background: var(--card); }
-.topbar .nm { font-size: 18px; font-weight: 800; margin: 0; }
+.topbar .brand { font-size: 18px; font-weight: 800; margin: 0; }
 .logo-banner { display: block; width: 100%; height: auto; }
 .slider { position: relative; max-width: 1100px; margin: 14px auto 0; padding: 0 14px; }
 .slider .vw { overflow: hidden; border-radius: 24px; box-shadow: 0 8px 28px #0002; direction: ltr; }
@@ -360,7 +360,7 @@ footer.ft { background: var(--dk); color: #fff; margin-top: 30px; padding: 24px 
 .pvq { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 24px; padding: 2px; flex: none; }
 .pvq button { width: 40px; height: 40px; border: 0; background: none; font-size: 20px; }
 .pvq b { min-width: 22px; text-align: center; }
-.pvadd { flex: 1; height: 48px; border: 0; border-radius: 24px; background: var(--accent); color: #fff; font-weight: 800; font-size: 16px; }
+.pvadd { flex: 1; min-width: 0; height: 48px; border: 0; border-radius: 24px; background: var(--accent); color: #fff; font-weight: 800; font-size: 15px; line-height: 1.2; padding: 0 8px; }
 .pvadd.bo { background: #b7791f; }
 .pvcart { flex: none; height: 46px; padding: 0 14px; border-radius: 24px; border: 1px solid var(--line); background: var(--card); font-weight: 700; }
 @media print { .pvtop, .pvbar, .nv, .wa-fab, .go-cart, .to-top, .mkcall, .pvsim, .mkstl, .toast { display: none !important; } body { padding: 0; } }

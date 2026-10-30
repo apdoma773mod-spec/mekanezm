@@ -23,7 +23,7 @@ export function Header({ site }: { site: Site }) {
   const pr = site.promo.trim();
   return (
     <header id="top">
-      <div className="topbar"><p className="nm">{site.name}</p></div>
+      <div className="topbar"><p className="brand">{site.name}</p></div>
       {site.logo && <Image className="logo-banner" src={site.logo} alt={site.name} width={1200} height={480} priority sizes="100vw" />}
       <Slider />
       {pr && <div className="ticker" aria-label={pr}><span aria-hidden="true">{pr} &nbsp;•&nbsp; {pr} &nbsp;•&nbsp; {pr}</span></div>}

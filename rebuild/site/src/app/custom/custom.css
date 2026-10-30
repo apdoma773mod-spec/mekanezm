@@ -1,0 +1,47 @@
+/* تجهيز المنتجات — same look as the old custom.html, scoped under .cx */
+.cx { --ink: #12202b; --mut: #667; --line: #e8e1cf; --ac: #a8741a; background: #f7f5ef; color: var(--ink); min-height: 100vh; margin-bottom: -150px; padding-bottom: 40px; }
+.cx .top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.cx .top b { font-size: 20px; color: var(--ac); }
+.cx .top a { color: var(--mut); text-decoration: none; font-weight: 600; font-size: 14px; }
+.cx .wrap { max-width: 720px; margin: 0 auto; padding: 18px 14px; }
+.cx h1 { font-size: 26px; margin: 6px 0 4px; }
+.cx p.s { color: var(--mut); margin: 0 0 16px; }
+.cx .pk { display: flex; gap: 14px; align-items: center; width: 100%; text-align: right; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 12px; margin-bottom: 12px; box-shadow: 0 3px 14px #0001; text-decoration: none; color: inherit; }
+.cx .pk svg { flex: 0 0 112px; width: 112px; height: 90px; border-radius: 14px; background: #0f2433; }
+.cx .pk b { display: block; font-size: 17px; margin-bottom: 3px; }
+.cx .pk span { font-size: 13px; color: var(--mut); line-height: 1.6; }
+.cx .card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 14px; margin-bottom: 12px; }
+.cx .card h3 { margin: 0 0 10px; font-size: 16px; }
+.cx .g { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cx .f { display: flex; flex-direction: column; gap: 4px; }
+.cx .full { grid-column: 1 / -1; }
+.cx label { font-size: 13px; font-weight: 700; }
+.cx input, .cx textarea { font: inherit; padding: 11px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; width: 100%; color: var(--ink); }
+.cx input:focus, .cx textarea:focus { outline: 0; border-color: var(--ac); }
+.cx .ch { display: flex; gap: 8px; flex-wrap: wrap; }
+.cx .ch button { flex: 1 1 auto; padding: 11px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; font-weight: 700; font-size: 14px; }
+.cx .ch button.on { background: var(--gd); border-color: #a8741a; color: #2a1c04; }
+.cx .hint { font-size: 12px; color: var(--mut); margin-top: 3px; }
+.cx .dr { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 8px; margin-bottom: 12px; }
+.cx .dr svg { width: 100%; height: auto; display: block; }
+.cx .dr .empty { padding: 30px; text-align: center; color: #889; }
+.cx .cta { display: block; width: 100%; padding: 16px; border: 0; border-radius: 16px; background: var(--gd); color: #2a1c04; font-weight: 800; font-size: 17px; box-shadow: 0 6px 18px #a8741a55; text-align: center; text-decoration: none; }
+.cx .cta.g2 { background: var(--wa); color: #fff; box-shadow: none; margin-top: 8px; }
+.cx .cta.l { background: #fff; color: var(--ink); border: 1.5px solid var(--line); box-shadow: none; margin-top: 8px; }
+.cx .msg { color: #c0392b; font-weight: 700; margin: 8px 0; min-height: 1.2em; }
+.cx .sum { white-space: pre-wrap; line-height: 1.9; font-size: 15px; }
+.cx .ov { position: fixed; inset: 0; background: #000a; z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.cx .ov > div { background: #f7f5ef; width: 100%; max-width: 720px; max-height: 92vh; overflow: auto; border-radius: 22px 22px 0 0; padding: 16px; }
+.cx .stp { display: flex; gap: 6px; margin: 0 0 12px; }
+.cx .stp span { flex: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 7px 4px; border-radius: 99px; background: #fff; border: 1px solid var(--line); color: var(--mut); }
+.cx .stp span.on { background: var(--gd); color: #2a1c04; border-color: #a8741a; }
+.cx .wn { margin: -4px 0 10px; }
+.cx .wn div { background: #fff7e0; border: 1px solid #f0d28a; border-radius: 12px; padding: 9px 12px; font-size: 13px; margin-bottom: 6px; font-weight: 700; }
+.cx .wn button { margin-right: 8px; border: 1px solid #a8741a; background: #fff; border-radius: 99px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
+.cx .cc { display: flex; gap: 8px; margin-top: 10px; }
+.cx .cc a { flex: 1; text-align: center; text-decoration: none; font-weight: 800; padding: 13px; border-radius: 14px; background: #10202c; color: #f6d77a; font-size: 14px; }
+.cx .qk { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.cx .qk button { border: 1px solid var(--line); background: #faf8f3; border-radius: 99px; padding: 3px 10px; font-weight: 700; font-size: 12px; color: var(--mut); }
+.cx .qk button:active { background: var(--gd); }
+.cx details summary { font-weight: 800; cursor: pointer; }
+.cx .ref { direction: ltr; font-size: 26px; font-weight: 800; color: #a8741a; letter-spacing: .08em; }

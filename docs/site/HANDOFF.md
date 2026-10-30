@@ -1,17 +1,50 @@
 # Public website rebuild — handoff
 
 Branch `site-rebuild` (from `tajroba-rebuild`), worktree `C:\Users\ميكانزم\Documents\mekanezm-site-next`.
-New workspace: `rebuild/site` (Next.js 15 App Router, TypeScript, zod). Port **3300**.
+New workspace `rebuild/site`: Next.js 15 App Router, TypeScript, zod. Port **3300**.
+`rebuild/backend`, `rebuild/frontend`, `rebuild/shared` were not touched (only `site` added to the root workspaces list).
 
 Rule followed: copy the old site's **final** state only (live `main`, commit 4ae6ad96), never replay its history.
 The old pages patch themselves with many script blocks; the final behaviour was read from the live page
 (headless Chrome: rendered DOM + final function versions) and from the last override in the source.
 
-## Status
-- [x] Data layer: `src/lib/catalog.ts` (server reads, ISR 300 s), `src/lib/api.ts` (browser writes: orders,
-      requests, tracking, reviews, notify-me, custom orders, portal). Same Supabase tables/RPCs as the old site.
-- [x] Store home `/`, product pages `/p/[id]`, cart + checkout with delivery choice, popups, SEO files.
-- [ ] `/custom` (تجهيز), `/story`, `/portal`
-- [ ] Browser check on mobile, tunnel link
+## What's built
+| New URL | Old page | Notes |
+|---|---|---|
+| `/` | shop.html | header banner + slider + promo ticker, trust chip, WhatsApp catalog, delivery/track buttons, socials, «الأكثر طلباً» carousel, 3 steps, custom-order card, choice assistant, category tiles (same SVG art), «مش لاقي» request, latest products, all products (live search with suggestions, avail filter, sort, fav share, recently viewed, sticky section bar), works, delivery info, why/stats/reviews/FAQ/location, footer |
+| `/p/[id]` | shop.html?p= overlay | real page per product (SSG + ISR): gallery with gold frame, arrows/dots/thumbs, zoom, breadcrumbs, stock, trust strip, ask price, delivery info, video, spec table, notify-me, WhatsApp order, call/print, similar, story link, sticky qty + add bar, JSON-LD Product + Breadcrumb |
+| `/custom` (`?k=steel|bamboo|delf`) | custom.html | measuring guide, quick sizes, live drawing, smart warnings, hinge suggestion with «اعتمد», review sheet, uploads drawing, `place_custom_order`, saved draft, track link |
+| `/story` (`?p=`) | story.html | scroll story, prev/next, share, store link, similar, preload next |
+| `/portal?t=` | portal.html | customer account page (invoices, payments, returns, send request with photos/videos) |
+| `sitemap.xml`, `robots.txt`, `manifest.webmanifest`, 404 | same files | |
 
-See the end of this file for "how to run" (filled in when the first run is verified).
+Popups: cart/checkout (pickup / Cairo-Giza delivery / shipping with governorate + address, back-order notes, «ابعت الطلب كله واتساب», success with track button), delivery info, product request with up to 3 photos, order tracking (orders + custom orders, step timeline), review, notify-me, works viewer, image zoom.
+Floating: bottom nav (fav filter, cart), WhatsApp button (shrinks on scroll), «كمّل الطلب» bar, back-to-top, scroll progress, toast with undo, offline notice, install-app + iOS hint.
+Old links redirect: `shop.html`, `shop.html?p=X` → `/p/X`, `shop.html?track=` → `/?track=`, `p/X.html`, `custom.html`, `story.html`, `portal.html`, `shop3.html`.
+Analytics: GA4 + Facebook Pixel (load lazily). Visit counter `bump_visit`.
+
+Not copied on purpose: the old shop.html admin editor (login/edit/save site) — the shop data is edited from the system. `shop3.html` was an old duplicate (redirects to `/`).
+
+## Data
+- Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
+- Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.
+- To move to the new backend: change only those two files (+ `config.ts`). Types are in `src/lib/schema.ts` (zod).
+- Images: `src/lib/image-loader.ts` resizes Supabase photos through Supabase's image endpoint; `/public/pw/*.webp` are the white-background covers, `/public/frame.webp` the gold frame.
+
+## Run
+```
+cd rebuild && npm install          # in this worktree only
+cd site && npx next build && npx next start -p 3300
+```
+`NEXT_PUBLIC_SITE_URL` (in `rebuild/site/.env.local`, not committed) sets the public address used in canonical/share/sitemap links; it is baked in at build time, so rebuild after changing it.
+Other env (optional): `NEXT_PUBLIC_SB_URL`, `NEXT_PUBLIC_SB_KEY`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_FB_PIXEL`.
+
+## Checked (2026-10-30, headless Chrome 390×844, also through a cloudflared quick tunnel)
+Home renders all 14 sections/7 products, search suggestions, add to cart → toast + bar, cart with shipping choice (27 governorates), delivery and track popups, category filter, product gallery + add bar, old-URL redirects, custom page warnings + hinge suggestion, story scroll, portal bad-token message, 404, sitemap/robots/manifest. No page errors.
+Orders/requests were NOT submitted (they would reach the real system).
+Slow-4G + 4× CPU, home: old LCP 7.9 s / load 9.3 s / ~1.1 MB → new LCP 4.1 s / load 4.8 s / ~0.7 MB (new measured through the tunnel from the PC, so first paint is slower than a real host would be).
+
+## Next
+- Pick hosting (Vercel / the same server as the system) and set `NEXT_PUBLIC_SITE_URL`; point the domain; keep the redirects.
+- Send one real test order from the new site and confirm it appears in the system.
+- Later: switch `catalog.ts`/`api.ts` to the new backend API.

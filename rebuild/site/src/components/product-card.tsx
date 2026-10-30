@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/schema';
 import { askPriceText, images, productPath, sectionOf, waUrl } from '@/lib/shop';
+import { evProduct } from '@/lib/track';
 import { useShop } from './shop-provider';
 
 // Placeholder colors/emoji per section name, for products without a photo.
@@ -22,6 +23,7 @@ export function ProductCard({ p, priority }: { p: Product; priority?: boolean })
   const { site, ok: isOk, fav, toggleFav, add, open } = useShop();
   const ok = isOk(p);
   const img = images(p)[0];
+  const addIt = () => { add(p.id); evProduct('add_to_cart', 'AddToCart', p); };
   const sec = sectionOf(site, p);
   return (
     <div className="card">
@@ -34,10 +36,10 @@ export function ProductCard({ p, priority }: { p: Product; priority?: boolean })
       {p.desc && <p>{p.desc}</p>}
       <a className="ask" target="_blank" rel="noopener" href={waUrl(site, askPriceText(p))}>💬 اسأل عن السعر</a>
       {ok ? (
-        <button className="add" onClick={() => add(p.id)}>➕ أضف للطلب</button>
+        <button className="add" onClick={addIt}>➕ أضف للطلب</button>
       ) : (
         <>
-          <button className="add bo" onClick={() => add(p.id)}>📦 اطلبه بالحجز</button>
+          <button className="add bo" onClick={addIt}>📦 اطلبه بالحجز</button>
           <button className="nm" onClick={() => open({ kind: 'notify', id: p.id })}>🔔 نبّهني لما يتوفر</button>
         </>
       )}
