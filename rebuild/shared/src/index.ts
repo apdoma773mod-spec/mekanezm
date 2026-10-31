@@ -15,3 +15,4 @@ export * from './schemas/reports.js';
 export * from './schemas/insights.js';
 export * from './schemas/phase4.js';
 export * from './schemas/hydrolek.js';
+export * from './schemas/camera.js';

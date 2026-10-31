@@ -11,7 +11,7 @@ const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_PHOTO_CHARS = 2_500_000;
 const PHOTO = /^data:image\/(jpeg|png|webp);base64,/;
 
-function checkBridge(app: FastifyInstance, request: FastifyRequest) {
+export function checkBridge(app: FastifyInstance, request: FastifyRequest) {
   const secret = app.config.BRIDGE_SECRET;
   if (!secret) throw forbidden('الجسر مش متفعّل (BRIDGE_SECRET)');
   if (String(request.headers['x-bridge-secret'] ?? '') !== secret) throw forbidden('السر غلط');

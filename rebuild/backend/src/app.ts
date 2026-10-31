@@ -37,6 +37,7 @@ import hydrolekRoutes from './modules/hydrolek/routes.js';
 import workRoutes from './modules/work/routes.js';
 import { smsRoutes } from './modules/inbox/sms.js';
 import { bridgeRoutes } from './modules/inbox/bridge.js';
+import cameraRoutes, { cameraBridgeRoutes } from './modules/camera/routes.js';
 import { inboxAdminRoutes } from './modules/inbox/admin.js';
 import backupRoutes from './modules/backup/routes.js';
 import termsRoutes from './modules/terms/routes.js';
@@ -114,6 +115,8 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(workRoutes, { prefix: '/work' });
       await api.register(smsRoutes, { prefix: '/sms' });
       await api.register(bridgeRoutes, { prefix: '/bridge' });
+      await api.register(cameraBridgeRoutes, { prefix: '/bridge/camera' });
+      await api.register(cameraRoutes, { prefix: '/camera' });
       await api.register(inboxAdminRoutes, { prefix: '/inbox' });
       await api.register(backupRoutes, { prefix: '/backup' });
       await api.register(termsRoutes, { prefix: '/terms' });

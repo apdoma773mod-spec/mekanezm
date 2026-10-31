@@ -29,17 +29,17 @@ const PTS_KEY = 'staff_points';
 const PUNCH_TTL_MS = 90_000;
 
 /** Hours and minutes in Cairo for a moment. */
-const cairoHm = (d: Date) => {
+export const cairoHm = (d: Date) => {
   const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).split(':').map(Number);
   return h! * 60 + m!;
 };
-const hmCairo = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
-const toMin = (hhmm: string) => {
+export const hmCairo = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+export const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 };
 /** A Cairo wall-clock time on a day as a UTC instant (Egypt is UTC+2 or +3 in summer). */
-function cairoInstant(day: string, hhmm: string): Date {
+export function cairoInstant(day: string, hhmm: string): Date {
   const guess = new Date(`${day}T${hhmm}:00Z`);
   const offset = cairoHm(guess) - toMin(hhmm);
   const fix = ((offset % 1440) + 1440) % 1440;
@@ -67,6 +67,8 @@ const staffDto = (s: Staff): StaffDto => ({
   userId: s.userId,
   note: s.note,
   active: s.active,
+  gapHours: s.gapHours,
+  place: (s.place === "market" || s.place === "both" ? s.place : "shop") as StaffDto["place"],
 });
 const attDto = (a: Attendance): AttendanceDto => ({
   id: a.id,
@@ -75,7 +77,8 @@ const attDto = (a: Attendance): AttendanceDto => ({
   inAt: a.inAt?.toISOString() ?? null,
   outAt: a.outAt?.toISOString() ?? null,
   lateMin: a.lateMin,
-  method: a.method === 'manual' ? 'manual' : 'qr',
+  method: a.method === 'manual' ? 'manual' : a.method === 'camera' ? 'camera' : 'qr',
+  snapshot: a.snapshot || undefined,
   note: a.note,
 });
 const moveDto = (m: StaffMove): StaffMoveDto => ({
