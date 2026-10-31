@@ -4,10 +4,16 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { CORNER, DOOR, HAND_LABEL, opposite, type Hand, type HandInfo } from '@/lib/hand';
 import { productPath, waUrl } from '@/lib/shop';
+import { HandMotion } from './hand-motion';
 import { useShop } from './shop-provider';
 
-/** Front view of the cabinet. «corner»: fixed part on one side, the trays come out toward the other. «door»: hinges on one side. */
+/** The looping motion graphic (see hand-motion.tsx). */
 export function HandDiagram({ hand, kind }: { hand: Hand; kind: 'corner' | 'door' }) {
+  return <HandMotion hand={hand} kind={kind} />;
+}
+
+/** The old still drawing, kept only as a fallback reference. */
+export function HandDiagramStill({ hand, kind }: { hand: Hand; kind: 'corner' | 'door' }) {
   const mir = hand === 'L' ? 'translate(320,0) scale(-1,1)' : undefined;
   const fixedX = hand === 'R' ? 52 : 268, outX = hand === 'R' ? 255 : 65;
   const id = `hd-${kind}-${hand}`;

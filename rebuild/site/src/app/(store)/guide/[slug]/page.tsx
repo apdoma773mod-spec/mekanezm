@@ -39,6 +39,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
             <h2>{b.h}</h2>
             {b.p?.map((x, i) => <p key={i}>{x}</p>)}
             {b.li && <ul>{b.li.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+            {g.slug === 'left-or-right' && b.h === 'الضلفة والمفصلات' && <div className="hd-both"><HandDiagram hand="R" kind="door" /><HandDiagram hand="L" kind="door" /></div>}
           </section>
         ))}
         <div className="row">

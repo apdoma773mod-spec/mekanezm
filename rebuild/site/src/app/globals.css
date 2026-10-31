@@ -726,3 +726,49 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 .hg-no a { display: block; text-align: center; text-decoration: none; }
 .hg-note { margin: 10px 0 0; white-space: pre-line; }
 .hg-pair, .hg-more { margin: 10px 0 0; font-size: 13.5px; }
+
+/* ---- يمين ولا شمال: motion graphic ---- */
+.hm { --T: 7s; margin: 0 auto 12px; max-width: 440px; }
+.hm-stage { position: relative; }
+.hm svg { display: block; width: 100%; height: auto; border-radius: 22px; box-shadow: 0 2px 4px #0000000d, 0 12px 30px #00000020; }
+.hm .hm-tx { font: 800 14px Cairo, Tahoma, sans-serif; fill: #fff; }
+.hm .hm-tx.w { font-size: 13px; }
+.hm .hm-lr { font: 700 12px Cairo, Tahoma, sans-serif; fill: #64748b; }
+.hm-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); padding: 4px 16px; border-radius: 99px; color: #fff; font-weight: 800; font-size: 15px; background: #1e6fd9; box-shadow: 0 4px 12px #0003; }
+.hm-badge.L { background: #d97706; }
+.hm-tray { filter: drop-shadow(0 8px 6px #0000004d); }
+.hm-door, .hm-door2, .hm-t1, .hm-t2 { animation-duration: var(--T); animation-iteration-count: infinite; animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+.hm-door { animation-name: hm-door; }
+.hm-door2 { animation-name: hm-door2; }
+.hm-t1 { animation-name: hm-t1; }
+.hm-t2 { animation-name: hm-t2; transform-box: fill-box; }
+.hm-fixed { animation: hm-pulse 1.3s ease-in-out infinite; }
+.hm-fixedfill { opacity: .5; animation: hm-pulse2 1.3s ease-in-out infinite; }
+.hm-lab { animation: hm-pulse2b 1.3s ease-in-out infinite; }
+.hm-guide { opacity: 0; animation: hm-gshow var(--T) linear infinite; }
+.hm-dash { animation: hm-flow .8s linear infinite; }
+.hm-steps { list-style: none; display: grid; gap: 6px; padding: 0; margin: 12px 0 4px; }
+.hm-steps li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--bg); font-weight: 700; font-size: 14.5px; opacity: .5; animation-duration: var(--T); animation-iteration-count: infinite; }
+.hm-steps li b { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #94a3b8; color: #fff; font-size: 13px; }
+.hm-c1 { animation-name: hm-s1; } .hm-c2 { animation-name: hm-s2; } .hm-c3 { animation-name: hm-s3; }
+.hm figcaption { margin-top: 6px; text-align: center; font-weight: 700; font-size: 13.5px; color: var(--mut); }
+.hm figcaption small { font-weight: 400; }
+@keyframes hm-door { 0%, 8% { transform: rotate(0); } 24%, 86% { transform: rotate(78deg); } 97%, 100% { transform: rotate(0); } }
+@keyframes hm-door2 { 0%, 8% { transform: rotate(0); } 28%, 80% { transform: rotate(-70deg); } 95%, 100% { transform: rotate(0); } }
+@keyframes hm-t1 { 0%, 26% { transform: translate(0, 0); } 54%, 80% { transform: translate(132px, 102px); } 94%, 100% { transform: translate(0, 0); } }
+@keyframes hm-t2 { 0%, 29% { transform: translate(0, 0) rotate(0); } 57%, 78% { transform: translate(86px, 66px) rotate(8deg); } 92%, 100% { transform: translate(0, 0) rotate(0); } }
+@keyframes hm-gshow { 0%, 24% { opacity: 0; } 38%, 76% { opacity: .95; } 88%, 100% { opacity: 0; } }
+@keyframes hm-flow { to { stroke-dashoffset: -25; } }
+@keyframes hm-pulse { 0%, 100% { opacity: .45; stroke-width: 4; } 50% { opacity: 1; stroke-width: 7; } }
+@keyframes hm-pulse2 { 0%, 100% { opacity: .22; } 50% { opacity: .6; } }
+@keyframes hm-pulse2b { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+@keyframes hm-s1 { 0%, 6% { opacity: .5; } 10%, 26% { opacity: 1; background: #fff2cf; } 32%, 100% { opacity: .5; } }
+@keyframes hm-s2 { 0%, 26% { opacity: .5; } 32%, 60% { opacity: 1; background: #e2eeff; } 66%, 100% { opacity: .5; } }
+@keyframes hm-s3 { 0%, 58% { opacity: .5; } 64%, 90% { opacity: 1; background: #fff2cf; } 96%, 100% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .hm * { animation: none !important; }
+  .hm-door { transform: rotate(78deg); } .hm-door2 { transform: rotate(-70deg); }
+  .hm-t1 { transform: translate(132px, 102px); } .hm-t2 { transform: translate(86px, 66px) rotate(8deg); }
+  .hm-guide { opacity: .95; } .hm-steps li { opacity: 1; } .hm-fixedfill { opacity: .5; }
+}
+@media (max-width: 699px) { .hd-both { grid-template-columns: 1fr !important; } }
