@@ -139,7 +139,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
             </Acc>
           )}
           {install && <a className="instl" href={install.href} {...(install.ext ? { target: '_blank', rel: 'noopener' } : {})}>🔧 إزاي يتركّب؟ {install.ext ? 'دليل التركيب' : 'خطوات التركيب'}</a>}
-          <Link className="instl" href="/help">🙋 محتاج حد يركّبها؟ هنرشّحلك</Link>
+          <Link className="instl" href="/help">🙋 محتاج حد يركّبها؟ نرشّحلك حد مستقل</Link>
           <Acc title="⭐ آراء اللي اشتروه">
             <ProductReviews id={p.id} name={p.name} />
           </Acc>

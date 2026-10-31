@@ -20,14 +20,10 @@ export const KINDS: Record<string, string> = { carpenter: 'نجار', installer:
 
 /** What the customer needs → the skill that serves it (used by /help to suggest people). */
 export const NEEDS = [
-  ['slide-old', '🗃️ مجرة درج أو دولاب وقعت أو بايظة', 'slides'],
-  ['hinge', '🔩 مفصلة أو ضلفة محتاجة تتغيّر', 'hinges'],
-  ['kitchen', '🍳 هعمل مطبخ جديد', 'kitchen'],
-  ['dressing', '👔 هعمل دريسنج روم', 'dressing'],
-  ['shoes', '👟 هعمل جزامة أو أرفف', 'shoes'],
-  ['wardrobe', '🚪 دولاب أو غرفة نوم (جديد أو تعديل)', 'wardrobe'],
-  ['repair', '🛠️ صيانة في البيت عندي', 'repair'],
-  ['design', '📐 محتاج مهندس يصمّم', 'design'],
+  ['new', '🏗️ هعمل شغل جديد (مطبخ، دريسنج روم، جزامة، دولاب…)', 'kitchen'],
+  ['fix', '🛠️ عندي حاجة محتاجة تتصلّح أو تتغيّر', 'repair'],
+  ['install', '🔧 معايا الإكسسوارات ومحتاج حد يركّبها', 'slides'],
+  ['design', '📐 محتاج مهندس يصمّم أو يدّيني فكرة', 'design'],
   ['other', '💬 حاجة تانية', 'repair'],
 ] as const;
 

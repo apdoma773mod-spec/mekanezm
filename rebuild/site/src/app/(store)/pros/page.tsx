@@ -8,7 +8,7 @@ import { ProCard, ProNote } from './pro-card';
 export const revalidate = 60;
 export const metadata: Metadata = {
   title: 'نجارين وفنيين نرشّحهم لتركيب وصيانة المطابخ والدواليب | ميكانيزم',
-  description: 'محتاج حد يركّب مجرة دولاب أو يصلّح مطبخ أو يعمل دريسنج روم؟ صنايعية ومهندسين راجعنا شغلهم، شوف أعمالهم وكلّمهم على طول.',
+  description: 'نجارين ومهندسين مستقلين راجعنا شغلهم، شوف أعمالهم وكلّمهم على طول. ميكانيزم بتبيع الإكسسوارات ومبتركّبش.',
   alternates: { canonical: '/pros' },
 };
 
@@ -25,7 +25,7 @@ export default async function Pros({ searchParams }: { searchParams: Promise<{ s
         <div className="info-cards" style={{ marginBottom: 12 }}>
           <div>
             <h2>محتاج حد دلوقتي؟</h2>
-            احكيلنا المشكلة (مجرة وقعت؟ مطبخ جديد؟ دريسنج؟) وهنرشّحلك الأنسب.
+            احكيلنا محتاج إيه وفين، وهنرشّحلك الأنسب.
             <div style={{ marginTop: 8 }}><Link className="pri" href="/help" style={{ display: 'block', textAlign: 'center', padding: '12px', color: '#fff' }}>🙋 احكيلنا محتاج إيه</Link></div>
           </div>
         </div>

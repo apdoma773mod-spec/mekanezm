@@ -68,7 +68,7 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/tools">🧮 حاسبات النجار</Link>
           <Link href="/works">🏗️ من شغلنا</Link>
           <Link href="/brands">🏷️ البراندات</Link>
-          <Link href="/help">🙋 محتاج حد يركّب أو يصلّح؟</Link>
+          <Link href="/help">🙋 محتاج حد ينفّذ الشغل؟</Link>
           <Link href="/pros">🧰 فنيين نرشّحهم</Link>
           <Link href="/trade">💼 أسعار الجملة للنجارين والتجار</Link>
           <Link href="/about">👋 مين إحنا</Link>

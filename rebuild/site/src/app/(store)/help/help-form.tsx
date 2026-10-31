@@ -15,7 +15,7 @@ import { ProCard, ProNote } from '../pros/pro-card';
 type Lite = Pick<Pro, 'id' | 'name' | 'kind' | 'skills' | 'areas' | 'phone' | 'years'> & { photo: string; imgs: number };
 
 export function HelpForm({ pros }: { pros: Lite[] }) {
-  const [need, setNeed] = useState<(typeof NEEDS)[number][0]>('slide-old');
+  const [need, setNeed] = useState<(typeof NEEDS)[number][0]>('new');
   const [f, setF] = useState({ name: '', phone: '', area: '', text: '' });
   const [pics, setPics] = useState<{ blob: Blob; url: string }[]>([]);
   const [msg, setMsg] = useState('');
@@ -60,7 +60,7 @@ export function HelpForm({ pros }: { pros: Lite[] }) {
     return (
       <div className="info-cards"><div>
         <h2>✔ وصلنا طلبك</h2>
-        هنراجعه ونرد عليك على الواتساب. وفي الوقت ده دول ناس مراجَع شغلها تقدر تكلمها لو مستعجل:
+        هنراجعه ونرد عليك على الواتساب. وفي الوقت ده دول ناس مستقلة راجعنا شغلها، تقدر تكلمها لو مستعجل:
         <div style={{ margin: '10px 0' }}><ProNote /></div>
         {list.length ? <div className="pros">{list.map(p => <ProCard key={p.id} p={p} msg={msgText} />)}</div> : <p className="mut">لسه مفيش حد مسجّل للطلب ده، وهنكلمك احنا ونرشّحلك حد.</p>}
         <p style={{ marginBottom: 0 }}><Link href={`/pros`}>شوف كل الفنيين ←</Link></p>
@@ -77,7 +77,7 @@ export function HelpForm({ pros }: { pros: Lite[] }) {
       </div>
       <div>
         <h2>احكيلنا</h2>
-        <label>التفاصيل <small>(المقاس، اللي بايظ، اللي عايزه…)</small><textarea rows={4} value={f.text} onChange={set('text')} maxLength={600} placeholder={need === 'slide-old' ? 'مثلاً: مجرة درج الدولاب وقعت، طولها حوالي 45 سم' : ''} /></label>
+        <label>التفاصيل <small>(كل ما تفصّل أكتر نرشّحلك أدق)</small><textarea rows={4} value={f.text} onChange={set('text')} maxLength={600} placeholder="اكتب اللي محتاجه بالتفصيل: المكان، المقاسات، اللي عايز يتعمل…" /></label>
         <div className="tpics">
           {pics.map((p, i) => <span key={p.url}><img src={p.url} alt="" /><button type="button" onClick={() => setPics(x => x.filter((_, k) => k !== i))} aria-label="شيل الصورة">✕</button></span>)}
           {pics.length < 3 && <button type="button" className="tadd" onClick={() => file.current?.click()}>📷<small>صورة</small></button>}
