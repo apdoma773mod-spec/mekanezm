@@ -13,7 +13,7 @@ import { parse } from '../../lib/validate.js';
  * «🛠️ أنظمة الشغل» keeps its documents as JSON, as the old system did in mk_settings (wk_*):
  * orders with their stages, config, display goods, show-room expenses, offcuts and forged-rod work.
  */
-const KEYS = ['count_sessions', 'voice_cmds', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
+const KEYS = ['count_sessions', 'voice_cmds', 'invoice_aliases', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
 const keyParam = z.object({ key: z.enum(KEYS) });
 
 const UPLOADS = path.resolve(process.cwd(), 'uploads');
@@ -26,9 +26,27 @@ export default async function workRoutes(app: FastifyInstance) {
   app.get('/kv/:key', { preHandler: app.authenticate }, async (request) => {
     const { key } = parse(keyParam, request.params);
     // the voice command words are read by everyone's 🎤 window; every other document is the owner's
-    if (key !== 'voice_cmds' && !isAdmin(actorOf(request))) throw forbidden('الشاشة دي للمدير بس');
+    if (key !== 'voice_cmds' && key !== 'invoice_aliases' && !isAdmin(actorOf(request))) throw forbidden('الشاشة دي للمدير بس');
     const s = await db.setting.findUnique({ where: { key } });
     return { value: s?.value ?? null };
+  });
+
+  /**
+   * The names a supplier uses for our products ({supplier: {invoice text: product id}}, old mk_settings invoice_aliases).
+   * Merged on the server so two people saving at once do not wipe each other; anyone who can buy may add names.
+   */
+  app.post('/aliases', { preHandler: app.authenticate }, async (request) => {
+    const { sup, map } = parse(z.object({ sup: z.string().max(200), map: z.record(z.string().max(300), z.string().max(64)) }), request.body);
+    const actor = actorOf(request);
+    const key = 'invoice_aliases';
+    const cur = ((await db.setting.findUnique({ where: { key } }))?.value ?? {}) as Record<string, Record<string, string>>;
+    const next = { ...cur, [sup || '*']: { ...(cur[sup || '*'] ?? {}), ...map } };
+    await db.setting.upsert({
+      where: { key },
+      create: { key, value: next as Prisma.InputJsonValue, updatedById: actor.id },
+      update: { value: next as Prisma.InputJsonValue, updatedById: actor.id },
+    });
+    return { ok: true };
   });
 
   app.put('/kv/:key', { preHandler: app.requireAdmin, bodyLimit: 20 * 1024 * 1024 }, async (request) => {

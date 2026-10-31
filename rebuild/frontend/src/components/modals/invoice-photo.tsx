@@ -6,6 +6,7 @@ import type { ProductDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
 import { vn } from '@/lib/import-daily';
 import { useToast } from '../ui/toast';
+import { InvoiceReview } from './invoice-review';
 import { useModal } from './modal-host';
 
 /** What the old parse-invoice returns for a supplier invoice photo. */
@@ -13,7 +14,7 @@ export interface ReadInvoice {
   supplier?: string;
   invoice_no?: string;
   date?: string;
-  items: { text?: string; code?: string; qty?: number; unit?: string; price?: number; total?: number }[];
+  items: { text?: string; code?: string; qty?: number; unit?: string; price?: number; total?: number; pid?: string; newName?: string }[];
   notes?: string;
   pno?: string;
   _check?: { n?: number; rows?: number; sum?: number; grand_total?: number; discount?: number; ok?: boolean; strips?: number; pages?: number };
@@ -425,11 +426,31 @@ export function InvoicePhotoButtons({
   const applied = useRef(new Set<string>());
 
   const [last, setLast] = useState<string | null>(null);
+  const [review, setReview] = useState<{ r: ReadInvoice; scanId: string | null; all: ProductDto[] } | null>(null);
+  const deep = async (id: string) => {
+    try {
+      await api.post(`/ai/scans/${id}/deep`, {});
+      // mark it waiting in the cache too, so the old answer is not applied again before the refresh
+      qc.setQueryData<{ items: Scan[]; ai: boolean }>(['ai-scans'], (d) =>
+        d ? { ...d, items: d.items.map((x) => (x.id === id ? { ...x, status: 'pending', attempts: 0 } : x)) } : d,
+      );
+      applied.current.delete(id);
+      setWaitId(id);
+      setReview(null);
+      toast('🔍 بقرا الفاتورة تاني بدقة أعلى… كمّل شغلك');
+    } catch (e) {
+      toast(`❌ ${errorMessage(e)}`, 'bad');
+    }
+  };
+  const openReview = async (r: ReadInvoice, scanId: string | null) => {
+    const all = await api.get<{ items: ProductDto[] }>('/products/all').then((x) => x.items).catch(() => [] as ProductDto[]);
+    setReview({ r, scanId, all });
+  };
   const apply = async (s: Scan) => {
     if (!s.result || applied.current.has(s.id)) return;
     applied.current.add(s.id);
     setLast(s.id);
-    await onRead(s.result, s.id);
+    await openReview(s.result, s.id);
     const c = s.result._check;
     toast(`✔ اتقرا ${s.result.items.length} بند — راجعهم${c && c.ok === false ? ' — ⚠️ ممكن يكون فيه بنود ناقصة أو الإجمالي مش مطابق' : ''}`);
   };
@@ -507,20 +528,7 @@ export function InvoicePhotoButtons({
           type="button"
           className="secondary"
           style={{ width: '100%', marginTop: 6 }}
-          onClick={async () => {
-            try {
-              await api.post(`/ai/scans/${last}/deep`, {});
-              // mark it waiting in the cache too, so the old answer is not applied again before the refresh
-              qc.setQueryData<{ items: Scan[]; ai: boolean }>(['ai-scans'], (d) =>
-                d ? { ...d, items: d.items.map((x) => (x.id === last ? { ...x, status: 'pending', attempts: 0 } : x)) } : d,
-              );
-              applied.current.delete(last);
-              setWaitId(last);
-              toast('🔍 بقرا الفاتورة تاني بدقة أعلى… كمّل شغلك');
-            } catch (e) {
-              toast(`❌ ${errorMessage(e)}`, 'bad');
-            }
-          }}
+          onClick={() => void deep(last)}
         >
           🔍 اقرا تاني بدقة أعلى
         </button>
@@ -574,7 +582,7 @@ export function InvoicePhotoButtons({
               onClick={async () => {
                 try {
                   const d = clParse(clText);
-                  await onRead(d, null);
+                  await openReview(d, null);
                   setClaude(false);
                   setClText('');
                   toast(`✔ اتقرا ${d.items.length} بند — راجعهم`);
@@ -595,6 +603,17 @@ export function InvoicePhotoButtons({
             <ScanRow key={s.id} s={s} dupe={dups.has(s.id)} onReview={(x) => void apply(x)} />
           ))}
         </div>
+      )}
+      {review && (
+        <InvoiceReview
+          data={review.r}
+          supplier={supplier ?? ''}
+          all={review.all}
+          scanId={review.scanId}
+          onClose={() => setReview(null)}
+          onDeep={review.scanId ? () => void deep(review.scanId!) : undefined}
+          onApply={(r) => onRead(r, review.scanId)}
+        />
       )}
       {waitId && <Chip text="⏳ بقرا الفاتورة في الخلفية… كمّل شغلك، هتفتحلك لوحدها أول ما تخلص" />}
     </div>

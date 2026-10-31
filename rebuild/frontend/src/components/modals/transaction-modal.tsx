@@ -408,10 +408,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                 const read: Line[] = r.items
                   .filter((it) => String(it.text ?? '').trim())
                   .map((it) => {
-                    const p = matchProduct(String(it.text), it.code, all);
+                    const p = it.pid ? all.find((x) => x.id === it.pid) : it.newName ? undefined : matchProduct(String(it.text), it.code, all);
                     const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
                     const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
-                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
+                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.newName || it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
                   });
                 setLines((ls) => [...ls.filter((l) => l.name.trim() && !(scanId && l.fromScan === scanId)), ...read]);
                 if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
