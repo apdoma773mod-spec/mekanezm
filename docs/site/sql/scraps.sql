@@ -4,7 +4,7 @@
 
 create table if not exists site_scraps (
   id         uuid primary key default gen_random_uuid(),
-  secret     text not null default encode(gen_random_bytes(12), 'hex'),
+  secret     text not null default encode(extensions.gen_random_bytes(12), 'hex'),
   category   text not null check (category in ('sheet','solid','alu')),
   material   text not null default '',
   brand      text not null default '',
