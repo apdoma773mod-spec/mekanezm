@@ -12,8 +12,11 @@ const security = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Self-contained server build (`.next/standalone`) for a real server / Docker.
-  output: 'standalone',
-  outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  // (On Vercel its own build output is used instead, so these two are skipped there.)
+  ...(process.env.VERCEL ? {} : {
+    output: 'standalone',
+    outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  }),
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
