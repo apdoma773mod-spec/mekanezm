@@ -21,7 +21,9 @@ export const productSchema = z.object({
   dir: z.object({
     off: z.boolean().optional(),
     hand: z.enum(['R', 'L']).optional(),
-    kind: z.enum(['corner', 'door', 'other']).optional(),
+    kind: z.enum(['bean', 'magic', 'generic', 'door', 'other', 'corner']).optional(),
+    /** The owner's own GIF / image / short video, shown instead of the built-in motion. */
+    media: z.string().optional(),
     pair: z.string().optional(),
     note: z.string().optional(),
   }).optional(),

@@ -3,10 +3,11 @@
 // Products are matched with the system by CODE (stock and orders use it), so the code must be the system's own product code.
 import { useMemo, useState } from 'react';
 import { saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
-import { handFromName, kindFromName, HAND_LABEL } from '@/lib/hand';
+import { HandDiagram } from '@/components/hand-guide';
+import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from '@/lib/hand';
 import { Imgs, uid7 } from './ui';
 
-type P = { id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: 'corner' | 'door' | 'other'; pair?: string; note?: string } };
+type P = { id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
 const PAGE = 25;
 const lite = (s: string) => String(s ?? '').toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
@@ -55,13 +56,16 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
     top: !!cur?.top, video: cur?.video ?? '', hidden: !!cur?.hidden,
     dirMode: (cur?.dir?.off ? 'off' : cur?.dir ? 'on' : 'auto') as Dir,
     hand: (cur?.dir?.hand ?? handFromName(cur?.name ?? '') ?? 'R') as 'R' | 'L',
-    kind: (cur?.dir?.kind ?? kindFromName(cur?.name ?? '')) as 'corner' | 'door' | 'other',
+    kind: (cur?.dir?.kind ? normKind(cur.dir.kind) : kindFromName(cur?.name ?? '')) as HandKind, media: cur?.dir?.media ?? '',
     pairCode: all.find(x => x.id === cur?.dir?.pair)?.code ?? '', note: cur?.dir?.note ?? '',
   }));
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF(x => ({ ...x, [k]: v }));
   const pair = f.pairCode.trim() ? all.find(x => x.id !== f.id && x.code === f.pairCode.trim()) : undefined;
   const autoHand = handFromName(f.name);
+  // what the customer will see: the chosen type, or the one detected from the name
+  const pvKind: HandKind = f.dirMode === 'on' ? f.kind : kindFromName(f.name);
+  const pvHand = f.dirMode === 'on' ? f.hand : autoHand;
 
   async function newSection() {
     const n = window.prompt('اسم القسم الجديد');
@@ -87,7 +91,7 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
         if (f.dirMode === 'off') o.dir = { off: true };
-        else if (f.dirMode === 'on') o.dir = { hand: f.hand, kind: f.kind, ...(pair ? { pair: pair.id } : {}), ...(f.note.trim() ? { note: f.note.trim() } : {}) };
+        else if (f.dirMode === 'on') o.dir = { hand: f.hand, kind: f.kind, ...(pair ? { pair: pair.id } : {}), ...(f.note.trim() ? { note: f.note.trim() } : {}), ...(f.media.trim() ? { media: f.media.trim() } : {}) };
         else delete o.dir;
         if (i > -1) arr[i] = o; else arr.push(o);
       }, ['products']);
@@ -125,14 +129,16 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         <h3>↔️ اتجاه الفتح (يمين / شمال)</h3>
         <p className="mut">للمنتجات اللي ليها نسخة يمين ونسخة شمال (ماجيك كورنر، فاصوليا…). الموقع بيشرح للعميل إزاي يختار الصح ويوديه للنسخة التانية.</p>
         <div className="ad-seg">{([['auto', 'تلقائي من الاسم'], ['on', 'هحدده بنفسي'], ['off', 'من غير اتجاه']] as const).map(([k, t]) => <button key={k} type="button" className={f.dirMode === k ? 'on' : ''} onClick={() => set('dirMode', k)}>{t}</button>)}</div>
-        {f.dirMode === 'auto' && <p className="mut">{autoHand ? `الاسم فيه «${HAND_LABEL[autoHand]}» — هيظهر شرح الاتجاه تلقائياً، والنسخة التانية بتتلقى لوحدها لو اسمها زي ده بالظبط وفيه الاتجاه العكسي.` : 'الاسم مفيهوش «يمين» أو «شمال»، فمفيش شرح اتجاه. اختار «هحدده بنفسي» لو المنتج ليه اتجاه.'}</p>}
+        {f.dirMode === 'auto' && <p className="mut">النوع اللي اتعرف من الاسم: <b>{KIND_LABEL[pvKind]}</b>. {autoHand ? `الاسم فيه «${HAND_LABEL[autoHand]}» — هيظهر شرح الاتجاه تلقائياً، والنسخة التانية بتتلقى لوحدها لو اسمها زي ده بالظبط وفيه الاتجاه العكسي.` : 'الاسم مفيهوش «يمين» أو «شمال»، فمفيش شرح اتجاه. اختار «هحدده بنفسي» لو المنتج ليه اتجاه.'}</p>}
         {f.dirMode === 'on' && <>
           <label>اتجاه المنتج ده<span className="ad-seg">{(['R', 'L'] as const).map(h => <button key={h} type="button" className={f.hand === h ? 'on' : ''} onClick={() => set('hand', h)}>{HAND_LABEL[h]}</button>)}</span></label>
-          <label>نوعه<span className="ad-seg">{([['corner', 'ماجيك / ركنة'], ['door', 'ضلفة / مفصلة'], ['other', 'تاني']] as const).map(([k, t]) => <button key={k} type="button" className={f.kind === k ? 'on' : ''} onClick={() => set('kind', k)}>{t}</button>)}</span></label>
+          <label>نوعه<span className="ad-seg">{(['bean', 'magic', 'generic', 'door', 'other'] as const).map(k => <button key={k} type="button" className={f.kind === k ? 'on' : ''} onClick={() => set('kind', k)}>{KIND_LABEL[k]}</button>)}</span></label>
           <label>كود النسخة التانية <small>(اختياري)</small><input dir="ltr" value={f.pairCode} onChange={e => set('pairCode', e.target.value)} /></label>
           {f.pairCode.trim() && <p className={pair ? 'mut' : 'err'}>{pair ? '✔ ' + pair.name : 'مفيش منتج بالكود ده'}</p>}
           <label>شرح إضافي <small>(اختياري — بيظهر للعميل)</small><textarea rows={3} value={f.note} onChange={e => set('note', e.target.value)} /></label>
+          <label>موشن مخصوص <small>(اختياري — لينك GIF أو صورة أو فيديو قصير بيظهر بدل الموشن الجاهز)</small><input dir="ltr" value={f.media} placeholder="https://…" onChange={e => set('media', e.target.value)} /></label>
         </>}
+        {f.dirMode !== 'off' && pvHand && pvKind !== 'other' && !f.media.trim() && <div className="ad-prevbox"><b>معاينة اللي الزبون هيشوفه:</b><HandDiagram hand={pvHand} kind={pvKind} /></div>}
       </section>
       <section className="ad-s">
         <h3>👁️ الظهور</h3>

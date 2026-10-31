@@ -772,3 +772,17 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
   .hm-guide { opacity: .95; } .hm-steps li { opacity: 1; } .hm-fixedfill { opacity: .5; }
 }
 @media (max-width: 699px) { .hd-both { grid-template-columns: 1fr !important; } }
+
+/* ---- motion templates: magic corner + generic pull-out ---- */
+.hm-mf, .hm-mb, .hm-gu { animation-duration: var(--T); animation-iteration-count: infinite; animation-timing-function: cubic-bezier(.5, 0, .2, 1); }
+.hm-mf { animation-name: hm-mf; }
+.hm-mb { animation-name: hm-mb; }
+.hm-gu { animation-name: hm-gu; }
+@keyframes hm-mf { 0%, 26% { transform: translate(0, 0); } 50%, 80% { transform: translate(30px, 98px); } 94%, 100% { transform: translate(0, 0); } }
+@keyframes hm-mb { 0%, 32% { transform: translate(0, 0) rotate(0); } 48% { transform: translate(112px, 18px) rotate(-7deg); } 64%, 78% { transform: translate(182px, 144px) rotate(0); } 92%, 100% { transform: translate(0, 0) rotate(0); } }
+@keyframes hm-gu { 0%, 26% { transform: translate(0, 0); } 54%, 80% { transform: translate(98px, 116px); } 94%, 100% { transform: translate(0, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .hm-mf { transform: translate(30px, 98px); } .hm-mb { transform: translate(182px, 144px); } .hm-gu { transform: translate(98px, 116px); }
+}
+.hm-media { display: block; width: 100%; max-width: 440px; margin: 0 auto 10px; border-radius: 22px; box-shadow: 0 12px 30px #00000020; }
+.ad-prevbox { margin: 10px 0; }

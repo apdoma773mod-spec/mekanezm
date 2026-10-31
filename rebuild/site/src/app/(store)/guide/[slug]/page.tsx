@@ -33,12 +33,13 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><Link href="/guide">دليل الاختيار</Link><span>›</span><span>{g.emoji}</span></nav>
         <h1 className="page-h">{g.emoji} {g.title}</h1>
         <p className="lead">{g.desc}</p>
-        {g.slug === 'left-or-right' && <div className="hd-both"><HandDiagram hand="R" kind="corner" /><HandDiagram hand="L" kind="corner" /></div>}
+        {g.slug === 'left-or-right' && <div className="hd-both"><HandDiagram hand="R" kind="bean" /><HandDiagram hand="L" kind="bean" /></div>}
         {g.blocks.map(b => (
           <section key={b.h}>
             <h2>{b.h}</h2>
             {b.p?.map((x, i) => <p key={i}>{x}</p>)}
             {b.li && <ul>{b.li.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+            {g.slug === 'left-or-right' && b.h === 'ماجيك كورنر (الكلاسيك)' && <div className="hd-both"><HandDiagram hand="R" kind="magic" /><HandDiagram hand="L" kind="magic" /></div>}
             {g.slug === 'left-or-right' && b.h === 'الضلفة والمفصلات' && <div className="hd-both"><HandDiagram hand="R" kind="door" /><HandDiagram hand="L" kind="door" /></div>}
           </section>
         ))}
