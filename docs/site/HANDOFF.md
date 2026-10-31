@@ -147,3 +147,8 @@ Slow-4G + 4× CPU, home: old LCP 7.9 s / load 9.3 s / ~1.1 MB → new LCP 4.1 s 
 - Pick hosting (Vercel / the same server as the system) and set `NEXT_PUBLIC_SITE_URL`; point the domain; keep the redirects.
 - Send one real test order from the new site and confirm it appears in the system.
 - Later: switch `catalog.ts`/`api.ts` to the new backend API.
+
+## Session 2 check (2026-10-31)
+Took over from the previous session: nothing was missing vs the old site. Rebuilt (`next build` passes, typecheck clean, `npm run test:e2e` all good), server on 3300.
+InstaPay / wallet numbers are in `config.ts` (`PAY`), overridable with `NEXT_PUBLIC_INSTAPAY` / `NEXT_PUBLIC_WALLET`.
+Hosting: both options (Vercel / the shop's own server with Docker) are in `docs/site/DEPLOY.md` §1; decision still the owner's.
