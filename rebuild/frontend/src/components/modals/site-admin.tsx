@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -8,6 +9,7 @@ import { api, errorMessage } from '@/lib/api';
 import { fileToDataUrl } from '@/lib/image';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
+import { useModal } from './modal-host';
 
 /** 🌐 محتوى الموقع (openSiteAdmin القديمة) + 🌐 «على الموقع» للصنف (openSiteProduct). */
 const SHOP_URL = 'https://apdoma773mod-spec.github.io/mekanezm/shop.html';
@@ -89,6 +91,7 @@ const rowStyle = { display: 'flex', gap: 10, alignItems: 'center', padding: '10p
 
 export function SiteAdmin({ tab: first = 'works', onClose }: { tab?: Tab; onClose: () => void }) {
   const toast = useToast();
+  const { open } = useModal();
   const [tab, setTab] = useState<Tab>(first);
   const [doc, setDoc] = useState<SiteDoc | null>(null);
   const [err, setErr] = useState('');
@@ -129,6 +132,9 @@ export function SiteAdmin({ tab: first = 'works', onClose }: { tab?: Tab; onClos
   return (
     <Modal title="🌐 محتوى الموقع" onClose={onClose} wide>
       <div className="btnrow" style={{ marginBottom: 12 }}>
+        <button type="button" className="secondary" data-spn onClick={() => open({ kind: 'siteProduct' })}>
+          ➕ منتج جديد
+        </button>
         {TABS.map(([k, t]) => (
           <button key={k} type="button" className={k === tab ? 'primary' : 'secondary'} onClick={() => setTab(k)}>
             {t}
@@ -418,6 +424,13 @@ function DeliveryTab({ d, save }: { d: SiteData; save: Save }) {
   );
 }
 
+const SOC = [
+  ['fb', 'فيسبوك', 'https://facebook.com/...'],
+  ['ig', 'انستجرام', 'https://instagram.com/...'],
+  ['tt', 'تيكتوك', 'https://tiktok.com/@...'],
+  ['yt', 'يوتيوب', 'https://youtube.com/@...'],
+] as const;
+
 function ContactTab({ d, save }: { d: SiteData; save: Save }) {
   const P = Array.isArray(d.phones) ? d.phones : [];
   const [wa, setWa] = useState(d.phone ?? '');
@@ -427,6 +440,9 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
   const [map, setMap] = useState(d.mapUrl ?? '');
   const [cat, setCat] = useState(d.catalog !== false);
   const [busy, setBusy] = useState(false);
+  const so = (d.socials ?? {}) as Record<string, string>;
+  const [soc, setSoc] = useState<Record<string, string>>(Object.fromEntries(SOC.map(([k]) => [k, so[k] ?? ''])));
+  const [soBusy, setSoBusy] = useState(false);
   return (
     <>
       <div className="form">
@@ -475,45 +491,173 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
       >
         حفظ
       </button>
+      <div id="soBox" style={{ marginTop: 18 }}>
+        <h3 style={{ margin: '0 0 8px' }}>📱 حسابات السوشيال</h3>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>بتظهر في الموقع كأيقونات — سيب الخانة فاضية لو مفيش حساب</p>
+        <div className="form">
+          {SOC.map(([k, n, ph]) => (
+            <div key={k} className="field">
+              <label>{n}</label>
+              <input id={`so_${k}`} dir="ltr" value={soc[k]} placeholder={ph} onChange={(e) => setSoc({ ...soc, [k]: e.target.value })} />
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="primary"
+          id="soSave"
+          style={{ marginTop: 10 }}
+          disabled={soBusy}
+          onClick={async () => {
+            const o: Record<string, string> = {};
+            for (const [k] of SOC) {
+              let v = (soc[k] ?? '').trim();
+              if (v && !/^https?:\/\//i.test(v)) v = `https://${v}`;
+              if (v) o[k] = v;
+            }
+            setSoBusy(true);
+            await save((x) => {
+              x.socials = o;
+            }, '✔ الحسابات اتحفظت على الموقع');
+            setSoBusy(false);
+          }}
+        >
+          💾 حفظ الحسابات
+        </button>
+      </div>
     </>
   );
 }
 
-/** 🌐 «على الموقع» for one product: show it on the shop page with its own name, section, text, video and photos. */
-export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }) {
+const ytId = (u: string) => /(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/.exec(u || '')?.[1] ?? '';
+
+/**
+ * 🌐 The old full-screen site product editor (index.html «spOpen»): name/section/code, photos (drop, order with arrows, ⭐ main),
+ * short text + «＋ مواصفة» rows, video, visible/⭐ switches, the live card «👀 شكله في الموقع», «💾 حفظ ونشر».
+ * Without `id` it is «➕ منتج جديد على الموقع»: the stock product is created first (price/cost/qty/unit), then published.
+ */
+export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void }) {
   const toast = useToast();
-  const prod = useProduct(id);
+  const qc = useQueryClient();
+  const prod = useProduct(id ?? null);
   const [doc, setDoc] = useState<SiteDoc | null>(null);
-  const [f, setF] = useState<{ on: boolean; name: string; desc: string; sec: string; imgs: string[]; top: boolean; video: string; spid?: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [specRows, setSpecRows] = useState<[string, string][] | null>(null);
+  const [f, setF] = useState<{
+    on: boolean;
+    name: string;
+    txt: string;
+    sp: [string, string][];
+    sec: string;
+    imgs: string[];
+    top: boolean;
+    video: string;
+    spid?: string;
+    wasOn: boolean;
+    code: string;
+    price: string;
+    cost: string;
+    qty: string;
+    unit: string;
+  } | null>(null);
+  const [busy, setBusy] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [up, setUp] = useState('');
+  const [over, setOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
+  const isNew = !id;
 
   useEffect(() => {
-    if (!p) return;
+    if (!isNew && !p) return;
     fetchSite()
       .then((s) => {
         setDoc(s);
-        const sp = s.data.products.find((x) => String(x.code || '') === String(p.code));
-        setF({ on: true, name: sp?.name ?? p.name, desc: sp?.desc ?? '', sec: sp?.sec ?? '', imgs: sp ? (sp.imgs?.length ? [...sp.imgs] : sp.img ? [sp.img] : []) : [], top: !!sp?.top, video: sp?.video ?? '', spid: sp?.id });
+        const sp = p ? s.data.products.find((x) => String(x.code || '') === String(p.code)) : undefined;
+        // old splitDesc: lines «المقاس: 50 سم» are specs, the rest is the short description
+        const txt: string[] = [];
+        const rows: [string, string][] = [];
+        (sp?.desc ?? '').split('\n').forEach((l) => {
+          const t = l.trim();
+          if (!t) return;
+          const m = t.match(/^([^:：]{1,30})[:：]\s*(.+)$/);
+          if (m) rows.push([m[1]!.trim(), m[2]!.trim()]);
+          else txt.push(t);
+        });
+        setF({
+          on: true,
+          wasOn: !!sp,
+          name: sp?.name ?? p?.name ?? '',
+          txt: txt.join('\n'),
+          sp: rows.length ? rows : [['المقاس', ''], ['الخامة', '']],
+          sec: sp?.sec ?? '',
+          imgs: sp ? (sp.imgs?.length ? [...sp.imgs] : sp.img ? [sp.img] : []) : [],
+          top: !!sp?.top,
+          video: sp?.video ?? '',
+          spid: sp?.id,
+          code: p ? String(p.code) : '',
+          price: '',
+          cost: '',
+          qty: '0',
+          unit: 'قطعة',
+        });
       })
       .catch((e) => toast(`محتاج نت عشان تفتح بيانات الموقع: ${errorMessage(e)}`, 'bad'));
-  }, [p, toast]);
+  }, [p, isNew, toast]);
 
-  if (prod.isPending || !doc || !f) return <Modal title="🌐 على الموقع" onClose={onClose}><Loading /></Modal>;
-  if (!p?.code) return <Modal title="🌐 على الموقع" onClose={onClose}><p>الصنف ده مالوش كود — اكتب كود الأول (الموقع والطلبات بيشتغلوا بالكود)</p></Modal>;
-  const code = String(p.code);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', k);
+    return () => document.removeEventListener('keydown', k);
+  }, [onClose]);
+
+  const shell = (inner: React.ReactNode) => (
+    <div id="spEd">
+      <div className="sx">{inner}</div>
+    </div>
+  );
+  if ((!isNew && prod.isPending) || !doc || !f) return shell(<div className="sb"><Loading /></div>);
+  if (!isNew && !p?.code)
+    return shell(
+      <div className="sb">
+        <p>الصنف ده مالوش كود — اكتب كود الأول (الموقع والطلبات بيشتغلوا بالكود)</p>
+        <button type="button" className="secondary" onClick={onClose}>
+          رجوع
+        </button>
+      </div>,
+    );
+  const secs = doc.data.sections;
+  const set = (x: Partial<typeof f>) => setF({ ...f, ...x });
+  const joined = [f.txt.trim()]
+    .concat(f.sp.filter((x) => x[0].trim() && x[1].trim()).map((x) => `${x[0].trim()}: ${x[1].trim()}`))
+    .filter(Boolean)
+    .join('\n');
+  const inStock = isNew ? Number(f.qty) > 0 : (p?.qty ?? 0) > 0;
+  const secName = secs.find((x) => x.id === f.sec)?.name;
+
+  const upload = async (list: FileList | File[] | null) => {
+    const fs = [...(list ?? [])].filter((x) => /^image\//.test(x.type));
+    if (!fs.length) return;
+    setBusy((n) => n + 1);
+    const got: string[] = [];
+    for (let k = 0; k < fs.length; k++) {
+      setUp(`⏳ برفع صورة ${k + 1} من ${fs.length}…`);
+      try {
+        got.push(await uploadSiteImage(fs[k]!));
+        setF((x) => (x ? { ...x, imgs: [...x.imgs.filter((u) => !got.includes(u)), ...got] } : x));
+      } catch (e) {
+        toast(`صورة مارفعتش: ${errorMessage(e)}`, 'bad');
+      }
+    }
+    setUp('');
+    setBusy((n) => n - 1);
+  };
 
   const newSection = async () => {
     const n = window.prompt('اسم القسم الجديد');
     if (!n?.trim()) return;
     const sid = uid7();
     try {
-      const s = await saveSite((d) => {
-        d.sections.push({ id: sid, name: n.trim() });
-      });
-      setDoc(s);
-      setF({ ...f, sec: sid });
+      setDoc(await saveSite((d) => void d.sections.push({ id: sid, name: n.trim() })));
+      set({ sec: sid });
       toast('✔ القسم اتعمل');
     } catch (e) {
       toast(errorMessage(e), 'bad');
@@ -521,19 +665,28 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
   };
 
   const go = async () => {
+    if (busy) return toast('استنى الصور تخلص رفع', 'bad');
+    if (!f.name.trim()) return toast('اكتب اسم المنتج', 'bad');
     if (f.on && !f.sec) return toast('اختار القسم', 'bad');
-    if (f.on && !f.name.trim()) return toast('اكتب اسم المنتج', 'bad');
     if (f.on && !f.imgs.length && !window.confirm('المنتج من غير صور — تكمّل؟')) return;
-    setBusy(true);
+    setSaving(true);
     try {
+      let code = f.code.trim();
+      if (isNew) {
+        const np = await api
+          .post<{ product: { code: string } }>('/products', { code: code || undefined, name: f.name.trim(), category: secName ?? '', unit: f.unit.trim() || 'قطعة', price: Number(f.price) || 0, cost: Number(f.cost) || 0, qty: Number(f.qty) || 0 })
+          .then((r) => r.product);
+        code = np.code;
+        void qc.invalidateQueries({ queryKey: ['products'] });
+      }
       await saveSite((d) => {
         const i = d.products.findIndex((x) => String(x.code || '') === code);
         if (!f.on) {
           if (i > -1) d.products.splice(i, 1);
           return;
         }
-        const o = i > -1 ? d.products[i] : { id: f.spid || uid7(), code, name: '', sec: '', imgs: [] as string[] };
-        Object.assign(o, { name: f.name.trim(), desc: f.desc.trim(), sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
+        const o = i > -1 ? d.products[i]! : { id: f.spid || uid7(), code, name: '', sec: '', imgs: [] as string[] };
+        Object.assign(o, { name: f.name.trim(), desc: joined, sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
         if (f.video.trim()) o.video = f.video.trim();
         else delete o.video;
         if (i > -1) d.products[i] = o;
@@ -542,136 +695,227 @@ export function SiteProduct({ id, onClose }: { id: string; onClose: () => void }
       toast(f.on ? '✔ اتحفظ واتنشر على الموقع' : '✔ اتشال من الموقع');
       onClose();
     } catch (e) {
-      setBusy(false);
+      setSaving(false);
       toast(`ماتحفظش: ${errorMessage(e)}`, 'bad');
     }
   };
 
-  // old splitDesc/joinDesc: lines «المقاس: 50 سم» are specs, the rest is the short description
-  const split = (() => {
-    const txt: string[] = [];
-    const sp: [string, string][] = [];
-    f.desc.split('\n').forEach((l) => {
-      const s = l.trim();
-      if (!s) return;
-      const m = s.match(/^([^:：]{1,30})[:：]\s*(.+)$/);
-      if (m) sp.push([m[1]!.trim(), m[2]!.trim()]);
-      else txt.push(s);
-    });
-    return { txt: txt.join('\n'), sp };
-  })();
-  const specs = specRows ?? (split.sp.length ? split.sp : ([['المقاس', ''], ['الخامة', '']] as [string, string][]));
-  const join = (txt: string, sp: [string, string][]) =>
-    [txt.trim()]
-      .concat(sp.filter((x) => x[0].trim() && x[1].trim()).map((x) => `${x[0].trim()}: ${x[1].trim()}`))
-      .filter(Boolean)
-      .join('\n');
-  const setSpecs = (sp: [string, string][]) => {
-    setSpecRows(sp);
-    setF({ ...f, desc: join(split.txt, sp) });
+  const mv = (i: number, j: number) => {
+    const a = [...f.imgs];
+    [a[i], a[j]] = [a[j]!, a[i]!];
+    set({ imgs: a });
   };
-  const sec = { border: '1px solid var(--border)', borderRadius: 14, padding: 12, marginBottom: 10 } as const;
+  const vid = ytId(f.video);
 
-  return (
-    <Modal title={`🌐 ${p.name}`} onClose={onClose}>
-      <span className={`pill ${f.spid ? 'on' : 'off'}`} style={{ display: 'inline-block', marginBottom: 10 }}>
-        {f.spid ? '● منشور على الموقع' : '○ مش على الموقع'}
-      </span>
-      <div style={sec}>
-        <h3 style={{ margin: '0 0 8px' }}>📝 البيانات الأساسية</h3>
-        <div className="form">
-        <div className="field full">
-          <label>اسم المنتج على الموقع</label>
-          <input value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={(e) => setF({ ...f, name: e.target.value })} />
-        </div>
-        <div className="field">
-          <label>القسم</label>
-          <select
-            value={f.sec}
-            onChange={(e) => {
-              if (e.target.value === '__new') void newSection();
-              else setF({ ...f, sec: e.target.value });
-            }}
-          >
-            <option value="">— اختار القسم —</option>
-            {doc.data.sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-            <option value="__new">＋ قسم جديد…</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>الكود</label>
-          <input value={code} disabled dir="ltr" />
-        </div>
-        </div>
-        <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 13 }}>
-          في المخزن: <b>{p.qty} {p.unit}</b> — الموقع بيعرض «متوفر» أو «اطلبه» بس، من غير أسعار.
-        </p>
+  return shell(
+    <>
+      <div className="sh">
+        <button type="button" className="secondary" id="seX" style={{ padding: '8px 12px' }} onClick={onClose}>
+          → رجوع
+        </button>
+        <h2>{isNew ? '➕ منتج جديد على الموقع' : `🌐 ${p!.name}`}</h2>
+        <span className={`pill ${f.wasOn ? 'on' : 'off'}`}>{f.wasOn ? '● منشور على الموقع' : '○ مش على الموقع'}</span>
       </div>
-      <div style={sec}>
-        <h3 style={{ margin: '0 0 8px' }}>
-          📷 الصور <small style={{ fontWeight: 400, color: 'var(--muted)' }}>أول صورة هي اللي بتظهر في الكارت — رتّبهم بالأسهم</small>
-        </h3>
-        <ImgsEditor imgs={f.imgs} onChange={(imgs) => setF((x) => (x ? { ...x, imgs } : x))} />
-      </div>
-      <div style={sec}>
-        <h3 style={{ margin: '0 0 8px' }}>📋 الوصف والمواصفات</h3>
-        <label>وصف قصير (بيظهر في صفحة المنتج)</label>
-        <textarea
-          rows={3}
-          value={split.txt}
-          placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج"
-          style={{ width: '100%', padding: 11, border: '1px solid var(--border)', borderRadius: 10 }}
-          onChange={(e) => setF({ ...f, desc: join(e.target.value, specs) })}
-        />
-        <label style={{ display: 'block', marginTop: 8 }}>المواصفات</label>
-        {specs.map((x, i) => (
-          <div key={i} className="spec" style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-            <input style={{ flex: 1, minWidth: 0 }} value={x[0]} placeholder="مثلاً: المقاس" onChange={(e) => setSpecs(specs.map((y, j) => (j === i ? [e.target.value, y[1]] : y)))} />
-            <input style={{ flex: 1, minWidth: 0 }} value={x[1]} placeholder="مثلاً: 50 سم" onChange={(e) => setSpecs(specs.map((y, j) => (j === i ? [y[0], e.target.value] : y)))} />
-            <button type="button" className="secondary" onClick={() => setSpecs(specs.filter((_, j) => j !== i))}>
-              ✕
+      <div className="sb">
+        <div>
+          <div className="sec">
+            <h3>📝 البيانات الأساسية</h3>
+            <label className="l">اسم المنتج على الموقع</label>
+            <input id="eName" value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={(e) => set({ name: e.target.value })} />
+            <div className="g2">
+              <div>
+                <label className="l">القسم</label>
+                <select id="eSec" value={f.sec} onChange={(e) => (e.target.value === '__new' ? void newSection() : set({ sec: e.target.value }))}>
+                  <option value="">— اختار القسم —</option>
+                  {secs.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                  <option value="__new">＋ قسم جديد…</option>
+                </select>
+              </div>
+              <div>
+                <label className="l">الكود</label>
+                <input id="eCode" dir="ltr" value={f.code} disabled={!isNew} placeholder={isNew ? 'سيبه فاضي = كود أوتوماتيك' : ''} onChange={(e) => set({ code: e.target.value })} />
+              </div>
+            </div>
+            {isNew ? (
+              <div className="g2">
+                <div>
+                  <label className="l">سعر البيع (في السيستم بس — مش بيظهر في الموقع)</label>
+                  <input id="ePrice" type="number" inputMode="decimal" min={0} step="0.01" value={f.price} onChange={(e) => set({ price: e.target.value })} />
+                </div>
+                <div>
+                  <label className="l">سعر الشراء (اختياري)</label>
+                  <input id="eCost" type="number" inputMode="decimal" min={0} step="0.01" value={f.cost} onChange={(e) => set({ cost: e.target.value })} />
+                </div>
+                <div>
+                  <label className="l">الكمية اللي عندك</label>
+                  <input id="eQty" type="number" inputMode="decimal" min={0} step="1" value={f.qty} onChange={(e) => set({ qty: e.target.value })} />
+                </div>
+                <div>
+                  <label className="l">الوحدة</label>
+                  <input id="eUnit" value={f.unit} onChange={(e) => set({ unit: e.target.value })} />
+                </div>
+              </div>
+            ) : (
+              <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 13 }}>
+                في المخزن: <b>{p!.qty} {p!.unit}</b> — الموقع بيعرض «متوفر» أو «اطلبه» بس، من غير أسعار.
+              </p>
+            )}
+          </div>
+          <div className="sec">
+            <h3>
+              📷 الصور <small>أول صورة هي اللي بتظهر في الكارت — رتّبهم بالأسهم</small>
+            </h3>
+            <div
+              className={`drop${over ? ' over' : ''}`}
+              id="eDrop"
+              onClick={() => fileRef.current?.click()}
+              onDragEnter={(e) => (e.preventDefault(), setOver(true))}
+              onDragOver={(e) => (e.preventDefault(), setOver(true))}
+              onDragLeave={(e) => (e.preventDefault(), setOver(false))}
+              onDrop={(e) => {
+                e.preventDefault();
+                setOver(false);
+                void upload(e.dataTransfer.files);
+              }}
+            >
+              📷 دوس هنا تضيف صور، أو اسحبها وارميها هنا
+              <br />
+              <small style={{ fontWeight: 400 }}>ممكن تختار كذا صورة مرة واحدة — بتتصغّر وتترفع لوحدها</small>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              id="eFile"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                void upload(e.target.files);
+                e.target.value = '';
+              }}
+            />
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
+            <div className="ig" id="eImgs">
+              {f.imgs.length ? (
+                f.imgs.map((u, i) => (
+                  <div key={u + i} className={`it${i ? '' : ' main'}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={u} alt="" loading="lazy" />
+                    <div className="ctl">
+                      <button type="button" title="شيل" style={{ color: '#c0392b' }} onClick={() => set({ imgs: f.imgs.filter((_, k) => k !== i) })}>
+                        ✕
+                      </button>
+                      <span>
+                        {i > 0 && (
+                          <button type="button" title="قدّم" onClick={() => mv(i - 1, i)}>
+                            ▶
+                          </button>
+                        )}
+                        {i < f.imgs.length - 1 && (
+                          <button type="button" title="أخّر" onClick={() => mv(i, i + 1)}>
+                            ◀
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                    {i ? (
+                      <button type="button" style={{ position: 'absolute', bottom: 4, right: 4, fontSize: 11, borderRadius: 8, padding: '1px 6px', border: 0, background: '#fffe' }} onClick={() => set({ imgs: [f.imgs[i]!, ...f.imgs.filter((_, k) => k !== i)] })}>
+                        ⭐ أساسية
+                      </button>
+                    ) : (
+                      <span className="tag">الأساسية</span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <small style={{ color: 'var(--muted)' }}>لسه مفيش صور</small>
+              )}
+            </div>
+          </div>
+          <div className="sec">
+            <h3>📋 الوصف والمواصفات</h3>
+            <label className="l">وصف قصير (بيظهر في صفحة المنتج)</label>
+            <textarea id="eTxt" rows={3} value={f.txt} placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج" onChange={(e) => set({ txt: e.target.value })} />
+            <label className="l">المواصفات</label>
+            <div id="eSpecs">
+              {f.sp.map((x, i) => (
+                <div key={i} className="spec">
+                  <input value={x[0]} placeholder="مثلاً: المقاس" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [e.target.value, y[1]] : y)) })} />
+                  <input value={x[1]} placeholder="مثلاً: 50 سم" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [y[0], e.target.value] : y)) })} />
+                  <button type="button" onClick={() => set({ sp: f.sp.filter((_, j) => j !== i) })}>
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="secondary" id="eAddSp" style={{ marginTop: 4 }} onClick={() => set({ sp: [...f.sp, ['', '']] })}>
+              ＋ مواصفة
             </button>
           </div>
-        ))}
-        <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setSpecs([...specs, ['', '']])}>
-          ＋ مواصفة
+          <div className="sec">
+            <h3>
+              🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small>
+            </h3>
+            <input id="eVid" dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => set({ video: e.target.value })} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {vid && <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" style={{ marginTop: 8, width: 220, borderRadius: 10 }} />}
+          </div>
+          <div className="sec">
+            <h3>👁️ الظهور</h3>
+            <div className="tg">
+              <div>
+                <b>يظهر على الموقع</b>
+                <small>لو قفلته المنتج بيختفي من الموقع ويفضل في السيستم</small>
+              </div>
+              <label className="sw">
+                <input type="checkbox" id="eOn" checked={f.on} onChange={(e) => set({ on: e.target.checked })} />
+                <span />
+              </label>
+            </div>
+            <div className="tg">
+              <div>
+                <b>⭐ منتج مميز</b>
+                <small>يظهر في «الأكثر طلباً» في أول الموقع</small>
+              </div>
+              <label className="sw">
+                <input type="checkbox" id="eTop" checked={f.top} onChange={(e) => set({ top: e.target.checked })} />
+                <span />
+              </label>
+            </div>
+          </div>
+        </div>
+        <div className="pv">
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>👀 شكله في الموقع</div>
+          <div className="pvc" id="ePv">
+            <div className="im">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {f.imgs[0] ? <img src={f.imgs[0]} alt="" /> : '🔧'}
+            </div>
+            <div className="bd">
+              <small>{secName ?? 'القسم'}</small>
+              <b>{f.name || 'اسم المنتج'}</b>
+              <small style={{ color: inStock ? '#1e7a3c' : '#b7791f' }}>● {inStock ? 'متوفر' : 'اطلبه — هيوصلك لما يتوفر'}</small>
+              {f.top && <small style={{ display: 'block', color: '#b7791f' }}>⭐ مميز</small>}
+              <div className="ask">💬 اسأل عن السعر</div>
+            </div>
+          </div>
+          <div className="pvd" id="ePvD">
+            {joined || 'الوصف والمواصفات هيظهروا هنا'}
+          </div>
+        </div>
+      </div>
+      <div className="sf">
+        <button type="button" className="primary" id="eSave" disabled={saving || busy > 0} onClick={go}>
+          {saving ? '⏳ بنحفظ…' : `💾 حفظ ${f.wasOn || isNew ? 'ونشر' : 'وانشر على الموقع'}`}
         </button>
-      </div>
-      <div style={sec}>
-        <h3 style={{ margin: '0 0 8px' }}>
-          🎬 فيديو <small style={{ fontWeight: 400, color: 'var(--muted)' }}>اختياري — يوتيوب أو لينك فيديو</small>
-        </h3>
-        <input dir="ltr" style={{ width: '100%' }} value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => setF({ ...f, video: e.target.value })} />
-      </div>
-      <div style={sec}>
-        <h3 style={{ margin: '0 0 8px' }}>👁️ الظهور</h3>
-        <label className="chk" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-          <input type="checkbox" checked={f.on} onChange={(e) => setF({ ...f, on: e.target.checked })} />
-          <span>
-            <b>يظهر على الموقع</b>
-            <small style={{ display: 'block', color: 'var(--muted)' }}>لو قفلته المنتج بيختفي من الموقع ويفضل في السيستم</small>
-          </span>
-        </label>
-        <label className="chk" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="checkbox" checked={f.top} onChange={(e) => setF({ ...f, top: e.target.checked })} />
-          <span>
-            <b>⭐ منتج مميز</b>
-            <small style={{ display: 'block', color: 'var(--muted)' }}>يظهر في «الأكثر طلباً» في أول الموقع</small>
-          </span>
-        </label>
-      </div>
-      <div className="modal-foot">
-        <button type="button" className="primary" disabled={busy} onClick={go}>
-          {busy ? '⏳ بنحفظ…' : f.spid ? '💾 حفظ ونشر' : '💾 حفظ وانشر على الموقع'}
-        </button>
-        <button type="button" className="secondary" onClick={onClose}>
+        <button type="button" className="secondary" id="eCancel" onClick={onClose}>
           إلغاء
         </button>
       </div>
-    </Modal>
+    </>,
   );
 }

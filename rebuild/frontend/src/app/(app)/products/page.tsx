@@ -76,6 +76,11 @@ function ProductsScreen() {
             <button type="button" className="secondary" onClick={() => open({ kind: 'importFile' })}>
               <Icon name="file" /> استيراد من ملف
             </button>
+            {isAdmin && (
+              <button type="button" className="primary" id="spNewBtn" onClick={() => open({ kind: 'siteProduct' })}>
+                ➕ منتج جديد على الموقع
+              </button>
+            )}
             <button type="button" className="primary" onClick={() => open({ kind: 'product' })}>
               <Icon name="plus" /> منتج جديد
             </button>

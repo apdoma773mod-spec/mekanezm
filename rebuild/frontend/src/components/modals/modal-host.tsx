@@ -56,7 +56,7 @@ export type ModalSpec =
   | ContactToolSpec
   | { kind: 'purchImport' }
   | { kind: 'siteAdmin'; tab?: 'works' | 'reviews' | 'delivery' | 'contact' | 'seo' }
-  | { kind: 'siteProduct'; id: string }
+  | { kind: 'siteProduct'; id?: string }
   | { kind: 'portal'; id: string }
   | { kind: 'portalNew' }
   | { kind: 'phoneImport' }
@@ -185,7 +185,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
         content = <PhoneImport onClose={close} />;
         break;
       case 'siteProduct':
-        content = <SiteProduct key={spec.id} id={spec.id} onClose={close} />;
+        content = <SiteProduct key={spec.id ?? 'new'} id={spec.id} onClose={close} />;
         break;
       case 'todayDetail':
         content = <TodayDetail key={spec.k} k={spec.k} />;
