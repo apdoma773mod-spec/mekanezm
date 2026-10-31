@@ -121,3 +121,15 @@ export type PortalData = {
   snap?: { shop?: { name?: string; phone?: string }; at?: string; bal?: { amt: number; txt: string }; inv?: PortalInvoice[]; pays?: { date: string; note?: string; amount: number }[]; rets?: { date: string; n: string; q: number; t: number }[] };
   msgs?: { at: string; body: string; media?: unknown[] }[];
 };
+
+// ── سوق الفضلة (see docs/site/sql/scraps.sql) ──
+export type ScrapDraft = {
+  category: string; material: string; brand: string; code: string; color: string; thick?: number; len: number; wid?: number; qty: number;
+  cond: string; edge: boolean; grain: boolean; price_mode: string; price?: number; area: string; name: string; phone: string; note: string; imgs: string[];
+};
+export const scrapAdd = (d: ScrapDraft) => rpc<{ id: string; secret: string }>('scrap_add', { p: d });
+export const scrapContact = (id: string) => rpc<{ name: string; phone: string; area: string }>('scrap_contact', { p_id: id });
+export const scrapDone = (id: string, secret: string, status: 'sold' | 'removed') => rpc<boolean>('scrap_done', { p_id: id, p_secret: secret, p_status: status });
+export const scrapRenew = (id: string, secret: string) => rpc<boolean>('scrap_renew', { p_id: id, p_secret: secret });
+export const scrapReport = (id: string, reason: string) => rpc<null>('scrap_report', { p_id: id, p_reason: reason });
+export const scrapMine = (pairs: { id: string; secret: string }[]) => rpc<Record<string, unknown>[]>('scrap_mine', { p_pairs: pairs });

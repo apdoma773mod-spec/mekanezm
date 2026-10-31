@@ -159,3 +159,11 @@ The shop does not install. Customers who need someone (old drawer slide fell, ne
 - `/pros` list (skill chips, area box, area matches first), `/pros/[id]` profile (works, areas, JSON-LD Person), `/pros/join` application with the rules in `PROS` (config.ts: 3 years, 3 photos, a reference, reply in 24 h, re-check every 6 months). The application arrives as «🔨 طلب انضمام لقايمة الفنيين — محتاج مراجعة».
 - WhatsApp/call taps are tracked as `contact` events. Guide `/guide/old-slide`. Links: home strip, product page, footer, sitemap.
 - **Confirm with the owner:** the rules numbers, and that the pros' phone numbers may be public. Nothing was submitted in tests.
+
+## v14 — سوق فضلة النجارين (/scraps)
+Open to everyone, no registration: search by size, add an offcut with name + phone, «فضلتي» (listings kept on the phone with a secret).
+- Search (`/scraps`, `/api/scraps`): sheets (type, maker, colour code, thickness, L×W), solid wood (species), aluminium (type, length). Rules in `lib/scraps.ts` (`matchScraps`): thickness must match (±0.6 mm); ✔ same code and big enough, ≈ same code up to 5 cm short, ◐ same board other colour; turning 90° allowed unless the board has a grain direction or the searcher forbids it; least waste first. Test: `npx tsx e2e/scraps.test.ts`.
+- Phone numbers never reach a page: only «اطلبها» reveals them (RPC `scrap_contact`, logged). «بلّغ»: 3 reports hide a listing. Listings expire after 30 days unless renewed from «فضلتي».
+- **Needs the database: `docs/site/sql/scraps.sql` is NOT applied.** Until the owner approves and runs it once in Supabase, the search shows an empty market and publishing says «السوق لسه مش متفعّل». Photos reuse the public `customer-requests` bucket.
+- Maker/type lists (`SHEET_BRANDS`, `SHEET_MATERIALS`…) are a starter list; anything else can be typed. Official colour-code catalogues (Goodwood, Topwood, Sharkawy…) are not loaded yet: they need the makers' catalogues.
+- UI test with the database mocked: `node e2e/scraps-ui.mjs` (all good).
