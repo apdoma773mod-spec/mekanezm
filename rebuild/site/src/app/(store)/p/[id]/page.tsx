@@ -5,6 +5,7 @@ import { Recent } from '@/components/home';
 import { getProduct, getSite } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
 import { brandOf } from '@/lib/brands';
+import { resolveHand } from '@/lib/hand';
 import { worksUsing } from '@/lib/works';
 import { complements, parseSpecs, images, productPath, sectionOf, sectionPath, toItem } from '@/lib/shop';
 
@@ -43,6 +44,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const prev = k > 0 ? toItem(same[k - 1], ok(same[k - 1])) : undefined;
   const next = k >= 0 && k < same.length - 1 ? toItem(same[k + 1], ok(same[k + 1])) : undefined;
   const brand = brandOf(p);
+  const hand = resolveHand(p, site.products);
   const works = worksUsing(site, p).map(w => ({ i: w.i, title: w.title, img: w.imgs[0] }));
   const instRow = parseSpecs(p.desc).rows.find(([k, v]) => /تركيب/.test(k) && /^https?:\/\//.test(v));
   const install = instRow ? { href: instRow[1], ext: true } : /مفصل/.test(p.name) ? { href: '/guide/install-hinge', ext: false } : /مجر|مجرى|مجري/.test(p.name) ? { href: '/guide/install-slides', ext: false } : undefined;
@@ -67,7 +69,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <ProductView p={p} ok={ok(p)} sim={sim} comp={comp} prev={prev} next={next} brand={brand ? { slug: brand.slug, name: brand.name } : undefined} works={works} install={install} />
+      <ProductView p={p} ok={ok(p)} sim={sim} comp={comp} prev={prev} next={next} brand={brand ? { slug: brand.slug, name: brand.name } : undefined} works={works} install={install} hand={hand} />
       <Recent exclude={p.id} />
     </>
   );

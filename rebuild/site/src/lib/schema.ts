@@ -15,6 +15,16 @@ export const productSchema = z.object({
   top: z.boolean().optional(),
   out: z.boolean().optional(),
   video: str.default(''),
+  /** Hidden from the site (set from /admin; the product stays in the data). */
+  hidden: z.boolean().optional(),
+  /** Left/right guidance (see lib/hand.ts). `off` turns the automatic detection off for this product. */
+  dir: z.object({
+    off: z.boolean().optional(),
+    hand: z.enum(['R', 'L']).optional(),
+    kind: z.enum(['corner', 'door', 'other']).optional(),
+    pair: z.string().optional(),
+    note: z.string().optional(),
+  }).optional(),
   // No price on purpose: the owner never shows prices on the site (zod drops the field).
 });
 
@@ -44,6 +54,8 @@ export const siteSchema = z.object({
   slides: z.array(z.string()).optional(),
   trust: z.array(z.string()).optional(),
   works: z.array(z.object({ title: str, desc: str.default(''), imgs: z.array(z.string()).default([]) })).default([]),
+  /** Hand-picked reviews the owner writes in the system / admin (customer reviews come from the web_reviews table). */
+  reviews: z.array(z.object({ id: str.default(''), name: str, area: str.default(''), stars: z.coerce.number().min(1).max(5).catch(5), text: str })).default([]),
   sections: z.array(sectionSchema).default([]),
   products: z.array(productSchema).default([]),
 });

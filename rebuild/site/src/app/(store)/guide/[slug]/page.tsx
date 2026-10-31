@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { HandDiagram } from '@/components/hand-guide';
 import { Footer } from '@/components/site-parts';
 import { getSettings } from '@/lib/catalog';
 import { SITE_URL } from '@/lib/config';
@@ -32,6 +33,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><Link href="/guide">دليل الاختيار</Link><span>›</span><span>{g.emoji}</span></nav>
         <h1 className="page-h">{g.emoji} {g.title}</h1>
         <p className="lead">{g.desc}</p>
+        {g.slug === 'left-or-right' && <div className="hd-both"><HandDiagram hand="R" kind="corner" /><HandDiagram hand="L" kind="corner" /></div>}
         {g.blocks.map(b => (
           <section key={b.h}>
             <h2>{b.h}</h2>

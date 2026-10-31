@@ -20,7 +20,7 @@ export const getSite = cache(async (): Promise<Site> => {
     if (!r.ok) throw new Error(`site_content ${r.status}`);
     const rows = (await r.json()) as { data: unknown }[];
     const s = siteSchema.parse(rows[0]?.data ?? {});
-    s.products = s.products.map(withCover);
+    s.products = s.products.filter(p => !p.hidden).map(withCover);
     return s;
   } catch (e) {
     console.error('getSite failed', e);

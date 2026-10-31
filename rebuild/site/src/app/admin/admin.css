@@ -44,3 +44,41 @@
 .ad-more ul { line-height: 2; padding-inline-start: 20px; }
 .ad-bar { position: fixed; inset: auto 0 0 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px calc(12px + var(--safe-b)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px #0000001a; }
 .ad-bar .pri { min-width: 150px; }
+.ad-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ad-top h2 { margin: 0; font-size: 18px; }
+.ad-s h3 { margin: 14px 0 8px; font-size: 16px; }
+.ad-s h3 small, .adm label small { font-weight: 400; color: var(--mut); }
+.ad-filter { display: grid; grid-template-columns: 1fr 140px; gap: 8px; margin-bottom: 10px; }
+.adm select { font: inherit; padding: 11px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); width: 100%; }
+.ad-list { display: grid; gap: 8px; }
+.ad-li { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); text-align: right; font: inherit; cursor: pointer; }
+.ad-li .th { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--bg); display: grid; place-items: center; font-size: 20px; color: #e5a100; }
+.ad-li .th img { width: 100%; height: 100%; object-fit: cover; }
+.ad-li .tx { display: grid; min-width: 0; }
+.ad-li .tx b { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ad-li .tx small { color: var(--mut); }
+.ad-li .bd i { font-style: normal; margin-inline-start: 4px; }
+.ad-pg { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; font-weight: 800; }
+.ad-pg button { width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 18px; cursor: pointer; }
+.ad-pg button:disabled { opacity: .3; }
+.ad-imgs .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.ad-th { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.ad-th.cover { border: 2px solid var(--accent); }
+.ad-th img { width: 100%; height: 100%; object-fit: cover; }
+.ad-th em { position: absolute; top: 4px; right: 4px; font-style: normal; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: var(--accent); color: #fff; }
+.ad-th > div { position: absolute; inset: auto 0 0 0; display: flex; background: #000a; }
+.ad-th > div button { flex: 1; border: 0; background: none; color: #fff; padding: 5px 0; font-size: 14px; cursor: pointer; }
+.ad-th > div button:disabled { opacity: .3; }
+.ad-add { aspect-ratio: 1; border-radius: 12px; border: 2px dashed var(--line); background: var(--bg); font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
+.ad-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ad-chips button { padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.ad-seg { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.ad-seg button { flex: 1; padding: 10px 8px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; }
+.ad-seg button.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 8%, #fff); }
+.adm label.ad-ck { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+.adm label.ad-ck input { width: 20px; height: 20px; accent-color: var(--accent); }
+.ad-row3 { display: grid; grid-template-columns: 1.3fr 1fr 1fr auto; gap: 6px; margin-bottom: 8px; }
+.ad-sv { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.ad-sn { display: grid; gap: 4px; }
+.ad-sec { grid-template-columns: 96px 1fr auto; }
+.ad-bar > .lnk { margin-inline-start: auto; }

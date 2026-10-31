@@ -6,7 +6,8 @@
 import { SB_KEY, SB_URL } from './config';
 
 export type Session = { at: string; rt: string };
-export type SiteDoc = { data: Record<string, any>; version: number }; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type Rec = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+export type SiteDoc = { data: Rec; version: number };
 
 let SES: Session | null = null;
 export const signedIn = () => !!SES;
@@ -47,14 +48,14 @@ export async function loadDoc(): Promise<SiteDoc> {
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 
 /** Read the newest version, apply `edit` to a copy, save it only if nobody saved in between (else read again and retry). */
-export async function saveDoc(edit: (d: Record<string, any>) => void): Promise<SiteDoc> { // eslint-disable-line @typescript-eslint/no-explicit-any
+export async function saveDoc(edit: (d: Rec) => void, allow: ('products' | 'works' | 'reviews')[] = []): Promise<SiteDoc> {
   for (let t = 0; t < 4; t++) {
     const cur = await loadDoc();
     const d = clone(cur.data);
     edit(d);
-    // Safety net: this screen never adds or removes products / works / reviews, so refuse a save that would.
-    for (const k of ['products', 'works', 'reviews']) {
-      if ((cur.data[k]?.length ?? 0) !== (d[k]?.length ?? 0)) throw new Error('الحفظ اتلغى: كان هيغيّر في ' + k);
+    // Safety net: only the screen that owns products / works / reviews may add or remove them (`allow`), any other save must keep the counts.
+    for (const k of ['products', 'works', 'reviews'] as const) {
+      if (!allow.includes(k) && (cur.data[k]?.length ?? 0) !== (d[k]?.length ?? 0)) throw new Error('الحفظ اتلغى: كان هيغيّر في ' + k);
     }
     const r = await sb(`/rest/v1/site_content?id=eq.main&version=eq.${cur.version}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },

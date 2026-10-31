@@ -151,9 +151,11 @@ export function Recent({ exclude }: { exclude?: string }) {
 
 /* ---------- reviews ---------- */
 export function Reviews() {
-  const { open } = useShop();
-  const [L, setL] = useState<Review[] | null>(null);
+  const { site, open } = useShop();
+  const [mine, setL] = useState<Review[] | null>(null);
   useEffect(() => { listReviews().then(setL); }, []);
+  // hand-picked reviews first, then the ones customers sent from the site
+  const L = mine && [...site.reviews.filter(r => r.text).map(r => ({ name: r.name + (r.area ? ' — ' + r.area : ''), rating: r.stars, body: r.text })), ...mine];
   const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
   return (
     <section className="mkp" id="mkRev" aria-labelledby="rev-h">

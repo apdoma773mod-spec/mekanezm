@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
 import { images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
+import { HAND_LABEL, type HandInfo } from '@/lib/hand';
 import { DeliveryEta } from './delivery-eta';
+import { HandGuide } from './hand-guide';
 import { CompareBtn, ProductReviews } from './extras';
 import { lqip, Placeholder } from './product-card';
 import { useShop } from './shop-provider';
@@ -17,7 +19,8 @@ function Acc({ title, open, children }: { title: string; open?: boolean; childre
   return <details className="acc" open={open}><summary>{title}</summary><div className="acc-b">{children}</div></details>;
 }
 
-export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = [], install }: {
+export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = [], install, hand }: {
+  hand?: HandInfo | null;
   p: Product; ok: boolean; sim: Item[]; comp?: Item[]; prev?: Item; next?: Item;
   brand?: { slug: string; name: string }; works?: { i: number; title: string; img: string }[]; install?: { href: string; ext: boolean };
 }) {
@@ -103,6 +106,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
           <div className="pvmeta">
             <span className={'pvav ' + (ok ? 'ok' : 'no')}>{ok ? 'متوفر — جاهز للاستلام' : 'مش متوفر دلوقتي — بالحجز'}</span>
             {p.code && <span className="pvcode">كود <b>{p.code}</b></span>}
+            {hand && <a className="pvdir" href="#hand">↔️ {HAND_LABEL[hand.hand]}</a>}
             {brand && <Link className="brandl" href={`/brand/${brand.slug}`}>🏷️ {brand.name}</Link>}
           </div>
           <div className="pvbuy">
@@ -116,6 +120,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
             <li><i>🚚</i>توصيل القاهرة والجيزة</li>
             <li><i>📍</i>أرض اللواء – الجيزة</li>
           </ul>
+          {hand && <HandGuide info={hand} name={p.name} />}
           {p.desc && (
             <Acc title="📋 المواصفات والتفاصيل" open>
               {specs.text && <div className="pvdesc" style={specs.rows.length ? { marginBottom: 8 } : undefined}>{specs.text}</div>}
