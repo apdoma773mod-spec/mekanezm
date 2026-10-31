@@ -20,13 +20,27 @@ export function Socials({ site }: { site: Settings }) {
   );
 }
 
+/** Promo strip. Arabic reads right-to-left, so the strip flows left-to-right: the beginning of the sentence enters first.
+ *  Two identical halves (enough copies to fill the screen) make the loop seamless; speed is ~60 px per second. */
+function Ticker({ text }: { text: string }) {
+  const unit = text.length * 9 + 56;
+  const copies = Math.max(1, Math.min(8, Math.ceil(700 / unit)));
+  const half = Array.from({ length: copies }, (_, i) => <span key={i}>{text}</span>);
+  return (
+    <div className="ticker" role="marquee" aria-label={text} style={{ ['--mqd' as string]: `${Math.max(12, Math.round((copies * unit) / 60))}s` }}>
+      <div className="tk-track" aria-hidden="true"><div>{half}</div><div>{half}</div></div>
+      <p className="tk-static">{text}</p>
+    </div>
+  );
+}
+
 export function Header({ site, slides }: { site: Settings; slides: Slide[] }) {
   const pr = site.promo.trim();
   return (
     <header id="top">
       {site.logo && <Image className="logo-banner" src={site.logo} alt={site.name} width={1200} height={480} priority sizes="100vw" />}
       <Slider slides={slides} />
-      {pr && <div className="ticker" aria-label={pr}><span aria-hidden="true">{pr} &nbsp;•&nbsp; {pr} &nbsp;•&nbsp; {pr}</span></div>}
+      {pr && <Ticker text={pr} />}
     </header>
   );
 }

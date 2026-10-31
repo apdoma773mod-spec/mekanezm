@@ -65,11 +65,14 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
 export function ProductRow({ title, href, items, total, id, priority }: { title: string; href: string; items: { p: Product; ok: boolean; fresh?: boolean }[]; total: number; id?: string; priority?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [edge, setEdge] = useState({ start: true, end: items.length < 3 });
+  const [idx, setIdx] = useState(0);
   const check = () => {
     const c = ref.current;
     if (!c) return;
     const x = Math.abs(c.scrollLeft); // RTL: scrollLeft runs negative
     setEdge({ start: x < 8, end: x + c.clientWidth >= c.scrollWidth - 8 });
+    const w = (c.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
+    if (w) setIdx(Math.min(items.length - 1, Math.round(x / (w + 12))));
   };
   const move = (dir: 1 | -1) => { const c = ref.current; if (c) c.scrollBy({ left: -dir * c.clientWidth * 0.85, behavior: 'smooth' }); };
   return (
@@ -83,6 +86,7 @@ export function ProductRow({ title, href, items, total, id, priority }: { title:
           {items.map(({ p, ok, fresh }, k) => <ProductCard key={p.id} p={p} ok={ok} fresh={fresh} priority={priority && k < 2} />)}
           {total > items.length && <Link className="more-card" href={href}><b>+{total - items.length}</b>شوف باقي القسم ←</Link>}
         </div>
+        {items.length > 1 && items.length <= 14 && <div className="prow-dots" aria-hidden="true">{items.map((_, k) => <i key={k} className={k === idx ? 'on' : ''} />)}</div>}
         {!edge.start && <button className="rarr r" onClick={() => move(-1)} aria-label="السابق">›</button>}
         {!edge.end && <button className="rarr l" onClick={() => move(1)} aria-label="التالي">‹</button>}
       </div>

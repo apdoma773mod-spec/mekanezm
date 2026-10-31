@@ -42,5 +42,5 @@ export function CompareBtn({ id }: { id: string }) {
     if (a.length < 2) return say('✔ اتضاف للمقارنة — افتح منتج تاني ودوس «قارن»');
     say(`✔ في المقارنة ${a.length === 2 ? 'منتجين' : '٣ منتجات'}`, () => router.push('/compare?i=' + a.map(encodeURIComponent).join(',')), 'قارن دلوقتي');
   };
-  return <button type="button" className={'cmpb' + (inList ? ' on' : '')} onClick={go} aria-pressed={inList}>⚖️ {inList ? 'في المقارنة' : 'قارن مع منتج تاني'}</button>;
+  return <button type="button" className={'cmpb' + (inList ? ' on' : '')} onClick={go} aria-pressed={inList}><i>⚖️</i>{inList ? 'في المقارنة' : 'قارن'}</button>;
 }

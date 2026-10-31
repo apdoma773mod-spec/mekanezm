@@ -12,6 +12,11 @@ import { CompareBtn, ProductReviews } from './extras';
 import { lqip, Placeholder } from './product-card';
 import { useShop } from './shop-provider';
 
+/** Collapsible section (native <details>, works without JS). */
+function Acc({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
+  return <details className="acc" open={open}><summary>{title}</summary><div className="acc-b">{children}</div></details>;
+}
+
 export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = [], install }: {
   p: Product; ok: boolean; sim: Item[]; comp?: Item[]; prev?: Item; next?: Item;
   brand?: { slug: string; name: string }; works?: { i: number; title: string; img: string }[]; install?: { href: string; ext: boolean };
@@ -89,51 +94,56 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
           </>}
         </div>
         <div className="pvi">
-          <h1>{p.name}</h1>
           <nav className="bc" aria-label="مكانك في الموقع">
             <Link href="/">الرئيسية</Link><span>›</span>
             {sec && <><Link href={sectionPath(sec.id)}>{sec.name}</Link><span>›</span></>}
             <span>{p.name.slice(0, 40)}</span>
           </nav>
+          <h1>{p.name}</h1>
           <div className="pvmeta">
-            <span className={'pvav ' + (ok ? 'ok' : 'no')}>● {ok ? 'متوفر' : 'غير متوفر حاليًا'}</span>
-            {p.code && <span>كود: {p.code}</span>}
-            {sec && <span>{sec.name}</span>}
+            <span className={'pvav ' + (ok ? 'ok' : 'no')}>{ok ? 'متوفر — جاهز للاستلام' : 'مش متوفر دلوقتي — بالحجز'}</span>
+            {p.code && <span className="pvcode">كود <b>{p.code}</b></span>}
             {brand && <Link className="brandl" href={`/brand/${brand.slug}`}>🏷️ {brand.name}</Link>}
           </div>
-          <div className="mktr"><span>💬 رد سريع على الواتساب</span><span>🚚 توصيل القاهرة والجيزة</span><span>📍 أرض اللواء – الجيزة</span></div>
-          <div className="pvbox pvprice">
-            <div><small>السعر</small><b>اسأل عن السعر</b></div>
-            <button type="button" className="pvpbtn" onClick={() => open({ kind: 'price', lines: [{ item, q }] })}>💰 ابعتلي السعر</button>
+          <div className="pvbuy">
+            <div className="pvbuy-p"><small>السعر</small><b>بيتحدد حسب الكمية</b></div>
+            <button type="button" className="pvpbtn" onClick={() => open({ kind: 'price', lines: [{ item, q }] })}>💬 ابعتلي السعر</button>
+            <a className="pvask" target="_blank" rel="noopener" href={waUrl(site, orderText(p))}>📲 اطلب على الواتساب</a>
+            {!ok && <button className="nm" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
           </div>
-          <DeliveryEta ok={ok} />
-          <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>🚚 محتاجه شحن أو توصيل؟ اعرف التفاصيل</button>
+          <ul className="pvtrust">
+            <li><i>💬</i>رد سريع على الواتساب</li>
+            <li><i>🚚</i>توصيل القاهرة والجيزة</li>
+            <li><i>📍</i>أرض اللواء – الجيزة</li>
+          </ul>
+          {p.desc && (
+            <Acc title="📋 المواصفات والتفاصيل" open>
+              {specs.text && <div className="pvdesc" style={specs.rows.length ? { marginBottom: 8 } : undefined}>{specs.text}</div>}
+              {specs.rows.length > 0 && <table className="pvspec"><tbody>{specs.rows.map(([k, v], j) => <tr key={j}><td>{k}</td><td>{v}</td></tr>)}</tbody></table>}
+            </Acc>
+          )}
+          <Acc title="🚚 يوصلك إمتى؟ والشحن">
+            <DeliveryEta ok={ok} />
+            <button type="button" className="shipbtn" onClick={() => open({ kind: 'ship' })}>اعرف تفاصيل الشحن والتوصيل</button>
+          </Acc>
           {vid && (
-            <div className="pvbox pvvid">
-              <h2>🎬 فيديو</h2>
+            <Acc title="🎬 فيديو المنتج">
               {vid.kind === 'youtube' ? <iframe src={`https://www.youtube-nocookie.com/embed/${vid.id}`} loading="lazy" title={p.name} allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
                 : vid.kind === 'file' ? <video src={vid.url} controls preload="metadata" playsInline />
                   : <a className="pvask" target="_blank" rel="noopener" href={vid.url}>▶️ شوف الفيديو</a>}
-            </div>
+            </Acc>
           )}
-          {p.desc && (
-            <div className="pvbox">
-              <h2>المواصفات</h2>
-              {specs.text && <div className="pvdesc" style={specs.rows.length ? { marginBottom: 8 } : undefined}>{specs.text}</div>}
-              {specs.rows.length > 0 && <table className="pvspec"><tbody>{specs.rows.map(([k, v], j) => <tr key={j}><td>{k}</td><td>{v}</td></tr>)}</tbody></table>}
-            </div>
-          )}
-          {!ok && <button className="nm" style={{ margin: '8px 0', width: '100%' }} onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
-          <a className="pvask" target="_blank" rel="noopener" href={waUrl(site, orderText(p))}>📲 اطلب على الواتساب</a>
-          <div className="mkcall">
-            {phone && <a href={'tel:' + String(phone).replace(/\s/g, '')}>📞 اتصل بنا</a>}
-            <a href="#" onClick={e => { e.preventDefault(); print(); }}>🖨️ اطبع الورقة</a>
-          </div>
-          <a className="friend" target="_blank" rel="noopener" href={'https://wa.me/?text=' + encodeURIComponent(`شوف ده من ميكانيزم: ${p.name}
-${productUrl(p.id)}`)}>📤 ابعته لصاحبك أو للنجار على الواتساب</a>
           {install && <a className="instl" href={install.href} {...(install.ext ? { target: '_blank', rel: 'noopener' } : {})}>🔧 إزاي يتركّب؟ {install.ext ? 'دليل التركيب' : 'خطوات التركيب'}</a>}
-          <CompareBtn id={p.id} />
-          <ProductReviews id={p.id} name={p.name} />
+          <Acc title="⭐ آراء اللي اشتروه">
+            <ProductReviews id={p.id} name={p.name} />
+          </Acc>
+          <div className="pvtools" role="group" aria-label="أدوات">
+            <button type="button" onClick={share}><i>⤴️</i>مشاركة</button>
+            <a target="_blank" rel="noopener" href={'https://wa.me/?text=' + encodeURIComponent(`شوف ده من ميكانيزم: ${p.name}\n${productUrl(p.id)}`)}><i>📤</i>للصاحب</a>
+            <CompareBtn id={p.id} />
+            {phone && <a href={'tel:' + String(phone).replace(/\s/g, '')}><i>📞</i>اتصل</a>}
+            <button type="button" onClick={() => print()}><i>🖨️</i>اطبع</button>
+          </div>
           {sim.length > 0 && (
             <div className="pvbox">
               <h2>منتجات مشابهة</h2>

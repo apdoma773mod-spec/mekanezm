@@ -33,8 +33,9 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
   return (
     <div className="card">
       <div className="imw lq" style={lqip(img)}>
-        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:760px) 40vw, 200px" priority={priority} /> : <Placeholder section={sec?.name} />}
+        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
         <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
+        <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
       </div>
       <div className="cb">
         <div className="cmeta">
@@ -44,10 +45,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
           {fresh && <span className="newc">جديد</span>}
         </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
-        <div className="cst">
-          <span className={'av' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
-          {!ok && <button type="button" className="bellt" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني</button>}
-        </div>
+        {!ok && <button type="button" className="bellt" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
         <div className="cf">
           {n > 0 ? (
             <div className="cstep" role="group" aria-label="الكمية في طلبك">
@@ -56,8 +54,8 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
               <button onClick={() => setQty(p.id, n - 1)} aria-label="نقص">−</button>
             </div>
           ) : <>
-            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>اسأل عن السعر</button>
-            <button className={'add' + (ok ? '' : ' bo')} onClick={addIt}>{ok ? 'أضف للطلب' : 'اطلبه بالحجز'}</button>
+            <button className={'add' + (ok ? '' : ' bo')} onClick={addIt}>{ok ? '🛒 أضف للطلب' : '📦 اطلبه بالحجز'}</button>
+            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>💬 اسأل عن السعر</button>
           </>}
         </div>
       </div>
