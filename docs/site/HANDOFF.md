@@ -152,3 +152,10 @@ Slow-4G + 4× CPU, home: old LCP 7.9 s / load 9.3 s / ~1.1 MB → new LCP 4.1 s 
 Took over from the previous session: nothing was missing vs the old site. Rebuilt (`next build` passes, typecheck clean, `npm run test:e2e` all good), server on 3300.
 InstaPay / wallet numbers are in `config.ts` (`PAY`), overridable with `NEXT_PUBLIC_INSTAPAY` / `NEXT_PUBLIC_WALLET`.
 Hosting: both options (Vercel / the shop's own server with Docker) are in `docs/site/DEPLOY.md` §1; decision still the owner's.
+
+## v13 — فنيين نرشّحهم (/help, /pros, /pros/join)
+The shop does not install. Customers who need someone (old drawer slide fell, new kitchen, dressing room, shoe cabinet, home repair) say so at `/help` → `place_request` «🙋 محتاج فني / تركيب» (photos up to 3), then see reviewed craftsmen for that need and area.
+- Data: `site_content.pros` (zod `proSchema`; no DB schema change). Added only from `/admin → 🧰 الفنيين` after the owner reviews an application. Hidden pros and ones without a phone are not shown.
+- `/pros` list (skill chips, area box, area matches first), `/pros/[id]` profile (works, areas, JSON-LD Person), `/pros/join` application with the rules in `PROS` (config.ts: 3 years, 3 photos, a reference, reply in 24 h, re-check every 6 months). The application arrives as «🔨 طلب انضمام لقايمة الفنيين — محتاج مراجعة».
+- WhatsApp/call taps are tracked as `contact` events. Guide `/guide/old-slide`. Links: home strip, product page, footer, sitemap.
+- **Confirm with the owner:** the rules numbers, and that the pros' phone numbers may be public. Nothing was submitted in tests.

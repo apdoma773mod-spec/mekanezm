@@ -86,6 +86,7 @@ export default async function Home() {
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
+        <Link className="trade-strip help-strip" href="/help"><span>🙋</span><b>محتاج حد يركّب أو يصلّح؟</b><small>مجرة وقعت؟ مطبخ؟ دريسنج؟ احكيلنا ونرشّحلك نجار أو مهندس</small></Link>
         <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">

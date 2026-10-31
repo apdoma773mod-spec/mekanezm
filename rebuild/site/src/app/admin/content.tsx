@@ -3,6 +3,8 @@
 // Same fields and shapes as the system's «🌐 محتوى الموقع» (both write the same site_content document).
 import { useState } from 'react';
 import { saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
+import { PROS } from '@/lib/config';
+import { KINDS, SKILLS } from '@/lib/pros';
 import { Imgs, uid7 } from './ui';
 
 type Work = { id: string; title: string; desc?: string; imgs: string[] };
@@ -10,7 +12,7 @@ type Rev = { id: string; name: string; area?: string; stars: number; text: strin
 
 function ListEditor<T extends { id: string }>({ title, items, row, blank, form, field, allow, doc, onDoc, check }: {
   title: string; items: T[]; row: (x: T) => React.ReactNode; blank: () => T; form: (x: T, set: (v: Partial<T>) => void) => React.ReactNode;
-  field: 'works' | 'reviews'; allow: 'works' | 'reviews'; doc: SiteDoc; onDoc: (d: SiteDoc) => void; check: (x: T) => string;
+  field: 'works' | 'reviews' | 'pros'; allow: 'works' | 'reviews' | 'pros'; doc: SiteDoc; onDoc: (d: SiteDoc) => void; check: (x: T) => string;
 }) {
   const [cur, setCur] = useState<T | null>(null), [isNew, setIsNew] = useState(false);
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
@@ -147,5 +149,36 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
         })}>💾 حفظ التواصل</button><span className={msg.contact?.startsWith('✗') ? 'err' : 'mut'}>{msg.contact}</span></div>
       </section>
     </>
+  );
+}
+
+type ProRec = { id: string; name: string; kind: string; skills: string[]; areas: string[]; phone: string; years: number; bio: string; photo: string; imgs: string[]; link: string; checked: string; hidden?: boolean };
+
+/** The craftsmen the shop recommends. A person is added here only after the shop reviewed the application (the request arrives in the system as «🔨 طلب انضمام»). */
+export function ProsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => void }) {
+  const month = new Date().toISOString().slice(0, 7);
+  return (
+    <ListEditor<ProRec> title="🧰 الفنيين المرشّحين" items={doc.data.pros ?? []} field="pros" allow="pros" doc={doc} onDoc={onDoc}
+      blank={() => ({ id: uid7(), name: '', kind: 'carpenter', skills: [], areas: [], phone: '', years: 0, bio: '', photo: '', imgs: [], link: '', checked: month })}
+      check={p => (p.name.trim().length < 2 ? 'اكتب الاسم' : p.phone.replace(/D/g, '').length < 10 ? 'اكتب رقم الواتساب' : !p.skills.length ? 'اختار تخصص' : p.imgs.length < PROS.minPhotos ? `ضيف ${PROS.minPhotos} صور من شغله على الأقل` : p.years < PROS.minYears ? `الخبرة أقل من ${PROS.minYears} سنين` : '')}
+      row={p => <><span className="th">{p.photo || p.imgs?.[0] ? <img src={p.photo || p.imgs[0]} alt="" /> : '🧰'}</span><span className="tx"><b>{p.name}{p.hidden ? ' (مخفي)' : ''}</b><small>{p.years} سنة · {p.imgs?.length ?? 0} صور · اتراجع {p.checked || '—'}</small></span></>}
+      form={(p, set) => <>
+        <p className="mut">أضفه بعد ما تراجع الطلب وتكلم المرجع. الشروط: خبرة {PROS.minYears} سنين و{PROS.minPhotos} صور على الأقل. الراجع الجاي بعد {PROS.recheckMonths} شهور.</p>
+        <label>الاسم<input value={p.name} onChange={e => set({ name: e.target.value })} /></label>
+        <label>النوع<select value={p.kind} onChange={e => set({ kind: e.target.value })}>{Object.entries(KINDS).map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select></label>
+        <label>رقم الواتساب<input value={p.phone} type="tel" inputMode="tel" onChange={e => set({ phone: e.target.value })} /></label>
+        <label>سنين الخبرة<input value={p.years || ''} inputMode="numeric" onChange={e => set({ years: Number(e.target.value.replace(/D/g, '')) || 0 })} /></label>
+        <b>التخصصات</b>
+        <div className="proofs">{SKILLS.map(([k, n]) => <label key={k} className={p.skills.includes(k) ? 'on' : ''}><input type="checkbox" checked={p.skills.includes(k)} onChange={() => set({ skills: p.skills.includes(k) ? p.skills.filter(x => x !== k) : [...p.skills, k] })} />{n}</label>)}</div>
+        <label>المناطق <small>(افصل بفاصلة)</small><input value={p.areas.join('، ')} onChange={e => set({ areas: e.target.value.split(/[,،]/).map(x => x.trim()).filter(Boolean) })} /></label>
+        <label>نبذة<textarea rows={3} value={p.bio} onChange={e => set({ bio: e.target.value })} /></label>
+        <label>رابط أعماله <small>(اختياري)</small><input value={p.link} onChange={e => set({ link: e.target.value })} placeholder="https://" /></label>
+        <label>آخر مراجعة <small>(شهر-سنة، مثلاً {month})</small><input value={p.checked} onChange={e => set({ checked: e.target.value })} /></label>
+        <label><input type="checkbox" checked={!!p.hidden} onChange={e => set({ hidden: e.target.checked })} /> إخفاء من الموقع</label>
+        <b>صورته <small>(اختياري)</small></b>
+        <Imgs value={p.photo ? [p.photo] : []} onChange={v => set({ photo: v[0] ?? '' })} />
+        <b>صور شغله</b>
+        <Imgs value={p.imgs} onChange={imgs => set({ imgs })} />
+      </>} />
   );
 }

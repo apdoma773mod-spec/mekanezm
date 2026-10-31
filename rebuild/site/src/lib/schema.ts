@@ -30,6 +30,28 @@ export const productSchema = z.object({
   // No price on purpose: the owner never shows prices on the site (zod drops the field).
 });
 
+/** A craftsman / engineer the shop recommends (added by the owner after reviewing an application, from /admin). */
+export const proSchema = z.object({
+  id: z.string(),
+  name: str,
+  kind: str.default('carpenter'),
+  /** Skill ids from lib/pros.ts → SKILLS. */
+  skills: z.array(z.string()).default([]),
+  /** Areas he works in (free text, one per item). */
+  areas: z.array(z.string()).default([]),
+  phone: str.default(''),
+  years: z.coerce.number().catch(0).default(0),
+  bio: str.default(''),
+  photo: str.default(''),
+  /** Photos of his own work. */
+  imgs: z.array(z.string()).default([]),
+  /** Link to his Facebook / Instagram page or work videos (optional). */
+  link: str.default(''),
+  /** Month the shop last checked him («2026-10»). */
+  checked: str.default(''),
+  hidden: z.boolean().optional(),
+});
+
 export const sectionSchema = z.object({ id: z.string(), name: str, img: str.default('') });
 
 const shipOptSchema = z.object({ note: str.default(''), fee: str.default(''), days: str.default('') }).partial();
@@ -58,11 +80,13 @@ export const siteSchema = z.object({
   works: z.array(z.object({ title: str, desc: str.default(''), imgs: z.array(z.string()).default([]) })).default([]),
   /** Hand-picked reviews the owner writes in the system / admin (customer reviews come from the web_reviews table). */
   reviews: z.array(z.object({ id: str.default(''), name: str, area: str.default(''), stars: z.coerce.number().min(1).max(5).catch(5), text: str })).default([]),
+  pros: z.array(proSchema).default([]),
   sections: z.array(sectionSchema).default([]),
   products: z.array(productSchema).default([]),
 });
 
 export type Product = z.infer<typeof productSchema>;
+export type Pro = z.infer<typeof proSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type Site = z.infer<typeof siteSchema>;
 /** code → in stock? (from the system's live stock) */

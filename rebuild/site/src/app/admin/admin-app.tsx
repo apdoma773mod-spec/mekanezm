@@ -3,7 +3,7 @@
 // (colors, promo strip, banners, logo, texts, social links). Everything is saved to the same document the system uses.
 import { useEffect, useMemo, useState } from 'react';
 import { loadDoc, login, logout, publishNow, saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
-import { ReviewsTab, ShipTab, WorksTab } from './content';
+import { ProsTab, ReviewsTab, ShipTab, WorksTab } from './content';
 import { ProductsTab } from './products';
 import { Img, move, uid7 } from './ui';
 
@@ -61,7 +61,7 @@ function Color({ k, v, set }: { k: keyof Form['theme']; v: string; set: (s: stri
   );
 }
 
-type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'ship' | 'more';
+type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'more';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
 export function AdminApp() {
@@ -135,7 +135,7 @@ export function AdminApp() {
     );
   }
 
-  const TABS: [Tab, string][] = [['products', '📦 المنتجات'], ['sections', '🗂️ الأقسام'], ['works', '🏗️ أعمالنا'], ['look', '🎨 الألوان والشريط'], ['banner', '🖼️ البنرات'], ['text', '📝 النصوص'], ['reviews', '⭐ الآراء'], ['ship', '🚚 التوصيل والتواصل'], ['more', '⚙️ أدوات']];
+  const TABS: [Tab, string][] = [['products', '📦 المنتجات'], ['sections', '🗂️ الأقسام'], ['works', '🏗️ أعمالنا'], ['look', '🎨 الألوان والشريط'], ['banner', '🖼️ البنرات'], ['text', '📝 النصوص'], ['reviews', '⭐ الآراء'], ['pros', '🧰 الفنيين'], ['ship', '🚚 التوصيل والتواصل'], ['more', '⚙️ أدوات']];
   const count = (id: string) => (doc.data.products ?? []).filter((p: Rec) => p.sec === id).length;
   return (
     <div className="ad">
@@ -147,6 +147,7 @@ export function AdminApp() {
 
       {tab === 'products' && <ProductsTab doc={doc} onDoc={onDoc} />}
       {tab === 'works' && <WorksTab doc={doc} onDoc={onDoc} />}
+      {tab === 'pros' && <ProsTab doc={doc} onDoc={onDoc} />}
       {tab === 'reviews' && <ReviewsTab doc={doc} onDoc={onDoc} />}
       {tab === 'ship' && <ShipTab key={doc.version} doc={doc} onDoc={onDoc} />}
 

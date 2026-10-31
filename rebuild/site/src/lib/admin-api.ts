@@ -48,13 +48,13 @@ export async function loadDoc(): Promise<SiteDoc> {
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 
 /** Read the newest version, apply `edit` to a copy, save it only if nobody saved in between (else read again and retry). */
-export async function saveDoc(edit: (d: Rec) => void, allow: ('products' | 'works' | 'reviews')[] = []): Promise<SiteDoc> {
+export async function saveDoc(edit: (d: Rec) => void, allow: ('products' | 'works' | 'reviews' | 'pros')[] = []): Promise<SiteDoc> {
   for (let t = 0; t < 4; t++) {
     const cur = await loadDoc();
     const d = clone(cur.data);
     edit(d);
     // Safety net: only the screen that owns products / works / reviews may add or remove them (`allow`), any other save must keep the counts.
-    for (const k of ['products', 'works', 'reviews'] as const) {
+    for (const k of ['products', 'works', 'reviews', 'pros'] as const) {
       if (!allow.includes(k) && (cur.data[k]?.length ?? 0) !== (d[k]?.length ?? 0)) throw new Error('الحفظ اتلغى: كان هيغيّر في ' + k);
     }
     const r = await sb(`/rest/v1/site_content?id=eq.main&version=eq.${cur.version}`, {

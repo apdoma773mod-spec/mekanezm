@@ -786,3 +786,28 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 }
 .hm-media { display: block; width: 100%; max-width: 440px; margin: 0 auto 10px; border-radius: 22px; box-shadow: 0 12px 30px #00000020; }
 .ad-prevbox { margin: 10px 0; }
+
+/* فنيين نرشّحهم */
+.help-strip { background: color-mix(in srgb, var(--accent) 88%, #000); }
+.pros { display: grid; gap: 12px; }
+@media (min-width: 760px) { .pros { grid-template-columns: 1fr 1fr; } }
+.pro { background: var(--card); border-radius: 18px; padding: 14px; box-shadow: var(--sh); display: grid; gap: 10px; }
+.pro-h { display: flex; gap: 12px; align-items: center; text-decoration: none; color: inherit; }
+.pro-ph { position: relative; flex: none; width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: #f0e8d8; display: grid; place-items: center; font-size: 28px; }
+.pro-ph.big { width: 96px; height: 96px; }
+.pro-t { display: grid; gap: 2px; }
+.pro-t small { color: var(--mut); }
+.pro-sk { display: flex; flex-wrap: wrap; gap: 6px; }
+.pro-sk span { background: #fff8e6; border: 1px solid #f0d28a; border-radius: 99px; padding: 4px 10px; font-size: 13px; font-weight: 700; }
+.pro-ws { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pro-ws span { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: #eee; }
+.pro-act { display: flex; gap: 8px; }
+.pro-act a { flex: 1; text-align: center; padding: 12px; border-radius: 14px; font-weight: 800; text-decoration: none; border: 1.5px solid var(--accent); }
+.pro-act .pri { background: var(--accent); color: #fff; }
+.pro-act .sec { color: var(--accent); background: var(--card); max-width: 38%; }
+.pro-top { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.pro-ok { display: inline-block; margin-top: 4px; color: #0a7a3d; font-weight: 700; font-size: 13px; }
+.pro-note { background: #fff8e6; border: 1px solid #f0d28a; border-radius: 14px; padding: 10px 12px; margin: 0 0 12px; line-height: 1.8; font-size: 14px; }
+.pro-area { display: flex; gap: 8px; margin-bottom: 12px; }
+.pro-area input { flex: 1; min-width: 0; padding: 12px; border: 1.5px solid var(--line); border-radius: 14px; font: inherit; background: var(--card); color: var(--fg); }
+.pro-area button { padding: 0 16px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; font-size: 18px; }
