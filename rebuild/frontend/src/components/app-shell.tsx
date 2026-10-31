@@ -59,6 +59,7 @@ const MAIN: NavItem[] = [
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
+  { href: '/camera', label: 'الكاميرات', icon: '📷', adminOnly: true },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
   { href: '/terms', label: 'أسعار وحدود العملاء', icon: '🏷️', adminOnly: true, pro: 'custTerms' },
   { href: '/samples', label: 'العينات', icon: '🧪' },
