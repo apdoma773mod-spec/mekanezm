@@ -222,6 +222,17 @@ ${sh.note ? `<div class="nt">📝 ${esc(sh.note)}</div>` : ''}
 .nt{font-size:16pt;font-weight:700;border:2px dashed #000;border-radius:4mm;padding:3mm 5mm}
 .ft{display:flex;align-items:center;justify-content:space-between;gap:5mm;border-top:2px solid #000;padding-top:3mm}.gr{display:flex;flex-wrap:wrap;gap:2mm 6mm;font-size:12pt;font-weight:600}.gr b{font-weight:800}.bc{width:60mm;height:18mm;flex:none}.bc svg{width:100%;height:100%}</style></head><body>${pages}</body></html>`;
 }
+/** 🏷️ طباعة ليبل (old mkInvLabel): 50×30 mm sticker per carton with the invoice number as a barcode, scanning it opens the invoice. */
+export function invoiceLabelHtml(inv: InvoiceDto, s: SettingsMap, n = 1): string {
+  const items = inv.items.filter((x) => x.qty > 0);
+  const pcs = items.reduce((t, x) => t + x.qty, 0);
+  const shop = s.store.name || 'ميكانيزم';
+  const lab = (i: number) =>
+    `<div class="lb"><div class="top"><b>${esc(shop)}</b><span>${esc(inv.date)}</span></div><div class="who">${esc(inv.person || 'عميل نقدي')}${inv.phone ? ` · <span dir="ltr">${esc(inv.phone)}</span>` : ''}</div><div class="bc">${code128Svg(inv.no, 38)}<div class="nm">${esc(inv.no)}</div></div><div class="bot"><span>${items.length} صنف · ${pcs} قطعة</span>${n > 1 ? `<b>كرتونة ${i + 1} من ${n}</b>` : `<b>${esc(money(inv.total))}</b>`}</div></div>`;
+  let pages = '';
+  for (let i = 0; i < n; i++) pages += lab(i);
+  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>ليبل ${esc(inv.no)}</title>${FONT_LINKS}<style>@page{size:50mm 30mm;margin:0}body{margin:0}*{box-sizing:border-box;font-family:Cairo,Tahoma,sans-serif;color:#000}.lb{width:50mm;height:30mm;padding:1.2mm 1.6mm;page-break-after:always;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}.top,.bot{display:flex;justify-content:space-between;align-items:center;font-size:7pt;line-height:1.1}.top b{font-size:8pt}.who{font-size:8pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bc svg{width:100%;height:11mm;display:block}.nm{text-align:center;font-size:7pt;font-weight:700;direction:ltr}</style></head><body>${pages}</body></html>`;
+}
 // ---------- 🖨️ ورق التجهيز (index.html 11355): من غير أسعار ولا إجماليات ولا اسم العميل. A4 بخط كبير ----------
 export interface PrepSheet {
   code?: string;

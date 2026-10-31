@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/api';
 import type { InvoiceDto, SettingsMap } from '@mk/shared';
 import { formatDateTime, money, qtyText } from '@/lib/format';
 import { htmlToPdf, shareOrSave } from '@/lib/pdf';
-import { dimOf, invoiceA4Html, prepSheetHtml, printHtml } from '@/lib/print';
+import { dimOf, invoiceA4Html, invoiceLabelHtml, prepSheetHtml, printHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
 import { useShipments } from '@/lib/phase4-queries';
@@ -231,6 +231,23 @@ export function InvoiceView({ id }: { id: string }) {
           </button>
         )}
       </div>
+      {isSale && (
+        <button
+          type="button"
+          id="mkInvLbl"
+          className="secondary"
+          style={{ width: '100%', padding: 12, marginTop: 8 }}
+          disabled={!settings.data}
+          onClick={() => {
+            const a = window.prompt('كام ليبل؟ (لو الأوردر في كذا كرتونة اكتب عددهم)', '1');
+            if (a === null || !settings.data) return;
+            const n = Math.max(1, Math.min(50, parseInt(a.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632)), 10) || 1));
+            printHtml(invoiceLabelHtml(r, settings.data, n));
+          }}
+        >
+          🏷️ طباعة ليبل
+        </button>
+      )}
       {isSale && <NotesButton no={r.no} id={r.id} />}
       <div id="prepB">
         <button type="button" className="secondary" style={{ width: '100%', padding: 12, marginTop: 8 }} onClick={prep}>
