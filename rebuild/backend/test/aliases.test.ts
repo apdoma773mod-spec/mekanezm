@@ -23,4 +23,10 @@ describe('supplier item names (invoice_aliases)', () => {
     expect(r.json().value).toEqual({ مورد: { 'مفصله 35': 'p1', مجري: 'p2' }, تاني: { x: 'p3' } });
     expect((await app.inject({ method: 'GET', url: '/api/v1/work/kv/points', headers: { cookie: staff } })).statusCode).toBe(403);
   });
+
+  it("shows how much of a product is reserved to every signed-in user", async () => {
+    await prisma.setting.create({ data: { key: "reservations", value: [{ pid: "p9", qty: 3, cust: "أحمد" }, { pid: "p9", qty: 2, cust: "منى" }, { pid: "x", qty: 1, cust: "ز" }] } });
+    const r = await app.inject({ method: "GET", url: "/api/v1/work/reserved/p9", headers: { cookie: staff } });
+    expect(r.json()).toEqual({ qty: 5, custs: ["أحمد", "منى"] });
+  });
 });

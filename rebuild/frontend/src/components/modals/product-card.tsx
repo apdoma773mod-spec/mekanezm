@@ -1,11 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { ProductDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import {
   useAllContacts,
+  useAllProducts,
   useInfoGroups,
   useMakeVariant,
   useProduct,
@@ -17,6 +19,7 @@ import {
   type ProductPack,
 } from '@/lib/trade-queries';
 import { useSettings } from '@/lib/queries';
+import { useAlts } from '@/lib/phase4-queries';
 import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
@@ -31,6 +34,31 @@ const kv = (l: string, v: React.ReactNode) => (v || v === 0 ? <div><small>{l}</s
 
 // ---------- 🏷️ شاشة المنتج ----------
 
+/** The 🔁 alternatives of a product as pills (old mkSX extra): in stock = teal, finished = grey. */
+function AltLinks({ ids, onOpen }: { ids: string[]; onOpen: (id: string) => void }) {
+  const all = useAllProducts({}).data ?? [];
+  return (
+    <>
+      {ids
+        .map((i) => all.find((x) => x.id === i))
+        .filter((a): a is ProductDto => !!a)
+        .map((a) => (
+          <a
+            key={a.id}
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpen(a.id);
+            }}
+            style={{ display: 'inline-block', margin: 3, padding: '3px 10px', borderRadius: 99, background: a.qty > 0 ? '#e3f4f5' : '#f3f3f3', color: a.qty > 0 ? '#087f8c' : '#999', textDecoration: 'none' }}
+          >
+            {a.name} ({a.qty > 0 ? qtyText(a.qty) : 'خلص'})
+          </a>
+        ))}
+    </>
+  );
+}
+
 export function ProductCard({ id }: { id: string }) {
   const { open, close } = useModal();
   const own = useIsAdmin();
@@ -38,6 +66,8 @@ export function ProductCard({ id }: { id: string }) {
   const info = useProductInfo(id);
   const sibs = useSiblings(id);
   const stats = useProductCard(id, own);
+  const reserved = useQuery({ queryKey: ['reserved', id], queryFn: ({ signal }) => api.get<{ qty: number; custs: string[] }>(`/work/reserved/${id}`, undefined, signal), staleTime: 15_000 });
+  const alts = useAlts().data?.[id];
   const [idx, setIdx] = useState(0);
 
   if (prod.isPending || info.isPending)
@@ -189,6 +219,17 @@ export function ProductCard({ id }: { id: string }) {
                 ),
               )}
             </div>
+          </div>
+        )}
+        {!!reserved.data?.qty && (
+          <div id="pcRes" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#fff4e0', fontSize: 13 }}>
+            📌 محجوز {qtyText(reserved.data.qty)} ({reserved.data.custs.join('، ')}) — المتاح فعلاً <b>{qtyText(Math.max(0, p.qty - reserved.data.qty))}</b>
+          </div>
+        )}
+        {!!alts?.length && (
+          <div id="pcAlts" style={{ marginTop: 8, fontSize: 13 }}>
+            <b>🔁 البدائل{p.qty <= 0 ? ' (الصنف ده خلصان)' : ''}:</b>{' '}
+            <AltLinks ids={alts} onOpen={(aid) => open({ kind: 'product', id: aid })} />
           </div>
         )}
         <div className="pc-acts">

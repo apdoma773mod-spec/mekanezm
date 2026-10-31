@@ -31,6 +31,14 @@ export default async function workRoutes(app: FastifyInstance) {
     return { value: s?.value ?? null };
   });
 
+  /** «📌 محجوز — المتاح فعلاً» in the product window: how much of one product is held for customers (everyone sees it, like the old one). */
+  app.get('/reserved/:pid', { preHandler: app.authenticate }, async (request) => {
+    const { pid } = parse(z.object({ pid: z.string().min(1).max(64) }), request.params);
+    const list = ((await db.setting.findUnique({ where: { key: 'reservations' } }))?.value ?? []) as { pid?: string; qty?: number; cust?: string }[];
+    const mine = Array.isArray(list) ? list.filter((r) => r.pid === pid) : [];
+    return { qty: mine.reduce((t, r) => t + (Number(r.qty) || 0), 0), custs: mine.map((r) => String(r.cust ?? '')) };
+  });
+
   /**
    * The names a supplier uses for our products ({supplier: {invoice text: product id}}, old mk_settings invoice_aliases).
    * Merged on the server so two people saving at once do not wipe each other; anyone who can buy may add names.
