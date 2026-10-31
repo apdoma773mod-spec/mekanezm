@@ -70,12 +70,12 @@ export async function getProduct(id: string) {
   return product ? { site, product, ok } : null;
 }
 
-export const PAGE = 24;
+export const PAGE = 20;
 
-/** One page-range of products for a section / search (pages are cumulative: page 2 = first 48). */
+/** One page of products for a section / search (page 2 = products 21–40). */
 export async function listProducts(o: { sec?: string; q?: string; sort?: Sort; av?: boolean; f?: string; page?: number }) {
   const { site, ok, fresh } = await getCatalog();
   const all = queryProducts(site.products, ok, o);
-  const n = Math.max(1, o.page ?? 1) * PAGE;
-  return { total: all.length, items: all.slice(0, n).map(p => ({ p, ok: ok(p), fresh: fresh(p) })) };
+  const pages = Math.max(1, Math.ceil(all.length / PAGE)), page = Math.min(pages, Math.max(1, o.page ?? 1));
+  return { total: all.length, page, pages, items: all.slice((page - 1) * PAGE, page * PAGE).map(p => ({ p, ok: ok(p), fresh: fresh(p) })) };
 }

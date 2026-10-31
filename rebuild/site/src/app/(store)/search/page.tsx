@@ -24,7 +24,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { site: full, ok, fresh } = await getCatalog();
   const base = sp.top ? full.products.filter(p => p.top) : full.products;
   const all = queryProducts(base, ok, { q, sort: (sp.sort ?? '') as Sort, av: !!sp.av });
-  const items = all.slice(0, Math.max(1, Number(sp.page) || 1) * PAGE).map(p => ({ p, ok: ok(p), fresh: fresh(p) }));
+  const pg = Math.min(Math.max(1, Math.ceil(all.length / PAGE)), Math.max(1, Number(sp.page) || 1));
+  const items = all.slice((pg - 1) * PAGE, pg * PAGE).map(p => ({ p, ok: ok(p), fresh: fresh(p) }));
   // Nothing matched every word: show close results and matching sections instead of an empty page.
   const near = !all.length && q ? looseQuery(base, q) : [];
   const nearSecs = !all.length && q ? visibleSections(site).filter(s => norm(q).split(' ').some(w => w.length >= 3 && norm(s.name).includes(w.slice(0, -1)))) : [];

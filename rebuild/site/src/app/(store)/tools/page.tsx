@@ -21,6 +21,7 @@ export default async function Tools() {
         <nav className="chips" aria-label="الحاسبات" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
           <a href="#hinges">🔩 المفصلات</a><a href="#slides">🗃️ المجرى</a><a href="#drawer">📐 عرض الدرج</a><a href="#sliding">🚪 الجرار</a><a href="#corner">🌀 الكورنر</a>
         </nav>
+        <Link className="calc-hero" href="/tools/lift"><span>⤴️</span><b>حاسبة الدراعات القلاب</b><small>بلوم أفنتوس، جراس، والباكم العادي — حسب مقاس الضلفة ونوع الخشب</small></Link>
         <Calculators />
         <p className="mut" style={{ marginTop: 16 }}>عايز الطقم كله؟ <Link href="/kits">الأطقم الجاهزة</Link></p>
       </main>

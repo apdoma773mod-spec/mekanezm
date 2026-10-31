@@ -50,7 +50,7 @@ export default async function Home() {
         <Categories />
         <nav className="qtools" aria-label="أدوات">
           <Link href="/kits"><span>🧰</span><b>أطقم جاهزة</b><small>جهّز مطبخك أو دولابك</small></Link>
-          <Link href="/tools"><span>🧮</span><b>حاسبات النجار</b><small>مفصلات، مجرى، درج</small></Link>
+          <Link href="/tools"><span>🧮</span><b>حاسبات النجار</b><small>الدراعات القلاب، المفصلات، المجرى</small></Link>
           <Link href="/works"><span>🏗️</span><b>من شغلنا</b><small>صور حقيقية</small></Link>
           <Link href="/brands"><span>🏷️</span><b>البراندات</b><small>بلوم، جراس، هيتتش، ويل ماكس</small></Link>
         </nav>

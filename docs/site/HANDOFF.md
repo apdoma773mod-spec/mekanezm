@@ -86,6 +86,22 @@ auto keyword chips inside big sections (`topTerms`, needs ≥4 products) + `?q=`
 - `docs/site/PHOTO-GUIDE.md`: how to photograph products, videos, works with codes, install-guide links.
 - Not done: loyalty points for carpenters. They need invoice totals per customer from the system.
 
+## v9
+- Horizontal product card: the photo takes 38% on the right, with the code, section, a two-line name, availability and two buttons beside it. One card = screen width in the home rows (swipe one by one, snap). One per row in listings (2 from 760 px, 3 from 1150 px).
+- Numbered pages: 20 products per page (`PAGE` in catalog.ts) with 1 2 … pager (`Pager` in listing.tsx). This replaces the cumulative «load more». The category, search and brand lists use it.
+- `/tools/lift` lift-up flap calculator (`src/lib/lifts.ts`):
+  - **Blum** (official catalogue & technical manual 2026, publications.blum.com/2026/catalogue/en/, AVENTOS pages 12–59): LF = KH (mm) × FG (kg, including 2× the handle; HF: both fronts including the handle).
+    - HK-XS: 20K1101 200–1000, 20K1301 500–1500, 20K1501 800–1800 per mechanism, doubled on two sides. KH 240–600. Two sides when KB > 610 (Blum US ordering info).
+    - HK-S set: 20K2B00 220–500, 20K2C00 400–1000, 20K2E00 960–2215, +50 % with a third mechanism. KH ≤ 600.
+    - HK top set: 22K2300 420–1610, 22K2500 930–2800, 22K2700 1730–5200, 22K2900 3200–9000. Max 18 kg. KH 205–600.
+    - HL top arms by KH/FG: 22L3200 300–339/1.5–9, 22L3500 340–389/1.75–10, 22L3800 390–540/2–12.25, 22L3900 480–580/2.5–14. Mechanism 22L2200 (300–389) / 22L2500 (390–580).
+    - HS top: 22S2200 350–450/2–11.5 and 450–540/2.5–12.5, 22S2500 480–660/2.75–15.25, 22S2800 650–800/3.5–18.5, arm 22S3500, +50 % weight with a third.
+    - HF top: 1 mechanism LF 1350–3000 (KB ≤ 600), 22F2500 2700–13500, 22F2800 10000–19300, +50 % with a third. Arms 22F3200 480–610, 22F3500 600–910, 22F3900 840–1200. Asymmetric: TKH ≈ upper front × 2.
+    - Overlaps → the stronger mechanism, as the catalogue recommends; the weaker one is shown as the alternative.
+  - **Grass Kinvaro T-Slim**: LF = front height × (weight + 2× handle). Bands 250–500 / 500–1100 / 1000–2250 / 1500–3375 (wide), as listed by Grass dealers (no open official table). L-80 and F-20 were left out because the dealer data conflict.
+  - **Gas struts (باكم، اندوكس…)**: torque balance with the usual 90° mounting (90 mm on the front from the hinge, 255 mm under the top, 10 mm back → lever ≈ 84 mm), two struts, +15 %. Sizes 80/100/120/150 N.
+  - Front weight from material density (MDF 750, gloss 800, plywood 550, chipboard 650, solid wood 700, aluminium + glass) × size × thickness, or typed by the customer.
+
 ## Data
 - Reads: `src/lib/catalog.ts` → Supabase `site_content` (id=main) + `rpc/site_stock`, cached 300 s / 60 s (ISR). Browser refreshes stock once on load.
 - Writes: `src/lib/api.ts` → same RPCs as the old site (`place_order`, `place_request`, `track_order`, `track_custom`, `list_reviews`, `add_review`, `add_notify_me`, `place_custom_order`, `bump_visit`, `mk_portal_get/send`) and storage buckets `customer-requests`, `portal`.

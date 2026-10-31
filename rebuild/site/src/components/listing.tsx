@@ -1,9 +1,8 @@
-// Product grid with sort / "available only" / keyword chips / "show more" — plain links, so it works
+// Product grid with sort / "available only" / keyword chips / numbered pages — plain links, so it works
 // without JS and Google can follow every page. Used by category pages and the search page.
 import Link from 'next/link';
 import type { Product } from '@/lib/schema';
 import { PAGE } from '@/lib/catalog';
-import { AutoMore } from './auto-more';
 import { ProductCard } from './product-card';
 
 export type ListParams = { q?: string; sort?: string; av?: string; page?: string; top?: string; f?: string };
@@ -43,15 +42,29 @@ export function Listing({ base, params, total, items, empty, terms, specs }: {
           <Link key={v} className={(params.sort ?? '') === v ? 'on' : ''} href={href({ sort: v, page: '' })} scroll={false}>{v ? t : 'ترتيب: ' + t}</Link>
         ))}
       </div>
-      <p className="count mut">{total ? `${total} منتج` : ''}</p>
+      <p className="count mut">{total ? `${total} منتج${total > PAGE ? ` — صفحة ${page} من ${Math.ceil(total / PAGE)}` : ''}` : ''}</p>
       {items.length ? (
         <div className="grid list-grid">{items.map(({ p, ok, fresh }, i) => <ProductCard key={p.id} p={p} ok={ok} fresh={fresh} priority={i < 2} />)}</div>
       ) : empty}
-      {items.length < total && (
-        <AutoMore href={href({ page: String(page + 1) })}>
-          عرض المزيد ({Math.min(PAGE, total - items.length)} من {total - items.length} باقيين)
-        </AutoMore>
-      )}
+      <Pager page={page} pages={Math.max(1, Math.ceil(total / PAGE))} href={n => href({ page: n > 1 ? String(n) : '' })} />
     </>
+  );
+}
+
+/** 1 2 3 … pages with previous/next; shows the first, the last and two around the current page. */
+export function Pager({ page, pages, href }: { page: number; pages: number; href: (n: number) => string }) {
+  if (pages < 2) return null;
+  const L: (number | '…')[] = [];
+  for (let n = 1; n <= pages; n++) {
+    if (n === 1 || n === pages || Math.abs(n - page) <= 2) L.push(n);
+    else if (L[L.length - 1] !== '…') L.push('…');
+  }
+  return (
+    <nav className="pager" aria-label="الصفحات">
+      {page > 1 ? <Link href={href(page - 1)} rel="prev" aria-label="الصفحة اللي قبل">›</Link> : <span className="off">›</span>}
+      {L.map((n, i) => n === '…' ? <span key={'e' + i} className="gap">…</span>
+        : <Link key={n} href={href(n)} className={n === page ? 'on' : ''} aria-current={n === page ? 'page' : undefined}>{n}</Link>)}
+      {page < pages ? <Link href={href(page + 1)} rel="next" aria-label="الصفحة اللي بعد">‹</Link> : <span className="off">‹</span>}
+    </nav>
   );
 }
