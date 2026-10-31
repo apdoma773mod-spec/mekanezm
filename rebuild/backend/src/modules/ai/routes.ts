@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { MAX_B64, MODEL, PROMPT, TOOL, TYPES, json, readTransfer, viaGemini } from './read-image.js';
 import { scanRoutes } from './scans.js';
+import visionRoutes from './vision.js';
 
 export const NO_KEY = 'قراءة الصور محتاجة مفتاح ذكاء اصطناعي (GEMINI_API_KEY مجاني أو ANTHROPIC_API_KEY) — كلّم المطوّر';
 
@@ -57,4 +58,5 @@ export default async function aiRoutes(app: FastifyInstance) {
   });
 
   await app.register(scanRoutes, { prefix: '/scans' });
+  await app.register(visionRoutes);
 }

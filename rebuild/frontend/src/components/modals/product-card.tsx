@@ -290,6 +290,7 @@ export function ProductDetails({ id }: { id: string }) {
   const ai = useRef(false);
   const [f, setF] = useState<ProductInfo | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const back = () => open({ kind: 'product', id });
   if (!prod || info.isPending)
     return (
@@ -403,7 +404,31 @@ export function ProductDetails({ id }: { id: string }) {
             </div>
           </div>
           <div className="field full">
-            <label>الوصف (بيظهر في الكارت ويتبعت مع المنتج)</label>
+            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              الوصف (بيظهر في الكارت ويتبعت مع المنتج)
+              <button
+                type="button"
+                className="secondary"
+                id="pceAi"
+                disabled={aiBusy}
+                style={{ padding: "4px 10px", fontSize: 13, width: "auto" }}
+                onClick={async () => {
+                  setAiBusy(true);
+                  const hint = [v.brand && `الماركة: ${v.brand}`, v.finish && `التشطيب: ${v.finish}`, v.size && `المقاس: ${v.size}`, v.specs].filter(Boolean).join("، ");
+                  try {
+                    const r = await api.post<{ description: string }>("/ai/describe-product", { name: prod.name, cat: prod.category ?? "", hint, image_url: v.imgs[0] ?? "" });
+                    set({ descr: r.description });
+                    toast("✔ الوصف اتكتب — راجعه ودوس «حفظ»");
+                  } catch (e) {
+                    toast(`الوصف ماتكتبش: ${errorMessage(e)}`, "bad");
+                  } finally {
+                    setAiBusy(false);
+                  }
+                }}
+              >
+                {aiBusy ? "⏳ بيكتب…" : "✨ اكتب الوصف"}
+              </button>
+            </label>
             <textarea rows={4} value={v.descr} onChange={(e) => set({ descr: e.target.value })} />
           </div>
           <div className="field full">

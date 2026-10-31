@@ -1,6 +1,7 @@
 'use client';
 
 import { CustomerBar } from '@/components/modals/customer-bar';
+import { PhotoSearch } from "./photo-search";
 import { termsFor, useTerms } from '@/lib/terms';
 import { useCreditLimits } from '@/lib/kv';
 import { useIsAdmin } from '../use-role';
@@ -155,6 +156,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [area, setArea] = useState('');
   const [autoPaid, setAutoPaid] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [photoFind, setPhotoFind] = useState(false);
   const shipment = useCreateShipment();
   // the packs (كرتونة/دستة) list is only needed once a stock item is in the invoice
   const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
@@ -434,6 +436,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             <button type="button" className="secondary" id="txScan" title="امسح باركود (كل مسحة = قطعة)" aria-label="امسح باركود" onClick={() => setScanning(true)}>
               📷
             </button>
+            <button type="button" className="primary" id="vsTxBtn" title="صوّر القطعة يطلعلك الصنف" aria-label="صوّر القطعة" onClick={() => setPhotoFind(true)}>
+              📸
+            </button>
             </div>
             {showBox && (
               <div className="txbox">
@@ -686,6 +691,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           </button>
         </div>
       </form>
+      {photoFind && (
+        <PhotoSearch
+          ctx="tx"
+          onClose={() => setPhotoFind(false)}
+          onPick={(pr) => {
+            addProduct(pr);
+            setPhotoFind(false);
+          }}
+        />
+      )}
       {scanning && (
         <CameraScanner
           multi
