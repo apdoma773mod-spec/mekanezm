@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ALU_TYPES, CATS, COMMON_THICK, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat, type Hit } from '@/lib/scraps';
+import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat, type Hit } from '@/lib/scraps';
 import { ev } from '@/lib/track';
 import Link from 'next/link';
 import { ScrapCard } from './scrap-card';
@@ -47,7 +47,8 @@ export function ScrapSearch() {
           <label>نوع اللوح <small>(اختياري)</small><select value={f.material} onChange={set('material')}><option value="">أي نوع</option>{SHEET_MATERIALS.map(m => <option key={m}>{m}</option>)}</select></label>
           <label>الشركة <small>(اختياري)</small><input list="sc-brands" value={f.brand} onChange={set('brand')} maxLength={40} placeholder="جودوود، توبوود…" /></label>
           <datalist id="sc-brands">{SHEET_BRANDS.map(b => <option key={b} value={b} />)}</datalist>
-          <label>كود اللون <small>(لو عايز نفس اللون بالظبط)</small><input value={f.code} onChange={set('code')} maxLength={30} placeholder="مثلاً: 1021" /></label>
+          <label>كود اللون <small>(لو عايز نفس اللون بالظبط)</small><input list="sc-codes" value={f.code} onChange={set('code')} maxLength={30} placeholder="مثلاً: 1021" /></label>
+          <datalist id="sc-codes">{codesFor(f.brand).map(c => <option key={c} value={c} />)}</datalist>
         </>}
         {cat === 'solid' && <label>نوع الخشب <small>(اختياري)</small><select value={f.material} onChange={set('material')}><option value="">أي نوع</option>{SOLID_SPECIES.map(m => <option key={m}>{m}</option>)}</select></label>}
         {cat === 'alu' && <>

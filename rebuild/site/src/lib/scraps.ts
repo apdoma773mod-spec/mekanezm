@@ -95,3 +95,12 @@ export const ago = (iso: string) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   return d <= 0 ? 'النهاردة' : d === 1 ? 'امبارح' : d < 30 ? `من ${d} يوم` : 'من شهر';
 };
+
+/** Colour codes published by Egyptian makers (suggestions while typing a code; any other code can still be typed).
+ *  Sources (checked 2026-10-31): counterelsharkawy.com/en/melamine-colors (54 codes, names not published there),
+ *  top-wood.net «كونتر الميلامين» (only 5 codes listed on the page; the full list is in their PDF catalogue). */
+export const BRAND_CODES: { match: RegExp; brand: string; codes: string[] }[] = [
+  { match: /شرقاو|sharkawy/i, brand: 'الشرقاوي', codes: ['1', '2', '7', '8', '9', '12', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '70', '71', '72', '73', '74', '75', '76', '78', '80', '85', '86', '88', '90', '91', '92', '93', '94', '95', '96', '97', '98', '99', '100', '101', '102', '103'] },
+  { match: /توب\s?وود|top\s?wood/i, brand: 'توبوود', codes: ['9009', '3031', '3026', '0310', '6015'] },
+];
+export const codesFor = (brand: string) => BRAND_CODES.find(b => b.match.test(brand))?.codes ?? [];

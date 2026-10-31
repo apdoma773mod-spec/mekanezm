@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { scrapAdd, uploadRequestImage } from '@/lib/api';
 import { shrinkImage } from '@/lib/images';
 import { getMe, saveMe } from '@/lib/me';
-import { ALU_TYPES, CATS, COMMON_THICK, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
+import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
 import { ev } from '@/lib/track';
 
 const num = (v: string) => { const n = Number(String(v).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(',', '.')); return Number.isFinite(n) && n > 0 ? n : 0; };
@@ -90,7 +90,8 @@ export function AddForm() {
           <label>نوع اللوح<select value={f.material} onChange={set('material')}><option value="">اختار</option>{SHEET_MATERIALS.map(m => <option key={m}>{m}</option>)}</select></label>
           <label>الشركة <small>(لو تعرفها)</small><input list="sc-brands2" value={f.brand} onChange={set('brand')} maxLength={40} /></label>
           <datalist id="sc-brands2">{SHEET_BRANDS.map(b => <option key={b} value={b} />)}</datalist>
-          <label>كود اللون <small>(مكتوب على اللوح أو الفاتورة)</small><input value={f.code} onChange={set('code')} maxLength={30} /></label>
+          <label>كود اللون <small>(مكتوب على اللوح أو الفاتورة)</small><input list="sc-codes2" value={f.code} onChange={set('code')} maxLength={30} /></label>
+          <datalist id="sc-codes2">{codesFor(f.brand).map(c => <option key={c} value={c} />)}</datalist>
           <label>اسم اللون <small>(اختياري)</small><input value={f.color} onChange={set('color')} maxLength={40} placeholder="مثلاً: جوزي غامق" /></label>
         </>}
         {cat === 'solid' && <label>نوع الخشب<select value={f.material} onChange={set('material')}><option value="">اختار</option>{SOLID_SPECIES.map(m => <option key={m}>{m}</option>)}</select></label>}
