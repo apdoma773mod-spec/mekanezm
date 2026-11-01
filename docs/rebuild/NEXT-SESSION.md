@@ -157,3 +157,6 @@ Phases 1–6 (see HANDOFF.md), plus phase 7 parts: Vodafone Cash (`/sms/in` same
 
 ## Last honest status
 Verified in a real browser on the test stack: 66-route smoke test (no console/API errors), sidebar click test, perf (production build: product page 60 ms, screen switch 0.2 s desktop / 0.7 s phone), flows test (14/16 assertions passed; the 2 failures were timing in the test script, the screenshot shows the screen is right). NOT verified: visual equality with the old screens beyond the daybook, dashboard header, sidebar, theme cards.
+
+## Hosting (free tier) - state
+See DEPLOY.md. Blocked only on the owner putting the Session pooler string (+ `?schema=mk_new`) in `C:\mekanizm-deploy\db.secret.txt`. Do NOT use browser tools for Supabase settings (hung once). Next: `prisma migrate deploy` + data copy into `mk_new`, Render service from `render.yaml`, Vercel project (root `rebuild/frontend`, env `BACKEND_URL`), repoint bridges.
