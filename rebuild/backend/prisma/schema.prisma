@@ -914,6 +914,8 @@ model WebOrder {
   customerName String
   phone        String    @default("")
   items        Json
+  /// How the customer wants it: { method: pickup|delivery|ship, gov, area, address } (sent by the site).
+  ship         Json?
   /// new | done | cancelled
   status       String    @default("new")
   /// What the customer was told about pickup («بكره إن شاء الله»…).
