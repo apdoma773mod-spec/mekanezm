@@ -34,11 +34,6 @@ const nextConfig = {
       { source: '/:file(frame.webp|og.jpg|icon-192.png|icon-512.png)', headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000' }] },
     ];
   },
-  // New backend (no CORS there): the browser talks to /mkapi/* on the site's own origin.
-  async rewrites() {
-    const backend = process.env.BACKEND_URL;
-    return backend ? [{ source: '/mkapi/:path*', destination: `${backend.replace(/\/$/, '')}/api/v1/:path*` }] : [];
-  },
   async redirects() {
     // Old GitHub Pages URLs keep working (Google, WhatsApp shares, printed QR codes).
     return [
