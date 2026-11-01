@@ -6,7 +6,7 @@ Plan: Vercel (frontend `rebuild/frontend`) → Render free (backend, `render.yam
 - [x] Uploads layer: `backend/src/lib/files.ts` (Supabase Storage when `SUPABASE_URL`+`SUPABASE_SERVICE_KEY` set, else local `uploads/`). Used by work/web/portal file routes.
 - [x] `render.yaml` blueprint at repo root, `.env.example` updated.
 - [ ] `C:\mekanizm-deploy\db.secret.txt` filled by the owner (Session pooler string; append `?schema=mk_new`).
-- [ ] Create schema + `prisma migrate deploy`, copy dev data into `mk_new`.
+- [x] migrations applied to mk_new; data copied with `backend/scripts/copy-to-hosted.mjs` (1791 rows: 1259 products, 291 contacts). Re-run is safe (truncates mk_new tables only).
 - [x] Storage bucket `mk-uploads` (private) and empty schema `mk_new` created in project `mekanizm-app` (ref rzvncstjattlklpdtkfn) via Supabase MCP. Nothing else touched.
 - [ ] Render service + env vars; Vercel project (root dir `rebuild/frontend`, env `BACKEND_URL=<render url>`).
 - [ ] Point shop-PC bridges at the Render URL.
