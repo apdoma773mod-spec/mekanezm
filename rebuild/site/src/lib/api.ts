@@ -3,6 +3,28 @@
 import { SB_KEY, SB_URL } from './config';
 import type { Ship, Stock } from './schema';
 
+/** NEXT_PUBLIC_NEW_BACKEND=1 sends orders/requests to the new backend (via /mkapi) instead of Supabase. */
+const NEW = process.env.NEXT_PUBLIC_NEW_BACKEND === '1';
+
+/** POST JSON to the new backend; its `{id}` reply becomes the same `data: id-string` shape rpc() gives. */
+async function mk(path: string, body: unknown): Promise<{ ok: boolean; data: string | null; message: string }> {
+  try {
+    const r = await fetch(`/mkapi/web/public/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const t = await r.text();
+    let j: { id?: string; message?: string; error?: string } | null = null;
+    try { j = JSON.parse(t); } catch { /* not json */ }
+    if (r.ok && j?.id) return { ok: true, data: String(j.id), message: '' };
+    return { ok: false, data: null, message: j?.message || j?.error || t.slice(0, 200) || 'error' };
+  } catch (e) { return { ok: false, data: null, message: String(e) }; }
+}
+
+const blobToB64 = (b: Blob) => new Promise<string>((res, rej) => {
+  const fr = new FileReader();
+  fr.onload = () => res(String(fr.result).split(',')[1] || '');
+  fr.onerror = () => rej(fr.error);
+  fr.readAsDataURL(b);
+});
+
 const H = { apikey: SB_KEY, 'Content-Type': 'application/json' };
 
 /** RPC call → { ok, data } where data is the parsed JSON (or text). Never throws on HTTP errors. */
@@ -24,6 +46,7 @@ export async function fetchStock(): Promise<Stock | null> {
 }
 
 export async function placeOrder(name: string, phone: string, items: { code: string; qty: number }[], ship: Ship) {
+  if (NEW) return mk('orders', { customerName: name, phone, items, ship });
   let r = await rpc<string>('place_order', { p_name: name, p_phone: phone || null, p_items: items, p_ship: ship });
   // Older database without the shipping parameter.
   if (!r.ok && /PGRST202|Could not find the function/i.test(r.message)) r = await rpc<string>('place_order', { p_name: name, p_phone: phone || null, p_items: items });
@@ -34,6 +57,15 @@ const randPath = (ext: string) => `r/${Date.now().toString(36)}-${Math.random().
 
 /** Upload a customer photo/drawing; returns its public URL. */
 export async function uploadRequestImage(blob: Blob): Promise<string> {
+  if (NEW) {
+    const r = await fetch('/mkapi/web/public/media', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: await blobToB64(blob), ext: blob.type === 'image/webp' ? 'webp' : 'jpg' }),
+    });
+    const j = r.ok ? await r.json().catch(() => null) : null;
+    if (!j?.url) throw new Error('upload');
+    return j.url as string;
+  }
   const path = randPath(blob.type === 'image/webp' ? 'webp' : 'jpg');
   const r = await fetch(`${SB_URL}/storage/v1/object/customer-requests/${path}`, {
     method: 'POST',
@@ -45,10 +77,10 @@ export async function uploadRequestImage(blob: Blob): Promise<string> {
 }
 
 export const placeRequest = (name: string, phone: string, note: string, imgs: string[]) =>
-  rpc<string>('place_request', { p_name: name, p_phone: phone, p_note: note, p_imgs: imgs });
+  NEW ? mk('requests', { name, phone, note, imgs }) : rpc<string>('place_request', { p_name: name, p_phone: phone, p_note: note, p_imgs: imgs });
 
 export const placeCustomOrder = (b: { kind: string; name: string; phone: string; spec: unknown; summary: string; note: string; img: string }) =>
-  rpc<string>('place_custom_order', { p_kind: b.kind, p_name: b.name, p_phone: b.phone, p_spec: b.spec, p_summary: b.summary, p_note: b.note, p_img: b.img });
+  NEW ? mk('custom', b) : rpc<string>('place_custom_order', { p_kind: b.kind, p_name: b.name, p_phone: b.phone, p_spec: b.spec, p_summary: b.summary, p_note: b.note, p_img: b.img });
 
 export type TrackedOrder = {
   ref: string; method?: string; status?: string; created_at?: string; eta?: string; invoiced?: boolean; gov?: string;
