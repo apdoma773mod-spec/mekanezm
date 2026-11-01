@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { steelWord } from '@/lib/steel-word';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { useModal } from '@/components/modals/modal-host';
 import { InboxCard, InboxTabs } from '@/components/inbox/inbox-tabs';
@@ -34,6 +36,34 @@ function OrderCard({ o, tab }: { o: WaOrderRow; tab: InboxTab }) {
       },
     });
 
+  const router = useRouter();
+  const why = useMemo(() => steelWord(o.body), [o.body]);
+  const [notSteel, setNotSteel] = useState(() => {
+    try {
+      return (JSON.parse(localStorage.getItem('mk_wa_notsteel') || '[]') as string[]).includes(o.id);
+    } catch {
+      return false;
+    }
+  });
+  const steel = !!why && !notSteel && tab !== 'done';
+  const markNotSteel = () => {
+    setNotSteel(true);
+    try {
+      const l = JSON.parse(localStorage.getItem('mk_wa_notsteel') || '[]') as string[];
+      localStorage.setItem('mk_wa_notsteel', JSON.stringify([...l, o.id].slice(-300)));
+    } catch {
+      /* no storage */
+    }
+  };
+  const prepSteel = () => {
+    try {
+      sessionStorage.setItem('mk_open_steel', JSON.stringify({ id: o.id, customer: o.customerName, phone: o.phone, body: o.body }));
+    } catch {
+      /* no storage */
+    }
+    router.push('/work?k=steel');
+  };
+
   return (
     <InboxCard tone={tab === 'new' ? 'new' : undefined}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -44,6 +74,14 @@ function OrderCard({ o, tab }: { o: WaOrderRow; tab: InboxTab }) {
       </div>
       <div style={{ whiteSpace: 'pre-wrap', margin: '8px 0', lineHeight: 1.8 }}>{o.body}</div>
       {o.invoiceNo && <div style={{ fontSize: 13, color: 'var(--muted)' }}>اتعملت فاتورة {o.invoiceNo}</div>}
+      {steel && (
+        <div id="waSteelBan" style={{ margin: '10px 0', padding: 12, borderRadius: 12, background: '#e8f4f6', border: '2px solid #087f8c', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <b style={{ fontSize: 16 }}>🔩 طلب استانلس</b>
+          <span style={{ flex: 1, minWidth: 160, fontSize: 13, color: '#475b61' }}>اتصنّف كده بسبب كلمة «{why}». لو غلط اضغط «مش استانلس».</span>
+          <button type="button" className="primary" id="waSteelGo" onClick={prepSteel}>🛠️ جهّز القطعة</button>
+          <button type="button" className="secondary" onClick={markNotSteel}>مش استانلس</button>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
         {tab !== 'done' && (
           <button type="button" className="primary" disabled={busy} onClick={makeInvoice}>
