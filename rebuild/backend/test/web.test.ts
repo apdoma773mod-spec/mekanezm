@@ -38,6 +38,14 @@ describe('website orders', () => {
     expect((await call(admin, 'GET', '/web/orders/count')).json().count).toBe(0);
   });
 
+  it('keeps the shipping choice the site sends', async () => {
+    const ship = { method: 'delivery', gov: 'الجيزة', area: 'الدقي', address: 'شارع التحرير ٥' };
+    expect((await call(null, 'POST', '/web/public/orders', { customerName: 'منى', items: [{ code: 'P0002', qty: 1 }], ship })).statusCode).toBe(200);
+    expect((await call(null, 'POST', '/web/public/orders', { customerName: 'منى', items: [{ code: 'P0002', qty: 1 }], ship: { method: 'x' } })).statusCode).toBe(400);
+    const row = (await call(admin, 'GET', '/web/orders')).json().items.find((o: { customerName: string }) => o.customerName === 'منى');
+    expect(row.ship).toEqual(ship);
+  });
+
   it('rejects an empty order', async () => {
     expect((await call(null, 'POST', '/web/public/orders', { customerName: 'x', items: [] })).statusCode).toBe(400);
     expect((await call(null, 'POST', '/web/public/orders', { customerName: '', items: [{ code: 'a', qty: 1 }] })).statusCode).toBe(400);

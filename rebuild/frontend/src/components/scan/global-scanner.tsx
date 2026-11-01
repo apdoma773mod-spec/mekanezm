@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { api } from '@/lib/api';
 import { lookupProduct } from '@/lib/trade-queries';
 import { useModal } from '../modals/modal-host';
 import { useToast } from '../ui/toast';
@@ -44,6 +45,22 @@ export function GlobalScanner() {
     let focusOnStart: Element | null = null;
 
     const route = async (code: string) => {
+      // كود فاتورة (MK-0001 / SH-0001 …) يفتح الفاتورة
+      const m = /^(MK|SH|QT|SP)-?(\d+)$/.exec(code);
+      if (m) {
+        const no = `${m[1]}-${m[2].padStart(4, '0')}`;
+        try {
+          const r = await api.get<{ items: { id: string; no: string }[] }>('/invoices', { q: no, pageSize: 5 });
+          const hit = r.items.find((i) => i.no === no);
+          if (hit) {
+            open({ kind: 'invoice', id: hit.id });
+            toast(`📟 ${no}`);
+            return;
+          }
+        } catch {
+          /* يكمّل يدوّر كصنف */
+        }
+      }
       try {
         const p = await lookupProduct(code);
         open({ kind: 'productDetails', id: p.id });
@@ -72,6 +89,13 @@ export function GlobalScanner() {
         if (bad || avg > GAP_MS || code.length < MIN_LEN) return;
         // في خانة كتابة عادية: سيبها تاخد الكود
         if (inTextField(document.activeElement) || inTextField(focusOnStart)) return;
+        if (document.querySelector('#txSearch')) {
+          // نافذة بيع/شراء مفتوحة: الكود يتضاف فيها حتى لو المؤشر مش في خانة البحث
+          window.dispatchEvent(new CustomEvent('mk:scan', { detail: code }));
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (document.querySelector('.modal')) return; // ما نبدّلش نافذة مفتوحة
         e.preventDefault();
         e.stopPropagation();

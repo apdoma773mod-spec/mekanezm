@@ -106,6 +106,9 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
   const rows = o.items.map((x) => ({ x, p: prod(x.code) }));
   const est = rows.reduce((s, r) => s + (r.p ? r.p.price * r.x.qty : 0), 0);
   const wa = o.phone ? waLink(o.phone, `أهلاً ${o.customerName}، بخصوص طلبك رقم ${sid} من موقع ميكانيزم`) : '';
+  const shipLine = o.ship
+    ? `${{ pickup: '🏬 استلام من المحل', delivery: '🚚 توصيل', ship: '📦 شحن' }[o.ship.method]}${[o.ship.gov, o.ship.area, o.ship.address].filter(Boolean).length ? ' — ' + [o.ship.gov, o.ship.area, o.ship.address].filter(Boolean).join('، ') : ''}`
+    : '';
 
   const invoice = () => {
     const missing = rows.filter((r) => !r.p).map((r) => r.x.code);
@@ -165,6 +168,7 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
         </div>
         {o.status === 'done' ? <span className="badge green">اتعملها فاتورة</span> : o.status === 'new' ? <span className="badge red">جديد</span> : <span className="badge">ملغي</span>}
       </div>
+      {shipLine && <div style={{ marginTop: 8, fontWeight: 600 }}>{shipLine}</div>}
       <div className="table-wrap" style={{ marginTop: 10 }}>
         <table className="table" style={{ minWidth: 380 }}>
           <thead>

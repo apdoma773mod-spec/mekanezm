@@ -13,6 +13,7 @@ export interface WebOrderRow {
   customerName: string;
   phone: string;
   items: WebOrderItem[];
+  ship?: { method: 'pickup' | 'delivery' | 'ship'; gov: string; area: string; address: string } | null;
   status: 'new' | 'done' | 'cancelled';
   eta: string;
   invoiceNo: string | null;

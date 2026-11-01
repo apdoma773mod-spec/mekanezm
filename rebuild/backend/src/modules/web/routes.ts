@@ -22,6 +22,14 @@ const orderBody = z.object({
     .array(z.object({ code: z.string().trim().min(1).max(40), qty: z.number().gt(0).max(100000), backorder: z.boolean().optional() }))
     .min(1)
     .max(100),
+  ship: z
+    .object({
+      method: z.enum(['pickup', 'delivery', 'ship']),
+      gov: z.string().trim().max(60).default(''),
+      area: z.string().trim().max(120).default(''),
+      address: z.string().trim().max(300).default(''),
+    })
+    .optional(),
 });
 const patchBody = z.object({
   status: z.enum(['new', 'done', 'cancelled']).optional(),
@@ -49,7 +57,7 @@ export default async function webRoutes(app: FastifyInstance) {
 
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
     const b = parse(orderBody, request.body);
-    const o = await db.webOrder.create({ data: { customerName: b.customerName, phone: b.phone, items: b.items as Prisma.InputJsonValue } });
+    const o = await db.webOrder.create({ data: { customerName: b.customerName, phone: b.phone, items: b.items as Prisma.InputJsonValue, ship: b.ship as Prisma.InputJsonValue | undefined } });
     return { id: o.id, no: o.id.slice(0, 8) };
   });
 

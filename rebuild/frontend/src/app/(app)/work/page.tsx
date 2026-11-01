@@ -77,7 +77,19 @@ function Work() {
     } catch {
       /* no stored request */
     }
+    // «🛠️ جهّز القطعة» from طلبات الواتساب: the stainless screen opens with the customer and the message
+    let steel: unknown = null;
+    try {
+      const raw = sessionStorage.getItem('mk_open_steel');
+      if (raw) {
+        sessionStorage.removeItem('mk_open_steel');
+        steel = JSON.parse(raw);
+      }
+    } catch {
+      /* no stored request */
+    }
     if (web) void w.mkWk?.openWeb(web);
+    else if (steel) void (w.mkWk as unknown as { stainlessFrom: (c: unknown) => Promise<void> }).stainlessFrom(steel);
     else void w.mkWk?.go(KEYS.includes(k) ? k : 'ord');
   }, [ready, k]);
 

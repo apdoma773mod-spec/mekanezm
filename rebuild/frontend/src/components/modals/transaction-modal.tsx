@@ -230,6 +230,21 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     }
   };
 
+  // 📟 جهاز الباركود والنافذة مفتوحة (والمؤشر برّه خانة البحث): الكود يتضاف في الفاتورة
+  const addRef = useRef(addProduct);
+  addRef.current = addProduct;
+  useEffect(() => {
+    const h = async (ev: Event) => {
+      try {
+        addRef.current(await lookupProduct(String((ev as CustomEvent).detail)));
+      } catch {
+        /* كود مش متسجل */
+      }
+    };
+    window.addEventListener('mk:scan', h);
+    return () => window.removeEventListener('mk:scan', h);
+  }, []);
+
   const setLine = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   const step = (l: Line, d: number) => setLine(l.key, { qty: String(Math.max(1, toNum(l.qty) + d)) });
 

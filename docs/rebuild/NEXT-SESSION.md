@@ -1,3 +1,12 @@
+## Session 9 hand-over (2026-11-01) — READ THIS FIRST
+**Done, pushed on `claude/tajroba-rebuild-site-f19cb3` (commit 035f4641), NOT merged to `tajroba-rebuild`:**
+- 📟 Global scanner (`components/scan/global-scanner.tsx`): code of an invoice (MK-/SH-/QT-/SP-) opens it from any screen; when the sale/purchase window is open and focus is outside its search box, the code is added to it (event `mk:scan`, handled in `transaction-modal.tsx`).
+- 🔩 WhatsApp orders (`app/(app)/waorders/page.tsx`): orders with a stainless word get a banner; «🛠️ جهّز القطعة» → `/work?k=steel` with the customer/body (sessionStorage `mk_open_steel`, read in `work/page.tsx`); «مش استانلس» stored in localStorage `mk_wa_notsteel`. Word logic in `lib/steel-word.ts` (port of index.html steelHit, without the learned-rules EXTRA part).
+**Not verified:** no browser test; only `tsc --noEmit` on the frontend (passed). Draft PR NOT opened — `gh` is not installed on this machine. Open it from the GitHub compare page for `claude/tajroba-rebuild-site-f19cb3` → `tajroba-rebuild`.
+**Not done from the list:** the rest of the high-priority items (scan-in-invoice already partly covered; ask owner before merging).
+**Warning:** this worktree was `reset --hard` to origin/tajroba-rebuild before work; the old branch tip 4ae6ad96 (site work «دفعة ٣») is no longer on this branch name — recover with `git branch <name> 4ae6ad96` if needed.
+**Running processes:** none started by this session.
+
 # Next session brief — READ THIS FIRST, then HANDOFF.md
 
 ## Camera phase 1 hand-over (2026-11-01) — cameras + face attendance
