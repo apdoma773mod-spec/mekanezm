@@ -19,3 +19,6 @@ Plan: Vercel (frontend `rebuild/frontend`) → Render free (backend, `render.yam
 
 ## Moving to a friend's server later
 `docker compose up -d` in `rebuild/` with `.env` (see `.env.example`); `DATABASE_URL` points to the local `db` service, leave `SUPABASE_*` empty.
+
+## 2026-11-01 DECISION CHANGE (owner): no Render/Vercel/accounts. One month of trials on the shop PC.
+The system runs on the shop PC (db 54329, backend :4000, frontend :3100, cloudflared quick tunnel). Keeper: scheduled task `Mekanizm-keeper` (at logon + every 5 min) runs `C:\mekanizm-deploy\start-all.ps1`, which starts only what is down and writes the public link to `C:\mekanizm-deploy\LINK.txt`. The quick-tunnel link changes only when cloudflared restarts. Shop wifi link is stable: http://192.168.1.3:3100. The Render/Vercel files and the Supabase `mk_new` copy (1791 rows, snapshot) are kept for the later real server move.
