@@ -1,19 +1,17 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { dateToDay } from '../../lib/dates.js';
 import { num } from '../../lib/money.js';
+import { putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
 
 /**
  * 🔗 رابط العميل: a private link per customer (token in the URL, nothing else to log in with). The page shows his balance, invoices
  * (with what was missing at delivery and handed over later), payments and returns, and lets him write a request with photos or video.
  */
-const UPLOADS = path.resolve(process.cwd(), 'uploads');
 const token = z.object({ token: z.string().regex(/^[a-z0-9]{20,40}$/) });
 const cid = z.object({ contactId: z.string().min(1).max(64) });
 const msgBody = z.object({
@@ -75,9 +73,8 @@ export default async function portalRoutes(app: FastifyInstance) {
     const buf = Buffer.from(data.includes(',') ? data.slice(data.indexOf(',') + 1) : data, 'base64');
     const max = ext === 'mp4' ? 25 * 1024 * 1024 : 8 * 1024 * 1024;
     if (!buf.length || buf.length > max) throw badRequest('الملف كبير أو فاضي');
-    await mkdir(UPLOADS, { recursive: true });
     const name = `${randomBytes(12).toString('hex')}.${ext}`;
-    await writeFile(path.join(UPLOADS, name), buf);
+    await putFile(name, buf, ext === 'mp4' ? 'video/mp4' : 'image/' + (ext === 'jpg' ? 'jpeg' : ext));
     return { u: `/api/v1/work/files/${name}`, t: ext === 'mp4' ? 'v' : 'i' };
   });
 

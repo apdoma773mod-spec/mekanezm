@@ -1,15 +1,13 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { actorOf } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
+import { putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
 
-const UPLOADS = path.resolve(process.cwd(), 'uploads');
 
 /**
  * «🌐 الموقع»: orders sent from the public shop page (web_orders) and the site's own content
@@ -98,9 +96,8 @@ export default async function webRoutes(app: FastifyInstance) {
     const { data, ext } = parse(z.object({ data: z.string().min(10), ext: z.enum(['jpg', 'jpeg', 'png', 'webp']).default('jpg') }), request.body);
     const buf = Buffer.from(data.includes(',') ? data.slice(data.indexOf(',') + 1) : data, 'base64');
     if (!buf.length || buf.length > 8 * 1024 * 1024) throw badRequest('الصورة كبيرة أو فاضية');
-    await mkdir(UPLOADS, { recursive: true });
     const name = `${randomBytes(12).toString('hex')}.${ext}`;
-    await writeFile(path.join(UPLOADS, name), buf);
+    await putFile(name, buf, 'image/' + (ext === 'jpg' ? 'jpeg' : ext));
     return { url: `/api/v1/work/files/${name}` };
   });
 
