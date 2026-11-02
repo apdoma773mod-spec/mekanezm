@@ -57,9 +57,12 @@ export async function bridgeRoutes(app: FastifyInstance) {
         body: z.string().min(1).max(4000),
       })
       .parse(request.body);
+    // the site's single «إرسال الطلب» button also opens WhatsApp with the same order (رقم الطلب: xxxxxxxx): it is already in «طلبات الموقع», so keep it out of the new WhatsApp orders
+    const ref = /رقم الطلب:\s*([a-z0-9]{8})/i.exec(b.body)?.[1]?.toLowerCase();
+    const dup = ref ? !!(await db.webOrder.findFirst({ where: { id: { startsWith: ref } }, select: { id: true } })) : false;
     try {
       const row = await db.waOrder.create({
-        data: { msgId: b.msgId || null, phone: b.phone, customerName: b.name, body: b.body },
+        data: { msgId: b.msgId || null, phone: b.phone, customerName: b.name, body: b.body, ...(dup ? { status: 'ignored' } : {}) },
       });
       return { id: row.id };
     } catch (e) {
