@@ -12,33 +12,85 @@ const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 
 const PAGE = 25;
 const lite = (s: string) => String(s ?? '').toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 
+type View = 'all' | 'top' | 'hidden' | 'noimg' | 'nodesc';
+type Sort = 'new' | 'name' | 'code';
+const VIEWS: [View, string][] = [['all', 'الكل'], ['top', '⭐ مميز'], ['hidden', '🙈 مخفي'], ['noimg', '📷 من غير صور'], ['nodesc', '📝 من غير وصف']];
+
 export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => void }) {
   const [q, setQ] = useState(''), [sec, setSec] = useState(''), [page, setPage] = useState(1);
+  const [view, setView] = useState<View>('all'), [sort, setSort] = useState<Sort>('new');
+  const [pick, setPick] = useState<Set<string>>(new Set()), [busy, setBusy] = useState(false), [note, setNote] = useState('');
   const [edit, setEdit] = useState<string | 'new' | null>(null);
   const all: P[] = doc.data.products ?? [];
   const secs: { id: string; name: string }[] = doc.data.sections ?? [];
   const secName = (id: string) => secs.find(s => s.id === id)?.name ?? '—';
+  const noImg = (p: P) => !(p.imgs?.length || p.img);
+  const counts = useMemo(() => ({ all: all.length, top: all.filter(p => p.top).length, hidden: all.filter(p => p.hidden).length, noimg: all.filter(noImg).length, nodesc: all.filter(p => !p.desc?.trim()).length }), [all]);
   const list = useMemo(() => {
     const w = lite(q).split(/\s+/).filter(Boolean);
-    return all.filter(p => (!sec || p.sec === sec) && w.every(x => lite(`${p.name} ${p.code}`).includes(x)));
-  }, [all, q, sec]);
+    const ok = (p: P) => view === 'all' || (view === 'top' ? p.top : view === 'hidden' ? p.hidden : view === 'noimg' ? noImg(p) : !p.desc?.trim());
+    const r = all.filter(p => (!sec || p.sec === sec) && ok(p) && w.every(x => lite(`${p.name} ${p.code}`).includes(x)));
+    if (sort === 'name') r.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+    else if (sort === 'code') r.sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }));
+    else r.reverse(); // newest added first
+    return r;
+  }, [all, q, sec, view, sort]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE)), pg = Math.min(page, pages);
+  const shown = list.slice((pg - 1) * PAGE, pg * PAGE);
+  const toggle = (id: string) => setPick(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allShownPicked = shown.length > 0 && shown.every(p => pick.has(p.id));
+
+  async function bulk(label: string, fn: (p: Rec) => void) {
+    if (!pick.size || busy) return;
+    setBusy(true); setNote('⏳ جاري التطبيق…');
+    try {
+      const ids = new Set(pick);
+      onDoc(await saveDoc(x => { for (const p of (x.products ?? []) as Rec[]) if (ids.has(p.id)) fn(p); }));
+      setNote(`✔ ${label} (${ids.size} منتج)`); setPick(new Set());
+    } catch (e) { setNote('✗ ' + (e as Error).message); }
+    setBusy(false);
+  }
+  const moveTo = (sid: string) => sid && bulk('اتنقلوا لقسم «' + secName(sid) + '»', p => { p.sec = sid; });
+  function exportCsv() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['الكود', 'الاسم', 'القسم', 'مميز', 'مخفي', 'عدد الصور'], ...list.map(p => [p.code, p.name, secName(p.sec), p.top ? 'نعم' : '', p.hidden ? 'نعم' : '', p.imgs?.length ?? (p.img ? 1 : 0)])];
+    const url = URL.createObjectURL(new Blob(['﻿' + rows.map(r => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'products.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   if (edit) return <ProductEditor doc={doc} id={edit === 'new' ? null : edit} onDoc={onDoc} onClose={() => setEdit(null)} />;
   return (
     <section className="ad-s">
-      <div className="ad-top"><h2>📦 المنتجات ({all.length})</h2><button className="pri" onClick={() => setEdit('new')}>＋ منتج جديد</button></div>
-      <div className="ad-filter">
+      <div className="ad-top"><h2>📦 المنتجات ({all.length})</h2><div className="ad-acts"><button type="button" className="lnk" onClick={exportCsv} disabled={!list.length}>⬇️ Excel</button><button className="pri" onClick={() => setEdit('new')}>＋ منتج جديد</button></div></div>
+      <div className="ad-chipbar">{VIEWS.map(([k, t]) => <button key={k} type="button" className={view === k ? 'on' : ''} onClick={() => { setView(k); setPage(1); }}>{t} <b>{counts[k]}</b></button>)}</div>
+      <div className="ad-filter ad-filter3">
         <input value={q} placeholder="ابحث بالاسم أو الكود…" onChange={e => { setQ(e.target.value); setPage(1); }} />
         <select value={sec} onChange={e => { setSec(e.target.value); setPage(1); }}><option value="">كل الأقسام</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <select value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="ترتيب"><option value="new">الأحدث</option><option value="name">بالاسم</option><option value="code">بالكود</option></select>
       </div>
-      {!list.length && <p className="mut">{all.length ? 'مفيش منتج بالاسم ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
-      <div className="ad-list">{list.slice((pg - 1) * PAGE, pg * PAGE).map(p => (
-        <button key={p.id} type="button" className="ad-li" onClick={() => setEdit(p.id)}>
-          <span className="th">{(p.imgs?.[0] || p.img) ? <img src={p.imgs?.[0] || p.img} alt="" /> : '📷'}</span>
-          <span className="tx"><b>{p.name || '(من غير اسم)'}</b><small>كود {p.code || '—'} · {secName(p.sec)}</small></span>
-          <span className="bd">{p.top && <i>⭐</i>}{p.hidden && <i>🙈</i>}</span>
-        </button>
+      {pick.size > 0 && (
+        <div className="ad-bulk" role="toolbar" aria-label="إجراءات جماعية">
+          <b>{pick.size} مختار</b>
+          <button type="button" disabled={busy} onClick={() => bulk('اتخفوا', p => { p.hidden = true; })}>🙈 إخفاء</button>
+          <button type="button" disabled={busy} onClick={() => bulk('ظهروا', p => { delete p.hidden; })}>👁️ إظهار</button>
+          <button type="button" disabled={busy} onClick={() => bulk('اتميّزوا', p => { p.top = true; })}>⭐ تمييز</button>
+          <button type="button" disabled={busy} onClick={() => bulk('اتشال التمييز', p => { delete p.top; })}>☆ إلغاء التمييز</button>
+          <select disabled={busy} value="" onChange={e => moveTo(e.target.value)} aria-label="نقل لقسم"><option value="">↪ نقل لقسم…</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <button type="button" className="lnk" onClick={() => setPick(new Set())}>إلغاء الاختيار</button>
+        </div>
+      )}
+      {note && <p className={note.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{note}</p>}
+      {!list.length && <p className="mut">{all.length ? 'مفيش منتج بالفلتر ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
+      {shown.length > 0 && <label className="ad-ck ad-all"><input type="checkbox" checked={allShownPicked} onChange={() => setPick(s => { const n = new Set(s); shown.forEach(p => (allShownPicked ? n.delete(p.id) : n.add(p.id))); return n; })} /> اختيار كل اللي في الصفحة</label>}
+      <div className="ad-list">{shown.map(p => (
+        <div key={p.id} className={'ad-row' + (pick.has(p.id) ? ' sel' : '')}>
+          <input type="checkbox" checked={pick.has(p.id)} onChange={() => toggle(p.id)} aria-label={'اختيار ' + (p.name || p.code)} />
+          <button type="button" className="ad-li" onClick={() => setEdit(p.id)}>
+            <span className="th">{(p.imgs?.[0] || p.img) ? <img src={p.imgs?.[0] || p.img} alt="" /> : '📷'}</span>
+            <span className="tx"><b>{p.name || '(من غير اسم)'}</b><small>كود {p.code || '—'} · {secName(p.sec)}</small></span>
+            <span className="bd">{p.top && <i title="مميز">⭐</i>}{p.hidden && <i title="مخفي">🙈</i>}{noImg(p) && <i title="من غير صور">⚠️</i>}</span>
+          </button>
+        </div>
       ))}</div>
       {pages > 1 && <div className="ad-pg"><button disabled={pg < 2} onClick={() => setPage(pg - 1)}>›</button><span>{pg} / {pages}</span><button disabled={pg >= pages} onClick={() => setPage(pg + 1)}>‹</button></div>}
     </section>
