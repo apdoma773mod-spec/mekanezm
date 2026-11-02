@@ -92,3 +92,35 @@ describe('site content', () => {
     expect(pub.data.sections).toEqual([{ id: 's1', name: 'مفصلات' }]);
   });
 });
+
+describe('website: stock, tracking, reviews', () => {
+  it('visitors see stock yes/no, track their own order by phone, and leave reviews the owner approves', async () => {
+    await prisma.product.create({ data: { code: 'W1', name: 'مفصلة', qty: 5, price: 10 } });
+    await prisma.product.create({ data: { code: 'W2', name: 'مقبض', qty: 0, price: 10 } });
+    const stock = (await call(null, 'GET', '/web/public/stock')).json();
+    expect(stock).toMatchObject({ W1: true, W2: false });
+
+    const sent = await call(null, 'POST', '/web/public/orders', { customerName: 'سمير', phone: '01001112223', items: [{ code: 'W1', qty: 2 }], ship: { method: 'delivery', gov: 'القاهرة', area: '', address: 'شارع' } });
+    const ref = sent.json().no as string;
+    const hit = (await call(null, 'POST', '/web/public/track', { ref, phone: '+201001112223' })).json().orders;
+    expect(hit).toHaveLength(1);
+    expect(hit[0]).toMatchObject({ ref, status: 'new', method: 'delivery', gov: 'القاهرة', items: [{ name: 'مفصلة', qty: 2 }] });
+    expect((await call(null, 'POST', '/web/public/track', { ref, phone: '01009998887' })).json().orders).toHaveLength(0);
+
+    const c = await call(null, 'POST', '/web/public/custom', { name: 'منى', phone: '01234567890', kind: 'steel', summary: 'ستانلس ٢ م' });
+    const cid = c.json().id as string;
+    expect((await call(null, 'POST', '/web/public/track-custom', { ref: cid.slice(0, 8), phone: '01234567890' })).json().orders[0]).toMatchObject({ kind: 'steel', status: 'new' });
+
+    expect((await call(null, 'POST', '/web/public/reviews', { name: 'أحمد', rating: 5, body: 'تمام' })).statusCode).toBe(200);
+    expect((await call(null, 'GET', '/web/public/reviews')).json()).toHaveLength(0);
+    expect((await call(staff, 'GET', '/web/reviews/pending')).statusCode).toBe(403);
+    const pending = (await call(admin, 'GET', '/web/reviews/pending')).json().items;
+    expect(pending).toHaveLength(1);
+    await call(admin, 'POST', `/web/reviews/pending/${pending[0].id}`, { approve: true });
+    expect((await call(null, 'GET', '/web/public/reviews')).json()).toEqual([{ name: 'أحمد', rating: 5, body: 'تمام' }]);
+    expect((await call(admin, 'GET', '/web/reviews/pending')).json().items).toHaveLength(0);
+
+    await call(null, 'POST', '/web/public/visit', { page: 'shop' });
+    expect((await call(admin, 'GET', '/web/visits')).json().visits.shop).toBe(1);
+  });
+});

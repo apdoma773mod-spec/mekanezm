@@ -87,6 +87,51 @@ function ImgsEditor({ imgs, onChange }: { imgs: string[]; onChange: (v: string[]
   );
 }
 
+/** ⭐ Reviews visitors left on the site: waiting for the owner to approve (it joins the list below) or reject. */
+function PendingReviews({ onChanged }: { onChanged: () => void }) {
+  const toast = useToast();
+  const [list, setList] = useState<{ id: string; name: string; rating: number; body: string }[]>([]);
+  const load = () =>
+    api
+      .get<{ items: { id: string; name: string; rating: number; body: string }[] }>('/web/reviews/pending')
+      .then((r) => setList(r.items))
+      .catch(() => setList([]));
+  useEffect(() => {
+    void load();
+  }, []);
+  const act = async (id: string, approve: boolean) => {
+    try {
+      await api.post('/web/reviews/pending/' + id, { approve });
+      toast(approve ? '✔ ظهر على الموقع' : 'اتشال');
+      await load();
+      if (approve) onChanged();
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
+  };
+  if (!list.length) return null;
+  return (
+    <div style={{ background: '#fff7e0', border: '1px solid #f0d98a', borderRadius: 12, padding: 10, marginBottom: 12 }}>
+      <b>📝 آراء جديدة من الزوار ({list.length}) — مستنية موافقتك</b>
+      {list.map((r) => (
+        <div key={r.id} style={rowStyle}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <b>{r.name}</b> <span style={{ color: '#f5a623' }}>{'★'.repeat(r.rating)}</span>
+            <br />
+            <small>{r.body}</small>
+          </div>
+          <button type="button" className="primary" onClick={() => void act(r.id, true)}>
+            ✔ انشر
+          </button>
+          <button type="button" className="secondary danger" onClick={() => void act(r.id, false)}>
+            امسح
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const rowStyle = { display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' } as const;
 
 export function SiteAdmin({ tab: first = 'works', onClose }: { tab?: Tab; onClose: () => void }) {
@@ -171,6 +216,7 @@ export function SiteAdmin({ tab: first = 'works', onClose }: { tab?: Tab; onClos
       {tab === 'reviews' && (
         <>
           <p style={{ color: 'var(--muted)', marginTop: 0 }}>اكتب آراء عملاء حقيقيين (بإذنهم). بتظهر في الصفحة الرئيسية.</p>
+          <PendingReviews onChanged={() => void reload()} />
           {(d.reviews ?? []).map((r, i) => (
             <div key={r.id} style={rowStyle}>
               <div style={{ flex: 1, minWidth: 0 }}>
