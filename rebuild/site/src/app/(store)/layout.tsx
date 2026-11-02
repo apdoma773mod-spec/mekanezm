@@ -3,15 +3,14 @@ import { Chrome } from '@/components/chrome';
 import { ShopProvider } from '@/components/shop-provider';
 import { TopBar } from '@/components/topbar';
 import { getSettings } from '@/lib/catalog';
+import { cssVars } from '@/lib/theme';
 
 export const revalidate = 60;
 
 export default async function StoreLayout({ children }: { children: ReactNode }) {
   const site = await getSettings();
-  // Colors chosen by the owner in /admin (accent, bg, fg, card); anything that is not a plain hex color is ignored.
-  const vars = (['accent', 'bg', 'fg', 'card'] as const)
-    .map(k => [k, String((site.theme as Record<string, unknown>)[k] ?? '')] as const)
-    .filter(([, v]) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)).map(([k, v]) => `--${k}:${v}`).join(';');
+  // Colors chosen by the owner in /admin; only valid hex values are used (see lib/theme.ts).
+  const vars = cssVars(site.theme as Record<string, unknown>);
   return (
     <ShopProvider site={site}>
       {vars && <style>{`:root{${vars}}`}</style>}

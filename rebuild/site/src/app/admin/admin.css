@@ -82,3 +82,13 @@
 .ad-sn { display: grid; gap: 4px; }
 .ad-sec { grid-template-columns: 96px 1fr auto; }
 .ad-bar > .lnk { margin-inline-start: auto; }
+.ad-sub { margin: 16px 0 8px; font-size: 15px; }
+.ad-themes, .ad-darks { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-themes button, .ad-darks button { display: grid; gap: 6px; justify-items: center; min-width: 92px; padding: 8px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--card-fg, inherit); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.ad-themes button.on, .ad-darks button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.ad-themes button > span { display: flex; gap: 4px; padding: 6px; border-radius: 10px; width: 100%; justify-content: center; }
+.ad-themes button i { width: 18px; height: 18px; border-radius: 6px; border: 1px solid #0002; }
+.ad-darks button i { width: 40px; height: 40px; border-radius: 12px; }
+.ad-grp { border-top: 1px solid var(--line); margin-top: 8px; }
+.ad-dk { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 8px; border-radius: 16px; text-align: center; font-size: 13px; font-weight: 700; }
+.ad-dk i { display: flex; margin: 0 auto 6px; width: 44px; height: 44px; border-radius: 14px; align-items: center; justify-content: center; font-size: 22px; font-style: normal; }
