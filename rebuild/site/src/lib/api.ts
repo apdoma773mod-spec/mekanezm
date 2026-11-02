@@ -7,12 +7,13 @@ import type { Ship, Stock } from './schema';
 const NEW = process.env.NEXT_PUBLIC_NEW_BACKEND === '1';
 
 /** POST JSON to the new backend; its `{id}` reply becomes the same `data: id-string` shape rpc() gives. */
-async function mk(path: string, body: unknown): Promise<{ ok: boolean; data: string | null; message: string }> {
+async function mk(path: string, body: unknown, raw = false): Promise<{ ok: boolean; data: string | null; message: string; json?: unknown }> {
   try {
     const r = await fetch(`/mkapi/web/public/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const t = await r.text();
     let j: { id?: string; message?: string; error?: string } | null = null;
     try { j = JSON.parse(t); } catch { /* not json */ }
+    if (raw) return { ok: r.ok, data: null, message: r.ok ? '' : j?.message || j?.error || t.slice(0, 200) || 'error', json: j };
     if (r.ok && j?.id) return { ok: true, data: String(j.id), message: '' };
     return { ok: false, data: null, message: j?.message || j?.error || t.slice(0, 200) || 'error' };
   } catch (e) { return { ok: false, data: null, message: String(e) }; }
@@ -39,6 +40,10 @@ async function rpc<T = unknown>(fn: string, body: unknown): Promise<{ ok: boolea
 
 export async function fetchStock(): Promise<Stock | null> {
   try {
+    if (NEW) {
+      const j = await (await fetch('/mkapi/web/public/stock', { cache: 'no-store' })).json();
+      return j && typeof j === 'object' && !Array.isArray(j) ? (j as Stock) : null;
+    }
     const r = await fetch(`${SB_URL}/rest/v1/rpc/site_stock`, { method: 'POST', headers: H, body: '{}', cache: 'no-store' });
     const j = await r.json();
     return j && typeof j === 'object' && !Array.isArray(j) ? (j as Stock) : null;
@@ -90,12 +95,18 @@ export type TrackedOrder = {
 export type TrackedCustom = { ref: string; kind?: string; status?: string; summary?: string; img?: string; eta?: string; stages?: string[]; stage_idx?: number | null };
 
 export async function trackOrder(ref: string, phone: string) {
+  if (NEW) {
+    const n = await mk('track', { ref, phone }, true);
+    if (!n.ok) throw new Error(n.message || 'err');
+    return ((n.json as { orders?: TrackedOrder[] }) ?? {}).orders ?? [];
+  }
   const r = await rpc<{ orders?: TrackedOrder[] }>('track_order', { p_ref: ref, p_phone: phone });
   if (!r.ok) throw new Error(r.message || 'err');
   return r.data?.orders ?? [];
 }
 export async function trackCustom(ref: string, phone: string) {
   try {
+    if (NEW) return (((await mk('track-custom', { ref, phone }, true)).json as { orders?: TrackedCustom[] }) ?? {}).orders ?? [];
     const r = await rpc<{ orders?: TrackedCustom[] }>('track_custom', { p_ref: ref, p_phone: phone });
     return r.ok ? r.data?.orders ?? [] : [];
   } catch { return []; }
@@ -105,13 +116,19 @@ export type Review = { name: string; rating: number; body?: string };
 /** Approved reviews: the shop's (no id) or one product's. */
 export async function listReviews(product?: string): Promise<Review[]> {
   try {
+    if (NEW) {
+      const r = await fetch('/mkapi/web/public/reviews' + (product ? '?product=' + encodeURIComponent(product) : ''), { cache: 'no-store' });
+      const j = r.ok ? await r.json() : [];
+      return Array.isArray(j) ? (j as Review[]) : [];
+    }
     const r = await rpc<Review[]>('list_reviews', { p_product: product ?? null });
     return Array.isArray(r.data) ? r.data : [];
   } catch { return []; }
 }
-export const addReview = (name: string, rating: number, body: string, product?: string) => rpc('add_review', { p_name: name, p_rating: rating, p_body: body, p_product: product ?? null });
+export const addReview = (name: string, rating: number, body: string, product?: string) =>
+  NEW ? mk('reviews', { name, rating, body, product: product ?? null }, true) : rpc('add_review', { p_name: name, p_rating: rating, p_body: body, p_product: product ?? null });
 export const addNotifyMe = (id: string, pname: string, name: string, phone: string) =>
-  rpc('add_notify_me', { p_product: id, p_pname: pname, p_name: name, p_phone: phone });
+  NEW ? mk('notify-me', { product: id, pname, name, phone }, true) : rpc('add_notify_me', { p_product: id, p_pname: pname, p_name: name, p_phone: phone });
 
 /** One visit count per page per browser session (just a number in the system). */
 export function bumpVisit(page: 'shop' | 'custom' | 'story') {
@@ -119,7 +136,7 @@ export function bumpVisit(page: 'shop' | 'custom' | 'story') {
     const k = 'mkv_' + page;
     if (sessionStorage.getItem(k)) return;
     sessionStorage.setItem(k, '1');
-    rpc('bump_visit', { p_page: page }).catch(() => {});
+    (NEW ? mk('visit', { page }, true) : rpc('bump_visit', { p_page: page })).catch(() => {});
   } catch { /* storage blocked */ }
 }
 
