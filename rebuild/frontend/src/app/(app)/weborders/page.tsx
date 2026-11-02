@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import type { InvoiceDto, Paginated } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { WebInsights } from '@/components/web-insights';
 import { waNum } from '@/components/hy/ui';
 import { useModal } from '@/components/modals/modal-host';
 import { Modal } from '@/components/ui/modal';
@@ -515,6 +516,7 @@ export default function WebOrdersPage() {
   return (
     <AdminOnly>
       <PageHeader title="طلبات الموقع" subtitle="الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة" />
+      <WebInsights />
       <OrdersList />
       <Requests />
       <Custom />

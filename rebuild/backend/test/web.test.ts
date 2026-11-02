@@ -109,6 +109,26 @@ describe('website order → WhatsApp copies', () => {
   });
 });
 
+describe('website: back in stock + insights', () => {
+  it('tells the waiting customer once when the product is back, and the insights show the numbers', async () => {
+    await prisma.product.create({ data: { code: 'B1', name: 'مقبض ذهبي', qty: 0, price: 10 } });
+    await prisma.setting.create({ data: { key: 'site_content', value: { version: 1, data: { products: [{ id: 'site-b1', name: 'مقبض ذهبي', code: 'B1' }] } } } });
+    await call(null, 'POST', '/web/public/notify-me', { product: 'site-b1', pname: 'مقبض ذهبي', name: 'علي', phone: '01001112223' });
+    const { notifyBackInStock } = await import('../src/modules/web/notify-me.js');
+    expect(await notifyBackInStock(prisma)).toBe(0);
+    const ins = (await call(admin, 'GET', '/web/insights')).json();
+    expect(ins.waiting).toEqual([{ pname: 'مقبض ذهبي', n: 1 }]);
+    await prisma.product.update({ where: { code: 'B1' }, data: { qty: 5 } });
+    expect(await notifyBackInStock(prisma)).toBe(1);
+    expect(await notifyBackInStock(prisma)).toBe(0);
+    const m = await prisma.outboundMessage.findMany();
+    expect(m).toHaveLength(1);
+    expect(m[0].toPhone).toBe('201001112223');
+    expect(m[0].body).toContain('مقبض ذهبي');
+    expect((await call(staff, 'GET', '/web/insights')).statusCode).toBe(403);
+  });
+});
+
 describe('website: stock, tracking, reviews', () => {
   it('visitors see stock yes/no, track their own order by phone, and leave reviews the owner approves', async () => {
     await prisma.product.create({ data: { code: 'W1', name: 'مفصلة', qty: 5, price: 10 } });

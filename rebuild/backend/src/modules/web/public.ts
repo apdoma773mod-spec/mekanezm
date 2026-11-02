@@ -150,5 +150,40 @@ export default async function webPublicRoutes(app: FastifyInstance) {
   });
 
   app.get('/notify', { preHandler: app.requireAdmin }, async () => ({ items: await getKv<unknown[]>(NOTIFY_KEY, []) }));
+  /** «📊 أداء الموقع»: visits, orders per day, the most ordered items and what people are waiting for. */
+  app.get('/insights', { preHandler: app.requireAdmin }, async () => {
+    const since = new Date(Date.now() - 30 * 86400_000);
+    const [orders, custom, requests, visits, notify, pending] = await Promise.all([
+      db.webOrder.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true, items: true, status: true } }),
+      db.webCustom.count({ where: { createdAt: { gte: since } } }),
+      db.webRequest.count({ where: { createdAt: { gte: since } } }),
+      getKv<{ shop?: number; custom?: number; story?: number; days?: Record<string, Record<string, number>> }>(VISITS_KEY, {}),
+      getKv<{ product: string; pname?: string }[]>(NOTIFY_KEY, []),
+      getKv<unknown[]>(REVIEWS_KEY, []),
+    ]);
+    const day = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(d);
+    const byDay: Record<string, number> = {};
+    const items = new Map<string, { qty: number; orders: number }>();
+    for (const o of orders) {
+      byDay[day(o.createdAt)] = (byDay[day(o.createdAt)] ?? 0) + 1;
+      for (const i of (o.items as { code: string; qty: number }[]) ?? []) {
+        const cur = items.get(i.code) ?? { qty: 0, orders: 0 };
+        items.set(i.code, { qty: cur.qty + Number(i.qty || 0), orders: cur.orders + 1 });
+      }
+    }
+    const names = new Map((await db.product.findMany({ where: { code: { in: [...items.keys()] } }, select: { code: true, name: true } })).map((p) => [p.code, p.name]));
+    const top = [...items.entries()].sort((a, b) => b[1].orders - a[1].orders || b[1].qty - a[1].qty).slice(0, 8).map(([code, v]) => ({ code, name: names.get(code) ?? code, ...v }));
+    const wait = new Map<string, { pname: string; n: number }>();
+    for (const w of notify) wait.set(w.product, { pname: w.pname || w.product, n: (wait.get(w.product)?.n ?? 0) + 1 });
+    const days = Object.entries(visits.days ?? {}).sort().slice(-30).map(([d, v]) => ({ day: d, shop: v.shop ?? 0, custom: v.custom ?? 0 }));
+    return {
+      visits: { shop: visits.shop ?? 0, custom: visits.custom ?? 0, story: visits.story ?? 0, days },
+      orders: { count: orders.length, done: orders.filter((o) => o.status === 'done').length, custom, requests, byDay },
+      top,
+      waiting: [...wait.values()].sort((a, b) => b.n - a.n).slice(0, 8),
+      pendingReviews: pending.length,
+    };
+  });
+
   app.get('/visits', { preHandler: app.requireAdmin }, async () => ({ visits: await getKv<Record<string, unknown>>(VISITS_KEY, {}) }));
 }
