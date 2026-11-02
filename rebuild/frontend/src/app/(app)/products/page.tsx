@@ -77,6 +77,11 @@ function ProductsScreen() {
               <Icon name="file" /> استيراد من ملف
             </button>
             {isAdmin && (
+              <button type="button" className="secondary" id="dimBulkBtn" onClick={() => open({ kind: 'dimBulk' })}>
+                📐 صور المقاسات لكل المنتجات
+              </button>
+            )}
+            {isAdmin && (
               <button type="button" className="primary" id="spNewBtn" onClick={() => open({ kind: 'siteProduct' })}>
                 ➕ منتج جديد على الموقع
               </button>
