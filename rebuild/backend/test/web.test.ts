@@ -93,6 +93,22 @@ describe('site content', () => {
   });
 });
 
+describe('website order → WhatsApp copies', () => {
+  it('queues one message per number (personal + two shop numbers) and can be switched off', async () => {
+    await prisma.product.create({ data: { code: 'N1', name: 'مفصلة', qty: 5, price: 10 } });
+    await call(null, 'POST', '/web/public/orders', { customerName: 'سمير', phone: '01001112223', items: [{ code: 'N1', qty: 2 }], ship: { method: 'delivery', gov: 'القاهرة', area: '', address: 'شارع التحرير' } });
+    await new Promise((r) => setTimeout(r, 300));
+    const q = await prisma.outboundMessage.findMany({ orderBy: { toPhone: 'asc' } });
+    expect(q.map((m) => m.toPhone)).toEqual(['201042383986', '201042466087', '201119199659']);
+    expect(q[0].body).toContain('مفصلة');
+    expect(q[0].body).toContain('سمير');
+    await prisma.setting.upsert({ where: { key: 'web_order_notify' }, create: { key: 'web_order_notify', value: { on: false } }, update: { value: { on: false } } });
+    await call(null, 'POST', '/web/public/orders', { customerName: 'منى', phone: '01001112224', items: [{ code: 'N1', qty: 1 }] });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await prisma.outboundMessage.count()).toBe(3);
+  });
+});
+
 describe('website: stock, tracking, reviews', () => {
   it('visitors see stock yes/no, track their own order by phone, and leave reviews the owner approves', async () => {
     await prisma.product.create({ data: { code: 'W1', name: 'مفصلة', qty: 5, price: 10 } });

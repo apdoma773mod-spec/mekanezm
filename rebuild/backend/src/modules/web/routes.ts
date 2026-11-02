@@ -14,6 +14,8 @@ import { parse } from '../../lib/validate.js';
  * (sections, products shown, works, reviews, delivery…, the old site_content row) kept as one versioned document.
  */
 const SITE_KEY = 'site_content';
+/** The owner's personal number and the two shop numbers (international form, as the bridge wants them). */
+const NOTIFY_DEFAULT = ['201119199659', '201042383986', '201042466087'];
 
 const orderBody = z.object({
   customerName: z.string().trim().min(1).max(120),
@@ -58,8 +60,37 @@ export default async function webRoutes(app: FastifyInstance) {
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
     const b = parse(orderBody, request.body);
     const o = await db.webOrder.create({ data: { customerName: b.customerName, phone: b.phone, items: b.items as Prisma.InputJsonValue, ship: b.ship as Prisma.InputJsonValue | undefined } });
+    void notifyNewOrder(o.id, b);
     return { id: o.id, no: o.id.slice(0, 8) };
   });
+
+  /**
+   * Every site order also goes to the owner's WhatsApp numbers from the shop's own WhatsApp (the bridge): the personal number and the two
+   * shop numbers by default. The list lives in Setting `web_order_notify` ({ on, to }) so it can change without a new version.
+   */
+  async function notifyNewOrder(id: string, b: z.infer<typeof orderBody>) {
+    try {
+      const cfg = ((await db.setting.findUnique({ where: { key: 'web_order_notify' } }))?.value ?? {}) as { on?: boolean; to?: string[] };
+      if (cfg.on === false) return;
+      const to = [...new Set((Array.isArray(cfg.to) && cfg.to.length ? cfg.to : NOTIFY_DEFAULT).map((x) => String(x).replace(/\D/g, '')).filter(Boolean))];
+      const names = new Map((await db.product.findMany({ where: { code: { in: b.items.map((i) => i.code) } }, select: { code: true, name: true } })).map((p) => [p.code, p.name]));
+      const how = { pickup: '🏪 هيستلم من المحل', delivery: '🛵 توصيل', ship: '📦 شحن' } as const;
+      const lines = b.items.map((i) => `• ${names.get(i.code) ?? i.code} (كود ${i.code}) × ${i.qty}${i.backorder ? ' — بالحجز' : ''}`);
+      const body = [
+        '🛒 طلب جديد من الموقع',
+        `رقم الطلب: ${id.slice(0, 8)}`,
+        `الاسم: ${b.customerName}`,
+        b.phone ? `الموبايل: ${b.phone}` : '',
+        ...lines,
+        b.ship ? `${how[b.ship.method]}${b.ship.gov ? ' — ' + b.ship.gov : ''}${b.ship.address ? ' — ' + b.ship.address : ''}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      for (const t of to) await db.outboundMessage.create({ data: { toPhone: t, body, byName: '🌐 طلب من الموقع' } });
+    } catch {
+      /* the order is saved either way */
+    }
+  }
 
   // ---- admin ----
   app.get('/orders', { preHandler: app.requireAdmin }, async () => {
