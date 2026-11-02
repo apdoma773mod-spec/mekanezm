@@ -855,3 +855,10 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 .mkw i { background: linear-gradient(145deg, var(--pl), var(--pa)); box-shadow: 0 6px 14px color-mix(in srgb, var(--pa) 33%, transparent); }
 .to-top { background: var(--pa); }
 .cust, .find, .rqv, .mks, .to-top { color: var(--dk-fg); }
+
+/* ---------- wood edge-banding (only when a wood sample is chosen in /admin) ---------- */
+.tb { position: relative; }
+.tb::after { content: ''; position: absolute; inset: auto 0 0 0; height: var(--wood-h, 0); background: var(--wood-img, none); box-shadow: 0 1px 0 #0002; pointer-events: none; }
+.card { position: relative; }
+.card::after { content: ''; position: absolute; inset: auto 0 0 0; height: var(--wood-h, 0); background: var(--wood-img, none); pointer-events: none; }
+.sh::before, .sh::after { background: var(--wood-img, var(--accent)); opacity: var(--wood-op, .45); height: var(--wood-h, 2px); border-radius: 3px; }

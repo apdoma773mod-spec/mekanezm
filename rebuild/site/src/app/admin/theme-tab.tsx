@@ -1,14 +1,14 @@
 'use client';
 // «🎨 الألوان»: whole-look presets, one color per role, automatic readable text, and a live preview.
-import { DARKS, DEFAULTS, HEX, THEMES, contrast, full, gloss, onColor, resolve, type ThemeKey, type ThemeMap } from '@/lib/theme';
+import { DARKS, DEFAULTS, HEX, THEMES, WOODS, contrast, full, gloss, grain, onColor, resolve, woodTheme, type ThemeKey, type ThemeMap } from '@/lib/theme';
 
-const LABEL: Record<ThemeKey, string> = {
+const LABEL: Record<Exclude<ThemeKey, 'wood'>, string> = {
   bg: 'خلفية الصفحة', fg: 'لون الكلام على الصفحة', card: 'خلفية الكروت والقوائم', cardFg: 'لون الكلام داخل الكروت',
   accent: 'لون الأزرار والتمييز', accentFg: 'لون الكلام على الأزرار', dark: 'لون الأقسام الداكنة (البترولي)', darkFg: 'لون الكلام على الأقسام الداكنة',
 };
 // each text color is checked against the background it sits on
 const AGAINST: Partial<Record<ThemeKey, ThemeKey>> = { fg: 'bg', cardFg: 'card', accentFg: 'accent', darkFg: 'dark' };
-const GROUPS: { title: string; keys: ThemeKey[] }[] = [
+const GROUPS: { title: string; keys: Exclude<ThemeKey, 'wood'>[] }[] = [
   { title: 'الصفحة', keys: ['bg', 'fg'] },
   { title: 'الكروت', keys: ['card', 'cardFg'] },
   { title: 'الأزرار', keys: ['accent', 'accentFg'] },
@@ -21,7 +21,17 @@ export function ThemeTab({ theme, set }: { theme: ThemeMap; set: (t: ThemeMap) =
   const text = (k: ThemeKey) => k === 'fg' || k === 'cardFg' || k === 'accentFg' || k === 'darkFg';
   const isTheme = (v: Partial<ThemeMap>) => (Object.keys(DEFAULTS) as ThemeKey[]).every(k => (theme[k] || '').toLowerCase() === (v[k] || '').toLowerCase());
 
+  const woodOn = (h: string) => (theme.wood || '').toLowerCase() === h;
   return <>
+    <h3 className="ad-sub">عينات الخشب <small>(ضغطة تغيّر ألوان الموقع كله وتضيف شريط الحافة)</small></h3>
+    <div className="ad-woods">
+      {WOODS.map(([n, h]) => (
+        <button key={h} type="button" className={woodOn(h) ? 'on' : ''} onClick={() => set({ ...DEFAULTS, ...woodTheme(h) })} aria-pressed={woodOn(h)}>
+          <i style={{ background: grain(h) }} /><b>{n}</b>
+        </button>))}
+      {theme.wood && <button type="button" className="clr" onClick={() => set({ ...theme, wood: '' })}><i /><b>من غير خشب</b></button>}
+    </div>
+
     <h3 className="ad-sub">ثيمات جاهزة (ضغطة واحدة تغيّر كل الألوان)</h3>
     <div className="ad-themes">
       {THEMES.map(t => {
@@ -40,6 +50,7 @@ export function ThemeTab({ theme, set }: { theme: ThemeMap; set: (t: ThemeMap) =
         </button>); })}
     </div>
 
+    <details className="ad-adv"><summary>تخصيص كل لون على حدة</summary>
     {GROUPS.map(g => <div key={g.title} className="ad-grp"><h3 className="ad-sub">{g.title}</h3>
       {g.keys.map(k => {
         const v = theme[k] || '', auto = text(k) && !v, eff = HEX.test(v) ? full(v) : (r as Record<string, string>)[k];
@@ -56,9 +67,11 @@ export function ThemeTab({ theme, set }: { theme: ThemeMap; set: (t: ThemeMap) =
           </div>);
       })}
     </div>)}
+    </details>
 
     <h3 className="ad-sub">معاينة حيّة</h3>
     <div className="ad-sw" style={{ background: r.bg, color: r.fg }}>
+      {r.wood && <div className="ad-edge" style={{ background: grain(r.wood) }} />}
       <b>عنوان الصفحة</b>
       <small style={{ color: r.mut }}>كلام ثانوي على الخلفية</small>
       <div style={{ background: r.card, color: r.cardFg }}><b>كارت منتج</b><span>مفصلة هيدروليك — 30 ج</span><i style={{ background: r.accent, color: r.accentFg }}>🛒 أضف للطلب</i></div>

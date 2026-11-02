@@ -1,6 +1,6 @@
 // Owner-chosen look of the store (set in /admin). Every color has a role; text colors are picked
 // automatically from the background behind them unless the owner chooses one on purpose.
-export const THEME_KEYS = ['accent', 'accentFg', 'bg', 'fg', 'card', 'cardFg', 'dark', 'darkFg'] as const;
+export const THEME_KEYS = ['accent', 'accentFg', 'bg', 'fg', 'card', 'cardFg', 'dark', 'darkFg', 'wood'] as const;
 export type ThemeKey = (typeof THEME_KEYS)[number];
 export type ThemeMap = Record<ThemeKey, string>;
 
@@ -27,7 +27,7 @@ export const gloss = (dark: string) => (full(dark) === '#0f2b3d'
   ? { pa: '#0f2b3d', pb: '#1b5e7b', pl: '#2f6f8f' } // the original petrol, exactly
   : { pa: full(dark), pb: mix(dark, '#2f9fc4', 0.34), pl: mix(dark, '#7fc3dd', 0.4) });
 
-export const DEFAULTS: ThemeMap = { accent: '#3cba2c', accentFg: '', bg: '#f3f4f6', fg: '', card: '#ffffff', cardFg: '', dark: '#0f2b3d', darkFg: '' };
+export const DEFAULTS: ThemeMap = { accent: '#3cba2c', accentFg: '', bg: '#f3f4f6', fg: '', card: '#ffffff', cardFg: '', dark: '#0f2b3d', darkFg: '', wood: '' };
 
 /** Final colors with every automatic choice resolved (used by the store and the live preview). */
 export function resolve(t: Partial<ThemeMap>) {
@@ -39,6 +39,7 @@ export function resolve(t: Partial<ThemeMap>) {
     accentFg: g('accentFg') || onColor(accent),
     cardFg: g('cardFg') || (g('card') ? onColor(card) : fg),
     darkFg: g('darkFg') || onColor(dark),
+    wood: g('wood'),
     mut: mix(fg, bg, 0.4),
     line: mix(bg, fg, 0.12),
     ...gloss(dark),
@@ -59,6 +60,7 @@ export function cssVars(theme: Record<string, unknown>) {
   if (t.accent || t.accentFg) out.push(`--on-acc:${r.accentFg}`);
   if (t.dark) out.push(`--pa:${r.pa}`, `--pb:${r.pb}`, `--pl:${r.pl}`);
   if (t.dark || t.darkFg) out.push(`--dk-fg:${r.darkFg}`);
+  if (t.wood) out.push(`--wood-img:${grain(t.wood)}`, '--wood-h:5px', '--wood-op:1');
   return out.join(';');
 }
 
@@ -78,3 +80,21 @@ export const DARKS: [string, string][] = [
   ['بترولي (الأصلي)', '#0f2b3d'], ['بترولي فاتح', '#12506b'], ['أزرق ملكي', '#10264a'], ['أخضر غامق', '#0f3a2b'],
   ['بنفسجي غامق', '#2a1458'], ['عنابي', '#3a0f1f'], ['بني ذهبي', '#3b2a0b'], ['أسود', '#14181c'],
 ];
+
+/** Wood grain from one base color: fine dark pores, light streaks and a soft top-to-bottom shade (pure CSS, no images). */
+export const grain = (hex: string) => {
+  const c = full(hex);
+  return `repeating-linear-gradient(91deg,rgba(0,0,0,.09) 0 1px,transparent 1px 6px),repeating-linear-gradient(89deg,rgba(255,255,255,.10) 0 2px,transparent 2px 13px),linear-gradient(180deg,${mix(c, '#ffffff', 0.14)},${c} 55%,${mix(c, '#000000', 0.16)})`;
+};
+
+/** Real wood / veneer samples. Each one builds a whole look: pale wood tint for pages, deep wood for buttons, dark wood for the glossy panels. */
+export const WOODS: [string, string][] = [
+  ['جوز', '#6b4430'], ['زان', '#cfa56f'], ['بلوط', '#b88653'], ['ماهوجني', '#7a3426'],
+  ['ونجي', '#3d2c24'], ['رماد', '#d4c3a1'], ['كرز', '#a4553a'], ['فحمي', '#2c2f33'],
+];
+export function woodTheme(hex: string): Partial<ThemeMap> {
+  const w = full(hex);
+  let accent = w, i = 0;
+  while (contrast(accent, '#ffffff') < 4.5 && i++ < 12) accent = mix(accent, '#000000', 0.1);
+  return { wood: w, bg: mix(w, '#ffffff', 0.9), card: mix(w, '#ffffff', 0.97), accent, dark: mix(w, '#0d1114', 0.8) };
+}

@@ -92,3 +92,67 @@
 .ad-grp { border-top: 1px solid var(--line); margin-top: 8px; }
 .ad-dk { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 8px; border-radius: 16px; text-align: center; font-size: 13px; font-weight: 700; }
 .ad-dk i { display: flex; margin: 0 auto 6px; width: 44px; height: 44px; border-radius: 14px; align-items: center; justify-content: center; font-size: 22px; font-style: normal; }
+
+/* ===================== Design system (admin only, independent of the store theme) ===================== */
+.adm {
+  --a-brand: #12506b; --a-brand-2: #0f2b3d; --a-gold: #d9a73a;
+  --a-bg: #f4f6f8; --a-surface: #fff; --a-surface-2: #eef1f4; --a-border: rgba(15, 43, 61, .10);
+  --a-text: #0e1b24; --a-text-2: #4a5b68; --a-text-3: #8394a1;
+  --a-sh1: 0 1px 2px rgba(15, 43, 61, .06), 0 1px 1px rgba(15, 43, 61, .04);
+  --a-sh2: 0 6px 16px -4px rgba(15, 43, 61, .12), 0 2px 4px -2px rgba(15, 43, 61, .06);
+  --a-ring: 0 0 0 3px color-mix(in srgb, var(--a-brand) 28%, transparent);
+  --a-ease: cubic-bezier(.2, .8, .2, 1);
+  color: var(--a-text); max-width: 760px;
+  font-family: "IBM Plex Sans Arabic", Cairo, system-ui, sans-serif; font-size: 15px; line-height: 1.75;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; letter-spacing: 0;
+}
+@media (prefers-color-scheme: dark) {
+  .adm { --a-bg: #0c1319; --a-surface: #121c24; --a-surface-2: #182530; --a-border: rgba(255, 255, 255, .09); --a-text: #e8eef3; --a-text-2: #a7b6c2; --a-text-3: #6f8392; --a-brand: #4aa3c7; --a-sh1: 0 1px 2px #0006; --a-sh2: 0 10px 24px -8px #0009; }
+}
+body:has(.adm) { background: radial-gradient(1100px 520px at 88% -8%, color-mix(in srgb, #12506b 14%, transparent), transparent 60%), var(--a-bg, #f4f6f8); }
+@media (prefers-color-scheme: dark) { body:has(.adm) { background: radial-gradient(1100px 520px at 88% -8%, #12506b30, transparent 60%), #0c1319; } }
+.adm label { color: var(--a-text-2); font-size: 13px; font-weight: 700; }
+.adm input:not([type=color]):not([type=file]), .adm textarea, .adm select {
+  min-height: 44px; background: var(--a-surface-2); color: var(--a-text); border: 1px solid var(--a-border); border-radius: 12px;
+  transition: border-color 180ms var(--a-ease), box-shadow 180ms var(--a-ease), background 180ms var(--a-ease);
+}
+.adm input:not([type=color]):not([type=file]):focus, .adm textarea:focus, .adm select:focus { outline: 0; border-color: var(--a-brand); box-shadow: var(--a-ring); background: var(--a-surface); }
+.adm .mut, .adm small { color: var(--a-text-3); }
+.adm .err { color: #dc2626; }
+.adm .lnk { color: var(--a-brand); }
+.ad-h { position: sticky; top: 0; z-index: 20; margin: 0 -14px 12px; padding: 12px 14px; background: color-mix(in srgb, var(--a-surface) 78%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid var(--a-border); }
+.ad-h h1 { font-size: clamp(20px, 3vw, 24px); font-weight: 800; line-height: 1.35; }
+.ad-h a, .ad-bar a { color: var(--a-brand); }
+.ad-tabs { gap: 6px; padding: 6px 0 12px; }
+.ad-tabs button { min-height: 42px; padding: 0 16px; border: 1px solid var(--a-border); background: var(--a-surface); color: var(--a-text-2); box-shadow: var(--a-sh1); transition: all 180ms var(--a-ease); }
+.ad-tabs button:hover { color: var(--a-text); transform: translateY(-1px); }
+.ad-tabs button.on { background: linear-gradient(135deg, var(--a-brand), var(--a-brand-2)); border-color: transparent; color: #fff; box-shadow: 0 6px 14px -4px color-mix(in srgb, var(--a-brand-2) 55%, transparent), inset 0 1px 0 #ffffff26; }
+.ad-s, .ad-login { background: var(--a-surface); border: 1px solid var(--a-border); border-radius: 20px; padding: 20px; box-shadow: var(--a-sh1), inset 0 1px 0 rgba(255, 255, 255, .5); color: var(--a-text); }
+.ad-s h2 { font-size: 19px; font-weight: 800; }
+.adm .pri, .ad-bar .pri { min-height: 44px; padding: 0 22px; border: 0; border-radius: 12px; font: inherit; font-weight: 800; color: #fff; cursor: pointer; background: linear-gradient(135deg, var(--a-brand), var(--a-brand-2)); box-shadow: 0 6px 14px -4px color-mix(in srgb, var(--a-brand-2) 55%, transparent), inset 0 1px 0 #ffffff26; transition: transform 180ms var(--a-ease), box-shadow 180ms var(--a-ease), filter 180ms; }
+.adm .pri:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.adm .pri:active { transform: scale(.98); }
+.adm .pri:focus-visible, .ad-tabs button:focus-visible { outline: 0; box-shadow: var(--a-ring); }
+.adm .pri:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.adm .sec { min-height: 44px; padding: 0 18px; border: 1px solid var(--a-border); border-radius: 12px; background: var(--a-surface); color: var(--a-text); font: inherit; font-weight: 700; cursor: pointer; box-shadow: var(--a-sh1); }
+.ad-bar { background: color-mix(in srgb, var(--a-surface) 80%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-top: 1px solid var(--a-border); color: var(--a-text); }
+.ad-li { background: var(--a-surface); border: 1px solid var(--a-border); border-radius: 14px; transition: transform 180ms var(--a-ease), box-shadow 180ms var(--a-ease); }
+.ad-li:hover { transform: translateY(-2px); box-shadow: var(--a-sh2); }
+.ad-mv button, .ad-color input[type=color] { background: var(--a-surface); border: 1px solid var(--a-border); }
+/* color screen */
+.ad-sub { color: var(--a-text); font-size: 15px; font-weight: 800; }
+.ad-sub small { font-weight: 500; }
+.ad-woods { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.ad-woods button { display: grid; gap: 8px; padding: 8px; border-radius: 16px; border: 1px solid var(--a-border); background: var(--a-surface); color: var(--a-text); font: inherit; cursor: pointer; box-shadow: var(--a-sh1); transition: transform 180ms var(--a-ease), box-shadow 180ms var(--a-ease); }
+.ad-woods button:hover { transform: translateY(-2px); box-shadow: var(--a-sh2); }
+.ad-woods button.on { border-color: var(--a-brand); box-shadow: 0 0 0 2px var(--a-brand), var(--a-sh2); }
+.ad-woods i { display: block; aspect-ratio: 1; border-radius: 12px; box-shadow: inset 0 1px 0 #ffffff40, inset 0 -2px 6px #0003, 0 4px 10px -4px #0006; }
+.ad-woods button.clr i { background: repeating-linear-gradient(45deg, var(--a-surface-2) 0 6px, var(--a-surface) 6px 12px); box-shadow: none; border: 1px dashed var(--a-border); }
+.ad-woods b { font-size: 13px; font-weight: 800; text-align: center; }
+.ad-adv { margin-top: 14px; border: 1px solid var(--a-border); border-radius: 14px; padding: 4px 14px 10px; background: var(--a-surface-2); }
+.ad-adv summary { cursor: pointer; font-weight: 800; padding: 10px 0; list-style: none; }
+.ad-adv summary::-webkit-details-marker { display: none; }
+.ad-adv summary::after { content: '▾'; float: inline-end; color: var(--a-text-3); }
+.ad-edge { height: 6px; border-radius: 3px; margin: -4px -6px 10px; box-shadow: 0 1px 0 #0002; }
+.ad-themes button { border: 1px solid var(--a-border); background: var(--a-surface); box-shadow: var(--a-sh1); }
+@media (prefers-reduced-motion: reduce) { .adm * { transition: none !important; animation: none !important; } }
