@@ -24,12 +24,14 @@ export const DEFAULTS: ThemeMap = { accent: '#3cba2c', accentFg: '', bg: '#f3f4f
 export function resolve(t: Partial<ThemeMap>) {
   const g = (k: ThemeKey) => (t[k] && HEX.test(t[k]!) ? full(t[k]!) : '');
   const accent = g('accent') || DEFAULTS.accent, bg = g('bg') || DEFAULTS.bg, card = g('card') || DEFAULTS.card, dark = g('dark') || DEFAULTS.dark;
-  const fg = g('fg') || (g('bg') ? onColor(bg) : '#14201a');
+  // A text color the owner picked is used only if it is readable on its background (contrast >= 3); otherwise it is chosen automatically.
+  const legible = (c: string, on: string) => (c && contrast(c, on) >= 3 ? c : '');
+  const fg = legible(g('fg'), bg) || (g('bg') ? onColor(bg) : '#14201a');
   return {
     accent, bg, card, dark, fg,
-    accentFg: g('accentFg') || onColor(accent),
-    cardFg: g('cardFg') || (g('card') ? onColor(card) : fg),
-    darkFg: g('darkFg') || onColor(dark),
+    accentFg: legible(g('accentFg'), accent) || onColor(accent),
+    cardFg: legible(g('cardFg'), card) || (g('card') ? onColor(card) : fg),
+    darkFg: legible(g('darkFg'), dark) || onColor(dark),
     wood: g('wood'),
     mut: mix(fg, bg, 0.4),
     line: mix(bg, fg, 0.12),
