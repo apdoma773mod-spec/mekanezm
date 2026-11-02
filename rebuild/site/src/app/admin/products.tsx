@@ -7,38 +7,91 @@ import { HandDiagram } from '@/components/hand-guide';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from '@/lib/hand';
 import { Imgs, uid7 } from './ui';
 
-type P = { id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
+type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
 const PAGE = 25;
+const BADGES = ['جديد', 'الأكثر طلباً', 'عرض خاص', 'كمية محدودة', 'وصل حديثاً', 'ضمان'];
 const lite = (s: string) => String(s ?? '').toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+
+type View = 'all' | 'top' | 'hidden' | 'noimg' | 'nodesc';
+type Sort = 'new' | 'name' | 'code';
+const VIEWS: [View, string][] = [['all', 'الكل'], ['top', '⭐ مميز'], ['hidden', '🙈 مخفي'], ['noimg', '📷 من غير صور'], ['nodesc', '📝 من غير وصف']];
 
 export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => void }) {
   const [q, setQ] = useState(''), [sec, setSec] = useState(''), [page, setPage] = useState(1);
+  const [view, setView] = useState<View>('all'), [sort, setSort] = useState<Sort>('new');
+  const [pick, setPick] = useState<Set<string>>(new Set()), [busy, setBusy] = useState(false), [note, setNote] = useState('');
   const [edit, setEdit] = useState<string | 'new' | null>(null);
   const all: P[] = doc.data.products ?? [];
   const secs: { id: string; name: string }[] = doc.data.sections ?? [];
   const secName = (id: string) => secs.find(s => s.id === id)?.name ?? '—';
+  const noImg = (p: P) => !(p.imgs?.length || p.img);
+  const counts = useMemo(() => ({ all: all.length, top: all.filter(p => p.top).length, hidden: all.filter(p => p.hidden).length, noimg: all.filter(noImg).length, nodesc: all.filter(p => !p.desc?.trim()).length }), [all]);
   const list = useMemo(() => {
     const w = lite(q).split(/\s+/).filter(Boolean);
-    return all.filter(p => (!sec || p.sec === sec) && w.every(x => lite(`${p.name} ${p.code}`).includes(x)));
-  }, [all, q, sec]);
+    const ok = (p: P) => view === 'all' || (view === 'top' ? p.top : view === 'hidden' ? p.hidden : view === 'noimg' ? noImg(p) : !p.desc?.trim());
+    const r = all.filter(p => (!sec || p.sec === sec) && ok(p) && w.every(x => lite(`${p.name} ${p.code}`).includes(x)));
+    if (sort === 'name') r.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+    else if (sort === 'code') r.sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }));
+    else r.reverse(); // newest added first
+    return r;
+  }, [all, q, sec, view, sort]);
   const pages = Math.max(1, Math.ceil(list.length / PAGE)), pg = Math.min(page, pages);
+  const shown = list.slice((pg - 1) * PAGE, pg * PAGE);
+  const toggle = (id: string) => setPick(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const allShownPicked = shown.length > 0 && shown.every(p => pick.has(p.id));
+
+  async function bulk(label: string, fn: (p: Rec) => void) {
+    if (!pick.size || busy) return;
+    setBusy(true); setNote('⏳ جاري التطبيق…');
+    try {
+      const ids = new Set(pick);
+      onDoc(await saveDoc(x => { for (const p of (x.products ?? []) as Rec[]) if (ids.has(p.id)) fn(p); }));
+      setNote(`✔ ${label} (${ids.size} منتج)`); setPick(new Set());
+    } catch (e) { setNote('✗ ' + (e as Error).message); }
+    setBusy(false);
+  }
+  const moveTo = (sid: string) => sid && bulk('اتنقلوا لقسم «' + secName(sid) + '»', p => { p.sec = sid; });
+  function exportCsv() {
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['الكود', 'الاسم', 'القسم', 'مميز', 'مخفي', 'عدد الصور'], ...list.map(p => [p.code, p.name, secName(p.sec), p.top ? 'نعم' : '', p.hidden ? 'نعم' : '', p.imgs?.length ?? (p.img ? 1 : 0)])];
+    const url = URL.createObjectURL(new Blob(['﻿' + rows.map(r => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = 'products.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   if (edit) return <ProductEditor doc={doc} id={edit === 'new' ? null : edit} onDoc={onDoc} onClose={() => setEdit(null)} />;
   return (
     <section className="ad-s">
-      <div className="ad-top"><h2>📦 المنتجات ({all.length})</h2><button className="pri" onClick={() => setEdit('new')}>＋ منتج جديد</button></div>
-      <div className="ad-filter">
+      <div className="ad-top"><h2>📦 المنتجات ({all.length})</h2><div className="ad-acts"><button type="button" className="lnk" onClick={exportCsv} disabled={!list.length}>⬇️ Excel</button><button className="pri" onClick={() => setEdit('new')}>＋ منتج جديد</button></div></div>
+      <div className="ad-chipbar">{VIEWS.map(([k, t]) => <button key={k} type="button" className={view === k ? 'on' : ''} onClick={() => { setView(k); setPage(1); }}>{t} <b>{counts[k]}</b></button>)}</div>
+      <div className="ad-filter ad-filter3">
         <input value={q} placeholder="ابحث بالاسم أو الكود…" onChange={e => { setQ(e.target.value); setPage(1); }} />
         <select value={sec} onChange={e => { setSec(e.target.value); setPage(1); }}><option value="">كل الأقسام</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <select value={sort} onChange={e => setSort(e.target.value as Sort)} aria-label="ترتيب"><option value="new">الأحدث</option><option value="name">بالاسم</option><option value="code">بالكود</option></select>
       </div>
-      {!list.length && <p className="mut">{all.length ? 'مفيش منتج بالاسم ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
-      <div className="ad-list">{list.slice((pg - 1) * PAGE, pg * PAGE).map(p => (
-        <button key={p.id} type="button" className="ad-li" onClick={() => setEdit(p.id)}>
-          <span className="th">{(p.imgs?.[0] || p.img) ? <img src={p.imgs?.[0] || p.img} alt="" /> : '📷'}</span>
-          <span className="tx"><b>{p.name || '(من غير اسم)'}</b><small>كود {p.code || '—'} · {secName(p.sec)}</small></span>
-          <span className="bd">{p.top && <i>⭐</i>}{p.hidden && <i>🙈</i>}</span>
-        </button>
+      {pick.size > 0 && (
+        <div className="ad-bulk" role="toolbar" aria-label="إجراءات جماعية">
+          <b>{pick.size} مختار</b>
+          <button type="button" disabled={busy} onClick={() => bulk('اتخفوا', p => { p.hidden = true; })}>🙈 إخفاء</button>
+          <button type="button" disabled={busy} onClick={() => bulk('ظهروا', p => { delete p.hidden; })}>👁️ إظهار</button>
+          <button type="button" disabled={busy} onClick={() => bulk('اتميّزوا', p => { p.top = true; })}>⭐ تمييز</button>
+          <button type="button" disabled={busy} onClick={() => bulk('اتشال التمييز', p => { delete p.top; })}>☆ إلغاء التمييز</button>
+          <select disabled={busy} value="" onChange={e => moveTo(e.target.value)} aria-label="نقل لقسم"><option value="">↪ نقل لقسم…</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <button type="button" className="lnk" onClick={() => setPick(new Set())}>إلغاء الاختيار</button>
+        </div>
+      )}
+      {note && <p className={note.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{note}</p>}
+      {!list.length && <p className="mut">{all.length ? 'مفيش منتج بالفلتر ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
+      {shown.length > 0 && <label className="ad-ck ad-all"><input type="checkbox" checked={allShownPicked} onChange={() => setPick(s => { const n = new Set(s); shown.forEach(p => (allShownPicked ? n.delete(p.id) : n.add(p.id))); return n; })} /> اختيار كل اللي في الصفحة</label>}
+      <div className="ad-list">{shown.map(p => (
+        <div key={p.id} className={'ad-row' + (pick.has(p.id) ? ' sel' : '')}>
+          <input type="checkbox" checked={pick.has(p.id)} onChange={() => toggle(p.id)} aria-label={'اختيار ' + (p.name || p.code)} />
+          <button type="button" className="ad-li" onClick={() => setEdit(p.id)}>
+            <span className="th">{(p.imgs?.[0] || p.img) ? <img src={p.imgs?.[0] || p.img} alt="" /> : '📷'}</span>
+            <span className="tx"><b>{p.name || '(من غير اسم)'}</b><small>كود {p.code || '—'} · {secName(p.sec)}</small></span>
+            <span className="bd">{p.top && <i title="مميز">⭐</i>}{p.hidden && <i title="مخفي">🙈</i>}{noImg(p) && <i title="من غير صور">⚠️</i>}</span>
+          </button>
+        </div>
       ))}</div>
       {pages > 1 && <div className="ad-pg"><button disabled={pg < 2} onClick={() => setPage(pg - 1)}>›</button><span>{pg} / {pages}</span><button disabled={pg >= pages} onClick={() => setPage(pg + 1)}>‹</button></div>}
     </section>
@@ -54,6 +107,8 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
   const [f, setF] = useState(() => ({
     id: cur?.id ?? uid7(), code: cur?.code ?? '', name: cur?.name ?? '', desc: cur?.desc ?? '', sec: cur?.sec ?? '', imgs: [...(cur?.imgs ?? (cur?.img ? [cur.img] : []))],
     top: !!cur?.top, video: cur?.video ?? '', hidden: !!cur?.hidden,
+    badge: cur?.badge ?? '', brand: cur?.brand ?? '', tags: (cur?.tags ?? []).join('، '), avail: (cur?.avail ?? '') as '' | 'in' | 'out' | 'order',
+    seoTitle: cur?.seoTitle ?? '', seoDesc: cur?.seoDesc ?? '', from: cur?.from ?? '', until: cur?.until ?? '',
     dirMode: (cur?.dir?.off ? 'off' : cur?.dir ? 'on' : 'auto') as Dir,
     hand: (cur?.dir?.hand ?? handFromName(cur?.name ?? '') ?? 'R') as 'R' | 'L',
     kind: (cur?.dir?.kind ? normKind(cur.dir.kind) : kindFromName(cur?.name ?? '')) as HandKind, media: cur?.dir?.media ?? '',
@@ -90,12 +145,32 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         Object.assign(o, { code: f.code.trim(), name: f.name.trim(), desc: f.desc.split('\n').filter(l => !/^[^:：]{1,30}[:：]\s*$/.test(l.trim())).join('\n').trim(), sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
+        const opt = (k: string, v: string) => { if (v.trim()) o[k] = v.trim(); else delete o[k]; };
+        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('from', f.from); opt('until', f.until); opt('avail', f.avail);
+        const tg = f.tags.split(/[,،\n]/).map(x => x.trim()).filter(Boolean);
+        if (tg.length) o.tags = tg; else delete o.tags;
         if (f.dirMode === 'off') o.dir = { off: true };
         else if (f.dirMode === 'on') o.dir = { hand: f.hand, kind: f.kind, ...(pair ? { pair: pair.id } : {}), ...(f.note.trim() ? { note: f.note.trim() } : {}), ...(f.media.trim() ? { media: f.media.trim() } : {}) };
         else delete o.dir;
         if (i > -1) arr[i] = o; else arr.push(o);
       }, ['products']);
       onDoc(d); onClose();
+    } catch (e) { setMsg('✗ ' + (e as Error).message); setBusy(false); }
+  }
+  async function duplicate() {
+    if (!cur) return;
+    const code = window.prompt('كود النسخة الجديدة (لازم يكون كود منتج تاني في السيستم)');
+    if (!code?.trim()) return;
+    setBusy(true);
+    try {
+      const nid = uid7();
+      onDoc(await saveDoc(x => {
+        const arr: Rec[] = (x.products ??= []);
+        if (arr.some(y => String(y.code ?? '') === code.trim())) throw new Error('الكود ده مستخدم في منتج تاني');
+        const src = arr.find(y => y.id === f.id); if (!src) throw new Error('المنتج مش موجود');
+        arr.push({ ...JSON.parse(JSON.stringify(src)), id: nid, code: code.trim(), name: src.name + ' (نسخة)', hidden: true });
+      }, ['products']));
+      onClose();
     } catch (e) { setMsg('✗ ' + (e as Error).message); setBusy(false); }
   }
   async function remove() {
@@ -141,12 +216,32 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         {f.dirMode !== 'off' && pvHand && pvKind !== 'other' && !f.media.trim() && <div className="ad-prevbox"><b>معاينة اللي الزبون هيشوفه:</b><HandDiagram hand={pvHand} kind={pvKind} /></div>}
       </section>
       <section className="ad-s">
+        <h3>🏷️ شارة وتصنيف</h3>
+        <label>شارة على الكارت <small>(اختياري — بتظهر بدل «جديد»)</small><input value={f.badge} maxLength={20} onChange={e => set('badge', e.target.value)} /></label>
+        <div className="ad-chips">{BADGES.map(b => <button key={b} type="button" onClick={() => set('badge', b)}>{b}</button>)}{f.badge && <button type="button" onClick={() => set('badge', '')}>✕ من غير شارة</button>}</div>
+        <label>البراند <small>(اختياري)</small><input value={f.brand} maxLength={40} onChange={e => set('brand', e.target.value)} /></label>
+        <label>كلمات بحث إضافية <small>(بالفاصلة — العميل يلاقي المنتج بيها: مثلاً «بلوم، مجرى مخفي»)</small><input value={f.tags} onChange={e => set('tags', e.target.value)} /></label>
+      </section>
+      <section className="ad-s">
+        <h3>📦 التوفر والجدولة</h3>
+        <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
+        <div className="ad-two"><label>يظهر من تاريخ<input type="date" dir="ltr" value={f.from} onChange={e => set('from', e.target.value)} /></label><label>يختفي بعد تاريخ<input type="date" dir="ltr" value={f.until} onChange={e => set('until', e.target.value)} /></label></div>
+        <small className="mut">سيب التواريخ فاضية لو عايزه يظهر دايماً.</small>
+      </section>
+      <section className="ad-s">
+        <h3>🔎 ظهور في جوجل</h3>
+        <label>عنوان الصفحة <small>(اختياري)</small><input value={f.seoTitle} maxLength={70} onChange={e => set('seoTitle', e.target.value)} /></label>
+        <label>وصف جوجل <small>({f.seoDesc.length}/155)</small><textarea rows={2} maxLength={155} value={f.seoDesc} onChange={e => set('seoDesc', e.target.value)} /></label>
+      </section>
+      <section className="ad-s">
         <h3>👁️ الظهور</h3>
         <label className="ad-ck"><input type="checkbox" checked={f.top} onChange={e => set('top', e.target.checked)} /> ⭐ منتج مميز <small>بيظهر في «الأكثر طلباً» في أول الموقع</small></label>
         <label className="ad-ck"><input type="checkbox" checked={f.hidden} onChange={e => set('hidden', e.target.checked)} /> 🙈 مخفي من الموقع <small>مبيظهرش للزباين، ولسه موجود هنا</small></label>
       </section>
       <div className="ad-bar">
         <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
+        {cur && <a className="lnk" href={'/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
+        {cur && <button type="button" className="lnk" disabled={busy} onClick={duplicate}>⧉ نسخة منه</button>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={remove}>🗑️ حذف</button>}
         <button className="pri" disabled={busy} onClick={save}>💾 {cur ? 'حفظ ونشر' : 'إضافة ونشر'}</button>
       </div>

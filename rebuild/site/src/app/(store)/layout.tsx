@@ -3,18 +3,20 @@ import { Chrome } from '@/components/chrome';
 import { ShopProvider } from '@/components/shop-provider';
 import { TopBar } from '@/components/topbar';
 import { getSettings } from '@/lib/catalog';
+import { chosenWood, cssVars, woodAreas, woodCss } from '@/lib/theme';
 
 export const revalidate = 60;
 
 export default async function StoreLayout({ children }: { children: ReactNode }) {
   const site = await getSettings();
-  // Colors chosen by the owner in /admin (accent, bg, fg, card); anything that is not a plain hex color is ignored.
-  const vars = (['accent', 'bg', 'fg', 'card'] as const)
-    .map(k => [k, String((site.theme as Record<string, unknown>)[k] ?? '')] as const)
-    .filter(([, v]) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)).map(([k, v]) => `--${k}:${v}`).join(';');
+  // Colors and wood chosen by the owner in /admin; only valid values are used (see lib/theme.ts).
+  const theme = site.theme as Record<string, unknown>;
+  const vars = cssVars(theme);
+  const w = chosenWood(theme);
+  const wood = w ? woodCss(w, woodAreas(theme)) : '';
   return (
     <ShopProvider site={site}>
-      {vars && <style>{`:root{${vars}}`}</style>}
+      {(vars || wood) && <style>{`${vars ? `:root{${vars}}` : ''}${wood}`}</style>}
       <a className="skip" href="#main">تخطّي للمحتوى</a>
       <Suspense fallback={<div className="tb" />}><TopBar /></Suspense>
       {children}

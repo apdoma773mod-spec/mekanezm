@@ -16,7 +16,7 @@ export type Sort = '' | 'az' | 'av' | 'new';
 export function queryProducts(products: Product[], ok: (p: Product) => boolean, o: { sec?: string; q?: string; sort?: Sort; av?: boolean; f?: string }) {
   const words = norm(o.q ?? '').split(' ').filter(Boolean);
   let L = products.filter(p => (!o.sec || p.sec === o.sec) && (!o.av || ok(p)) && (!o.f || hasSpec(p, o.f)) &&
-    (!words.length || (h => words.every(w => h.includes(w)))(norm(`${p.name} ${p.code} ${p.desc}`))));
+    (!words.length || (h => words.every(w => h.includes(w)))(norm(`${p.name} ${p.code} ${p.desc} ${p.brand} ${p.tags.join(' ')}`))));
   if (words.length && !o.sort) {
     // Name matches first.
     const inName = (p: Product) => words.every(w => norm(p.name).includes(w));
@@ -91,7 +91,7 @@ export function withCover(p: Product): Product {
 export const images = (p: Product) => (p.imgs.length ? p.imgs : p.img ? [p.img] : []);
 
 export const stockOk = (p: Product, stock: Stock) =>
-  p.code && Object.prototype.hasOwnProperty.call(stock, p.code) ? !!stock[p.code] : !p.out;
+  p.avail ? p.avail === 'in' : p.code && Object.prototype.hasOwnProperty.call(stock, p.code) ? !!stock[p.code] : !p.out;
 
 const intl = (phone: string) => {
   let ph = String(phone || '').replace(/\D/g, '');

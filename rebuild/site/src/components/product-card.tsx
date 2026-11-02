@@ -42,7 +42,8 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
           {p.code && <span className="code">كود {p.code}</span>}
           {sec && <span className="csec">{sec.name}</span>}
           {p.video && <span className="vidc">🎬 فيديو</span>}
-          {fresh && <span className="newc">جديد</span>}
+          {p.badge && <span className="newc">{p.badge}</span>}
+          {fresh && !p.badge && <span className="newc">جديد</span>}
         </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
         {!ok && <button type="button" className="bellt" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}

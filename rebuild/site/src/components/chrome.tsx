@@ -80,7 +80,7 @@ export function Chrome() {
     <>
       <div className="prog" aria-hidden="true"><i style={{ width: prog + '%' }} /></div>
       {offline && <div className="offline" role="status">⚠️ مفيش إنترنت — بعض الحاجات ممكن ماتشتغلش</div>}
-      <a className={'wa-fab' + (y > 120 || path !== '/' ? ' mini' : '')} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
+      <a className="wa-fab mini" style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
         target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب من ميكانيزم')}
         onClick={e => {
           // Mention what the customer is looking at (product or section).

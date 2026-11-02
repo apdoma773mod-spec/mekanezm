@@ -5,27 +5,26 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadDoc, login, logout, publishNow, saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
 import { ProsTab, ReviewsTab, ShipTab, WorksTab } from './content';
 import { ProductsTab } from './products';
+import { ImportTab } from './import';
 import { Img, move, uid7 } from './ui';
+import { DEFAULTS, HEX, THEME_KEYS, WOOD_AREAS, WOOD_KEYS, woodById, type ThemeMap } from '@/lib/theme';
+import { ThemeTab } from './theme-tab';
+import { Ico } from './icons';
 
 type Sec = { id: string; name: string; img: string };
 type Form = {
   promo: string; name: string; tagline: string; logo: string; hero: string;
   slides: string[]; trust: string[]; socials: Record<'fb' | 'ig' | 'tt' | 'yt', string>;
-  theme: Record<'accent' | 'bg' | 'fg' | 'card', string>; sections: Sec[]; removed: string[];
+  theme: ThemeMap; sections: Sec[]; removed: string[];
 };
-const THEME_DEFAULT = { accent: '#3cba2c', bg: '#f3f4f6', fg: '#14201a', card: '#ffffff' } as const;
-const THEME_LABEL = { accent: 'لون الأزرار والتمييز', bg: 'لون خلفية الصفحة', fg: 'لون الكلام', card: 'لون الكروت' } as const;
-const PRESETS: [string, string][] = [['أخضر', '#3cba2c'], ['ذهبي', '#b8862b'], ['أزرق', '#1e6fd9'], ['تركواز', '#0f9d9a'], ['أحمر', '#d6342c'], ['بنفسجي', '#7c3aed'], ['أسود', '#222222']];
-const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-const full = (h: string) => (h.length === 4 ? '#' + [...h.slice(1)].map(c => c + c).join('') : h);
-const lum = (h: string) => { const v = full(h).slice(1).match(/../g)!.map(x => parseInt(x, 16) / 255).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+const THEME_DEFAULT = DEFAULTS;
 
 const fromDoc = (d: Rec): Form => ({
   promo: String(d.promo ?? ''), name: String(d.name ?? ''), tagline: String(d.tagline ?? ''), logo: String(d.logo ?? ''), hero: String(d.hero ?? ''),
   slides: Array.isArray(d.slides) ? d.slides.filter((x: unknown) => typeof x === 'string') : [],
   trust: Array.isArray(d.trust) ? d.trust.filter((x: unknown) => typeof x === 'string') : [],
   socials: { fb: d.socials?.fb ?? '', ig: d.socials?.ig ?? '', tt: d.socials?.tt ?? '', yt: d.socials?.yt ?? '' },
-  theme: { accent: d.theme?.accent ?? '', bg: d.theme?.bg ?? '', fg: d.theme?.fg ?? '', card: d.theme?.card ?? '' },
+  theme: Object.fromEntries([...THEME_KEYS, ...WOOD_KEYS].map(k => [k, String(d.theme?.[k] ?? '')])) as ThemeMap,
   sections: Array.isArray(d.sections) ? d.sections.map((s: Sec) => ({ id: s.id, name: String(s.name ?? ''), img: String(s.img ?? '') })) : [], removed: [],
 });
 
@@ -35,7 +34,12 @@ function applyForm(d: Rec, f: Form) {
   d.slides = f.slides; d.trust = f.trust.map(x => x.trim()).filter(Boolean);
   d.socials = { ...(d.socials ?? {}), ...Object.fromEntries(Object.entries(f.socials).map(([k, v]) => [k, v.trim()])) };
   const th: Rec = { ...(d.theme ?? {}) };
-  for (const k of Object.keys(THEME_DEFAULT) as (keyof Form['theme'])[]) { if (HEX.test(f.theme[k])) th[k] = f.theme[k]; else delete th[k]; }
+  for (const k of THEME_KEYS) { if (HEX.test(f.theme[k])) th[k] = f.theme[k]; else delete th[k]; }
+  // wood settings: only a known finish / level / area list is kept
+  const wid = f.theme.woodId ?? '', wlv = f.theme.woodLvl ?? '', wat = (f.theme.woodAt ?? '').split(',').filter(a => WOOD_AREAS.some(x => x[0] === a)).join(',');
+  if (woodById(wid)) th.woodId = wid; else delete th.woodId;
+  if (/^[123]$/.test(wlv)) th.woodLvl = wlv; else delete th.woodLvl;
+  if (wat) th.woodAt = wat; else delete th.woodAt;
   d.theme = th;
   // sections: new ones are added, renamed/re-ordered ones updated, deleted ones removed (never one that still has products)
   const cur: Sec[] = Array.isArray(d.sections) ? d.sections : [];
@@ -46,22 +50,7 @@ function applyForm(d: Rec, f: Form) {
   d.sections = [...ordered, ...rest];
 }
 
-function Color({ k, v, set }: { k: keyof Form['theme']; v: string; set: (s: string) => void }) {
-  const eff = HEX.test(v) ? full(v) : THEME_DEFAULT[k];
-  return (
-    <div className="ad-color">
-      <label>{THEME_LABEL[k]}</label>
-      <div>
-        <input type="color" value={eff} onChange={e => set(e.target.value)} aria-label={THEME_LABEL[k]} />
-        <input dir="ltr" value={v} placeholder={THEME_DEFAULT[k]} onChange={e => set(e.target.value.trim())} maxLength={7} />
-        {v && <button type="button" className="lnk" onClick={() => set('')}>الافتراضي</button>}
-      </div>
-      {k === 'accent' && HEX.test(v) && lum(v) > 0.55 && <small className="err">اللون فاتح — الكلام الأبيض على الأزرار هيبقى صعب القراءة.</small>}
-    </div>
-  );
-}
-
-type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'more';
+type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'import' | 'more';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
 export function AdminApp() {
@@ -135,30 +124,27 @@ export function AdminApp() {
     );
   }
 
-  const TABS: [Tab, string][] = [['products', '📦 المنتجات'], ['sections', '🗂️ الأقسام'], ['works', '🏗️ أعمالنا'], ['look', '🎨 الألوان والشريط'], ['banner', '🖼️ البنرات'], ['text', '📝 النصوص'], ['reviews', '⭐ الآراء'], ['pros', '🧰 الفنيين'], ['ship', '🚚 التوصيل والتواصل'], ['more', '⚙️ أدوات']];
+  const TABS: [Tab, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['import', 'استيراد'], ['more', 'أدوات']];
   const count = (id: string) => (doc.data.products ?? []).filter((p: Rec) => p.sec === id).length;
   return (
     <div className="ad">
       <header className="ad-h">
-        <h1>⚙️ إدارة الموقع</h1>
+        <h1>إدارة الموقع</h1>
         <div><a href="/" target="_blank" rel="noopener">↗ افتح الموقع</a><button type="button" className="lnk" onClick={() => { logout(); location.reload(); }}>خروج</button></div>
       </header>
-      <nav className="ad-tabs" aria-label="الأقسام">{TABS.map(([k, t]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setSaved(''); }}>{t}</button>)}</nav>
+      <nav className="ad-tabs" aria-label="الأقسام">{TABS.map(([k, t]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setSaved(''); }}><Ico n={k} />{t}</button>)}</nav>
 
       {tab === 'products' && <ProductsTab doc={doc} onDoc={onDoc} />}
       {tab === 'works' && <WorksTab doc={doc} onDoc={onDoc} />}
       {tab === 'pros' && <ProsTab doc={doc} onDoc={onDoc} />}
       {tab === 'reviews' && <ReviewsTab doc={doc} onDoc={onDoc} />}
+      {tab === 'import' && <ImportTab doc={doc} onDoc={onDoc} backup={backup} />}
       {tab === 'ship' && <ShipTab key={doc.version} doc={doc} onDoc={onDoc} />}
 
       {tab === 'look' && <>
         <section className="ad-s">
           <h2>🎨 الألوان</h2>
-          <div className="ad-presets">{PRESETS.map(([n, c]) => <button key={c} type="button" style={{ background: c }} className={f.theme.accent.toLowerCase() === c ? 'on' : ''} onClick={() => up('theme', { ...f.theme, accent: c })}>{n}</button>)}</div>
-          {(Object.keys(THEME_DEFAULT) as (keyof Form['theme'])[]).map(k => <Color key={k} k={k} v={f.theme[k]} set={s => up('theme', { ...f.theme, [k]: s })} />)}
-          <div className="ad-sw" style={{ background: HEX.test(f.theme.bg) ? f.theme.bg : THEME_DEFAULT.bg, color: HEX.test(f.theme.fg) ? f.theme.fg : THEME_DEFAULT.fg }}>
-            <div style={{ background: HEX.test(f.theme.card) ? f.theme.card : THEME_DEFAULT.card }}><b>معاينة</b><span>كارت منتج</span><i style={{ background: HEX.test(f.theme.accent) ? f.theme.accent : THEME_DEFAULT.accent }}>🛒 أضف للطلب</i></div>
-          </div>
+          <ThemeTab theme={f.theme} set={t => up('theme', t)} />
         </section>
         <section className="ad-s">
           <h2>📣 الشريط المتحرك</h2>

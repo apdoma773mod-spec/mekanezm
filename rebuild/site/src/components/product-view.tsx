@@ -100,7 +100,6 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
           <nav className="bc" aria-label="مكانك في الموقع">
             <Link href="/">الرئيسية</Link><span>›</span>
             {sec && <><Link href={sectionPath(sec.id)}>{sec.name}</Link><span>›</span></>}
-            <span>{p.name.slice(0, 40)}</span>
           </nav>
           <h1>{p.name}</h1>
           <div className="pvmeta">

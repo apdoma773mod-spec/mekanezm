@@ -17,6 +17,15 @@ export const productSchema = z.object({
   video: str.default(''),
   /** Hidden from the site (set from /admin; the product stays in the data). */
   hidden: z.boolean().optional(),
+  /** Owner extras (set from /admin): label on the card, brand, search keywords, availability override, SEO texts, show-from / show-until dates. */
+  badge: str.default(''),
+  brand: str.default(''),
+  tags: z.array(z.string()).default([]),
+  avail: z.enum(['in', 'out', 'order']).optional().catch(undefined),
+  seoTitle: str.default(''),
+  seoDesc: str.default(''),
+  from: str.default(''),
+  until: str.default(''),
   /** Left/right guidance (see lib/hand.ts). `off` turns the automatic detection off for this product. */
   dir: z.object({
     off: z.boolean().optional(),

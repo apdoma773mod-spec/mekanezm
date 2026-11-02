@@ -38,10 +38,10 @@ export function Img({ value, onChange, label, wide }: { value: string; onChange:
 export function Imgs({ value, onChange }: { value: string[]; onChange: (u: string[]) => void }) {
   const [busy, setBusy] = useState(''), [err, setErr] = useState('');
   const file = useRef<HTMLInputElement>(null);
-  async function pick(fl: FileList | null) {
-    if (!fl?.length) return;
+  async function pick(fl: FileList | File[] | null) {
+    const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
+    if (!list.length) return;
     setErr(''); const added: string[] = [];
-    const list = [...fl];
     for (let i = 0; i < list.length; i++) {
       setBusy(`⏳ بيرفع ${i + 1} من ${list.length}…`);
       try { added.push(await sendPhoto(list[i])); } catch (e) { setErr((e as Error).message); break; }
@@ -50,7 +50,7 @@ export function Imgs({ value, onChange }: { value: string[]; onChange: (u: strin
     setBusy('');
   }
   return (
-    <div className="ad-imgs">
+    <div className="ad-imgs" tabIndex={-1} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files); }} onPaste={e => pick(e.clipboardData.files)}>
       <div className="ad-grid">
         {value.map((u, i) => (
           <div key={u + i} className={'ad-th' + (i === 0 ? ' cover' : '')}>
@@ -65,6 +65,7 @@ export function Imgs({ value, onChange }: { value: string[]; onChange: (u: strin
         ))}
         <button type="button" className="ad-add" disabled={!!busy} onClick={() => file.current?.click()}>{busy || '＋ صور'}</button>
       </div>
+      <small className="mut">اسحب الصور هنا أو الصقها (Ctrl+V)، أو <button type="button" className="lnk" onClick={() => { const u = window.prompt('لينك الصورة (https://…)')?.trim(); if (u && /^https?:\/\//i.test(u)) onChange([...value, u]); }}>ضيف بلينك</button></small>
       {err && <small className="err">{err}</small>}
       <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { pick(e.target.files); e.target.value = ''; }} />
     </div>
