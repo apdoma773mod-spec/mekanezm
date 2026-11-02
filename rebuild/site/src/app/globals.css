@@ -284,7 +284,7 @@ footer.ft { background: var(--dk); color: #fff; margin-top: 30px; padding: 24px 
 .to-top.on { opacity: 1; pointer-events: auto; }
 .prog { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 6000; pointer-events: none; }
 .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f6d77a, #a8741a); }
-.toast { position: fixed; bottom: 96px; left: 50%; transform: translate(-50%, 20px); background: var(--navy); color: #fff; padding: 10px 14px; border-radius: 14px; z-index: 5500; display: flex; gap: 12px; align-items: center; opacity: 0; pointer-events: none; transition: .3s; font-weight: 700; font-size: 14px; box-shadow: 0 8px 24px #0004; max-width: calc(100% - 32px); }
+.toast { position: fixed; top: calc(76px + env(safe-area-inset-top, 0px)); left: 50%; transform: translate(-50%, -20px); background: var(--navy); color: #fff; padding: 10px 14px; border-radius: 14px; z-index: 5500; display: flex; gap: 12px; align-items: center; opacity: 0; pointer-events: none; transition: .3s; font-weight: 700; font-size: 14px; box-shadow: 0 8px 24px #0004; max-width: calc(100% - 32px); }
 .toast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 .toast button { background: none; border: 0; color: var(--gold-l); font-weight: 800; text-decoration: underline; }
 .offline { position: fixed; top: 0; left: 0; right: 0; z-index: 5000; background: #b7791f; color: #fff; text-align: center; padding: 8px; font-weight: 700; font-size: 13px; }
@@ -309,7 +309,7 @@ footer.ft { background: var(--dk); color: #fff; margin-top: 30px; padding: 24px 
 .pri:disabled, .btn-g:disabled { opacity: .6; }
 .citem { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0; }
 .citem small { display: block; color: var(--mut); font-size: 12px; }
-.qty { display: flex; align-items: center; gap: 6px; flex: none; }
+.qty { display: flex; align-items: center; gap: 6px; flex: none; direction: ltr; }
 .qty button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); }
 .bo { color: #b7791f; font-size: 12px; }
 .shopt { display: grid; gap: 8px; margin: 4px 0; }

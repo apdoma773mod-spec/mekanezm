@@ -7,8 +7,12 @@ import { checkSizes, defaults, DRAW, GUIDE, KIND, num, quick, summary, warnings,
 import { svgToJpeg } from '@/lib/images';
 import { saveOrder } from '@/components/shop-provider';
 
+const SAMPLE: Partial<Record<Kind, Vals>> = {
+  steel: { shape: 'U', t: '4.5', w: '80', hf: '15', hb: '15', q: '1' },
+  bamboo: { kind: 'طبيعي', split: 'no', dv: '2', w: '45', l: '50', h: '12', q: '1' },
+  delf: { type: 'hinged', mat: 'ألمنيوم', handle: 'none', hside: 'right', drill: 'yes', hinge: 'right', hn: '3', w: '50', h: '200', wheel: 'yes', q: '1' },
+};
 const wa = (t: string) => `https://wa.me/${CUSTOM_WA}?text=${encodeURIComponent(t)}`;
-const STEPS = <div className="stp"><span className="on">١ المقاسات</span><span>٢ بياناتك</span><span>٣ تأكيد</span></div>;
 
 export function CustomApp({ initial }: { initial: Kind | null }) {
   const [k, setK] = useState<Kind | null>(initial);
@@ -117,7 +121,6 @@ function Form({ k, back, onDone }: { k: Kind; back: () => void; onDone: (d: { co
     <>
       <h1>{KIND[k]}</h1>
       <p className="s">اختار المواصفات واكتب المقاسات — الرسمة بتتحدّث قدامك.</p>
-      {STEPS}
       <details className="card"><summary>📏 إزاي أقيس؟</summary><p style={{ margin: '8px 0 0', lineHeight: 1.8 }}>{GUIDE[k]}</p></details>
       {k === 'steel' && (
         <div className="card"><h3>🔩 مقاسات قطعة الاستانلس (حماية الباب من الرطوبة والمياه)</h3>
@@ -155,7 +158,7 @@ function Form({ k, back, onDone }: { k: Kind; back: () => void; onDone: (d: { co
           )}
         </div>
       )}
-      <div className="dr">{draw ? <div dangerouslySetInnerHTML={{ __html: draw }} /> : <div className="empty">اكتب المقاسات وهتظهر الرسمة هنا</div>}</div>
+      <div className="dr">{draw ? <div dangerouslySetInnerHTML={{ __html: draw }} /> : <div className="sample"><div style={{ opacity: .45 }} dangerouslySetInnerHTML={{ __html: SAMPLE[k] ? DRAW[k](SAMPLE[k]!) : '' }} /><div className="empty">ده مثال — اكتب مقاساتك وهتظهر رسمة شغلك هنا</div></div>}</div>
       {W.length > 0 && <div className="wn" aria-live="polite">{W.map(w => <div key={w.text}>⚠️ {w.text}{w.hn && <button type="button" onClick={() => set('hn', String(w.hn))}>اعتمد</button>}</div>)}</div>}
       <div className="card"><h3>بياناتك</h3>
         <div className="g">

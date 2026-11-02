@@ -117,9 +117,9 @@ export const defaults = (k: Kind): Vals => ({
 
 /** Quick-pick sizes under some fields. */
 export function quick(k: Kind, f: string): number[] | null {
-  const QK: Record<string, number[]> = { t: [3, 3.5, 4, 4.5, 5, 5.5, 6, 7], hf: [5, 8, 10, 12, 15, 20, 25, 30], hb: [5, 8, 10, 12, 15, 20, 25, 30] };
+  const QK: Record<string, number[]> = { t: [4, 4.5, 5, 5.5, 6], hf: [5, 10, 15, 20, 25], hb: [5, 10, 15, 20, 25] };
   if (k === 'delf') return ({ w: [40, 50, 60, 80, 90], h: [200, 210, 220, 240] } as Record<string, number[]>)[f] ?? null;
-  if (k === 'steel' && f === 'w') return [40, 50, 60, 70, 75, 80, 90, 100];
+  if (k === 'steel' && f === 'w') return [60, 70, 80, 90];
   return QK[f] ?? null;
 }
 
