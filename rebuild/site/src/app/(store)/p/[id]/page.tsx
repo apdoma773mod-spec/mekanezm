@@ -23,10 +23,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   if (!r) return {};
   const { site, product: p } = r;
   const sec = sectionOf(site, p);
-  const d = p.desc.replace(/\s+/g, ' ').slice(0, 155) || `${sec?.name ? sec.name + ' — ' : ''}${site.name}`;
+  const d = p.seoDesc || p.desc.replace(/\s+/g, ' ').slice(0, 155) || `${sec?.name ? sec.name + ' — ' : ''}${site.name}`;
   const im = images(p)[0];
   return {
-    title: `${p.name} | ميكانيزم`,
+    title: p.seoTitle || `${p.name} | ميكانيزم`,
     description: d,
     alternates: { canonical: productPath(p.id) },
     openGraph: { title: p.name, description: d, type: 'website', url: productPath(p.id), images: im ? [{ url: abs(im) }] : undefined },

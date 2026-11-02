@@ -7,9 +7,10 @@ import { HandDiagram } from '@/components/hand-guide';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from '@/lib/hand';
 import { Imgs, uid7 } from './ui';
 
-type P = { id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
+type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
 const PAGE = 25;
+const BADGES = ['جديد', 'الأكثر طلباً', 'عرض خاص', 'كمية محدودة', 'وصل حديثاً', 'ضمان'];
 const lite = (s: string) => String(s ?? '').toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 
 type View = 'all' | 'top' | 'hidden' | 'noimg' | 'nodesc';
@@ -106,6 +107,8 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
   const [f, setF] = useState(() => ({
     id: cur?.id ?? uid7(), code: cur?.code ?? '', name: cur?.name ?? '', desc: cur?.desc ?? '', sec: cur?.sec ?? '', imgs: [...(cur?.imgs ?? (cur?.img ? [cur.img] : []))],
     top: !!cur?.top, video: cur?.video ?? '', hidden: !!cur?.hidden,
+    badge: cur?.badge ?? '', brand: cur?.brand ?? '', tags: (cur?.tags ?? []).join('، '), avail: (cur?.avail ?? '') as '' | 'in' | 'out' | 'order',
+    seoTitle: cur?.seoTitle ?? '', seoDesc: cur?.seoDesc ?? '', from: cur?.from ?? '', until: cur?.until ?? '',
     dirMode: (cur?.dir?.off ? 'off' : cur?.dir ? 'on' : 'auto') as Dir,
     hand: (cur?.dir?.hand ?? handFromName(cur?.name ?? '') ?? 'R') as 'R' | 'L',
     kind: (cur?.dir?.kind ? normKind(cur.dir.kind) : kindFromName(cur?.name ?? '')) as HandKind, media: cur?.dir?.media ?? '',
@@ -142,12 +145,32 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         Object.assign(o, { code: f.code.trim(), name: f.name.trim(), desc: f.desc.split('\n').filter(l => !/^[^:：]{1,30}[:：]\s*$/.test(l.trim())).join('\n').trim(), sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
+        const opt = (k: string, v: string) => { if (v.trim()) o[k] = v.trim(); else delete o[k]; };
+        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('from', f.from); opt('until', f.until); opt('avail', f.avail);
+        const tg = f.tags.split(/[,،\n]/).map(x => x.trim()).filter(Boolean);
+        if (tg.length) o.tags = tg; else delete o.tags;
         if (f.dirMode === 'off') o.dir = { off: true };
         else if (f.dirMode === 'on') o.dir = { hand: f.hand, kind: f.kind, ...(pair ? { pair: pair.id } : {}), ...(f.note.trim() ? { note: f.note.trim() } : {}), ...(f.media.trim() ? { media: f.media.trim() } : {}) };
         else delete o.dir;
         if (i > -1) arr[i] = o; else arr.push(o);
       }, ['products']);
       onDoc(d); onClose();
+    } catch (e) { setMsg('✗ ' + (e as Error).message); setBusy(false); }
+  }
+  async function duplicate() {
+    if (!cur) return;
+    const code = window.prompt('كود النسخة الجديدة (لازم يكون كود منتج تاني في السيستم)');
+    if (!code?.trim()) return;
+    setBusy(true);
+    try {
+      const nid = uid7();
+      onDoc(await saveDoc(x => {
+        const arr: Rec[] = (x.products ??= []);
+        if (arr.some(y => String(y.code ?? '') === code.trim())) throw new Error('الكود ده مستخدم في منتج تاني');
+        const src = arr.find(y => y.id === f.id); if (!src) throw new Error('المنتج مش موجود');
+        arr.push({ ...JSON.parse(JSON.stringify(src)), id: nid, code: code.trim(), name: src.name + ' (نسخة)', hidden: true });
+      }, ['products']));
+      onClose();
     } catch (e) { setMsg('✗ ' + (e as Error).message); setBusy(false); }
   }
   async function remove() {
@@ -193,12 +216,32 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         {f.dirMode !== 'off' && pvHand && pvKind !== 'other' && !f.media.trim() && <div className="ad-prevbox"><b>معاينة اللي الزبون هيشوفه:</b><HandDiagram hand={pvHand} kind={pvKind} /></div>}
       </section>
       <section className="ad-s">
+        <h3>🏷️ شارة وتصنيف</h3>
+        <label>شارة على الكارت <small>(اختياري — بتظهر بدل «جديد»)</small><input value={f.badge} maxLength={20} onChange={e => set('badge', e.target.value)} /></label>
+        <div className="ad-chips">{BADGES.map(b => <button key={b} type="button" onClick={() => set('badge', b)}>{b}</button>)}{f.badge && <button type="button" onClick={() => set('badge', '')}>✕ من غير شارة</button>}</div>
+        <label>البراند <small>(اختياري)</small><input value={f.brand} maxLength={40} onChange={e => set('brand', e.target.value)} /></label>
+        <label>كلمات بحث إضافية <small>(بالفاصلة — العميل يلاقي المنتج بيها: مثلاً «بلوم، مجرى مخفي»)</small><input value={f.tags} onChange={e => set('tags', e.target.value)} /></label>
+      </section>
+      <section className="ad-s">
+        <h3>📦 التوفر والجدولة</h3>
+        <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
+        <div className="ad-two"><label>يظهر من تاريخ<input type="date" dir="ltr" value={f.from} onChange={e => set('from', e.target.value)} /></label><label>يختفي بعد تاريخ<input type="date" dir="ltr" value={f.until} onChange={e => set('until', e.target.value)} /></label></div>
+        <small className="mut">سيب التواريخ فاضية لو عايزه يظهر دايماً.</small>
+      </section>
+      <section className="ad-s">
+        <h3>🔎 ظهور في جوجل</h3>
+        <label>عنوان الصفحة <small>(اختياري)</small><input value={f.seoTitle} maxLength={70} onChange={e => set('seoTitle', e.target.value)} /></label>
+        <label>وصف جوجل <small>({f.seoDesc.length}/155)</small><textarea rows={2} maxLength={155} value={f.seoDesc} onChange={e => set('seoDesc', e.target.value)} /></label>
+      </section>
+      <section className="ad-s">
         <h3>👁️ الظهور</h3>
         <label className="ad-ck"><input type="checkbox" checked={f.top} onChange={e => set('top', e.target.checked)} /> ⭐ منتج مميز <small>بيظهر في «الأكثر طلباً» في أول الموقع</small></label>
         <label className="ad-ck"><input type="checkbox" checked={f.hidden} onChange={e => set('hidden', e.target.checked)} /> 🙈 مخفي من الموقع <small>مبيظهرش للزباين، ولسه موجود هنا</small></label>
       </section>
       <div className="ad-bar">
         <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
+        {cur && <a className="lnk" href={'/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
+        {cur && <button type="button" className="lnk" disabled={busy} onClick={duplicate}>⧉ نسخة منه</button>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={remove}>🗑️ حذف</button>}
         <button className="pri" disabled={busy} onClick={save}>💾 {cur ? 'حفظ ونشر' : 'إضافة ونشر'}</button>
       </div>

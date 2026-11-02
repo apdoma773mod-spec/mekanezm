@@ -1,26 +1,17 @@
 // Owner-chosen look of the store (set in /admin). Every color has a role; text colors are picked
 // automatically from the background behind them unless the owner chooses one on purpose.
+import { HEX, contrast, full, mix, onColor } from './theme-math';
+import { woodById, woodFromHex, woodSvg, woodUrl, type Wood } from './woods';
+
+export { HEX, contrast, full, lum, mix, onColor } from './theme-math';
+export { WOOD_FAMILIES, WOOD_LIB, woodById, woodFromHex, woodUrl, type Wood } from './woods';
+
 export const THEME_KEYS = ['accent', 'accentFg', 'bg', 'fg', 'card', 'cardFg', 'dark', 'darkFg', 'wood'] as const;
 export type ThemeKey = (typeof THEME_KEYS)[number];
-export type ThemeMap = Record<ThemeKey, string>;
-
-export const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
-export const full = (h: string) => (h.length === 4 ? '#' + [...h.slice(1)].map(c => c + c).join('') : h.toLowerCase());
-
-const rgb = (h: string) => full(h).slice(1).match(/../g)!.map(x => parseInt(x, 16));
-export const lum = (h: string) => {
-  const v = rgb(h).map(x => x / 255).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
-};
-/** WCAG contrast ratio, 1 (none) .. 21 (black on white). */
-export const contrast = (a: string, b: string) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
-/** Readable text color for a given background: white or near-black, whichever contrasts more. */
-export const onColor = (bg: string) => (contrast(bg, '#ffffff') >= contrast(bg, '#14201a') ? '#ffffff' : '#14201a');
-/** Mix `a` with `b` (t = share of b, 0..1). */
-export const mix = (a: string, b: string, t: number) => {
-  const x = rgb(a), y = rgb(b);
-  return '#' + x.map((c, i) => Math.round(c + (y[i] - c) * t).toString(16).padStart(2, '0')).join('');
-};
+/** Wood settings that are not colors: chosen finish id, how much wood (1..3), and the exact places it is applied. */
+export const WOOD_KEYS = ['woodId', 'woodLvl', 'woodAt'] as const;
+export type WoodKey = (typeof WOOD_KEYS)[number];
+export type ThemeMap = Record<ThemeKey, string> & Partial<Record<WoodKey, string>>;
 
 /** Glossy petrol-style gradient stops from one dark base color (the original petrol: #0f2b3d / #1b5e7b / #2f6f8f). */
 export const gloss = (dark: string) => (full(dark) === '#0f2b3d'
@@ -74,47 +65,103 @@ export const THEMES: { name: string; v: Partial<ThemeMap> }[] = [
   { name: 'أحمر', v: { accent: '#d6342c', bg: '#faf1f0', card: '#ffffff', dark: '#3a0f0d' } },
 ];
 
+/** Rich, saturated accent colors for buttons (each one passes white-text contrast). */
+export const ACCENTS: [string, string][] = [
+  ['أخضر ميكانيزم', '#3cba2c'], ['زمردي', '#0e8f5b'], ['تركواز', '#0f8f94'], ['بترولي', '#1b7f9c'], ['أزرق ملكي', '#1e5bd9'], ['نيلي', '#3b3fc4'],
+  ['بنفسجي', '#7c3aed'], ['عنابي', '#a3214a'], ['أحمر', '#d6342c'], ['برتقالي محروق', '#c2570c'], ['ذهبي', '#a9741a'], ['نحاسي', '#a6592f'],
+  ['جوزي', '#6b4430'], ['فحمي', '#2c3036'],
+];
+
 /** Dark/glossy block colors: each one drives the glossy squares and dark panels. */
 export const DARKS: [string, string][] = [
   ['بترولي (الأصلي)', '#0f2b3d'], ['بترولي فاتح', '#12506b'], ['أزرق ملكي', '#10264a'], ['أخضر غامق', '#0f3a2b'],
-  ['بنفسجي غامق', '#2a1458'], ['عنابي', '#3a0f1f'], ['بني ذهبي', '#3b2a0b'], ['أسود', '#14181c'],
+  ['بنفسجي غامق', '#2a1458'], ['عنابي', '#3a0f1f'], ['بني ذهبي', '#3b2a0b'], ['أسود', '#14181c'], ['جوز غامق', '#2b1a10'], ['فحمي دافئ', '#25221f'],
 ];
 
-/** Wood board texture as a tiny vector image (SVG turbulence = real-looking grain, no photo files). */
-export const woodTex = (hex: string, seed = 3) => {
-  const c = full(hex), d = mix(c, '#000000', 0.62);
-  const [r, g, b] = rgb(d).map(x => (x / 255).toFixed(3));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" preserveAspectRatio="none"><defs><filter id="w" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.28" numOctaves="4" seed="${seed}" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} 2.4 0 0 0 -0.75"/></filter><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs><rect width="640" height="180" fill="${c}"/><rect width="640" height="180" filter="url(#w)"/><rect width="640" height="180" fill="url(#s)"/></svg>`;
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-};
-/** Plain CSS for the grain (used by small swatches). */
+/** Wood board texture (vector, sharp on any screen). */
+export const woodTex = (hex: string, seed = 0) => woodUrl(woodFromHex(hex), 960, 240, { seed });
+/** Plain CSS for a small swatch of a wood. */
 export const grain = (hex: string) => `${woodTex(hex)} center / cover, ${full(hex)}`;
 
-/** Wood details for the store: header plank, section titles on a screwed plank, card edge banding, nav top edge.
- *  Only added when the owner picks a wood. Colors of the site are NOT touched. */
-export function woodCss(hex: string) {
-  const c = full(hex), fg = onColor(c), tex = woodTex(c), tex2 = woodTex(c, 9);
-  const plank = (t: string) => `background-color:${c};background-image:${t};background-size:100% 100%`;
-  const screw = 'background:radial-gradient(circle at 35% 30%,#f6d77a,#b8862b 62%,#5a3d0c);box-shadow:0 1px 1px #0009';
-  return [
-    `.tb{position:relative}`,
-    `.tb::after{content:"";position:absolute;inset:auto 0 0 0;height:9px;${plank(tex)};box-shadow:inset 0 1px 0 #ffffff66,0 3px 6px #0004;pointer-events:none}`,
-    `.sh h2{${plank(tex2)};color:${fg};padding:5px 22px;border-radius:8px;box-shadow:inset 0 1px 0 #ffffff66,inset 0 -2px 0 #0005,0 4px 10px #0003;text-shadow:0 1px 0 ${fg === '#ffffff' ? '#0007' : '#ffffff77'}}`,
-    `.sh h2::before,.sh h2::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 10px;vertical-align:middle;font-size:0;${screw}}`,
-    `.card{position:relative}`,
-    `.card::after{content:"";position:absolute;inset:auto 0 0 0;height:10px;${plank(tex)};box-shadow:inset 0 1px 0 #ffffff55;pointer-events:none}`,
-    `.nv::before{content:"";position:absolute;inset:0 0 auto 0;height:7px;${plank(tex2)};box-shadow:inset 0 -1px 0 #0005;pointer-events:none}`,
-  ].join('\n');
+/** The wood the owner chose: a library finish by id, or one built from a custom color. null = no wood. */
+export function chosenWood(t: Partial<ThemeMap> | Record<string, unknown> | undefined): Wood | null {
+  const id = String((t as Record<string, unknown>)?.woodId ?? '');
+  if (id && woodById(id)) return woodById(id)!;
+  const hex = String((t as Record<string, unknown>)?.wood ?? '');
+  return HEX.test(hex) ? woodFromHex(hex) : null;
 }
 
-/** Real wood / veneer samples. Each one builds a whole look: pale wood tint for pages, deep wood for buttons, dark wood for the glossy panels. */
+export const WOOD_AREAS: [string, string][] = [
+  ['head', 'شريط الهيدر'], ['titles', 'عناوين الأقسام'], ['cards', 'حافة الكروت'], ['frame', 'إطار صور المنتجات'],
+  ['nav', 'الشريط السفلي'], ['foot', 'الفوتر'], ['btn', 'الأزرار'], ['bg', 'خلفية الصفحة'],
+];
+/** Presets for «how much wood»: 1 = touches, 2 = the usual look, 3 = wood everywhere. */
+export const WOOD_LEVELS: [string, string, string[]][] = [
+  ['1', 'لمسات خفيفة', ['head', 'titles']],
+  ['2', 'متوسط', ['head', 'titles', 'cards', 'frame', 'nav', 'foot']],
+  ['3', 'كامل', ['head', 'titles', 'cards', 'frame', 'nav', 'foot', 'btn', 'bg']],
+];
+/** Where the wood is applied: the owner's own list if set, else the chosen level (default: medium). */
+export function woodAreas(t: Partial<ThemeMap> | Record<string, unknown> | undefined): string[] {
+  const at = String((t as Record<string, unknown>)?.woodAt ?? '');
+  if (at) return at.split(',').filter(a => WOOD_AREAS.some(x => x[0] === a));
+  const lvl = String((t as Record<string, unknown>)?.woodLvl ?? '2');
+  return (WOOD_LEVELS.find(l => l[0] === lvl) ?? WOOD_LEVELS[1])[2];
+}
+
+/** Wood details for the store. Only added when the owner picks a wood; the colors of the site are never touched
+ *  (except the optional «خلفية الصفحة» wood, which is a pale veneer behind the content). */
+export function woodCss(wood: Wood, areas: string[]) {
+  const on = (a: string) => areas.includes(a);
+  const c = wood.tones[1], fg = onColor(c);
+  const board = (seed: number, h = 240, o: { gloss?: boolean } = {}) => woodUrl(wood, 960, h, { seed, ...o });
+  const plank = (seed: number, h = 240, o: { gloss?: boolean } = {}) => `background-color:${c};background-image:${board(seed, h, o)};background-size:100% 100%`;
+  const screw = 'background:radial-gradient(circle at 35% 30%,#f6d77a,#b8862b 62%,#5a3d0c);box-shadow:0 1px 1px #0009';
+  const out: string[] = [];
+  if (on('head')) out.push(
+    `.tb{position:relative}`,
+    `.tb::after{content:"";position:absolute;inset:auto 0 0 0;height:10px;${plank(3, 120)};box-shadow:inset 0 1px 0 #ffffff66,0 3px 6px #0004;pointer-events:none}`,
+  );
+  if (on('titles')) out.push(
+    `.sh h2{${plank(9, 120, { gloss: true })};color:${fg};padding:5px 22px;border-radius:8px;box-shadow:inset 0 1px 0 #ffffff66,inset 0 -2px 0 #0005,0 4px 10px #0003;text-shadow:0 1px 0 ${fg === '#ffffff' ? '#0007' : '#ffffff77'}}`,
+    `.sh h2::before,.sh h2::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 10px;vertical-align:middle;font-size:0;${screw}}`,
+  );
+  if (on('cards')) out.push(
+    `.card{position:relative}`,
+    `.card::after{content:"";position:absolute;inset:auto 0 0 0;height:11px;${plank(5, 120)};box-shadow:inset 0 1px 0 #ffffff55;pointer-events:none;z-index:3}`,
+  );
+  if (on('frame')) out.push(
+    `.card .imw::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;padding:7px;background:${woodUrl(wood, 640, 480, { seed: 13, gloss: true })} center/100% 100%;-webkit-mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 1px 2px #0006)}`,
+  );
+  if (on('nav')) out.push(
+    `.nv::before{content:"";position:absolute;inset:0 0 auto 0;height:8px;${plank(9, 120)};box-shadow:inset 0 -1px 0 #0005;pointer-events:none}`,
+  );
+  if (on('foot')) out.push(
+    `footer.ft{position:relative;border-top:0}`,
+    `footer.ft::before{content:"";position:absolute;inset:0 0 auto 0;height:14px;${plank(17, 120, { gloss: true })};box-shadow:inset 0 -2px 0 #0006,0 2px 6px #0005}`,
+  );
+  if (on('btn')) out.push(
+    `.pvadd,.btn-big,.go-cart{${plank(21, 120, { gloss: true })} !important;color:${fg} !important;border:0 !important;text-shadow:0 1px 0 ${fg === '#ffffff' ? '#0007' : '#ffffff77'};box-shadow:inset 0 1px 0 #ffffff66,inset 0 -2px 0 #0005,0 5px 12px #0003}`,
+    `.add{border-color:${wood.tones[1]} !important;color:${wood.tones[0]} !important;background:${woodUrl({ ...wood, tones: [mix(wood.tones[0], '#fff', 0.78), mix(wood.tones[1], '#fff', 0.84), mix(wood.tones[2], '#fff', 0.9)] }, 480, 120, { seed: 23 })} center/100% 100% !important;font-weight:800}`,
+  );
+  if (on('bg')) {
+    const pale: Wood = { ...wood, tones: [mix(wood.tones[0], '#ffffff', 0.82), mix(wood.tones[1], '#ffffff', 0.88), mix(wood.tones[2], '#ffffff', 0.92)], warp: wood.warp };
+    out.push(`body{background-color:${pale.tones[1]};background-image:${woodUrl(pale, 1400, 900, { seed: 29 })};background-size:cover;background-attachment:fixed}`);
+  }
+  return out.join('\n');
+}
+
+/** Real wood / veneer samples (kept for the old one-hex setting): the library finish nearest to a hex. */
 export const WOODS: [string, string][] = [
   ['جوز', '#6b4430'], ['زان', '#cfa56f'], ['بلوط', '#b88653'], ['ماهوجني', '#7a3426'],
   ['ونجي', '#3d2c24'], ['رماد', '#d4c3a1'], ['كرز', '#a4553a'], ['فحمي', '#2c2f33'],
 ];
-export function woodTheme(hex: string): Partial<ThemeMap> {
-  const w = full(hex);
-  let accent = w, i = 0;
+
+/** A whole look from one wood: pale wood tint for pages, deep wood for buttons, dark wood for the glossy panels. */
+export function woodTheme(w: Wood): Partial<ThemeMap> {
+  const body = w.tones[1];
+  let accent = body, i = 0;
   while (contrast(accent, '#ffffff') < 4.5 && i++ < 12) accent = mix(accent, '#000000', 0.1);
-  return { wood: w, bg: mix(w, '#ffffff', 0.9), card: mix(w, '#ffffff', 0.97), accent, dark: mix(w, '#0d1114', 0.8) };
+  return { wood: '', woodId: w.id, bg: mix(body, '#ffffff', 0.9), card: mix(body, '#ffffff', 0.97), accent, dark: mix(w.tones[0], '#0d1114', 0.55) };
 }
+export { woodSvg };

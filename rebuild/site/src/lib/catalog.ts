@@ -21,7 +21,8 @@ export const getSite = cache(async (): Promise<Site> => {
     const rows = (await r.json()) as { data: unknown }[];
     const s = siteSchema.parse(rows[0]?.data ?? {});
     s.pros = s.pros.filter(x => !x.hidden && x.name.trim() && x.phone.trim());
-    s.products = s.products.filter(p => !p.hidden).map(withCover);
+    const today = new Date().toISOString().slice(0, 10);
+    s.products = s.products.filter(p => !p.hidden && !(p.from && today < p.from) && !(p.until && today > p.until)).map(withCover);
     return s;
   } catch (e) {
     console.error('getSite failed', e);

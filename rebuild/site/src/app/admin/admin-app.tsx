@@ -5,8 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { loadDoc, login, logout, publishNow, saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
 import { ProsTab, ReviewsTab, ShipTab, WorksTab } from './content';
 import { ProductsTab } from './products';
+import { ImportTab } from './import';
 import { Img, move, uid7 } from './ui';
-import { DEFAULTS, HEX, THEME_KEYS, type ThemeMap } from '@/lib/theme';
+import { DEFAULTS, HEX, THEME_KEYS, WOOD_AREAS, WOOD_KEYS, woodById, type ThemeMap } from '@/lib/theme';
 import { ThemeTab } from './theme-tab';
 import { Ico } from './icons';
 
@@ -23,7 +24,7 @@ const fromDoc = (d: Rec): Form => ({
   slides: Array.isArray(d.slides) ? d.slides.filter((x: unknown) => typeof x === 'string') : [],
   trust: Array.isArray(d.trust) ? d.trust.filter((x: unknown) => typeof x === 'string') : [],
   socials: { fb: d.socials?.fb ?? '', ig: d.socials?.ig ?? '', tt: d.socials?.tt ?? '', yt: d.socials?.yt ?? '' },
-  theme: Object.fromEntries(THEME_KEYS.map(k => [k, String(d.theme?.[k] ?? '')])) as ThemeMap,
+  theme: Object.fromEntries([...THEME_KEYS, ...WOOD_KEYS].map(k => [k, String(d.theme?.[k] ?? '')])) as ThemeMap,
   sections: Array.isArray(d.sections) ? d.sections.map((s: Sec) => ({ id: s.id, name: String(s.name ?? ''), img: String(s.img ?? '') })) : [], removed: [],
 });
 
@@ -34,6 +35,11 @@ function applyForm(d: Rec, f: Form) {
   d.socials = { ...(d.socials ?? {}), ...Object.fromEntries(Object.entries(f.socials).map(([k, v]) => [k, v.trim()])) };
   const th: Rec = { ...(d.theme ?? {}) };
   for (const k of THEME_KEYS) { if (HEX.test(f.theme[k])) th[k] = f.theme[k]; else delete th[k]; }
+  // wood settings: only a known finish / level / area list is kept
+  const wid = f.theme.woodId ?? '', wlv = f.theme.woodLvl ?? '', wat = (f.theme.woodAt ?? '').split(',').filter(a => WOOD_AREAS.some(x => x[0] === a)).join(',');
+  if (woodById(wid)) th.woodId = wid; else delete th.woodId;
+  if (/^[123]$/.test(wlv)) th.woodLvl = wlv; else delete th.woodLvl;
+  if (wat) th.woodAt = wat; else delete th.woodAt;
   d.theme = th;
   // sections: new ones are added, renamed/re-ordered ones updated, deleted ones removed (never one that still has products)
   const cur: Sec[] = Array.isArray(d.sections) ? d.sections : [];
@@ -44,7 +50,7 @@ function applyForm(d: Rec, f: Form) {
   d.sections = [...ordered, ...rest];
 }
 
-type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'more';
+type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'import' | 'more';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
 export function AdminApp() {
@@ -118,7 +124,7 @@ export function AdminApp() {
     );
   }
 
-  const TABS: [Tab, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['more', 'أدوات']];
+  const TABS: [Tab, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['import', 'استيراد'], ['more', 'أدوات']];
   const count = (id: string) => (doc.data.products ?? []).filter((p: Rec) => p.sec === id).length;
   return (
     <div className="ad">
@@ -132,6 +138,7 @@ export function AdminApp() {
       {tab === 'works' && <WorksTab doc={doc} onDoc={onDoc} />}
       {tab === 'pros' && <ProsTab doc={doc} onDoc={onDoc} />}
       {tab === 'reviews' && <ReviewsTab doc={doc} onDoc={onDoc} />}
+      {tab === 'import' && <ImportTab doc={doc} onDoc={onDoc} backup={backup} />}
       {tab === 'ship' && <ShipTab key={doc.version} doc={doc} onDoc={onDoc} />}
 
       {tab === 'look' && <>
