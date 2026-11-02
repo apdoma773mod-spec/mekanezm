@@ -18,15 +18,25 @@ const dimV = (x: number, y1: number, y2: number, t: string, side = -1) => `<g st
 const svgWrap = (b: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="800" height="600" direction="ltr" style="direction:ltr"><rect width="400" height="300" fill="#fff"/><rect x="2" y="2" width="396" height="296" rx="10" fill="none" stroke="#d9a73a" stroke-width="2"/><text x="200" y="22" text-anchor="middle" font-size="13" font-weight="800" fill="#a8741a" ${F}>MEKANEZM — رسم توضيحي للطلب</text>${b}</svg>`;
 
 function drawSteel(v: Vals) {
-  const t = num(v.t), W = num(v.w), hf = num(v.hf), hb = num(v.hb);
-  if (!(t > 0 && W > 0 && hf > 0 && hb > 0)) return '';
+  const sh = v.shape || 'U';
+  if (sh === 'flat') return drawFlat(v);
+  const t = num(v.t), W = num(v.w), hf = num(v.hf), hb = sh === 'L' ? 0 : num(v.hb);
+  if (!(t > 0 && W > 0 && hf > 0 && (sh === 'L' || hb > 0))) return '';
   const m = Math.max(hf, hb), k = Math.min(165 / (m * 1.35), 95 / t), dh = 185, x0 = 105 - (t * k) / 2, yb = 250, yt = yb - dh, tw = t * k;
   const side = `<rect x="${x0}" y="${yt}" width="${tw}" height="${dh}" fill="#c9a77a" stroke="#6b4a1f" stroke-width="1.5"/><text x="${x0 + tw / 2}" y="${yt + 60}" text-anchor="middle" font-size="11" fill="#6b4a1f" ${F} transform="rotate(-90 ${x0 + tw / 2} ${yt + 60})">الباب</text>
   <path d="M${x0 - 4} ${yb - hf * k}V${yb + 4}H${x0 + tw + 4}V${yb - hb * k}" fill="none" stroke="#6aa5c9" stroke-width="5" stroke-linejoin="round"/><path d="M${x0 - 4} ${yb - hf * k}V${yb + 4}H${x0 + tw + 4}V${yb - hb * k}" fill="none" stroke="#e6f3fb" stroke-width="1.4"/>
-  ${dimV(x0 - 16, yb - hf * k, yb, hf + ' سم', -1)}${dimV(x0 + tw + 16, yb - hb * k, yb, hb + ' سم', 1)}${dimH(x0, x0 + tw, yb + 22, t + ' سم')}<text x="${x0 - 12}" y="${yt - 8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الوش</text><text x="${x0 + tw + 12}" y="${yt - 8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الضهر</text>`;
+  ${dimV(x0 - 16, yb - hf * k, yb, hf + ' سم', -1)}${hb ? dimV(x0 + tw + 16, yb - hb * k, yb, hb + ' سم', 1) : ''}${dimH(x0, x0 + tw, yb + 22, t + ' سم')}<text x="${x0 - 12}" y="${yt - 8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الوش</text><text x="${x0 + tw + 12}" y="${yt - 8}" font-size="12" font-weight="800" fill="#12202b" ${F}>الضهر</text>`;
   const fw = 130, fx = 250, fh = dh, bh = Math.max(16, Math.min(130, hf * 2.2));
   const front = `<rect x="${fx}" y="${yt}" width="${fw}" height="${fh}" fill="#c9a77a" stroke="#6b4a1f" stroke-width="1.5"/><rect x="${fx}" y="${yb - bh}" width="${fw}" height="${bh}" fill="#6aa5c9" stroke="#3a6f93"/><rect x="${fx}" y="${yb - bh}" width="${fw}" height="${bh * 0.35}" fill="#e6f3fb" opacity=".55"/>${dimH(fx, fx + fw, yb + 22, 'عرض الباب ' + W + ' سم')}<text x="${fx + fw / 2}" y="${yt + fh / 2 - bh / 2}" text-anchor="middle" font-size="12" fill="#6b4a1f" ${F}>منظر أمامي</text>`;
   return svgWrap(side + front + `<text x="105" y="${yt - 26}" text-anchor="middle" font-size="12" fill="#667" ${F}>قطاع جانبي</text>`);
+}
+
+/** A flat strip (no bend): length × height, screwed or glued on the face of the door. */
+function drawFlat(v: Vals) {
+  const W = num(v.w), H = num(v.hf);
+  if (!(W > 0 && H > 0)) return '';
+  const k = Math.min(300 / W, 170 / H), w = W * k, h = H * k, x = 200 - w / 2, y = 150 - h / 2 + 6;
+  return svgWrap(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#6aa5c9" stroke="#3a6f93" stroke-width="1.5"/><rect x="${x}" y="${y}" width="${w}" height="${h * 0.35}" fill="#e6f3fb" opacity=".55"/>${dimH(x, x + w, y + h + 20, W + ' سم')}${dimV(x - 16, y, y + h, H + ' سم', -1)}<text x="200" y="${y - 12}" text-anchor="middle" font-size="12" fill="#667" ${F}>شريحة عدلة مسطحة (من غير ثني)</text>`);
 }
 
 function drawBamboo(v: Vals) {
@@ -100,16 +110,16 @@ export const GUIDE: Record<Kind, string> = {
 };
 
 export const defaults = (k: Kind): Vals => ({
-  steel: { q: '1' },
+  steel: { q: '1', shape: 'U' },
   bamboo: { kind: 'طبيعي', split: 'no', dv: '2', q: '1' },
   delf: { type: 'hinged', mat: 'ألمنيوم', handle: 'none', hside: 'right', drill: 'yes', hinge: 'right', hn: '3', wheel: 'yes', q: '1' },
 })[k];
 
 /** Quick-pick sizes under some fields. */
 export function quick(k: Kind, f: string): number[] | null {
-  const QK: Record<string, number[]> = { t: [3, 4, 5], hf: [10, 15, 20], hb: [10, 15, 20] };
+  const QK: Record<string, number[]> = { t: [3, 3.5, 4, 4.5, 5, 5.5, 6, 7], hf: [5, 8, 10, 12, 15, 20, 25, 30], hb: [5, 8, 10, 12, 15, 20, 25, 30] };
   if (k === 'delf') return ({ w: [40, 50, 60, 80, 90], h: [200, 210, 220, 240] } as Record<string, number[]>)[f] ?? null;
-  if (k === 'steel' && f === 'w') return [60, 70, 80, 90];
+  if (k === 'steel' && f === 'w') return [40, 50, 60, 70, 75, 80, 90, 100];
   return QK[f] ?? null;
 }
 
@@ -147,7 +157,12 @@ export function warnings(k: Kind, V: Vals): { text: string; hn?: number }[] {
 export function summary(k: Kind, V: Vals) {
   const q = Math.max(1, Math.round(num(V.q)) || 1);
   const L = [`${KIND[k]} — عدد ${q}`];
-  if (k === 'steel') L.push(`سُمك الباب: ${V.t} سم`, `عرض الباب: ${V.w} سم`, `الاستانلس من الوش: ${V.hf} سم`, `الاستانلس من الضهر: ${V.hb} سم`, `طول الشريحة المفرودة: ${Math.round((num(V.hf) + num(V.t) + num(V.hb)) * 10) / 10} سم (حدّين ثنية)`);
+  if (k === 'steel') {
+    const sh = V.shape || 'U';
+    if (sh === 'flat') L.push('الشكل: شريحة عدلة مسطحة (من غير ثني)', `الطول: ${V.w} سم`, `الارتفاع: ${V.hf} سم`);
+    else if (sh === 'L') L.push('الشكل: حرف L (وش + تحت الباب)', `سُمك الباب: ${V.t} سم`, `عرض الباب: ${V.w} سم`, `الاستانلس من الوش: ${V.hf} سم`, `طول الشريحة المفرودة: ${Math.round((num(V.hf) + num(V.t)) * 10) / 10} سم (ثنية واحدة)`);
+    else L.push('الشكل: تلبيسة حرف U (وش + ضهر)', `سُمك الباب: ${V.t} سم`, `عرض الباب: ${V.w} سم`, `الاستانلس من الوش: ${V.hf} سم`, `الاستانلس من الضهر: ${V.hb} سم`, `طول الشريحة المفرودة: ${Math.round((num(V.hf) + num(V.t) + num(V.hb)) * 10) / 10} سم (حدّين ثنية)`);
+  }
   if (k === 'bamboo') L.push(`النوع: ${V.kind}`, V.split === 'yes' ? `متقسم — ${Math.round(num(V.dv)) || 0} فاصل` : 'بدون تقسيم', `العرض: ${V.w} سم`, `الطول: ${V.l} سم`, `الارتفاع (العمق): ${V.h} سم`, 'المقاس برّه برّه');
   if (k === 'delf') {
     L.push(`النوع: ${V.type === 'hinged' ? 'مفصلي' : 'جرار'}`, `العرض: ${V.w} سم`, `الارتفاع: ${V.h} سم`, `المقبض: ${({ none: 'بدون مقبض', one: 'من ناحية ' + (V.hside === 'left' ? 'الشمال' : 'اليمين'), both: 'من الناحيتين' } as Record<string, string>)[V.handle]}`);
@@ -160,7 +175,10 @@ export function summary(k: Kind, V: Vals) {
 /** Missing-measurements message ('' when OK). */
 export function checkSizes(k: Kind, V: Vals) {
   const n = (x: string) => num(V[x]) > 0;
-  if (k === 'steel' && !(n('t') && n('w') && n('hf') && n('hb'))) return 'اكتب كل المقاسات';
+  if (k === 'steel') {
+    const sh = V.shape || 'U';
+    if (sh === 'flat' ? !(n('w') && n('hf')) : sh === 'L' ? !(n('t') && n('w') && n('hf')) : !(n('t') && n('w') && n('hf') && n('hb'))) return 'اكتب كل المقاسات';
+  }
   if (k === 'bamboo' && (!(n('w') && n('l') && n('h')) || (V.split === 'yes' && !(num(V.dv) >= 1)))) return 'اكتب العرض والطول والارتفاع' + (V.split === 'yes' ? ' وعدد الفواصل' : '');
   if (k === 'delf' && (!(n('w') && n('h')) || (V.type === 'hinged' && V.drill === 'yes' && !(num(V.hn) >= 1)))) return 'اكتب عرض وارتفاع الدلفة' + (V.type === 'hinged' && V.drill === 'yes' ? ' وعدد المفصلات' : '');
   return '';
