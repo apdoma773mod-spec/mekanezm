@@ -120,7 +120,8 @@ export default async function webPublicRoutes(app: FastifyInstance) {
     const days = { ...(v.days ?? {}) };
     days[day] = { ...(days[day] ?? {}), [page]: (days[day]?.[page] ?? 0) + 1 };
     for (const k of Object.keys(days).sort().slice(0, -60)) delete days[k];
-    await putKv(VISITS_KEY, { ...v, days });
+    // two first visits at the same moment both try to create the row: losing one count is fine, a 500 is not
+    await putKv(VISITS_KEY, { ...v, days }).catch(() => undefined);
     return { ok: true };
   });
 
