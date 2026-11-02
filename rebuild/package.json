@@ -5,9 +5,12 @@
   "workspaces": [
     "shared",
     "backend",
-    "frontend"
+    "frontend",
+    "site"
   ],
   "scripts": {
+    "dev:site": "npm run dev -w site",
+    "build:site": "npm run build -w site",
     "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",

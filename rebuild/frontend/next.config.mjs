@@ -8,8 +8,11 @@ const backend = process.env.BACKEND_URL ?? 'http://127.0.0.1:4000';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  // Self-contained build for Docker / a shop PC. On Vercel its own output is used instead.
+  ...(process.env.VERCEL ? {} : {
+    output: 'standalone',
+    outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  }),
   poweredByHeader: false,
   reactStrictMode: true,
   async rewrites() {

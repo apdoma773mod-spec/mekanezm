@@ -1,0 +1,54 @@
+/* المنتجات بالتفصيل — scroll story, same look as the old story.html */
+.story { background: #fff; color: #111; min-height: 100vh; margin-bottom: -150px; }
+.story .top { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #eee; }
+.story .top b { font-size: 22px; color: #a8741a; }
+.story .top a { color: #667; text-decoration: none; font-size: 14px; }
+.story .list { max-width: 900px; margin: 0 auto; padding: 22px 16px 60px; }
+.story .list h1 { font-size: 30px; margin: 0 0 6px; }
+.story .list p { color: #667; margin: 0 0 18px; }
+.story .g { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.story .g a { text-decoration: none; color: inherit; background: #faf8f3; border-radius: 18px; padding: 10px; text-align: center; border: 1px solid #eee4d0; }
+.story .g .im { position: relative; display: block; aspect-ratio: 1; background: #fff; border-radius: 12px; overflow: hidden; }
+.story .g span.t { display: block; font-weight: 700; font-size: 13px; margin-top: 6px; line-height: 1.5; }
+
+.st { position: fixed; inset: 0; z-index: 3000; background: #fff; overflow-y: auto; overscroll-behavior: contain; }
+.st .nv2 { position: fixed; top: 12px; right: 12px; z-index: 6; display: flex; gap: 8px; }
+.st .nv2 button, .st .nv2 a, .st .x { width: 42px; height: 42px; border-radius: 50%; border: 0; background: #111c; color: #fff; font-size: 18px; backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.st .x { position: fixed; top: 12px; left: 12px; z-index: 5; font-size: 20px; }
+.st .bar { position: fixed; top: 0; right: 0; left: 0; height: 3px; z-index: 5; background: #0001; }
+.st .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f6d77a, #a8741a); }
+.st .intro { height: 240vh; position: relative; }
+.st .pin { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow: hidden; padding: 0 20px; }
+.st .eb { font-size: 13px; letter-spacing: .18em; color: #a8741a; font-weight: 700; margin-bottom: 10px; }
+.st h1 { font-size: clamp(34px, 9vw, 72px); line-height: 1.15; margin: 0 0 8px; max-width: 900px; will-change: transform, opacity; }
+.st .sub { color: #667; font-size: 16px; margin: 0 0 18px; }
+.st .hero-i { touch-action: pan-y; cursor: grab; width: min(86vw, 520px); aspect-ratio: 1; object-fit: contain; will-change: transform; mix-blend-mode: multiply; }
+.st .hint { position: absolute; bottom: 22px; color: #889; font-size: 13px; animation: sth 1.6s infinite; }
+@keyframes sth { 50% { transform: translateY(6px); } }
+.st .seq { position: relative; }
+.st .stage { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; background: radial-gradient(circle at 50% 45%, #fff 40%, #f3f1ec); }
+.st .frames { position: relative; width: min(88vw, 560px); aspect-ratio: 1; }
+.st .frames img { mix-blend-mode: multiply; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; will-change: opacity, transform; }
+.st .cap { position: absolute; bottom: 7vh; right: 0; left: 0; text-align: center; padding: 0 20px; }
+.st .cap .n { font-size: 12px; color: #a8741a; letter-spacing: .2em; font-weight: 700; }
+.st .cap .t { font-size: clamp(22px, 6vw, 40px); transition: opacity .35s, transform .35s; min-height: 1.4em; }
+.st .cap .t.o { opacity: 0; transform: translateY(10px); }
+.st .cap .v { font-size: 15px; color: #667; min-height: 1.6em; }
+.st .dots { position: absolute; top: 50%; right: 12px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 6px; }
+.st .dots i { width: 6px; height: 6px; border-radius: 50%; background: #0003; transition: all .3s; }
+.st .dots i.on { background: #a8741a; height: 18px; border-radius: 4px; }
+.st .specs { padding: 70px 18px 40px; max-width: 760px; margin: 0 auto; }
+.st .specs h2 { font-size: 30px; text-align: center; margin: 0 0 20px; }
+.st .sp { display: flex; justify-content: space-between; gap: 12px; padding: 15px 4px; border-bottom: 1px solid #e6e2d8; opacity: 0; transform: translateY(24px); transition: all .6s; }
+.st .sp.in { opacity: 1; transform: none; }
+.st .sp b { color: #a8741a; }
+.st .sp span { font-weight: 700; text-align: left; }
+.st .cta { display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 18px 40px; max-width: 760px; margin: 0 auto; }
+.st .cta a { flex: 1 1 200px; text-align: center; text-decoration: none; font-weight: 800; padding: 16px; border-radius: 16px; background: #25d366; color: #fff; }
+.st .cta a.g { background: linear-gradient(135deg, #f6d77a, #d9a73a, #a8741a); color: #2a1c04; }
+.st .cta a.shp { background: #10202c; color: #f6d77a; }
+.st .rel { padding: 10px 18px 60px; max-width: 760px; margin: 0 auto; }
+.st .rel h2 { font-size: 22px; margin: 0 0 12px; text-align: center; }
+.st .rel .rw { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.st .rel button { flex: 0 0 130px; color: #111; background: #faf8f3; border: 1px solid #eee4d0; border-radius: 16px; padding: 8px; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.5; }
+.st .rel img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border-radius: 10px; mix-blend-mode: multiply; }

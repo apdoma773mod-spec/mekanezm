@@ -1,0 +1,32 @@
+/* حسابك عند ميكانيزم — customer's private page (scoped under .pt) */
+.pt { --ink: #14213d; --mut: #6b7280; --pbg: #f4f5fa; --line: #e5e7ef; --pri: #0b1650; --acc: #e8a317; --red: #c0392b; --grn: #1e8449; background: var(--pbg); color: var(--ink); min-height: 100vh; margin-bottom: -150px; font: 16px/1.7 system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif; }
+.pt header { background: var(--pri); color: #fff; padding: 20px 16px 26px; }
+.pt header h1 { margin: 0; font-size: 22px; }
+.pt header p { margin: 4px 0 0; opacity: .85; font-size: 14px; }
+.pt main { max-width: 640px; margin: -14px auto 0; padding: 0 14px 40px; }
+.pt .card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--line); }
+.pt h2 { margin: 0 0 10px; font-size: 18px; }
+.pt .bal { font-size: 26px; font-weight: 800; }
+.pt .row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.pt .row:last-child { border: 0; }
+.pt .mut { color: var(--mut); font-size: 14px; }
+.pt textarea { width: 100%; min-height: 150px; border: 2px solid var(--line); border-radius: 14px; padding: 14px; font: inherit; resize: vertical; background: #fff; color: var(--ink); }
+.pt textarea:focus { outline: none; border-color: var(--pri); }
+.pt button { font: inherit; border: 0; border-radius: 14px; padding: 15px 18px; font-weight: 700; width: 100%; }
+.pt .pri { background: var(--pri); color: #fff; margin-top: 12px; }
+.pt .sec { background: #eef0f8; color: var(--pri); margin-top: 10px; display: block; text-align: center; text-decoration: none; border-radius: 14px; padding: 15px 18px; font-weight: 700; }
+.pt button:disabled { opacity: .5; }
+.pt .inv { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.pt .inv summary { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; align-items: center; list-style: none; }
+.pt .inv summary::-webkit-details-marker { display: none; }
+.pt .inv .body { padding: 0 14px 14px; }
+.pt .tag { display: inline-block; border-radius: 99px; padding: 2px 10px; font-size: 13px; font-weight: 700; }
+.pt .tag.r { background: #fdecea; color: var(--red); }
+.pt .tag.g { background: #e6f4ea; color: var(--grn); }
+.pt .miss { background: #fff8e6; border-radius: 12px; padding: 10px 12px; margin-top: 10px; white-space: pre-wrap; }
+.pt .thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.pt .thumbs button { width: auto; background: #eef0f8; border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 400; }
+.pt .thumbs img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; display: block; }
+.pt .msg { border-right: 4px solid var(--acc); padding: 8px 12px; margin-bottom: 10px; background: #fffdf5; border-radius: 8px; white-space: pre-wrap; }
+.pt .note { font-size: 14px; color: var(--mut); margin-top: 8px; }
+.pt .err { padding: 40px 16px; text-align: center; }
