@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { NavCard } from '@/components/nav-card';
 import { ProThemeCard, ProUiCard } from '@/components/pro';
 import { HtmlPreview } from '@/components/ui/html-preview';
 import { Modal } from '@/components/ui/modal';
@@ -123,6 +124,7 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
         }
       />
       <ProThemeCard />
+      <NavCard />
       <ProUiCard />
       <div className="grid2">
         <div className="card">

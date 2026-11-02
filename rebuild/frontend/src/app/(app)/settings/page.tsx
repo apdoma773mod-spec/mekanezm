@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { VersionCard } from '@/components/nav-card';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { storeSettings, type StoreSettings } from '@mk/shared';
@@ -106,6 +107,7 @@ function SettingsScreen() {
         }
       />
       <div className="grid2">
+        <VersionCard />
         <CompanyForm initial={settings.data.store} />
         <div className="card">
           <h3>المستخدمين والأمان</h3>

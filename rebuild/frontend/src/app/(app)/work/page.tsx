@@ -77,7 +77,18 @@ function Work() {
     } catch {
       /* no stored request */
     }
-    if (web) void w.mkWk?.openWeb(web);
+    let steel: unknown = null;
+    try {
+      const raw = sessionStorage.getItem('mk_open_steel');
+      if (raw) {
+        sessionStorage.removeItem('mk_open_steel');
+        steel = JSON.parse(raw);
+      }
+    } catch {
+      /* none */
+    }
+    if (steel) void (w.mkWk as unknown as { stainlessFrom: (c: unknown) => Promise<void> }).stainlessFrom(steel);
+    else if (web) void w.mkWk?.openWeb(web);
     else void w.mkWk?.go(KEYS.includes(k) ? k : 'ord');
   }, [ready, k]);
 

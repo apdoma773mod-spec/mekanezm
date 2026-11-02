@@ -388,7 +388,7 @@ export const useAllProducts = (q: AllProductsQuery = {}, enabled = true) =>
     queryKey: ['products', 'all', q],
     queryFn: ({ signal }) => api.get<{ items: ProductDto[] }>('/products/all', q as Record<string, string>, signal).then((r) => r.items),
     enabled,
-    staleTime: 30_000,
+    staleTime: 300_000,
     placeholderData: keepPreviousData,
   });
 
@@ -489,7 +489,7 @@ export const useAllContacts = (type: 'CUSTOMER' | 'SUPPLIER', enabled = true) =>
     queryKey: ['contacts', 'all', type],
     queryFn: ({ signal }) => api.get<{ items: ContactDto[] }>('/contacts/all', { type }, signal).then((r) => r.items),
     enabled,
-    staleTime: 30_000,
+    staleTime: 300_000,
     placeholderData: keepPreviousData,
   });
 
@@ -546,7 +546,7 @@ export const useAllProductInfo = (enabled = true) =>
     queryKey: ['product-info', 'all'],
     queryFn: ({ signal }) => api.get<{ infos: Record<string, ProductInfo> }>('/products/info/all', undefined, signal).then((r) => r.infos),
     enabled,
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 export const useProductInfo = (id: string | null) =>
   useQuery({

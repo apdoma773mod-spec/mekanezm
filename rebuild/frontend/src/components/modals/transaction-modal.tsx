@@ -31,6 +31,7 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { SCAN_EVENT, scanTargets } from '../scan/scan-bus';
 import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
 
 interface Line {
@@ -165,6 +166,20 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const scanRef = useRef<string | null>(null);
   const qc = useQueryClient();
 
+  const addRef = useRef<(p: ProductDto) => void>(() => {});
+  useEffect(() => {
+    scanTargets.tx++;
+    const h = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (code) void lookupProduct(code).then((p) => addRef.current(p)).catch(() => {});
+    };
+    window.addEventListener(SCAN_EVENT, h);
+    return () => {
+      scanTargets.tx--;
+      window.removeEventListener(SCAN_EVENT, h);
+    };
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 120);
     return () => clearTimeout(t);
@@ -215,6 +230,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     setSearch('');
     searchRef.current?.focus();
   };
+
+  addRef.current = addProduct;
 
   /** A barcode scanner types the code and presses Enter: add the exact match straight away. */
   const onSearchKey = async (e: KeyboardEvent<HTMLInputElement>) => {

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useModal } from './modals/modal-host';
+import { NavApply } from './nav-card';
+import { ScanRouter } from './scan/scan-router';
 
 /**
  * إضافات القوة (طلب صاحب المحل: ١٠ اقتراحات): شريط النت فاصل، اختصارات الكيبورد على الكمبيوتر،
@@ -213,6 +215,8 @@ export function PowerExtras() {
       <LeaveGuard />
       <NewVersion />
       <ToTop />
+      <ScanRouter />
+      <NavApply />
     </>
   );
 }
