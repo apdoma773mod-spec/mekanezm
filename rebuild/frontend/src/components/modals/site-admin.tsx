@@ -10,7 +10,7 @@ import { fileToDataUrl } from '@/lib/image';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
 import { useModal } from './modal-host';
-import { DimImageMaker } from './dim-image';
+import { dimSig, generateDimImage, hasDims, parseDims } from '@/lib/dim-auto';
 
 /** 🌐 محتوى الموقع (openSiteAdmin القديمة) + 🌐 «على الموقع» للصنف (openSiteProduct). */
 const SHOP_URL = 'https://apdoma773mod-spec.github.io/mekanezm/shop.html';
@@ -604,12 +604,15 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     cost: string;
     qty: string;
     unit: string;
+    dimImg: string;
+    dimSig: string;
+    dimTxt: string;
   } | null>(null);
   const [busy, setBusy] = useState(0);
   const [saving, setSaving] = useState(false);
   const [up, setUp] = useState('');
   const [over, setOver] = useState(false);
-  const [dimOpen, setDimOpen] = useState(false);
+  const [dimMsg, setDimMsg] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
   const isNew = !id;
@@ -646,6 +649,9 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
           cost: '',
           qty: '0',
           unit: 'قطعة',
+          dimImg: String((sp as Record<string, unknown> | undefined)?.dimImg ?? ''),
+          dimSig: String((sp as Record<string, unknown> | undefined)?.dimSig ?? ''),
+          dimTxt: String((sp as Record<string, unknown> | undefined)?.dimTxt ?? ''),
         });
       })
       .catch((e) => toast(`محتاج نت عشان تفتح بيانات الموقع: ${errorMessage(e)}`, 'bad'));
@@ -712,12 +718,53 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     }
   };
 
+  /** 📐 the size picture, made by the system from the product's own photos: no choices (see lib/dim-auto). Returns the new photo list or null. */
+  const makeDim = async (force: boolean): Promise<{ imgs: string[]; dimImg: string; dimSig: string } | null> => {
+    if (!f || !f.imgs.length) return null;
+    const dims = parseDims(f.sp, f.dimTxt);
+    if (!hasDims(dims)) return null;
+    const sig = dimSig(dims);
+    if (!force && sig === f.dimSig && f.dimImg && f.imgs.includes(f.dimImg)) return null;
+    const phones = ((doc?.data as { phones?: string[] } | undefined)?.phones ?? []).filter(Boolean).join(' - ');
+    const pool = f.imgs.filter((u) => u !== f.dimImg);
+    const blob = await generateDimImage(pool, dims, phones ? `ميكانيزم — ${phones}` : 'ميكانيزم — MEKANIZM', setDimMsg);
+    setDimMsg('⏳ برفع الصورة…');
+    const url = await uploadSiteImage(new File([blob], 'dim.jpg', { type: 'image/jpeg' }));
+    return { imgs: [pool[0]!, url, ...pool.slice(1)], dimImg: url, dimSig: sig };
+  };
+
+  const regenDim = async () => {
+    try {
+      if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return toast('اكتب المقاسات الأول (عرض / ارتفاع / عمق)', 'bad');
+      const r = await makeDim(true);
+      if (r) set(r);
+      toast('✔ صورة المقاسات اتعملت — هي التانية في الصور');
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
+    setDimMsg('');
+  };
+
   const go = async () => {
     if (busy) return toast('استنى الصور تخلص رفع', 'bad');
     if (!f.name.trim()) return toast('اكتب اسم المنتج', 'bad');
     if (f.on && !f.sec) return toast('اختار القسم', 'bad');
     if (f.on && !f.imgs.length && !window.confirm('المنتج من غير صور — تكمّل؟')) return;
     setSaving(true);
+    let imgsOut = f.imgs;
+    let dimOut = { dimImg: f.dimImg, dimSig: f.dimSig };
+    if (f.on) {
+      try {
+        const r = await makeDim(false);
+        if (r) {
+          imgsOut = r.imgs;
+          dimOut = { dimImg: r.dimImg, dimSig: r.dimSig };
+        }
+      } catch (e) {
+        toast(`صورة المقاسات ماتعملتش: ${errorMessage(e)} — اتحفظ المنتج من غيرها`, 'bad');
+      }
+      setDimMsg('');
+    }
     try {
       let code = f.code.trim();
       if (isNew) {
@@ -734,7 +781,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
           return;
         }
         const o = i > -1 ? d.products[i]! : { id: f.spid || uid7(), code, name: '', sec: '', imgs: [] as string[] };
-        Object.assign(o, { name: f.name.trim(), desc: joined, sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
+        Object.assign(o, { name: f.name.trim(), desc: joined, sec: f.sec, imgs: imgsOut, img: imgsOut[0] ?? '', top: f.top, dimImg: dimOut.dimImg, dimSig: dimOut.dimSig, dimTxt: f.dimTxt.trim() });
         if (f.video.trim()) o.video = f.video.trim();
         else delete o.video;
         if (i > -1) d.products[i] = o;
@@ -847,17 +894,19 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               }}
             />
             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
-            <button type="button" className="secondary" id="eDimBtn" style={{ margin: '8px 0' }} onClick={() => setDimOpen(true)}>
-              📐 اعمل صورة المقاسات (أسهم ومقاسات على الصورة)
-            </button>
-            {dimOpen && (
-              <DimImageMaker
-                images={f.imgs}
-                specs={f.sp}
-                onClose={() => setDimOpen(false)}
-                onAdd={(url) => set({ imgs: [f.imgs[0] ?? url, ...(f.imgs[0] ? [url] : []), ...f.imgs.slice(1)] })}
-              />
-            )}
+            <div style={{ margin: '8px 0', padding: 10, borderRadius: 12, background: '#fff8e8', border: '1px solid #f0d98a' }}>
+              <b>📐 صورة المقاسات</b>
+              <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>
+                السيستم بيختار أوضح صورة من صور المنتج، ويفصل المنتج عن الخلفية، ويرسم عليه أسهم المقاسات لوحده — وبتتحط تاني صورة. بتتعمل أوتوماتيك لما تحفظ.
+              </div>
+              {!hasDims(parseDims(f.sp)) && (
+                <input value={f.dimTxt} placeholder="مقاسات الصورة: العرض × الارتفاع × العمق (سم) — مثلاً 60 × 45 × 12" onChange={(e) => set({ dimTxt: e.target.value })} style={{ width: '100%' }} />
+              )}
+              <button type="button" className="secondary" id="eDimBtn" style={{ marginTop: 6 }} disabled={!!dimMsg} onClick={() => void regenDim()}>
+                🪄 اعملها دلوقتي
+              </button>
+              <span style={{ fontSize: 13, marginInlineStart: 8 }}>{dimMsg}</span>
+            </div>
             <div className="ig" id="eImgs">
               {f.imgs.length ? (
                 f.imgs.map((u, i) => (
