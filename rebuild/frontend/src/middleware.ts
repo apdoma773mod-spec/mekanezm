@@ -9,6 +9,15 @@ const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '
  */
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  // Behind ngrok's free plan: forward /api/* ourselves so we can send the header that skips its browser warning page.
+  if (pathname.startsWith('/api/')) {
+    const base = process.env.BACKEND_URL?.replace(/\/$/, '');
+    if (!base || !base.includes('ngrok')) return NextResponse.next(); // normal rewrite in next.config.mjs
+    const headers = new Headers(req.headers);
+    headers.set('ngrok-skip-browser-warning', '1');
+    return NextResponse.rewrite(new URL(`${pathname}${search}`, base), { request: { headers } });
+  }
   const hasSession = req.cookies.has('mk_rt');
 
   // the customer's own link opens without any login
@@ -35,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|ico|webmanifest)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|ico|webmanifest)$).*)'],
 };
