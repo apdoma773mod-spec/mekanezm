@@ -8,6 +8,7 @@ import { ProductsTab } from './products';
 import { Img, move, uid7 } from './ui';
 import { DEFAULTS, HEX, THEME_KEYS, type ThemeMap } from '@/lib/theme';
 import { ThemeTab } from './theme-tab';
+import { Ico } from './icons';
 
 type Sec = { id: string; name: string; img: string };
 type Form = {
@@ -117,15 +118,15 @@ export function AdminApp() {
     );
   }
 
-  const TABS: [Tab, string][] = [['products', '📦 المنتجات'], ['sections', '🗂️ الأقسام'], ['works', '🏗️ أعمالنا'], ['look', '🎨 الألوان والشريط'], ['banner', '🖼️ البنرات'], ['text', '📝 النصوص'], ['reviews', '⭐ الآراء'], ['pros', '🧰 الفنيين'], ['ship', '🚚 التوصيل والتواصل'], ['more', '⚙️ أدوات']];
+  const TABS: [Tab, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['more', 'أدوات']];
   const count = (id: string) => (doc.data.products ?? []).filter((p: Rec) => p.sec === id).length;
   return (
     <div className="ad">
       <header className="ad-h">
-        <h1>⚙️ إدارة الموقع</h1>
+        <h1>إدارة الموقع</h1>
         <div><a href="/" target="_blank" rel="noopener">↗ افتح الموقع</a><button type="button" className="lnk" onClick={() => { logout(); location.reload(); }}>خروج</button></div>
       </header>
-      <nav className="ad-tabs" aria-label="الأقسام">{TABS.map(([k, t]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setSaved(''); }}>{t}</button>)}</nav>
+      <nav className="ad-tabs" aria-label="الأقسام">{TABS.map(([k, t]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setSaved(''); }}><Ico n={k} />{t}</button>)}</nav>
 
       {tab === 'products' && <ProductsTab doc={doc} onDoc={onDoc} />}
       {tab === 'works' && <WorksTab doc={doc} onDoc={onDoc} />}

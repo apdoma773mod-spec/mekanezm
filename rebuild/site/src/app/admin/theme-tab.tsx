@@ -23,10 +23,10 @@ export function ThemeTab({ theme, set }: { theme: ThemeMap; set: (t: ThemeMap) =
 
   const woodOn = (h: string) => (theme.wood || '').toLowerCase() === h;
   return <>
-    <h3 className="ad-sub">عينات الخشب <small>(ضغطة تغيّر ألوان الموقع كله وتضيف شريط الحافة)</small></h3>
+    <h3 className="ad-sub">عينات الخشب <small>(لمسة خشب جرافيك: لوح تحت الهيدر، ألواح بمسامير نحاس على العناوين، وحافة للكروت. ألوان الموقع بتفضل زي ما هي)</small></h3>
     <div className="ad-woods">
       {WOODS.map(([n, h]) => (
-        <button key={h} type="button" className={woodOn(h) ? 'on' : ''} onClick={() => set({ ...DEFAULTS, ...woodTheme(h) })} aria-pressed={woodOn(h)}>
+        <button key={h} type="button" className={woodOn(h) ? 'on' : ''} onClick={() => set({ ...theme, wood: h })} aria-pressed={woodOn(h)}>
           <i style={{ background: grain(h) }} /><b>{n}</b>
         </button>))}
       {theme.wood && <button type="button" className="clr" onClick={() => set({ ...theme, wood: '' })}><i /><b>من غير خشب</b></button>}
@@ -71,10 +71,11 @@ export function ThemeTab({ theme, set }: { theme: ThemeMap; set: (t: ThemeMap) =
 
     <h3 className="ad-sub">معاينة حيّة</h3>
     <div className="ad-sw" style={{ background: r.bg, color: r.fg }}>
-      {r.wood && <div className="ad-edge" style={{ background: grain(r.wood) }} />}
-      <b>عنوان الصفحة</b>
+      {r.wood
+        ? <div className="ad-plank" style={{ background: grain(r.wood), color: onColor(r.wood) }}><span className="ad-screw" />الأقسام<span className="ad-screw" /></div>
+        : <b>عنوان الصفحة</b>}
       <small style={{ color: r.mut }}>كلام ثانوي على الخلفية</small>
-      <div style={{ background: r.card, color: r.cardFg }}><b>كارت منتج</b><span>مفصلة هيدروليك — 30 ج</span><i style={{ background: r.accent, color: r.accentFg }}>🛒 أضف للطلب</i></div>
+      <div style={{ background: r.card, color: r.cardFg }}><b>كارت منتج</b><span>مفصلة هيدروليك — 30 ج</span><i style={{ background: r.accent, color: r.accentFg }}>أضف للطلب</i>{r.wood && <u className="ad-cedge" style={{ background: grain(r.wood) }} />}</div>
       <div className="ad-dk" style={{ background: `linear-gradient(135deg,${r.pa},${r.pb})`, color: r.darkFg }}>
         {['🔧', '🚪', '🧰'].map(x => <span key={x}><i style={{ background: `linear-gradient(145deg,${r.pl},${r.pa})`, boxShadow: `0 6px 14px ${r.pa}55` }}>{x}</i>قسم</span>)}
       </div>

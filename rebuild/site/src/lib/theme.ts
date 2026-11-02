@@ -60,7 +60,6 @@ export function cssVars(theme: Record<string, unknown>) {
   if (t.accent || t.accentFg) out.push(`--on-acc:${r.accentFg}`);
   if (t.dark) out.push(`--pa:${r.pa}`, `--pb:${r.pb}`, `--pl:${r.pl}`);
   if (t.dark || t.darkFg) out.push(`--dk-fg:${r.darkFg}`);
-  if (t.wood) out.push(`--wood-img:${grain(t.wood)}`, '--wood-h:5px', '--wood-op:1');
   return out.join(';');
 }
 
@@ -81,11 +80,32 @@ export const DARKS: [string, string][] = [
   ['بنفسجي غامق', '#2a1458'], ['عنابي', '#3a0f1f'], ['بني ذهبي', '#3b2a0b'], ['أسود', '#14181c'],
 ];
 
-/** Wood grain from one base color: fine dark pores, light streaks and a soft top-to-bottom shade (pure CSS, no images). */
-export const grain = (hex: string) => {
-  const c = full(hex);
-  return `repeating-linear-gradient(91deg,rgba(0,0,0,.09) 0 1px,transparent 1px 6px),repeating-linear-gradient(89deg,rgba(255,255,255,.10) 0 2px,transparent 2px 13px),linear-gradient(180deg,${mix(c, '#ffffff', 0.14)},${c} 55%,${mix(c, '#000000', 0.16)})`;
+/** Wood board texture as a tiny vector image (SVG turbulence = real-looking grain, no photo files). */
+export const woodTex = (hex: string, seed = 3) => {
+  const c = full(hex), d = mix(c, '#000000', 0.62);
+  const [r, g, b] = rgb(d).map(x => (x / 255).toFixed(3));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" preserveAspectRatio="none"><defs><filter id="w" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.28" numOctaves="4" seed="${seed}" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${r} 0 0 0 0 ${g} 0 0 0 0 ${b} 2.4 0 0 0 -0.75"/></filter><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs><rect width="640" height="180" fill="${c}"/><rect width="640" height="180" filter="url(#w)"/><rect width="640" height="180" fill="url(#s)"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 };
+/** Plain CSS for the grain (used by small swatches). */
+export const grain = (hex: string) => `${woodTex(hex)} center / cover, ${full(hex)}`;
+
+/** Wood details for the store: header plank, section titles on a screwed plank, card edge banding, nav top edge.
+ *  Only added when the owner picks a wood. Colors of the site are NOT touched. */
+export function woodCss(hex: string) {
+  const c = full(hex), fg = onColor(c), tex = woodTex(c), tex2 = woodTex(c, 9);
+  const plank = (t: string) => `background-color:${c};background-image:${t};background-size:100% 100%`;
+  const screw = 'background:radial-gradient(circle at 35% 30%,#f6d77a,#b8862b 62%,#5a3d0c);box-shadow:0 1px 1px #0009';
+  return [
+    `.tb{position:relative}`,
+    `.tb::after{content:"";position:absolute;inset:auto 0 0 0;height:9px;${plank(tex)};box-shadow:inset 0 1px 0 #ffffff66,0 3px 6px #0004;pointer-events:none}`,
+    `.sh h2{${plank(tex2)};color:${fg};padding:5px 22px;border-radius:8px;box-shadow:inset 0 1px 0 #ffffff66,inset 0 -2px 0 #0005,0 4px 10px #0003;text-shadow:0 1px 0 ${fg === '#ffffff' ? '#0007' : '#ffffff77'}}`,
+    `.sh h2::before,.sh h2::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 10px;vertical-align:middle;font-size:0;${screw}}`,
+    `.card{position:relative}`,
+    `.card::after{content:"";position:absolute;inset:auto 0 0 0;height:10px;${plank(tex)};box-shadow:inset 0 1px 0 #ffffff55;pointer-events:none}`,
+    `.nv::before{content:"";position:absolute;inset:0 0 auto 0;height:7px;${plank(tex2)};box-shadow:inset 0 -1px 0 #0005;pointer-events:none}`,
+  ].join('\n');
+}
 
 /** Real wood / veneer samples. Each one builds a whole look: pale wood tint for pages, deep wood for buttons, dark wood for the glossy panels. */
 export const WOODS: [string, string][] = [
