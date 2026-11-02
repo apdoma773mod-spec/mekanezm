@@ -10,6 +10,7 @@ import { fileToDataUrl } from '@/lib/image';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
 import { useModal } from './modal-host';
+import { DimImageMaker } from './dim-image';
 
 /** 🌐 محتوى الموقع (openSiteAdmin القديمة) + 🌐 «على الموقع» للصنف (openSiteProduct). */
 const SHOP_URL = 'https://apdoma773mod-spec.github.io/mekanezm/shop.html';
@@ -608,6 +609,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [saving, setSaving] = useState(false);
   const [up, setUp] = useState('');
   const [over, setOver] = useState(false);
+  const [dimOpen, setDimOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
   const isNew = !id;
@@ -845,6 +847,17 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               }}
             />
             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
+            <button type="button" className="secondary" id="eDimBtn" style={{ margin: '8px 0' }} onClick={() => setDimOpen(true)}>
+              📐 اعمل صورة المقاسات (أسهم ومقاسات على الصورة)
+            </button>
+            {dimOpen && (
+              <DimImageMaker
+                images={f.imgs}
+                specs={f.sp}
+                onClose={() => setDimOpen(false)}
+                onAdd={(url) => set({ imgs: [f.imgs[0] ?? url, ...(f.imgs[0] ? [url] : []), ...f.imgs.slice(1)] })}
+              />
+            )}
             <div className="ig" id="eImgs">
               {f.imgs.length ? (
                 f.imgs.map((u, i) => (
