@@ -90,10 +90,14 @@ function CartSheet() {
     if (sh.address) text.push('📍 ' + sh.address);
     setBusy(true);
     setMsg('جاري إرسال الطلب…');
+    let wa: Window | null = null;
+    try { wa = window.open('', '_blank'); } catch { wa = null; }
+    const toWa = (id: string) => { if (wa) { try { wa.location.href = waUrl(site, orderMsg(id, name.trim(), phone.trim(), text)); return; } catch { /* the sheet below keeps a button */ } } };
     try {
       const r = await placeOrder(name.trim(), phone.trim(), body, sh);
       if (r.ok && typeof r.data === 'string') {
         const ref = r.data.slice(0, 8);
+        toWa(r.data);
         if (phone.trim()) saveLast(ref, phone.trim());
         saveMe({ name, phone });
         saveOrder({ ref, at: new Date().toISOString(), phone: phone.trim(), lines: lines.map(l => [l.item.name, l.q]), ship: shipLine(sh) });
@@ -102,9 +106,11 @@ function CartSheet() {
         ev('generate_lead', 'Lead');
         return;
       }
+      toWa('');
       const em = r.message;
       setMsg(em === 'invalid_name' ? 'الاسم مش صحيح' : em === 'invalid_phone' || em === 'need_phone' ? 'رقم الموبايل مش صحيح' : em === 'invalid_ship' ? 'العنوان طويل أوي — اختصره شوية' : em === 'too_many_requests' ? 'في ضغط دلوقتي، جرّب بعد شوية أو كلمنا على الواتساب' : 'تعذر تسجيل الطلب دلوقتي. تقدر تبعته على الواتساب.');
     } catch {
+      toWa('');
       setMsg('مفيش اتصال بالإنترنت، جرّب تاني');
     }
     setBusy(false);
@@ -122,7 +128,7 @@ function CartSheet() {
         <PayInfo method={done.ship.method} />
         <button className="sec" onClick={() => open({ kind: 'track', ref, phone: done.phone })}>📦 تابع طلبك وصل لفين</button>
         <div className="row">
-          <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, orderMsg(done.ref, done.name, done.phone, done.lines))}>📲 ابعت على الواتساب</a>
+          <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, orderMsg(done.ref, done.name, done.phone, done.lines))}>📲 لو الواتساب ما فتحش، دوس هنا</a>
           <button className="sec" onClick={close}>إغلاق</button>
         </div>
       </Sheet>
@@ -170,16 +176,13 @@ function CartSheet() {
       </>}
       {lines.length > 0 && <PayInfo method={ship.method} />}
       <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg || (anyBack ? <span className="warn">في أصناف مش متوفرة دلوقتي — اطلبها عادي وهنكلمك نقولك ميعاد وصولها.</span> : '')}</p>
-      {lines.length > 0 && (
-        <a className="btn-g" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب:\n' + lines.map(({ item: p, q }) => `• ${p.name}${p.code ? ` (كود ${p.code})` : ''} × ${q}`).join('\n') + (name.trim() ? '\nالاسم: ' + name.trim() : ''))}>💬 ابعت الطلب كله واتساب</a>
-      )}
       {lines.length > 0 && <button type="button" className="sec" style={{ width: '100%', marginTop: 8 }} onClick={() => open({ kind: 'price', lines })}>💰 ابعتلي سعر الطلب كله</button>}
       {lines.length > 0 && <div className="row">
         <button type="button" className="sec" onClick={shareCart}>📤 ابعت السلة كلينك</button>
         <a className="sec" style={{ textAlign: 'center', textDecoration: 'none' }} target="_blank" rel="noopener" href={'/quote?i=' + lines.map(l => `${encodeURIComponent(l.item.id)}.${l.q}`).join(',') + (name.trim() ? '&n=' + encodeURIComponent(name.trim()) : '')}>🧾 عرض سعر / PDF</a>
       </div>}
       <div className="row">
-        {lines.length > 0 && <button className="pri" onClick={send} disabled={busy}>إرسال الطلب</button>}
+        {lines.length > 0 && <button className="pri" onClick={send} disabled={busy}>✔ ابعت الطلب</button>}
         <button className="sec" onClick={close}>إغلاق</button>
       </div>
     </Sheet>
