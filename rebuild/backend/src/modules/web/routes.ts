@@ -86,12 +86,84 @@ export default async function webRoutes(app: FastifyInstance) {
     return { ok: true };
   });
   const idParams = z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{6,40}$/) });
+
+  /** 🗂️ the published catalogs, newest first */
+  app.get('/catalog/list', { preHandler: app.requireAdmin }, async () => {
+    const cur = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id ?? null;
+    const rows = await db.setting.findMany({ where: { key: { startsWith: CAT } }, orderBy: { updatedAt: 'desc' }, select: { key: true, updatedAt: true } });
+    return { items: rows.map((r) => ({ id: r.key.slice(CAT.length), at: r.updatedAt.toISOString(), current: r.key === CAT + cur })) };
+  });
+  app.delete('/catalog/:id', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(idParams, request.params);
+    await db.setting.deleteMany({ where: { key: CAT + id } });
+    const cur = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
+    if (cur === id) await db.setting.deleteMany({ where: { key: CAT_CURRENT } });
+    return { ok: true };
+  });
+  app.put('/catalog/current', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(idParams, request.body);
+    const actor = actorOf(request);
+    if (!(await db.setting.findUnique({ where: { key: CAT + id } }))) throw notFound('الكتالوج ده مش موجود');
+    await db.setting.upsert({ where: { key: CAT_CURRENT }, create: { key: CAT_CURRENT, value: { id }, updatedById: actor.id }, update: { value: { id }, updatedById: actor.id } });
+    return { ok: true };
+  });
+
+  /** 📊 what customers do inside the catalog: counted in memory, written every minute (no row per click) */
+  const STATS = 'catalog_stats';
+  type Stats = { days: Record<string, Record<string, number>>; views: Record<string, number>; adds: Record<string, number>; q: Record<string, number> };
+  const pend: Stats = { days: {}, views: {}, adds: {}, q: {} };
+  let dirty = false;
+  const bump = (m: Record<string, number>, k: string, n = 1) => (m[k] = (m[k] ?? 0) + n);
+  const trim = (m: Record<string, number>, keep: number) => Object.fromEntries(Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, keep));
+  const flush = async () => {
+    if (!dirty) return;
+    dirty = false;
+    const cur = ((await db.setting.findUnique({ where: { key: STATS } }))?.value as Stats | undefined) ?? { days: {}, views: {}, adds: {}, q: {} };
+    for (const [d, m] of Object.entries(pend.days)) for (const [k, n] of Object.entries(m)) bump((cur.days[d] ??= {}), k, n);
+    for (const k of ['views', 'adds', 'q'] as const) for (const [c, n] of Object.entries(pend[k])) bump(cur[k], c, n);
+    pend.days = {};
+    pend.views = {};
+    pend.adds = {};
+    pend.q = {};
+    const days = Object.keys(cur.days).sort().slice(-60);
+    const out: Stats = { days: Object.fromEntries(days.map((d) => [d, cur.days[d]!])), views: trim(cur.views, 300), adds: trim(cur.adds, 300), q: trim(cur.q, 200) };
+    await db.setting.upsert({ where: { key: STATS }, create: { key: STATS, value: out as unknown as Prisma.InputJsonValue }, update: { value: out as unknown as Prisma.InputJsonValue } });
+  };
+  const timer = setInterval(() => void flush().catch((e) => app.log.warn({ err: e }, 'catalog stats flush')), 60_000);
+  timer.unref();
+  app.addHook('onClose', async () => {
+    clearInterval(timer);
+    await flush().catch(() => {});
+  });
+  app.post('/public/catalog/hit', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } }, bodyLimit: 4096 }, async (request) => {
+    let b: unknown = request.body;
+    if (typeof b === 'string') {
+      try {
+        b = JSON.parse(b);
+      } catch {
+        return { ok: false };
+      }
+    }
+    const h = z.object({ ev: z.enum(['open', 'view', 'add', 'cart', 'q', 'zoom']), c: z.string().max(300).optional(), q: z.string().max(40).optional(), n: z.number().optional() }).safeParse(b);
+    if (!h.success) return { ok: false };
+    const day = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
+    bump((pend.days[day] ??= {}), h.data.ev);
+    if (h.data.ev === 'view' && h.data.c) bump(pend.views, h.data.c.slice(0, 40));
+    if (h.data.ev === 'add' && h.data.c) bump(pend.adds, h.data.c.slice(0, 40));
+    if (h.data.ev === 'q' && h.data.q) bump(pend.q, h.data.q.trim().toLowerCase());
+    dirty = true;
+    return { ok: true };
+  });
+  app.get('/catalog/stats', { preHandler: app.requireAdmin }, async () => {
+    await flush();
+    return { stats: ((await db.setting.findUnique({ where: { key: STATS } }))?.value as Stats | undefined) ?? { days: {}, views: {}, adds: {}, q: {} } };
+  });
   const catRow = async (id: string) => (await db.setting.findUnique({ where: { key: CAT + id } }))?.value as { html?: string; print?: string } | undefined;
   app.get('/public/catalog/:id', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { id } = parse(idParams, request.params);
     const html = (await catRow(id))?.html;
     if (!html) throw notFound('الكتالوج ده مش موجود');
-    return catHeaders(reply, false).send(html.replaceAll('__PDF__', `${id}/print`));
+    return catHeaders(reply, false).send(html.replaceAll('__PDF__', `${id}/print`).replaceAll('__HIT__', 'hit'));
   });
   /** The same catalog laid out page after page, opens the browser's print box (save as PDF). */
   app.get('/public/catalog/:id/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
@@ -107,7 +179,7 @@ export default async function webRoutes(app: FastifyInstance) {
     const row = await catRow(id);
     if (!row?.html) throw notFound('مفيش كتالوج منشور حاليًا');
     void request;
-    return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(row.html.replaceAll('__PDF__', 'catalog-latest/print'));
+    return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(row.html.replaceAll('__PDF__', 'catalog-latest/print').replaceAll('__HIT__', 'catalog/hit'));
   });
   app.get('/public/catalog-latest/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (_request, reply) => {
     const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;

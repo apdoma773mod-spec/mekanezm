@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_ARTICLES, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type Article, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
 import { printHtml } from '@/lib/print';
-import { useAllProducts } from '@/lib/trade-queries';
+import { useAllProductInfo, useAllProducts } from '@/lib/trade-queries';
 import { fetchSite, saveSite } from '@/lib/web-queries';
 
 /** 🌟 استوديو الكتالوج: كل اختيارات الشكل والمحتوى، معاينة كتاب بيتقلّب، PDF، ولينك للإرسال (هدية لشخص أو نسخة ميكانيزم). */
@@ -50,6 +50,10 @@ export function CatalogStudio() {
   const [busy, setBusy] = useState('');
   const [link, setLink] = useState('');
   const [siteLink, setSiteLink] = useState('');
+  const [pubs, setPubs] = useState<{ id: string; at: string; current: boolean }[] | null>(null);
+  const [stats, setStats] = useState<{ days: Record<string, Record<string, number>>; views: Record<string, number>; adds: Record<string, number>; q: Record<string, number> } | null>(null);
+  const loadPubs = () => api.get<{ items: { id: string; at: string; current: boolean }[] }>('/web/catalog/list').then((r) => setPubs(r.items)).catch((e) => toast(errorMessage(e), 'bad'));
+  const loadStats = () => api.get<{ stats: NonNullable<typeof stats> }>('/web/catalog/stats').then((r) => setStats(r.stats)).catch((e) => toast(errorMessage(e), 'bad'));
   const [pickSec, setPickSec] = useState('');
   const file = useRef<HTMLInputElement>(null);
   const fileFor = useRef<string>('');
@@ -75,11 +79,41 @@ export function CatalogStudio() {
   const data = site.data?.data;
   const qty = useMemo(() => new Map(prods.map((p) => [String(p.code), p.qty])), [prods]);
   const secName = useMemo(() => Object.fromEntries((data?.sections ?? []).map((s) => [s.id, s.name])), [data]);
-  const all: CatProduct[] = useMemo(
-    () =>
-      (data?.products ?? [])
-        .filter((p) => p.imgs?.length)
-        .map((p) => ({
+  const infos = useAllProductInfo(cfg.source === 'stock').data;
+  const byCode = useMemo(() => new Map(prods.map((p) => [String(p.code), p])), [prods]);
+  const NEW_MS = 45 * 864e5;
+  const all: CatProduct[] = useMemo(() => {
+    const top = new Set((data?.products ?? []).filter((p) => p.top).map((p) => String(p.code)));
+    if (cfg.source === 'stock') {
+      const siteBy = new Map((data?.products ?? []).map((p) => [String(p.code), p]));
+      return prods
+        .map((p) => {
+          const inf = infos?.[p.id];
+          const sp = siteBy.get(String(p.code));
+          const imgs = inf?.imgs?.length ? inf.imgs : sp?.imgs ?? [];
+          return {
+            code: String(p.code),
+            name: sp?.name || p.name,
+            desc: [sp?.desc || inf?.descr || '', inf?.specs || ''].filter(Boolean).join('\n'),
+            imgs,
+            dimImg: String((sp as unknown as Record<string, unknown> | undefined)?.dimImg ?? ''),
+            section: p.category || 'منتجات متنوعة',
+            inStock: p.qty > 0,
+            featured: top.has(String(p.code)),
+            isNew: Date.now() - new Date(p.createdAt).getTime() < NEW_MS,
+            brand: inf?.brand || '',
+            size: inf?.size || '',
+            finish: inf?.finish || '',
+            unit: p.unit,
+          } satisfies CatProduct;
+        })
+        .filter((p) => p.imgs.length);
+    }
+    return (data?.products ?? [])
+      .filter((p) => p.imgs?.length)
+      .map((p) => {
+        const sp = byCode.get(String(p.code));
+        return {
           code: String(p.code || ''),
           name: p.name || String(p.code),
           desc: p.desc,
@@ -87,9 +121,12 @@ export function CatalogStudio() {
           dimImg: String((p as unknown as Record<string, unknown>).dimImg ?? ''),
           section: secName[p.sec] ?? '',
           inStock: (qty.get(String(p.code)) ?? 0) > 0,
-        })),
-    [data, secName, qty],
-  );
+          featured: !!p.top,
+          isNew: sp ? Date.now() - new Date(sp.createdAt).getTime() < NEW_MS : false,
+          video: p.video,
+        } satisfies CatProduct;
+      });
+  }, [data, secName, qty, cfg.source, prods, infos, byCode, NEW_MS]);
   const secNames = useMemo(() => [...new Set(all.map((p) => p.section || 'منتجات متنوعة'))], [all]);
   const picked = all.filter((p) => !off.has(p.section || 'منتجات متنوعة') && (!stockOnly || p.inStock));
   const set = (x: Partial<CatCfg>) => setCfg((c) => ({ ...c, ...x }));
@@ -144,7 +181,7 @@ export function CatalogStudio() {
     if (!check()) return;
     setBusy(current ? 'site' : 'pub');
     try {
-      const { id } = await api.post<{ id: string }>('/web/catalog', { html: buildFlipbook(input(false), { pdfUrl: '__PDF__' }), print: buildProCatalog(input(false), { autoPrint: true }), current });
+      const { id } = await api.post<{ id: string }>('/web/catalog', { html: buildFlipbook(input(false), { pdfUrl: '__PDF__', hitUrl: '__HIT__' }), print: buildProCatalog(input(false), { autoPrint: true }), current });
       if (current) {
         setSiteLink(`${location.origin}/api/v1/web/public/catalog-latest`);
         toast('✔ الكتالوج اتنشر للعملاء على الموقع');
@@ -173,6 +210,7 @@ export function CatalogStudio() {
     try {
       const url = await uploadSiteImage(f);
       if (fileFor.current.startsWith('art:')) setArt(fileFor.current.slice(4), { img: url });
+      else if (fileFor.current === 'showroom') set({ showroomImgs: [...cfg.showroomImgs, url].slice(0, 5) });
       else if (fileFor.current === 'cover') set({ cover: { ...cfg.cover, imgs: [url, ...cfg.cover.imgs].slice(0, 3) } });
       else set({ secImgs: { ...cfg.secImgs, [fileFor.current]: url } });
     } catch (e) {
@@ -419,6 +457,114 @@ export function CatalogStudio() {
           <button type="button" className="primary" onClick={() => setCfg((c) => ({ ...c, articles: [...c.articles, { id: 'a-' + Date.now().toString(36), on: true, kind: 'مقال', title: '', body: '', sec: '' }] }))}>➕ مقال جديد</button>
           <button type="button" className="secondary" onClick={() => window.confirm('ترجّع المقالات الافتراضية؟ هتتمسح تعديلاتك على المقالات.') && setCfg((c) => ({ ...c, articles: DEFAULT_ARTICLES }))}>↩️ رجّع المقالات الافتراضية</button>
         </div>
+      </Sec>
+
+      <Sec title="🗃️ حجم الكتالوج ومصدر المنتجات" open>
+        <label style={lab}>المنتجات منين؟</label>
+        <select value={cfg.source} onChange={(e) => set({ source: e.target.value as CatCfg['source'] })}>
+          <option value="site">المنشورة على الموقع (بأوصافها وصورها)</option>
+          <option value="stock">كل أصناف المخزن اللي ليها صور (للكتالوج الكبير)</option>
+        </select>
+        <label style={lab}>شكل عرض المنتجات</label>
+        <select value={cfg.density} onChange={(e) => set({ density: e.target.value as CatCfg['density'] })}>
+          <option value="auto">تلقائي: صفحة لكل منتج لو العدد صغير، وشبكة كروت لو كبير</option>
+          <option value="full">صفحة كاملة لكل منتج</option>
+          <option value="grid">شبكة كروت (والمنتجات المميزة ⭐ صفحة كاملة)</option>
+        </select>
+        <label style={lab}>عدد الكروت في الصفحة</label>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {([4, 6, 9] as const).map((n) => (
+            <button key={n} type="button" className={cfg.gridN === n ? 'primary' : 'secondary'} onClick={() => set({ gridN: n })}>
+              {n} في الصفحة
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--muted,#62767c)' }}>
+          المنتجات اللي ليها نفس الاسم بمقاسات مختلفة (مجرى ٣٠ / ٣٥ / ٤٠…) بتتجمع في كارت واحد بجدول مقاسات وأكواد. المنتج المميز ⭐ في الموقع بياخد صفحة كاملة.
+        </p>
+      </Sec>
+
+      <Sec title="🧩 صفحات وإضافات احترافية">
+        <div style={{ display: 'grid', gap: 8 }}>
+          {(
+            [
+              ['qr', '📱 كود QR على كل منتج (يفتح واتساب والكود جاهز)'],
+              ['icons', '🔇 أيقونات المميزات تلقائي (سوفت كلوز، سحب كامل، حمولة، بلد الصنع…)'],
+              ['families', '📏 تجميع المقاسات في كارت واحد بجدول'],
+              ['index', '🔤 فهرس المنتجات الأبجدي في الآخر'],
+              ['codes', '#️⃣ فهرس الأكواد في الآخر'],
+              ['secColors', '🎨 لون مختلف لكل قسم (التبويبات والشارات)'],
+              ['showroom', '🏬 صفحة «معرضنا» بصور المعرض'],
+              ['backQr', '💬 QR واتساب على الغلاف الأخير'],
+            ] as const
+          ).map(([k, l]) => (
+            <label key={k} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14 }}>
+              <input type="checkbox" style={{ width: 'auto' }} checked={cfg.extras[k]} onChange={(e) => set({ extras: { ...cfg.extras, [k]: e.target.checked } })} /> {l}
+            </label>
+          ))}
+        </div>
+        <label style={lab}>صور المعرض (لحد ٥)</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {cfg.showroomImgs.map((u) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={u} src={u} alt="" title="اضغط تشيلها" onClick={() => set({ showroomImgs: cfg.showroomImgs.filter((x) => x !== u) })} style={{ width: 70, height: 50, objectFit: 'cover', borderRadius: 8, cursor: 'pointer' }} />
+          ))}
+          <button type="button" className="secondary" disabled={!!busy || cfg.showroomImgs.length >= 5} onClick={() => { fileFor.current = 'showroom'; file.current?.click(); }}>📷 ارفع صورة من المعرض</button>
+        </div>
+        <label style={lab}>كلمة تحت اسم كل قسم في صفحة الافتتاح</label>
+        {secNames.map((n) => (
+          <div key={n} style={{ marginBottom: 6 }}>
+            <small style={{ fontWeight: 700 }}>{n}</small>
+            <input style={inp} value={cfg.secTexts[n] ?? ''} placeholder="مثلًا: حلول تنظيم وتخزين لكل ركن في المطبخ" onChange={(e) => set({ secTexts: { ...cfg.secTexts, [n]: e.target.value } })} />
+          </div>
+        ))}
+      </Sec>
+
+      <Sec title="📊 إحصائيات الكتالوج (العملاء بيعملوا إيه)">
+        <button type="button" className="secondary" onClick={() => void loadStats()}>🔄 اعرض الإحصائيات</button>
+        {stats && (() => {
+          const days = Object.entries(stats.days).sort((x, y) => y[0].localeCompare(x[0])).slice(0, 14);
+          const sum = (k: string) => Object.values(stats.days).reduce((t, d) => t + (d[k] ?? 0), 0);
+          const top = (m: Record<string, number>) => Object.entries(m).sort((x, y) => y[1] - x[1]).slice(0, 10);
+          const nm = (c: string) => all.find((p) => p.code === c)?.name ?? '';
+          return (
+            <div style={{ fontSize: 13.5, marginTop: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 6 }}>
+                {[['open', '👀 مرات الفتح'], ['view', '📄 مشاهدة منتجات'], ['add', '➕ أضافوا للطلب'], ['cart', '💬 طلبات اتبعتت'], ['q', '🔍 عمليات بحث'], ['zoom', '🔍 تكبير صور']].map(([k, l]) => (
+                  <div key={k} style={{ ...box, marginBottom: 0, textAlign: 'center' }}>
+                    <b style={{ fontSize: 22, display: 'block' }}>{sum(k!)}</b>
+                    {l}
+                  </div>
+                ))}
+              </div>
+              <b style={{ display: 'block', marginTop: 10 }}>أكتر المنتجات مشاهدة</b>
+              {top(stats.views).map(([c, n]) => (<div key={c}>{n} × {c} {nm(c)}</div>))}
+              <b style={{ display: 'block', marginTop: 10 }}>أكتر المنتجات اللي اتضافت للطلب</b>
+              {top(stats.adds).map(([c, n]) => (<div key={c}>{n} × {c} {nm(c)}</div>))}
+              <b style={{ display: 'block', marginTop: 10 }}>العملاء بيدوروا على إيه</b>
+              {top(stats.q).map(([q, n]) => (<div key={q}>{n} × «{q}»</div>))}
+              <b style={{ display: 'block', marginTop: 10 }}>آخر الأيام</b>
+              {days.map(([d, m]) => (<div key={d}>{d}: فتح {m.open ?? 0} · مشاهدة {m.view ?? 0} · طلبات {m.cart ?? 0}</div>))}
+            </div>
+          );
+        })()}
+      </Sec>
+
+      <Sec title="🗂️ الكتالوجات اللي اتنشرت">
+        <button type="button" className="secondary" onClick={() => void loadPubs()}>🔄 اعرض اللي اتنشر</button>
+        {pubs && (pubs.length ? pubs : []).map((x) => {
+          const url = `${location.origin}/api/v1/web/public/catalog/${x.id}`;
+          return (
+            <div key={x.id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid #e8eef0', padding: '8px 0' }}>
+              <span style={{ flex: 1, minWidth: 140 }}>{new Date(x.at).toLocaleString('ar-EG')} {x.current && <b style={{ color: '#0e7a3f' }}>· 🌐 على الموقع</b>}</span>
+              <a className="secondary" style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid #cfdcdf' }} href={url} target="_blank" rel="noreferrer">↗️ افتح</a>
+              <button type="button" className="secondary" onClick={() => void navigator.clipboard?.writeText(url).then(() => toast('✔ اتنسخ'))}>📋</button>
+              {!x.current && <button type="button" className="secondary" onClick={() => void api.put('/web/catalog/current', { id: x.id }).then(() => { toast('✔ بقى هو اللي على الموقع'); setSiteLink(`${location.origin}/api/v1/web/public/catalog-latest`); void loadPubs(); }).catch((e) => toast(errorMessage(e), 'bad'))}>🌐 خليه على الموقع</button>}
+              <button type="button" className="secondary" onClick={() => window.confirm('تمسح الكتالوج ده؟ اللينك بتاعه هيقف.') && void api.delete(`/web/catalog/${x.id}`).then(() => void loadPubs()).catch((e) => toast(errorMessage(e), 'bad'))}>🗑️</button>
+            </div>
+          );
+        })}
+        {pubs && !pubs.length && <p>لسه مفيش كتالوجات منشورة.</p>}
       </Sec>
 
       <Sec title="📦 إيه اللي يطلع في الكتالوج؟">
