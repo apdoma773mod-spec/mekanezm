@@ -14,9 +14,10 @@ import { parse } from '../../lib/validate.js';
  * المفتاح: GEMINI_API_KEY في backend/.env، أو اللي عبده بيحطه من صفحة الكتالوج (Setting ai_gemini_key).
  */
 const KEY_SETTING = 'ai_gemini_key';
-const TEXT_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3-flash-preview'];
-const IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-2.0-flash-preview-image-generation'];
-const GONE = /no longer available|not found|is not supported|deprecated|unknown model|not available/i;
+// جوجل بيقفل موديلات قديمة للمستخدمين الجداد ويغيّر الأسماء كتير: بنجرب من الأحدث، وأي موديل مقفول/زحمة/مالوش حصة بنعدّي للي بعده
+const TEXT_MODELS = (process.env.CATALOG_TEXT_MODELS || 'gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3-flash-preview,gemini-flash-latest,gemini-3.5-flash-lite').split(',');
+const IMAGE_MODELS = (process.env.CATALOG_IMAGE_MODELS || 'gemini-3.1-flash-image,gemini-3.1-flash-image-preview,gemini-3-pro-image,gemini-3-pro-image-preview,gemini-2.5-flash-image').split(',');
+const SKIP = /no longer available|not found|is not supported|deprecated|unknown model|not available|high demand|overloaded|quota|RESOURCE_EXHAUSTED|UNAVAILABLE|Gemini (404|429|500|503)/i;
 
 const body = z.object({
   code: z.string().trim().min(1).max(40),
@@ -33,6 +34,8 @@ export interface AiResult {
   features: string[];
   specs: Spec[];
   sources: string[];
+  /** المقاسات جت من بحث جوجل (true) ولا من معلومات الموديل بس (لازم تتراجع) */
+  searched: boolean;
   img: string;
   textError?: string;
   imgError?: string;
@@ -58,7 +61,7 @@ async function firstWorking<T>(models: string[], run: (m: string) => Promise<T>)
       return await run(m);
     } catch (e) {
       last = e as Error;
-      if (!GONE.test(last.message)) throw last;
+      if (!SKIP.test(last.message)) throw last;
     }
   }
   throw last;
@@ -67,7 +70,8 @@ async function firstWorking<T>(models: string[], run: (m: string) => Promise<T>)
 const friendly = (e: unknown) => {
   const m = String((e as Error)?.message || e);
   if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'المفتاح غلط — اتأكد إنك نسخته كامل';
-  if (/quota|RESOURCE_EXHAUSTED|rate/i.test(m)) return 'خلصت الحصة المجانية لجوجل النهارده أو الموديل ده محتاج تفعيل الدفع في Google AI Studio — جرّب بكرة';
+  if (/quota|RESOURCE_EXHAUSTED/i.test(m)) return 'جوجل مش مدّي حصة مجانية للحاجة دي على المفتاح ده (محتاج تفعيل الدفع Billing في Google AI Studio)، أو الحصة خلصت النهارده';
+  if (/high demand|overloaded|UNAVAILABLE/i.test(m)) return 'سيرفرات جوجل زحمة دلوقتي، جرّب كمان شوية';
   if (/timeout|abort/i.test(m)) return 'جوجل اتأخر في الرد، جرّب تاني';
   return m.slice(0, 200);
 };
@@ -142,10 +146,18 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     if (!k) throw badRequest('محتاج مفتاح Gemini الأول (مجاني من aistudio.google.com)');
     const photo = await loadImage(p.img);
     const imgPart = photo ? [{ inline_data: { mime_type: photo.mime, data: photo.data } }] : [];
-    const out: AiResult = { desc: '', features: [], specs: [], sources: [], img: '' };
+    const out: AiResult = { desc: '', features: [], specs: [], sources: [], searched: false, img: '' };
 
     const text = async () => {
-      const b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p) }, ...imgPart] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3 } }, 90000));
+      let b: Awaited<ReturnType<typeof gemini>>;
+      try {
+        b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p) }, ...imgPart] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3 } }, 90000));
+        out.searched = true;
+      } catch (e) {
+        if (!SKIP.test(String((e as Error).message))) throw e;
+        // البحث مش متاح على المفتاح ده: من معلومات الموديل نفسه (بيتعلّم «راجعها»)
+        b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p).replace('ابحث في جوجل عن', 'من معلوماتك عن') }, ...imgPart] }], generationConfig: { temperature: 0.2 } }, 90000));
+      }
       const c = b.candidates?.[0];
       const t = (c?.content?.parts ?? []).map((x) => x.text || '').join('');
       const j = t.match(/\{[\s\S]*\}/)?.[0];
@@ -159,7 +171,7 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     const image = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
       const b = await firstWorking(IMAGE_MODELS, (m) =>
-        gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: m.includes('2.0') ? ['TEXT', 'IMAGE'] : ['IMAGE'] } }, 120000),
+        gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: ['IMAGE'] } }, 120000),
       );
       const part = (b.candidates?.[0]?.content?.parts ?? []).find((x) => x.inlineData?.data || x.inline_data?.data);
       const data = part?.inlineData?.data || part?.inline_data?.data;

@@ -40,21 +40,27 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
     }
   };
 
-  const one = async (p: CatProduct): Promise<boolean> => {
+  // النتيجة: got = اتعمل حاجة واتحفظت للمنتج (حتى لو جزء منها فشل، زي الصورة)
+  const one = async (p: CatProduct, single = false): Promise<{ got: boolean; err: boolean }> => {
     setBusy((b) => ({ ...b, [p.code]: true }));
     setErrs((x) => ({ ...x, [p.code]: '' }));
     try {
       const r = await api.post<AiOut>('/web/catalog/ai/product', { code: p.code, name: p.name, section: p.section ?? '', desc: (p.desc ?? '').slice(0, 3000), img: p.imgs.find((u) => u !== p.dimImg) ?? '' });
       const old = ai[p.code];
-      const got: AiInfo = { desc: r.desc || old?.desc || '', features: r.features.length ? r.features : (old?.features ?? []), specs: r.specs.length ? r.specs : (old?.specs ?? []), img: r.img || old?.img || '', sources: r.sources, at: new Date().toISOString() };
+      const got: AiInfo = { desc: r.desc || old?.desc || '', features: r.features.length ? r.features : (old?.features ?? []), specs: r.specs.length ? r.specs : (old?.specs ?? []), img: r.img || old?.img || '', sources: r.sources, searched: r.desc || r.specs.length ? !!r.searched : old?.searched, at: new Date().toISOString() };
       const err = [r.textError && `الوصف والمقاسات: ${r.textError}`, r.imgError && `الصورة: ${r.imgError}`].filter(Boolean).join(' — ');
       if (err) setErrs((x) => ({ ...x, [p.code]: err }));
-      if (got.desc || got.img || got.specs.length) setAi(p.code, got);
+      const has = !!(r.desc || r.img || r.specs.length);
+      if (has) setAi(p.code, got);
       setOpen(p.code);
-      return !err;
+      if (single && has) {
+        await new Promise((x) => setTimeout(x, 80));
+        await saveNow().then(() => toast('✔ اتعمل واتحفظ — هيظهر في صفحة المنتج في الكتالوج')).catch((e) => toast(errorMessage(e), 'bad'));
+      }
+      return { got: has, err: !!err };
     } catch (e) {
       setErrs((x) => ({ ...x, [p.code]: errorMessage(e) }));
-      return false;
+      return { got: false, err: true };
     } finally {
       setBusy((b) => ({ ...b, [p.code]: false }));
     }
@@ -66,9 +72,12 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
     const list = todo;
     setRun({ done: 0, total: list.length });
     let fails = 0;
+    let made = 0;
     for (let i = 0; i < list.length && !stop.current; i++) {
-      const ok = await one(list[i]!);
-      if (!ok) fails++;
+      const r = await one(list[i]!);
+      const ok = r.got;
+      if (ok) made++;
+      else fails++;
       setRun({ done: i + 1, total: list.length });
       // لو ٣ ورا بعض فشلوا (غالبًا الحصة خلصت) نقف
       if (fails >= 3 && !ok) {
@@ -84,7 +93,8 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
     await new Promise((r) => setTimeout(r, 80));
     await saveNow().catch(() => {});
     setRun(null);
-    toast('✔ خلصنا واتحفظ');
+    if (made) toast(`✔ اتعمل لـ ${made} منتج واتحفظ — هيظهر في صفحات المنتجات في الكتالوج`);
+    else toast('مفيش حاجة اتعملت — شوف السبب المكتوب تحت المنتجات', 'bad');
   };
 
   const t = q.trim();
@@ -139,7 +149,7 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
                   <span style={{ flex: 1, minWidth: 140 }}>
                     {p.name} <small style={sm}>({p.code})</small> {a ? <b style={{ color: '#0e7a3f' }}>✔</b> : null}
                   </span>
-                  <button type="button" className={a ? 'secondary' : 'primary'} disabled={!!busy[p.code] || !!run} onClick={() => void one(p)}>
+                  <button type="button" className={a ? 'secondary' : 'primary'} disabled={!!busy[p.code] || !!run} onClick={() => void one(p, true)}>
                     {busy[p.code] ? '⏳ بيشتغل…' : a ? '🔁 اعمل تاني' : '✨ اعمل'}
                   </button>
                   {a && (
@@ -168,6 +178,7 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
                       </table>
                     )}
                     {a.sources && a.sources.length > 0 && <p style={{ ...sm, margin: '6px 0 0' }}>المصادر: {a.sources.length} موقع</p>}
+                    {a.searched === false && (a.specs.length > 0 || a.desc) && <p style={{ color: '#b26a00', fontSize: 13, margin: '6px 0 0' }}>⚠️ المقاسات دي من معلومات الذكاء الاصطناعي من غير بحث على النت (البحث محتاج تفعيل الدفع في جوجل) — راجعها قبل النشر.</p>}
                     <button type="button" className="secondary" style={{ marginTop: 6 }} onClick={() => setAi(p.code, null)}>🗑️ شيل اللي اتعمل للمنتج ده</button>
                   </div>
                 )}

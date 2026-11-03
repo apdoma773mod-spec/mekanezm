@@ -181,6 +181,8 @@ export interface AiInfo {
   specs: { k: string; v: string }[];
   img: string;
   sources?: string[];
+  /** المقاسات من بحث جوجل؛ false = من معلومات الموديل بس (لازم تتراجع) */
+  searched?: boolean;
   at?: string;
 }
 
