@@ -149,7 +149,8 @@ export async function catalogAiRoutes(app: FastifyInstance) {
   app.put('/catalog/ai/cf', { preHandler: app.requireAdmin }, async (request) => {
     const b = parse(z.object({ account: z.string().max(200), token: z.string().max(400) }), request.body);
     const clean = (x: string) => x.replace(/[\s"'‎‏‪-‮]/g, '');
-    const account = clean(b.account);
+    // ينفع يلزق لينك صفحة Cloudflare كلها (dash.cloudflare.com/<account id>/home) وإحنا نطلّع الـ ID منه
+    const account = clean(b.account).match(/[0-9a-f]{32}/i)?.[0] ?? clean(b.account);
     const token = clean(b.token);
     const actor = actorOf(request);
     if (!account && !token) await db.setting.deleteMany({ where: { key: CF_SETTING } });
