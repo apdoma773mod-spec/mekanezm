@@ -142,13 +142,13 @@ const CSS = `
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 :root{--t:#087f8c;--td:color-mix(in srgb,var(--t) 68%,#000);--tk:#0b2e33;--g:#c9971f;--m:#f5a623;--gl:color-mix(in srgb,var(--g) 30%,#fff);--bg:#f4f8f9;--ink:#14262b;--mut:#62767c}
 body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;color:var(--ink);background:#fff;direction:rtl}
-.pg{width:794px;height:1123px;position:relative;overflow:hidden;page-break-after:always;background:#fff}
+.pg{--u:calc(var(--H,1123px)/100);width:794px;height:var(--H,1123px);position:relative;overflow:hidden;page-break-after:always;background:#fff}
 .pg:last-child{page-break-after:auto}
 svg.bp{position:absolute;inset:0;width:100%;height:100%}
 /* ===== غلاف ===== */
 .cover{background:linear-gradient(170deg,var(--tk),color-mix(in srgb,var(--tk) 60%,var(--t)) 70%,var(--t));color:#fff}
-.cover .mos{position:absolute;top:0;left:0;right:0;height:640px;overflow:hidden}
-.cover .mos div{position:absolute;top:-40px;height:720px;background-size:cover;background-position:center;opacity:.9}
+.cover .mos{position:absolute;top:0;left:0;right:0;height:calc(var(--u)*57);overflow:hidden}
+.cover .mos div{position:absolute;top:-40px;height:calc(var(--u)*57 + 80px);background-size:cover;background-position:center;opacity:.9}
 .cover .mos div:nth-child(1){right:-60px;width:330px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%)}
 .cover .mos div:nth-child(2){right:220px;width:330px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);filter:saturate(1.1) brightness(.85)}
 .cover .mos div:nth-child(3){right:500px;width:360px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);filter:brightness(.75)}
@@ -167,7 +167,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .cover .cont{margin-top:20px;font-size:14px;opacity:.9;line-height:2}
 /* ===== إهداء / برقية ===== */
 .gft{background:linear-gradient(180deg,#fffdf7,#f7efdc);display:flex;align-items:center;justify-content:center}
-.gft .fr{width:640px;height:940px;border:2px solid var(--g);outline:1px solid var(--g);outline-offset:-12px;padding:70px 60px;position:relative;text-align:center;display:flex;flex-direction:column}
+.gft .fr{width:640px;height:calc(var(--H,1123px) - 180px);border:2px solid var(--g);outline:1px solid var(--g);outline-offset:-12px;padding:70px 60px;position:relative;text-align:center;display:flex;flex-direction:column}
 .gft .orn{color:var(--g);font-size:30px;letter-spacing:.5em}
 .gft h2{font-size:24px;letter-spacing:.3em;color:var(--g);margin:6px 0 4px;font-weight:700}
 .gft .to{font-size:22px;color:var(--mut);margin-top:34px}
@@ -206,11 +206,11 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .opn .tt .bar{width:100px;height:6px;margin:20px 0}
 .opn .tt p{margin:0;font-size:19px;opacity:.9}
 .opn .no{position:absolute;top:36px;right:40px;z-index:2;font-size:120px;font-weight:900;color:#ffffff40;line-height:1}
-.lst{padding:70px 50px}
+.lst{padding:70px 50px 60px;display:flex;flex-direction:column}.lst .rows{flex:1;display:flex;flex-direction:column;max-height:calc(var(--H,1123px) - 260px)}
 .lst h2{font-size:34px;margin:0;color:var(--td)}.lst .bar{margin:10px 0 22px}
-.lst .it{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:2px solid var(--ink)}
+.lst .it{display:flex;align-items:center;gap:18px;padding:14px 0;border-top:2px solid var(--ink);flex:1;max-height:210px}
 .lst .it:last-child{border-bottom:2px solid var(--ink)}
-.lst .it img{width:150px;height:96px;object-fit:cover;border-radius:10px;background:#eef3f4;flex:none}
+.lst .it img{width:230px;height:100%;max-height:150px;object-fit:cover;border-radius:10px;background:#eef3f4;flex:none}
 .lst .it b{display:block;font-size:19px;line-height:1.4}.lst .it small{display:block;color:var(--mut);font-size:13px;margin-top:3px}
 .lst .it span.n{margin-inline-start:auto;font-size:26px;font-weight:700;color:var(--mut);padding-inline-start:10px}
 /* ===== صفحة المنتج (تداخل صور وألوان) ===== */
@@ -238,41 +238,52 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .pp .ft2{position:absolute;bottom:0;left:0;right:0;height:46px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12px}
 .pp .ft2 b{direction:ltr}
 .pp .cta{position:absolute;z-index:8;font-size:13px;line-height:1.7}.pp .cta b{direction:ltr;display:inline-block}
-/* التخطيط ١: صورة كاملة + كتلة لون بزاوية */
-.l1 .bg{position:absolute;top:0;left:0;width:100%;height:720px;object-fit:cover}
-.l1 .shade{position:absolute;inset:0 0 auto 0;height:720px;background:linear-gradient(180deg,#0b2e3380 0,#0000 28%,#0000 60%,#0b2e3366 100%)}
-.l1 .pan{position:absolute;z-index:5;right:0;top:500px;bottom:0;width:480px;background:linear-gradient(160deg,var(--t),var(--td));clip-path:polygon(0 80px,100% 0,100% 100%,0 100%);padding:130px 50px 70px 44px;color:#fff}
-.l1 .pan:before{content:"";position:absolute;inset:0;background:radial-gradient(300px 220px at 90% 15%,#ffffff22,transparent)}
-.l1 h1{font-size:38px;position:relative}.l1 .pan *{position:relative}.l1 p.intro{color:#ffffffee}.l1 ul.ft li{color:#fff}
-.l1 .code{top:70px;right:44px}.l1 .stk{top:70px;left:50px}
-.l1 .card{left:40px;top:620px;width:262px}
-.l1 .tiles{left:40px;top:880px;width:262px;grid-template-columns:repeat(3,1fr)}.l1 .tiles div{height:84px}
-.l1 .dim{left:44px;top:140px;width:210px}
-.l1 .ft2{color:#fff}.l1 .ft2:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#fff 0,#fff 42%,transparent 42%);z-index:-1}
-.l1 .ft2{color:var(--mut)}.l1 .cta{left:40px;bottom:60px;width:262px;color:var(--td);font-weight:700}
-/* التخطيط ٢: كتلة داكنة كبيرة + صورة بتخرج منها + شريط صور */
-.l2 .blk{position:absolute;top:0;left:0;right:0;height:500px;background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 60%,var(--t)));color:#fff;clip-path:polygon(0 0,100% 0,100% 86%,0 100%)}
-.l2 .blk .tx{position:absolute;right:50px;top:96px;width:400px}
-.l2 h1{font-size:40px;color:#fff}.l2 p.intro{color:#ffffffe8}
-.l2 .hero{position:absolute;z-index:5;left:44px;top:150px;width:310px;height:590px;object-fit:cover;border-radius:calc(var(--r,18px) + 8px);border:8px solid #fff;box-shadow:0 28px 50px #0b2e3366}
-.l2 .code{top:150px;left:60px}.l2 .stk{top:196px;left:60px}
-.l2 .card{right:44px;top:560px;width:380px}.l2 .cbox{position:absolute;z-index:6;right:44px;top:436px;width:380px;background:linear-gradient(135deg,var(--g),color-mix(in srgb,var(--g) 70%,#000));color:#fff;border-radius:18px;padding:14px 18px;font-size:14px;line-height:1.8;box-shadow:0 12px 26px #0004}.l2 .cbox b{direction:ltr;display:inline-block;font-size:17px}
-.l2 .ftxt{position:absolute;right:44px;top:560px;width:380px;z-index:3}
-.l2 .tiles{left:44px;right:44px;top:790px;grid-template-columns:repeat(4,1fr)}.l2 .tiles div{height:150px}
-.l2 .cap{position:absolute;left:44px;right:44px;top:960px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12.5px;line-height:1.7;color:#2b3b3f}
-.l2 .cap b{display:block;color:var(--t);font-size:13.5px;margin-bottom:2px}
-.l2 .dim{right:44px;top:360px;width:190px;z-index:9}
-.l2 .ft2{background:var(--tk);color:#ffffffcc}.l2 .cta{display:none}
-/* التخطيط ٣: صورة نصف الصفحة + لوح داكن بحافة مائلة */
-.l3 .ph{position:absolute;top:0;left:0;width:470px;height:1123px;object-fit:cover}
-.l3 .dk{position:absolute;z-index:5;top:0;bottom:0;right:0;width:470px;background:linear-gradient(180deg,var(--tk),color-mix(in srgb,var(--tk) 70%,var(--t)));clip-path:polygon(70px 0,100% 0,100% 100%,0 100%);color:#fff;padding:96px 46px 70px 100px}
-.l3 .dk:before{content:"";position:absolute;inset:0;background:radial-gradient(260px 200px at 20% 90%,color-mix(in srgb,var(--t) 50%,transparent),transparent)}
-.l3 .dk>*{position:relative}.l3 h1{font-size:34px}.l3 p.intro{color:#ffffffe0;font-size:14.5px}.l3 ul.ft li{color:#fff;font-size:13px}
-.l3 .card{left:300px;top:690px;width:300px;z-index:7;background:#ffffff}
-.l3 .tiles{left:40px;top:830px;width:230px;grid-template-columns:1fr 1fr;z-index:7}.l3 .tiles div{height:110px}
-.l3 .code{top:70px;left:44px}.l3 .stk{top:70px;left:150px}
-.l3 .dim{left:40px;top:140px;width:210px}
-.l3 .ft2{color:#ffffffcc;background:#00000066}.l3 .cta{display:none}
+/* ===== صور كبيرة متداخلة + مربعات صغيرة (٣ تخطيطات) ===== */
+.pp{--u:calc(var(--H,1123px)/100)}
+.pp .im{position:absolute;object-fit:cover;background:#dfe7ea;display:block}
+.pp .bd{border:5px solid #fff;border-radius:var(--r,18px);box-shadow:0 16px 36px #0a1a3a55}
+.pp .chips{position:absolute;display:grid;gap:6px;z-index:6}
+.pp .chip{background:#fff;border-radius:max(4px,calc(var(--r,18px) - 6px));padding:6px 10px;box-shadow:0 6px 16px #0a1a3a26;font-size:12px;line-height:1.55;color:#243438;border-inline-start:4px solid var(--m)}
+.pp .chip b{display:block;color:var(--t);font-size:10.5px;letter-spacing:.03em;font-weight:800}
+.pp .chip.k{display:flex;justify-content:space-between;gap:8px}.pp .chip.k b{display:inline;font-size:11px;color:var(--mut)}.pp .chip.k span{font-weight:800}
+.pp .glass{position:absolute;z-index:5;background:color-mix(in srgb,var(--tk) 90%,transparent);color:#fff;border-radius:var(--r,18px);padding:14px 16px;box-shadow:0 14px 30px #0a1a3a55}
+.pp .glass h1{font-size:25px;color:#fff}.pp .glass .gl{margin:8px 0 8px;width:48px;height:4px}.pp .glass p.intro{font-size:12.8px;line-height:1.85;color:#ffffffe6;margin:0}
+.pp .th{position:absolute;z-index:6;display:grid;gap:6px;grid-auto-flow:column;grid-auto-columns:1fr}
+.pp .th img{width:100%;height:100%;object-fit:cover;border-radius:max(4px,calc(var(--r,18px) - 6px));border:3px solid #fff;box-shadow:0 8px 18px #0a1a3a44;min-width:0}
+.pp .dim{width:130px;padding:4px}.pp .dim small{font-size:10.5px}
+.pp .ft2{background:var(--tk);color:#ffffffcc;height:44px}
+.pp .ctat{position:absolute;z-index:6;font-size:12px;line-height:1.7;font-weight:800;color:var(--tk)}.pp .ctat b{direction:ltr;display:inline-block;color:var(--t)}
+/* أ: صورة كاملة فوق + صورة ثانية طالعة + لوحة نص صغيرة */
+.la .i1{top:0;left:0;width:100%;height:calc(var(--u)*57)}
+.la .sh{position:absolute;left:0;right:0;top:0;height:calc(var(--u)*57);background:linear-gradient(180deg,#0a1a3acc 0,#0000 20%,#0000 72%,#0a1a3a66 100%)}
+.la .i2{left:28px;top:calc(var(--u)*43);width:calc(46% - 20px);height:calc(var(--u)*31)}
+.la .tx{right:28px;top:calc(var(--u)*51);width:calc(54% - 42px)}
+.la .pts{right:28px;top:calc(var(--u)*69);width:calc(54% - 42px)}
+.la .sp{left:28px;top:calc(var(--u)*76);width:calc(46% - 20px);grid-template-columns:1fr 1fr}
+.la .th{left:28px;top:calc(var(--u)*85);width:calc(46% - 20px);height:calc(var(--u)*9)}
+.la .ctat{right:28px;top:calc(var(--u)*89);width:calc(54% - 42px)}
+.la .code{top:56px;right:28px}.la .stk{top:56px;left:28px}.la .dim{right:28px;top:calc(var(--u)*9)}
+/* ب: صورة نصف الصفحة بحافة مائلة + لوح داكن + صورة ثانية على الحدّ */
+.lb .i1{left:0;top:0;width:68%;height:100%;clip-path:polygon(0 0,100% 0,84% 100%,0 100%)}
+.lb .pn{position:absolute;z-index:4;right:0;top:0;bottom:0;width:52%;background:linear-gradient(180deg,var(--tk),color-mix(in srgb,var(--tk) 72%,var(--t)));clip-path:polygon(26% 0,100% 0,100% 100%,0 100%)}
+.lb .tx{right:26px;top:70px;width:calc(40% - 10px);background:transparent;box-shadow:none;padding:0}
+.lb .sp{right:26px;top:calc(var(--u)*37);width:calc(40% - 10px)}
+.lb .i2{left:36%;top:calc(var(--u)*50);width:34%;height:calc(var(--u)*23);z-index:7}
+.lb .pts{right:26px;top:calc(var(--u)*75);width:calc(40% - 10px);gap:5px}.lb .pts .chip{padding:5px 9px;font-size:11.5px;line-height:1.5}
+.lb .th{left:24px;bottom:62px;width:30%;height:calc(var(--u)*10)}
+.lb .ctat{right:26px;top:calc(var(--u)*47);width:calc(40% - 10px);color:#fff}.lb .ctat b{color:var(--m)}
+.lb .code{top:58px;left:24px}.lb .stk{top:100px;left:24px}.lb .dim{left:24px;top:calc(var(--u)*14)}
+/* ج: شريط عنوان + صورة كبيرة بإطار + صورتين متداخلتين تحتها */
+.lc .bnd{position:absolute;z-index:2;left:0;right:0;top:0;height:calc(var(--u)*26);background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 62%,var(--t)));clip-path:polygon(0 0,100% 0,100% 88%,0 100%)}
+.lc .bnd h1{position:absolute;right:44px;top:64px;width:62%;font-size:27px;color:#fff}
+.lc .bnd p.intro{position:absolute;right:44px;top:calc(var(--u)*17);width:60%;font-size:12.5px;line-height:1.8;color:#ffffffdd;margin:0}
+.lc .i1{left:24px;right:24px;top:calc(var(--u)*17);height:calc(var(--u)*43);z-index:3}
+.lc .i2{left:24px;top:calc(var(--u)*53);width:calc(48% - 18px);height:calc(var(--u)*23);z-index:5}
+.lc .i3{right:24px;top:calc(var(--u)*57);width:calc(48% - 18px);height:calc(var(--u)*21);z-index:5}
+.lc .pts{left:24px;right:24px;top:calc(var(--u)*79);grid-template-columns:repeat(3,1fr)}
+.lc .sp{left:24px;right:24px;top:calc(var(--u)*88);grid-template-columns:repeat(3,1fr)}
+.lc .th{display:none}.lc .ctat{display:none}
+.lc .code{top:58px;left:30px;z-index:8}.lc .stk{top:100px;left:30px;z-index:8}.lc .dim{left:30px;top:calc(var(--u)*20);z-index:8}
 `;
 
 /** رسم هندسي خفيف (شبكة + دوائر قياس) */
@@ -393,39 +404,38 @@ export function proPages(inp: CatInput): Built {
   secs.forEach(([name, list], si) => {
     const sImg = cfg.secImgs[name] || heroOf(list[0]!);
     pages.push(`<section class="pg opn">${sImg ? `<img class="bgi" src="${esc(sImg)}" alt="">` : ''}<div class="no">${nn(si + 1)}</div>${tabs(si)}<div class="tt"><small>SECTION ${si + 1}</small><h2>${esc(name)}</h2><div class="bar"></div><p>${nn(list.length)} منتج في القسم ده</p></div></section>`);
-    pages.push(`<section class="pg lst">${tabs(si)}<h2>${esc(name)}</h2><div class="bar"></div>${list
+    pages.push(`<section class="pg lst">${tabs(si)}<h2>${esc(name)}</h2><div class="bar"></div><div class="rows">${list
       .map((p) => `<div class="it">${heroOf(p) ? `<img src="${esc(heroOf(p))}" alt="">` : ''}<div><b>${esc(p.name)}</b><small>كود ${esc(p.code)}</small></div><span class="n">${pn(prodPage.get(p.code)!)}</span></div>`)
-      .join('')}</section>`);
+      .join('')}</div></section>`);
     list.forEach((p, pi) => {
       const i = prodPage.get(p.code)!;
       index.push({ n: p.name, c: p.code, s: name, p: i });
       const d = splitDesc(p.desc ?? '');
       const photos = p.imgs.filter((u) => u !== p.dimImg);
-      const h = photos[0] ?? '';
-      const bleed = photos[1] || photos[0] || '';
-      const more = (photos.slice(1).length ? photos.slice(1) : photos).slice(0, 4);
-      const lay = cfg.layout === 'auto' ? String(((i + si) % 3) + 1) : cfg.layout;
+      const lay = cfg.layout === 'auto' ? ['a', 'b', 'c'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'a');
+      const p1 = photos[0] ?? '';
+      const p2 = photos[1] || p1;
+      const p3 = photos[2] || photos[1] || p1;
+      const restImgs = photos.slice(lay === 'c' ? 3 : 2, lay === 'c' ? 6 : 5);
       const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
       const code = `<span class="code">${esc(p.code)}</span>`;
-      const specRows = [['كود المنتج', `<span dir="ltr">${esc(p.code)}</span>`], ['القسم', esc(name)], ...d.specs.slice(0, 2).map(([k, v]) => [esc(cut(k, 18)), esc(cut(v, 34))])];
-      const spec = F.specs ? `<div class="card"><h3>المواصفات</h3><table>${specRows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table></div>` : '';
+      const nSpec = lay === 'c' ? 3 : 4;
+      const specs: [string, string][] = [['الكود', p.code], ...d.specs.slice(0, nSpec - 1).map(([k, v]) => [cut(k, 14), cut(v, 22)] as [string, string])];
+      const sp = F.specs ? `<div class="chips sp">${specs.map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>` : '';
+      const nPts = lay === 'c' ? 3 : 3;
+      const pts = d.points.length ? `<div class="chips pts">${d.points.slice(0, nPts).map((x, k) => `<div class="chip"><b>${['الميزة الأولى', 'الميزة التانية', 'الميزة التالتة'][k]}</b>${esc(cut(x, lay === 'c' ? 70 : lay === 'b' ? 56 : 78))}</div>`).join('')}</div>` : '';
       const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
-      const pts = d.points.length ? `<ul class="ft">${d.points.slice(0, lay === '3' ? 4 : 3).map((x) => `<li>${esc(cut(x, 150))}</li>`).join('')}</ul>` : '';
-      const tiles = F.gallery && more.length ? `<div class="tiles">${more.slice(0, lay === '2' ? 4 : lay === '1' ? 3 : 2).map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>` : '';
+      const th = F.gallery && restImgs.length ? `<div class="th">${restImgs.slice(0, 3).map((u) => `<img src="${esc(u)}" alt="">`).join('')}</div>` : '';
       const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
-      const cta = `<div class="cta">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>`;
+      const ctat = `<div class="ctat">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>`;
+      const title = `<h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 125))}</p>` : ''}`;
       let inner = '';
-      if (lay === '1') {
-        inner = `<img class="bg" src="${esc(bleed)}" alt=""><div class="shade"></div>${hd}${code}${stk}${dim}
-        <div class="pan"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 200))}</p>` : ''}${pts}</div>${spec}${tiles}${cta}`;
-      } else if (lay === '2') {
-        const caps = d.points.slice(0, 4);
-        inner = `<div class="blk">${blueprint(794, 500, false)}<div class="tx"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 220))}</p>` : ''}</div></div>${hd}
-        <img class="hero" src="${esc(h || bleed)}" alt="">${code}${stk}${dim}<div class="cbox">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>
-        ${spec || `<div class="ftxt">${pts}</div>`}${tiles}${caps.length ? `<div class="cap">${caps.map((x) => `<div>${esc(cut(x, 70))}</div>`).join('')}</div>` : ''}`;
+      if (lay === 'a') {
+        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><div class="glass tx">${title}</div>${pts}${sp}${th}${ctat}`;
+      } else if (lay === 'b') {
+        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="pn"></div>${hd}${code}${stk}${dim}<div class="glass tx">${title}</div>${sp}<img class="im i2 bd" src="${esc(p2)}" alt="">${pts}${th}`;
       } else {
-        inner = `<img class="ph" src="${esc(bleed)}" alt="">${hd}${code}${stk}${dim}
-        <div class="dk"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 200))}</p>` : ''}${pts}</div>${spec}${tiles}`;
+        inner = `<div class="bnd"><h1>${esc(p.name)}</h1>${d.intro ? `<p class="intro">${esc(cut(d.intro, 110))}</p>` : ''}</div>${hd}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${pts}${sp}`;
       }
       pages.push(`<section class="pg pp l${lay}">${tabs(si)}${inner}${foot(i)}</section>`);
       void pi;
@@ -458,13 +468,13 @@ export function buildFlipbook(inp: CatInput, opts: { close?: boolean; pdfUrl?: s
   const flipCss = `
 html,body{height:100%;margin:0;background:#1b2427;overflow:hidden;touch-action:manipulation}
 body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
-#bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:#000a;backdrop-filter:blur(6px)}
+#bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px 0 ${opts.close ? '58px' : '10px'};color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:linear-gradient(180deg,#000b,#0000)}
 #bar a#b-pdf{flex:none;background:var(--g,#c9971f);color:#fff;border-radius:99px;padding:7px 12px;font:800 12.5px Cairo,sans-serif;text-decoration:none}#bar #b-x{background:#ffffff33;width:30px;height:30px;font-size:15px}@media (hover:none){#bar .nv{display:none}}#bar button{flex:none;background:#ffffff22;color:#fff;border:0;border-radius:99px;width:34px;height:34px;font:700 18px Cairo,sans-serif}
 #q{flex:1;min-width:0;border:0;border-radius:99px;padding:8px 14px;font:600 14px Cairo,sans-serif;background:#ffffffe8;color:#14262b;outline:none}
 #res{position:fixed;top:54px;right:10px;left:10px;max-width:460px;margin:0 auto;max-height:55vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 14px 40px #000a;z-index:40;display:none}
 #res div{padding:10px 14px;border-bottom:1px solid #e6eef0;font:600 14px Cairo,sans-serif;color:#14262b;display:flex;justify-content:space-between;gap:10px}
 #res div small{color:#62767c;font-weight:500}#res div b{color:var(--t);flex:none}
-#stage{position:fixed;inset:50px 0 0 0;display:flex;align-items:center;justify-content:center}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
 .fp{box-shadow:0 20px 60px #000a}
 .fp .page{background:#fff;overflow:hidden}
 .fp .pg{transform-origin:0 0;position:absolute;top:0;left:0}
@@ -473,9 +483,11 @@ body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
   const script = `
 (function(){
   var W=794,H=1123, IDX=${data};
-  var vw=innerWidth,vh=innerHeight-50,portrait=vw<vh*1.1;
-  var pageH=Math.min(vh-16,(portrait?vw:vw/2)*H/W);
-  var pageW=pageH*W/H, k=pageW/W;
+  var vw=innerWidth,vh=innerHeight,portrait=vw<vh*1.1;
+  var colW=portrait?vw:vw/2;
+  H=Math.max(1000,Math.min(1700,Math.round(W*vh/colW)));
+  document.documentElement.style.setProperty('--H',H+'px');
+  var pageW=colW, pageH=pageW*H/W, k=pageW/W;
   document.querySelectorAll('.page .pg').forEach(function(el){el.style.transform='scale('+k+')';});
   var pf=new St.PageFlip(document.getElementById('book'),{width:Math.round(pageW),height:Math.round(pageH),size:'fixed',showCover:true,drawShadow:true,maxShadowOpacity:.5,flippingTime:700,usePortrait:true,mobileScrollSupport:false,swipeDistance:20,clickEventForward:false,startPage:0});
   pf.loadFromHTML(document.querySelectorAll('.page'));
@@ -492,7 +504,7 @@ body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
   res.addEventListener('click',function(e){var d=e.target.closest('[data-p]');if(!d)return;pf.turnToPage(+d.getAttribute('data-p'));res.style.display='none';q.blur();});
   document.addEventListener('click',function(e){if(!e.target.closest('#res')&&e.target!==q)res.style.display='none';});
 })();`;
-  const body = `<body><div id="bar">${opts.close ? '<button id="b-x" title="إغلاق">✕</button>' : ''}<input id="q" type="search" placeholder="🔍 ابحث في الكتالوج: اسم منتج، كود، قسم…" autocomplete="off">${opts.pdfUrl ? `<a id="b-pdf" href="${esc(opts.pdfUrl)}" target="_blank" rel="noopener">⬇️ PDF</a>` : ''}<button id="b-prev" class="nv" title="السابق">‹</button><button id="b-next" class="nv" title="التالي">›</button></div><div id="res"></div><div id="stage"><div id="book" class="fp">${b.pages.map((p) => `<div class="page">${p}</div>`).join('')}</div></div>
+  const body = `<body><div id="bar"><input id="q" type="search" placeholder="🔍 ابحث في الكتالوج: اسم منتج، كود، قسم…" autocomplete="off">${opts.pdfUrl ? `<a id="b-pdf" href="${esc(opts.pdfUrl)}" target="_blank" rel="noopener">⬇️ PDF</a>` : ''}<button id="b-prev" class="nv" title="السابق">‹</button><button id="b-next" class="nv" title="التالي">›</button></div><div id="res"></div><div id="stage"><div id="book" class="fp">${b.pages.map((p) => `<div class="page">${p}</div>`).join('')}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
 <script>${script}</script></body></html>`;
   void cfg;
