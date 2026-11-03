@@ -613,6 +613,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [up, setUp] = useState('');
   const [over, setOver] = useState(false);
   const [dimMsg, setDimMsg] = useState('');
+  const [dimErr, setDimErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
   const isNew = !id;
@@ -733,14 +734,20 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     return { imgs: [pool[0]!, url, ...pool.slice(1)], dimImg: url, dimSig: sig };
   };
 
+  const fail = (m: string) => {
+    setDimErr(m);
+    toast(m, 'bad');
+  };
   const regenDim = async () => {
+    setDimErr('');
     try {
-      if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return toast('اكتب المقاسات الأول (عرض / ارتفاع / عمق)', 'bad');
+      if (!f?.imgs.length) return fail('ارفع صورة للمنتج الأول');
+      if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return fail('اكتب المقاسات الأول: العرض × الارتفاع × العمق (سم) في الخانة اللي فوق الزرار');
       const r = await makeDim(true);
       if (r) set(r);
       toast('✔ صورة المقاسات اتعملت — هي التانية في الصور');
     } catch (e) {
-      toast(errorMessage(e), 'bad');
+      fail('صورة المقاسات ماتعملتش: ' + errorMessage(e));
     }
     setDimMsg('');
   };
@@ -906,6 +913,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                 🪄 اعملها دلوقتي
               </button>
               <span style={{ fontSize: 13, marginInlineStart: 8 }}>{dimMsg}</span>
+              {dimErr && <div style={{ fontSize: 13, marginTop: 6, color: '#c0392b', fontWeight: 700 }}>{dimErr}</div>}
             </div>
             <div className="ig" id="eImgs">
               {f.imgs.length ? (

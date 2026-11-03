@@ -57,6 +57,14 @@ export default async function webRoutes(app: FastifyInstance) {
   // ---- public (the shop page): what to show, and where orders go ----
   app.get('/public/site', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => ({ site: await readSite() }));
 
+  /** Which site products are in stock: code → true/false (no quantities, no prices). Same shape the old site_stock gave. */
+  app.get('/public/stock', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => {
+    const site = await readSite();
+    const codes = ((site.data.products as { code?: unknown }[] | undefined) ?? []).map((p) => String(p.code ?? '')).filter(Boolean);
+    const rows = codes.length ? await db.product.findMany({ where: { code: { in: codes }, deletedAt: null }, select: { code: true, qty: true } }) : [];
+    return Object.fromEntries(rows.map((r) => [r.code, Number(r.qty) > 0]));
+  });
+
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
     const b = parse(orderBody, request.body);
     const o = await db.webOrder.create({ data: { customerName: b.customerName, phone: b.phone, items: b.items as Prisma.InputJsonValue, ship: b.ship as Prisma.InputJsonValue | undefined } });
