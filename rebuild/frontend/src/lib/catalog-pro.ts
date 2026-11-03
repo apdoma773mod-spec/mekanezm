@@ -14,6 +14,131 @@ export interface CatProduct {
   inStock?: boolean;
 }
 
+export interface Article {
+  id: string;
+  on: boolean;
+  /** دليل اختيار / تركيب / مقال / نصيحة… بيظهر فوق العنوان */
+  kind: string;
+  title: string;
+  /** سطر عادي = فقرة، «## » عنوان فرعي، «1. » خطوة، «- » نقطة، «> » نصيحة */
+  body: string;
+  img?: string;
+  /** فاضي = في أول الكتالوج، اسم قسم = بعد منتجات القسم ده، __end = في آخر الكتالوج */
+  sec: string;
+}
+
+type Block = { t: 'p' | 'h' | 'b' | 'q'; x: string } | { t: 'n'; x: string; n: number };
+export function parseBody(body: string): Block[] {
+  const out: Block[] = [];
+  for (const raw of body.replace(/\r/g, '').split('\n')) {
+    const t = raw.trim();
+    if (!t) continue;
+    let m: RegExpMatchArray | null;
+    if ((m = t.match(/^##\s*(.+)$/))) out.push({ t: 'h', x: m[1]! });
+    else if ((m = t.match(/^(\d+)[.)\-]\s*(.+)$/))) out.push({ t: 'n', x: m[2]!, n: Number(m[1]) });
+    else if ((m = t.match(/^[-•]\s*(.+)$/))) out.push({ t: 'b', x: m[1]! });
+    else if ((m = t.match(/^>\s*(.+)$/))) out.push({ t: 'q', x: m[1]!.replace(/^نصيحة[:：]\s*/, '') });
+    else out.push({ t: 'p', x: t });
+  }
+  return out;
+}
+
+export const TIPS = [
+  'قِس مرتين.. وقص مرة واحدة.',
+  'اختار الميكانيزم قبل ما ترسم الدولاب، مش بعده.',
+  'الحمولة الصح بتعمّر الدرج سنين.',
+  'سوفت كلوز.. هدوء وفخامة في كل حركة.',
+  'التركيب الصح نص جودة الشغل.',
+];
+
+export const DEFAULT_ARTICLES: Article[] = [
+  {
+    id: 'a-choose',
+    on: true,
+    kind: 'دليل الاختيار',
+    title: 'إزاي تختار الميكانيزم المناسب قبل ما تصمم',
+    sec: '',
+    body: `اختيار الميكانيزم بيتم قبل رسم الدولاب مش بعده، لأن مقاسات الدولاب نفسها بتتحدد على حسب الميكانيزم. ولو اخترته متأخر هتضطر تعدّل المقاسات وتضيّع وقت وخامة.
+## الخطوات
+1. حدد الاستخدام: درج هادي في أوضة النوم؟ جرار دريسنج؟ درج مطبخ تقيل للحلل؟ الاستخدام هو اللي بيحدد الحمل اللي المجرى لازم يشيله.
+2. حدد الحمل: اختار مجرى حمولته أعلى من أقصى وزن هتحطه جواه بهامش أمان، خصوصًا في المطبخ.
+3. حدد نوع الحركة: سوفت كلوز للقفل الهادي، أو فتح بالضغط لو من غير مقبض، أو مجرى عادي لو الميزانية بسيطة.
+4. حدد طريقة التركيب: مجرى جانبي ظاهر أو مخفي تحت الدرج، وكل واحد ليه فراغات مختلفة على الجنب وتحت.
+5. اختار الطول على حسب عمق الدولاب من جوه، ومتزودش عن العمق الفعلي.
+6. اقرا بيانات المنتج في الكتالوج (الأطوال المتاحة والفراغات المطلوبة) وإنت بترسم، وسجّلها في الرسم.
+> ابعتلنا مقاسات الدولاب على واتساب قبل التنفيذ ونرشحلك الميكانيزم المناسب.
+## ليه قبل التصميم؟
+- عشان تثبت المقاسات النهائية من أول مرة.
+- عشان تعرف الفراغات اللازمة جنب الدرج وتحته وخلفه.
+- عشان تحسب سُمك الخامة والتكلفة صح.`,
+  },
+  {
+    id: 'a-measure',
+    on: true,
+    kind: 'مقال',
+    title: 'إزاي تقيس صح من أول مرة',
+    sec: '',
+    body: `أغلب مشاكل التركيب سببها قياس غلط. خد خمس دقايق زيادة في القياس توفّر عليك يوم شغل.
+## قِس إيه؟
+1. العرض الداخلي للدولاب أو الفتحة، من جوه لجوه.
+2. العمق الداخلي، وقِسه عند الحافة وعند الضهر عشان تتأكد إنه مستقيم.
+3. الارتفاع المتاح للدرج أو للباب.
+4. سُمك الخامة، لأنه بيدخل في حساب مقاس الدرج والباب.
+5. أي حاجة في الطريق: ماسورة، سيفون، حلقة، أو بروز في الحيطة.
+- سجّل المقاسات على الرسم نفسه مش على ورقة تانية.
+- قِس مرتين، ولو الرقمين مختلفين قِس تالت.
+> لو المقاس مش مظبوط، نظبط المجرى أو المفصلة على المقاس مش العكس.`,
+  },
+  {
+    id: 'a-slide',
+    on: true,
+    kind: 'تركيب',
+    title: 'تركيب المجرى (السكة) خطوة بخطوة',
+    sec: '',
+    body: `خطوات عامة لتركيب مجرى الدرج. راجع بيانات المنتج والفراغات المطلوبة قبل ما تبدأ.
+1. علّم مكان المجرى على الجنب الداخلي للدولاب وعلى جنب الدرج بميزان وقلم.
+2. ثبّت الجزء الثابت في الدولاب الأول، وتأكد إنه أفقي ومتساوي على الجنبين.
+3. ثبّت الجزء المتحرك في الدرج على نفس الارتفاع.
+4. ركّب الدرج في المجرى وجرّب الفتح والقفل.
+5. لو في ميل أو احتكاك، فك البراغي شوية وعدّل الوضع وشدّ تاني.
+6. اختبر الحمل: حط وزن فعلي في الدرج وجرّب الحركة.
+> متستخدمش براغي أطول من اللازم عشان متخرجش من الناحية التانية للخشب.
+- استخدم الميزان في كل خطوة.
+- ثبّت بكل الفتحات المتاحة، مش فتحة وسيبك من الباقي.`,
+  },
+  {
+    id: 'a-hinge',
+    on: true,
+    kind: 'تركيب',
+    title: 'تركيب المفصلة وضبطها',
+    sec: '',
+    body: `المفصلة الصح بتتركب في دقايق، بس ضبطها هو اللي بيفرق بين شغل عادي وشغل محترف.
+1. اعمل الحفرة (الكأس) في الباب بمقدار 35 مم بالعمق المناسب لسُمك الباب، وخلي بالك من المسافة بين الحفرة وحافة الباب.
+2. ركّب جسم المفصلة في الباب وثبّته.
+3. ثبّت القاعدة في جنب الدولاب على المسافة المحددة في بيانات المنتج.
+4. ركّب الباب على القاعدة وجرّب الفتح والقفل.
+## الضبط
+- ضبط الجنب: لتساوي الفواصل بين الأبواب.
+- ضبط العمق: لقرب الباب أو بعده عن الدولاب.
+- ضبط الارتفاع: لتساوي الأبواب مع بعض.
+> اضبط باب باب، وراجع الفواصل كلها في الآخر.`,
+  },
+  {
+    id: 'a-care',
+    on: true,
+    kind: 'نصيحة',
+    title: 'العناية بالسوفت كلوز والميكانيزم',
+    sec: '',
+    body: `شوية عادات بسيطة بتخلّي الميكانيزم يعمّر سنين.
+- نضّف المجرى من التراب بقطعة قماش ناشفة أو مبلولة شوية، وتجنب المواد الكاشطة.
+- متحطش في الدرج وزن أكبر من حمولة المجرى.
+- متضغطش على الدرج وهو مفتوح ولا تقعد عليه.
+- لو سمعت صوت أو حسيت باحتكاك، افحص التركيب والمستوى قبل ما تتفاقم المشكلة.
+- اقفل الدرج بإيدك لحد ما السوفت كلوز يكمل، ومتخبطوش بقوة.
+> لو في أي مشكلة، كلمنا واتساب وهنساعدك.`,
+  },
+];
+
 export interface CatCfg {
   colors: { main: string; dark: string; accent: string; alt: string };
   cover: { title: string; subtitle: string; note: string; imgs: string[] };
@@ -22,6 +147,7 @@ export interface CatCfg {
   layout: 'auto' | '1' | '2' | '3';
   flags: { tabs: boolean; stock: boolean; specs: boolean; gallery: boolean; toc: boolean; story: boolean; search: boolean };
   story: { title: string; text: string };
+  articles: Article[];
   style: { font: string; radius: number; coverStyle: 'mosaic' | 'full' | 'minimal'; pattern: boolean; showCode: boolean; showFooter: boolean };
   cta: string;
   /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
@@ -79,6 +205,7 @@ export const DEFAULT_CFG: CatCfg = {
   layout: 'auto',
   flags: { tabs: true, stock: true, specs: true, gallery: true, toc: true, story: true, search: true },
   story: { title: 'حكاية ميكانيزم', text: STORY_TEXT },
+  articles: DEFAULT_ARTICLES,
   style: { font: 'Cairo', radius: 18, coverStyle: 'mosaic', pattern: true, showCode: true, showFooter: true },
   cta: 'للسعر والطلب كلمنا واتساب واذكر كود المنتج',
 };
@@ -95,6 +222,7 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     secImgs: { ...c?.secImgs },
     flags: { ...d.flags, ...c?.flags },
     story: { ...d.story, ...c?.story },
+    articles: Array.isArray(c?.articles) ? c.articles : d.articles,
     style: { ...d.style, ...c?.style },
     gift: c?.gift,
   };
@@ -208,10 +336,10 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .opn .no{position:absolute;top:36px;right:40px;z-index:2;font-size:120px;font-weight:900;color:#ffffff40;line-height:1}
 .lst{padding:70px 50px 60px;display:flex;flex-direction:column}.lst .rows{flex:1;display:flex;flex-direction:column;max-height:calc(var(--H,1123px) - 260px)}
 .lst h2{font-size:34px;margin:0;color:var(--td)}.lst .bar{margin:10px 0 22px}
-.lst .it{display:flex;align-items:center;gap:18px;padding:14px 0;border-top:2px solid var(--ink);flex:1;max-height:210px}
+.lst .it{display:flex;align-items:center;gap:18px;padding:14px 0;border-top:2px solid var(--ink);flex:1;max-height:330px}
 .lst .it:last-child{border-bottom:2px solid var(--ink)}
-.lst .it img{width:230px;height:100%;max-height:150px;object-fit:cover;border-radius:10px;background:#eef3f4;flex:none}
-.lst .it b{display:block;font-size:19px;line-height:1.4}.lst .it small{display:block;color:var(--mut);font-size:13px;margin-top:3px}
+.lst .it img{width:300px;height:100%;max-height:300px;object-fit:cover;border-radius:10px;background:#eef3f4;flex:none}
+.lst .it b{display:block;font-size:22px;line-height:1.4}.lst .it small{display:block;color:var(--mut);font-size:13px;margin-top:3px}
 .lst .it span.n{margin-inline-start:auto;font-size:26px;font-weight:700;color:var(--mut);padding-inline-start:10px}
 /* ===== صفحة المنتج (تداخل صور وألوان) ===== */
 .pp .hd{position:absolute;top:0;left:0;right:0;height:44px;z-index:8;background:var(--tk);display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12.5px;color:#fff;border-bottom:1.5px solid #ffffff90}
@@ -238,6 +366,32 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .pp .ft2{position:absolute;bottom:0;left:0;right:0;height:46px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12px}
 .pp .ft2 b{direction:ltr}
 .pp .cta{position:absolute;z-index:8;font-size:13px;line-height:1.7}.pp .cta b{direction:ltr;display:inline-block}
+/* ===== مقالات وإرشادات + صفحة نصيحة ===== */
+.ft2{position:absolute;bottom:0;left:0;right:0;height:44px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12px;background:var(--tk);color:#ffffffcc}.ft2 b{direction:ltr}
+.art{background:linear-gradient(180deg,#fff,#f4f7fa)}
+.art .aim{position:absolute;top:0;left:0;width:100%;height:calc(var(--H,1123px)*.27);object-fit:cover}
+.art .ahd{position:relative;padding:62px 56px 0}
+.art .ahd.ov{padding-top:calc(var(--H,1123px)*.27 - 62px);background:linear-gradient(180deg,#0000,#fff 55px)}
+.art .ahd small{color:var(--m);font-weight:900;letter-spacing:.08em;background:var(--tk);padding:3px 12px;border-radius:99px;font-size:12px}
+.art .ahd h2{font-size:calc(34px*var(--fs,1));line-height:1.35;margin:12px 0 0;color:var(--tk)}
+.art .ahd .bar{margin:12px 0 0}
+.art{display:flex;flex-direction:column}.art .ahd{flex:none}.art .abd{flex:1;display:flex;flex-direction:column;padding:20px 56px 64px;font-size:calc(16px*var(--fs,1));line-height:2;min-height:0}.art .abd .fill{flex:1;min-height:170px;margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.art .abd .fill img{width:100%;height:100%;object-fit:cover;border-radius:var(--r,18px);border:4px solid #fff;box-shadow:0 10px 24px #0a1a3a40;min-height:0}
+.art .abd p{margin:0 0 12px;color:#2b3b3f}
+.art .abd h3{font-size:21px;color:var(--t);margin:18px 0 8px;border-inline-start:5px solid var(--m);padding-inline-start:10px}
+.art .stp{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;background:#fff;border-radius:var(--r,18px);padding:calc(10px*var(--fs,1)) 14px;box-shadow:0 5px 14px #0a1a3a1a}
+.art .stp i{flex:none;width:34px;height:34px;border-radius:50%;background:var(--t);color:#fff;font:900 17px Cairo,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.art .bul{position:relative;margin:0 0 8px;padding-inline-start:22px;color:#2b3b3f}
+.art .bul:before{content:"";position:absolute;right:0;top:12px;width:9px;height:9px;background:var(--m);transform:rotate(45deg)}
+.art .tipb{margin:14px 0;background:linear-gradient(135deg,var(--tk),color-mix(in srgb,var(--tk) 65%,var(--t)));color:#fff;border-radius:var(--r,18px);padding:14px 18px;border-inline-start:6px solid var(--m)}
+.art .tipb b{display:block;color:var(--m);margin-bottom:2px}
+.tip{background:var(--tk);color:#fff}
+.tip .bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
+.tip:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,color-mix(in srgb,var(--tk) 55%,transparent),var(--tk))}
+.tip .tq{position:absolute;z-index:2;right:56px;left:56px;top:34%}
+.tip .tq small{letter-spacing:.2em;color:var(--m);font-weight:800}
+.tip .tq h2{font-size:56px;line-height:1.4;margin:14px 0 0;font-weight:900}
+.tip .tq .bar{margin-top:22px}
+.tip .ft2{z-index:5}
 /* ===== صور كبيرة متداخلة + مربعات صغيرة (٣ تخطيطات) ===== */
 .pp{--u:calc(var(--H,1123px)/100)}
 .pp .im{position:absolute;object-fit:cover;background:#dfe7ea;display:block}
@@ -328,7 +482,7 @@ export function proPages(inp: CatInput): Built {
   const phoneTxt = phones.join(' · ');
   const st = cfg.style;
   const fam = (FONTS.includes(st.font) ? st.font : 'Cairo');
-  const vars = `:root{--r:${Math.max(0, Math.min(40, Number(st.radius) || 0))}px;--ff:'${fam}'}body{font-family:'${fam}',Cairo,Tahoma,sans-serif}${st.pattern ? '' : ' svg.bp{display:none}'}${st.showCode ? '' : ' .pp .code{display:none}'}${st.showFooter ? '' : ' .pp .ft2{display:none}'}:root{--t:${safeColor(cfg.colors.main, '#087f8c')};--tk:${safeColor(cfg.colors.dark, '#0b2e33')};--g:${safeColor(cfg.colors.accent, '#c9971f')};--m:${safeColor(cfg.colors.alt, '#f5a623')}}`;
+  const vars = `:root{--r:${Math.max(0, Math.min(40, Number(st.radius) || 0))}px;--ff:'${fam}'}body{font-family:'${fam}',Cairo,Tahoma,sans-serif}${st.pattern ? '' : ' svg.bp{display:none}'}${st.showCode ? '' : ' .pp .code{display:none}'}${st.showFooter ? '' : ' .ft2{display:none}'}:root{--t:${safeColor(cfg.colors.main, '#087f8c')};--tk:${safeColor(cfg.colors.dark, '#0b2e33')};--g:${safeColor(cfg.colors.accent, '#c9971f')};--m:${safeColor(cfg.colors.alt, '#f5a623')}}`;
   const bySec = new Map<string, CatProduct[]>();
   for (const p of inp.products) {
     const k = p.section || 'منتجات متنوعة';
@@ -338,39 +492,26 @@ export function proPages(inp: CatInput): Built {
   const secs = [...bySec.entries()];
   const heroOf = (p: CatProduct) => p.imgs.find((u) => u !== p.dimImg) || p.imgs[0] || '';
   const F = cfg.flags;
+  const arts = cfg.articles.filter((a) => a.on && a.title.trim() && a.body.trim());
 
-  // ترتيب البداية: غلاف، إهداء؟، فهرس؟، حكاية؟ ثم (لو لازم) ورقة ملاحظات عشان القسم يبدأ على يسار الفتحة
-  const pre: string[] = [];
-  if (cfg.gift) pre.push('gift');
-  if (F.toc) pre.push('toc');
-  if (F.story) pre.push('story');
-  let idx = 1 + pre.length;
-  if (idx % 2 === 0) {
-    pre.push('note');
-    idx++;
-  }
+  // الصفحات بتتحط في قايمة بالترتيب، ورقم كل صفحة هو مكانها في القايمة (الـ HTML بيتبني آخر حاجة)
+  const entries: ((i: number) => string)[] = [];
+  const index: SearchItem[] = [];
+  const add = (b: (i: number) => string) => entries.push(b);
   const start = new Map<string, number>();
   const prodPage = new Map<string, number>();
-  for (const [name, list] of secs) {
-    start.set(name, idx);
-    idx += 2;
-    for (const p of list) prodPage.set(p.code, idx++);
-    if (list.length % 2) idx++;
-  }
-  const total = idx + 1;
+  const artStart = new Map<string, number>();
+  let total = 0;
   const pn = (i: number) => nn(i + 1);
   const foot = (i: number) => `<div class="ft2"><span>${esc(inp.shop)}${inp.address ? ` — ${esc(inp.address)}` : ''}</span><b>${esc(phoneTxt)}</b><span>${pn(i)} / ${nn(total)}</span></div>`;
-  const tabs = (cur: number) => (F.tabs ? `<div class="tabs">${secs.map((_, i) => `<i class="${i === cur ? 'on' : ''}">${nn(i + 1)}</i>`).join('')}</div>` : '');
-
-  const pages: string[] = [];
-  const index: SearchItem[] = [];
+  const tabs = (cur: number) => (F.tabs && cur >= 0 ? `<div class="tabs">${secs.map((_, i) => `<i class="${i === cur ? 'on' : ''}">${nn(i + 1)}</i>`).join('')}</div>` : '');
 
   // الغلاف
   const covImgs = (cfg.cover.imgs.length ? cfg.cover.imgs : inp.products.map(heroOf).filter(Boolean)).slice(0, 3);
   while (covImgs.length && covImgs.length < 3) covImgs.push(covImgs[covImgs.length - 1]!);
   const cs = cfg.style.coverStyle;
   const mosHtml = cs === 'minimal' ? '' : cs === 'full' && covImgs[0] ? `<div class="mos" style="height:100%"><div style="inset:0;width:100%;right:0;top:0;height:100%;clip-path:none;background-image:url('${esc(covImgs[0])}');opacity:.55"></div></div>` : `<div class="mos">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`;
-  pages.push(`<section class="pg cover">${mosHtml}${gearSvg()}
+  add(() => `<section class="pg cover">${mosHtml}${gearSvg()}
   <div class="bx"><div class="kick">PRODUCT CATALOG</div><h1>${esc(cfg.cover.title)}</h1>
   <div class="ln"><b>${esc(cfg.cover.subtitle)}</b><i></i></div>
   <div class="out">${new Date().getFullYear()}</div>
@@ -378,68 +519,135 @@ export function proPages(inp: CatInput): Built {
   <div class="stats"><div class="stat"><b>${nn(inp.products.length)}</b><span>منتج</span></div><div class="stat"><b>${nn(secs.length)}</b><span>قسم</span></div><div class="stat"><b>${esc(phones[0] ?? '')}</b><span>واتساب وطلبات</span></div></div>
   <div class="cont">${esc(inp.tagline || '')}${inp.address ? `<br>📍 ${esc(inp.address)}` : ''}</div></div></section>`);
 
-  for (const k of pre) {
-    if (k === 'gift' && cfg.gift) {
-      const g = cfg.gift;
-      pages.push(`<section class="pg gft"><div class="fr"><div class="orn">✦ ✦ ✦</div><h2>برقية إهداء</h2><div class="orn" style="font-size:16px">${esc(inp.shop)}</div>
+  if (cfg.gift) {
+    const g = cfg.gift;
+    add(() => `<section class="pg gft"><div class="fr"><div class="orn">✦ ✦ ✦</div><h2>برقية إهداء</h2><div class="orn" style="font-size:16px">${esc(inp.shop)}</div>
       <div class="to">إلى السيد / الأستاذ</div><div class="nm">${esc(g.name)}</div>${g.title ? `<div class="tt">${esc(g.title)}</div>` : ''}<div class="ln"></div>
       <div class="msg">${esc(g.message || GIFT_MESSAGE)}</div><div class="sg">${esc(g.from ? 'مع تحيات' : '')}<b>${esc(g.from || inp.shop)}</b>${g.from ? esc(inp.shop) : ''}</div><div class="orn" style="margin-top:22px">✦ ✦ ✦</div></div></section>`);
-    } else if (k === 'toc') {
-      pages.push(`<section class="pg toc"><h2>الفهرس</h2><div class="bar"></div>${secs
-        .map(([n, l], i) => `<div class="row"><span>${nn(i + 1)}. ${esc(n)}<small class="sub">${nn(l.length)} منتج</small></span><i></i><span>${pn(start.get(n)!)}</span></div>`)
-        .join('')}</section>`);
-    } else if (k === 'story') {
-      pages.push(`<section class="pg sty"><div class="q">”</div><h2>${esc(cfg.story.title)}</h2><div class="bar"></div>${cfg.story.text
-        .split('\n')
-        .filter((x) => x.trim())
-        .map((x) => `<p>${esc(x)}</p>`)
-        .join('')}<div class="sg">— ${esc(inp.shop)}</div></section>`);
-    } else {
-      pages.push(`<section class="pg note"><h2>ملاحظات</h2></section>`);
-    }
+  }
+  if (F.toc) {
+    add(() => {
+      const rows = [
+        ...secs.map(([n, l], i) => `<div class="row"><span>${nn(i + 1)}. ${esc(n)}<small class="sub">${nn(l.length)} منتج</small></span><i></i><span>${pn(start.get(n)!)}</span></div>`),
+        ...arts.filter((a) => artStart.has(a.id)).map((a) => `<div class="row" style="font-size:16px"><span>📘 ${esc(a.title)}</span><i></i><span>${pn(artStart.get(a.id)!)}</span></div>`),
+      ];
+      return `<section class="pg toc"><h2>الفهرس</h2><div class="bar"></div>${rows.join('')}</section>`;
+    });
+  }
+  if (F.story) {
+    add(() => `<section class="pg sty"><div class="q">”</div><h2>${esc(cfg.story.title)}</h2><div class="bar"></div>${cfg.story.text
+      .split('\n')
+      .filter((x) => x.trim())
+      .map((x) => `<p>${esc(x)}</p>`)
+      .join('')}<div class="sg">— ${esc(inp.shop)}</div></section>`);
   }
 
+  // صفحات المقالات: النص بيتقسم على صفحات بحسب الطول
+  const artPages = (a: Article, si: number) => {
+    const blocks = parseBody(a.body);
+    const first = !!a.img;
+    const chunks: Block[][] = [[]];
+    let w = 0;
+    const cap0 = first ? 1250 : 1900;
+    let cap = cap0;
+    const cw: number[] = [0];
+    for (const b of blocks) {
+      const bw = (b.t === 'p' ? b.x.length : b.x.length + 70) + 45;
+      if (w + bw > cap && chunks[chunks.length - 1]!.length) {
+        chunks.push([]);
+        cw.push(0);
+        w = 0;
+        cap = 1900;
+      }
+      chunks[chunks.length - 1]!.push(b);
+      w += bw;
+      cw[cw.length - 1] = w;
+    }
+    chunks.forEach((ch, k) => {
+      if (k === 0) artStart.set(a.id, entries.length);
+      add((i) => {
+        if (k === 0) {
+          index.push({ n: a.title, c: a.kind || 'مقال', s: 'مقالات وإرشادات', p: i });
+        }
+        const body = ch
+          .map((b) => {
+            if (b.t === 'h') return `<h3>${esc(b.x)}</h3>`;
+            if (b.t === 'n') return `<div class="stp"><i>${nn(b.n)}</i><span>${esc(b.x)}</span></div>`;
+            if (b.t === 'b') return `<div class="bul">${esc(b.x)}</div>`;
+            if (b.t === 'q') return `<div class="tipb"><b>💡 نصيحة</b>${esc(b.x)}</div>`;
+            return `<p>${esc(b.x)}</p>`;
+          })
+          .join('');
+        // الصفحة القصيرة: خط أكبر + شريط صور من المنتجات بدل الفراغ
+        const ratio = (cw[k] ?? 0) / (k === 0 ? cap0 : 1900);
+        const scale = ratio < 0.4 ? 1.32 : ratio < 0.62 ? 1.16 : 1;
+        const fillImgs = ratio < 0.66 ? [0, 1, 2].map((n) => inp.products.length ? heroOf(inp.products[(i * 2 + n * 3 + 1) % inp.products.length]!) : '').filter(Boolean) : [];
+        const fill = fillImgs.length ? `<div class="fill">${fillImgs.map((u) => `<img src="${esc(u)}" alt="">`).join('')}</div>` : '';
+        return `<section class="pg art" style="--fs:${scale}">${tabs(si)}${k === 0 && a.img ? `<img class="aim" src="${esc(a.img)}" alt="">` : ''}
+        <div class="ahd${k === 0 && a.img ? ' ov' : ''}"><small>${esc(a.kind || 'إرشادات')}${chunks.length > 1 ? ` · ${nn(k + 1)}/${nn(chunks.length)}` : ''}</small><h2>${esc(a.title)}</h2><div class="bar"></div></div>
+        <div class="abd${k === 0 && a.img ? ' wi' : ''}">${body}${fill}</div>${foot(i)}</section>`;
+      });
+    });
+  };
+  arts.filter((a) => !a.sec).forEach((a) => artPages(a, -1));
+
+  // صفحة «نصيحة» بدل الصفحة الفاضية لما نحتاج نظبّط الفتحة
+  let tipN = 0;
+  const tipPage = () => {
+    const t = TIPS[tipN % TIPS.length]!;
+    const img = inp.products.length ? heroOf(inp.products[(tipN * 3 + 1) % inp.products.length]!) : '';
+    tipN++;
+    add((i) => `<section class="pg tip">${img ? `<img class="bgi" src="${esc(img)}" alt="">` : ''}<div class="tq"><small>نصيحة من ${esc(inp.shop)}</small><h2>${esc(t)}</h2><div class="bar"></div></div>${foot(i)}</section>`);
+  };
+
   secs.forEach(([name, list], si) => {
+    if (entries.length % 2 === 0) tipPage();
+    start.set(name, entries.length);
     const sImg = cfg.secImgs[name] || heroOf(list[0]!);
-    pages.push(`<section class="pg opn">${sImg ? `<img class="bgi" src="${esc(sImg)}" alt="">` : ''}<div class="no">${nn(si + 1)}</div>${tabs(si)}<div class="tt"><small>SECTION ${si + 1}</small><h2>${esc(name)}</h2><div class="bar"></div><p>${nn(list.length)} منتج في القسم ده</p></div></section>`);
-    pages.push(`<section class="pg lst">${tabs(si)}<h2>${esc(name)}</h2><div class="bar"></div><div class="rows">${list
+    add(() => `<section class="pg opn">${sImg ? `<img class="bgi" src="${esc(sImg)}" alt="">` : ''}<div class="no">${nn(si + 1)}</div>${tabs(si)}<div class="tt"><small>SECTION ${si + 1}</small><h2>${esc(name)}</h2><div class="bar"></div><p>${nn(list.length)} منتج في القسم ده</p></div></section>`);
+    add(() => `<section class="pg lst">${tabs(si)}<h2>${esc(name)}</h2><div class="bar"></div><div class="rows">${list
       .map((p) => `<div class="it">${heroOf(p) ? `<img src="${esc(heroOf(p))}" alt="">` : ''}<div><b>${esc(p.name)}</b><small>كود ${esc(p.code)}</small></div><span class="n">${pn(prodPage.get(p.code)!)}</span></div>`)
       .join('')}</div></section>`);
-    list.forEach((p, pi) => {
-      const i = prodPage.get(p.code)!;
-      index.push({ n: p.name, c: p.code, s: name, p: i });
-      const d = splitDesc(p.desc ?? '');
-      const photos = p.imgs.filter((u) => u !== p.dimImg);
-      const lay = cfg.layout === 'auto' ? ['c', 'a', 'b'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'c');
-      const p1 = photos[0] ?? '';
-      const p2 = photos[1] || p1;
-      const p3 = photos[2] || photos[1] || p1;
-      const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
-      const code = `<span class="code">${esc(p.code)}</span>`;
-      const specs: [string, string][] = [['الكود', p.code], ['القسم', cut(name, 22)], ...d.specs.slice(0, 2).map(([k, v]) => [cut(k, 14), cut(v, 20)] as [string, string])];
-      const r2 = F.specs ? `<div class="r2">${specs.slice(0, lay === 'b' ? 3 : 4).map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>` : '';
-      const boxes: string[] = [];
-      if (d.intro) boxes.push(`<div class="chip hl"><b>عن المنتج</b>${esc(cut(d.intro, 120))}</div>`);
-      d.points.slice(0, 2).forEach((x, k) => boxes.push(`<div class="chip"><b>${k ? 'ميزة' : 'أهم ميزة'}</b>${esc(cut(x, 80))}</div>`));
-      const r1 = boxes.length ? `<div class="r1 n${boxes.length}">${boxes.join('')}</div>` : '<div></div>';
-      const bx = `<div class="bx">${r1}${r2}</div>`;
-      const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
-      const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
-      const nm = `<div class="nm"><small>${esc(name)}</small>${esc(p.name)}</div>`;
-      let inner = '';
-      if (lay === 'a') {
-        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
-      } else if (lay === 'b') {
-        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
-      } else {
-        inner = `<div class="bnd"></div>${hd}${nm}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${bx}`;
-      }
-      pages.push(`<section class="pg pp l${lay}">${tabs(si)}${inner}${foot(i)}</section>`);
-      void pi;
+    list.forEach((p) => {
+      prodPage.set(p.code, entries.length);
+      add((i) => {
+        index.push({ n: p.name, c: p.code, s: name, p: i });
+        const d = splitDesc(p.desc ?? '');
+        const photos = p.imgs.filter((u) => u !== p.dimImg);
+        const lay = cfg.layout === 'auto' ? ['c', 'a', 'b'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'c');
+        const p1 = photos[0] ?? '';
+        const p2 = photos[1] || p1;
+        const p3 = photos[2] || photos[1] || p1;
+        const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
+        const code = `<span class="code">${esc(p.code)}</span>`;
+        const specs: [string, string][] = [['الكود', p.code], ['القسم', cut(name, 22)], ...d.specs.slice(0, 2).map(([k, v]) => [cut(k, 14), cut(v, 20)] as [string, string])];
+        const r2 = F.specs ? `<div class="r2">${specs.slice(0, lay === 'b' ? 3 : 4).map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>` : '';
+        const boxes: string[] = [];
+        if (d.intro) boxes.push(`<div class="chip hl"><b>عن المنتج</b>${esc(cut(d.intro, 120))}</div>`);
+        d.points.slice(0, 2).forEach((x, k) => boxes.push(`<div class="chip"><b>${k ? 'ميزة' : 'أهم ميزة'}</b>${esc(cut(x, 80))}</div>`));
+        const r1 = boxes.length ? `<div class="r1 n${boxes.length}">${boxes.join('')}</div>` : '<div></div>';
+        const bx = `<div class="bx">${r1}${r2}</div>`;
+        const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
+        const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
+        const nm = `<div class="nm"><small>${esc(name)}</small>${esc(p.name)}</div>`;
+        let inner = '';
+        if (lay === 'a' || lay === 'b') {
+          inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
+        } else {
+          inner = `<div class="bnd"></div>${hd}${nm}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${bx}`;
+        }
+        return `<section class="pg pp l${lay}">${tabs(si)}${inner}${foot(i)}</section>`;
+      });
     });
-    if (list.length % 2) pages.push(`<section class="pg note">${tabs(si)}<h2>ملاحظات</h2></section>`);
+    // مقالات القسم ده
+    arts.filter((a) => a.sec === name).forEach((a) => artPages(a, si));
   });
-  pages.push(`<section class="pg cover" style="display:flex;align-items:center;justify-content:center;text-align:center"><div class="mos" style="height:100%;opacity:.35">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>${gearSvg()}<div style="position:relative"><h1 style="font-size:84px;margin:0;background:linear-gradient(180deg,#fff,var(--gl));-webkit-background-clip:text;background-clip:text;color:transparent">شكرًا لثقتكم</h1><div class="ln" style="justify-content:center"><i style="max-width:100px"></i></div><p style="font-size:22px;line-height:2;margin:0">${esc(inp.shop)}<br>نوصّل لحد عندك في كل المحافظات</p><div style="font-size:34px;font-weight:900;color:var(--gl);direction:ltr;margin-top:16px">${esc(phoneTxt)}</div></div></section>`);
+  // مقالات «في آخر الكتالوج»
+  arts.filter((a) => a.sec === '__end').forEach((a) => artPages(a, -1));
+  add(() => `<section class="pg cover" style="display:flex;align-items:center;justify-content:center;text-align:center"><div class="mos" style="height:100%;opacity:.35">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>${gearSvg()}<div style="position:relative"><h1 style="font-size:84px;margin:0;background:linear-gradient(180deg,#fff,var(--gl));-webkit-background-clip:text;background-clip:text;color:transparent">شكرًا لثقتكم</h1><div class="ln" style="justify-content:center"><i style="max-width:100px"></i></div><p style="font-size:22px;line-height:2;margin:0">${esc(inp.shop)}<br>نوصّل لحد عندك في كل المحافظات</p><div style="font-size:34px;font-weight:900;color:var(--gl);direction:ltr;margin-top:16px">${esc(phoneTxt)}</div></div></section>`);
+  total = entries.length;
+  // الأقسام بتبدأ على اليسار، فصفحة النهاية بتتحسب بعد ما اتعدّت كل الصفحات
+  const pages = entries.map((b, i) => b(i));
   return { pages, css: CSS, index, vars };
 }
 

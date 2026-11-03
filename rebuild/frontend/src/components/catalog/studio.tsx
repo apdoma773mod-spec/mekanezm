@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { uploadSiteImage } from '@/components/modals/site-admin';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
-import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
+import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_ARTICLES, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type Article, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
 import { printHtml } from '@/lib/print';
 import { useAllProducts } from '@/lib/trade-queries';
 import { fetchSite, saveSite } from '@/lib/web-queries';
@@ -93,6 +93,16 @@ export function CatalogStudio() {
   const secNames = useMemo(() => [...new Set(all.map((p) => p.section || 'منتجات متنوعة'))], [all]);
   const picked = all.filter((p) => !off.has(p.section || 'منتجات متنوعة') && (!stockOnly || p.inStock));
   const set = (x: Partial<CatCfg>) => setCfg((c) => ({ ...c, ...x }));
+  const setArt = (id: string, x: Partial<Article>) => setCfg((c) => ({ ...c, articles: c.articles.map((a) => (a.id === id ? { ...a, ...x } : a)) }));
+  const moveArt = (id: string, d: number) =>
+    setCfg((c) => {
+      const a = [...c.articles];
+      const i = a.findIndex((x) => x.id === id);
+      const j = i + d;
+      if (i < 0 || j < 0 || j >= a.length) return c;
+      [a[i], a[j]] = [a[j]!, a[i]!];
+      return { ...c, articles: a };
+    });
   const setFlag = (k: keyof CatCfg['flags'], v: boolean) => setCfg((c) => ({ ...c, flags: { ...c.flags, [k]: v } }));
   const abs = (u: string) => (u && u.startsWith('/') ? `${location.origin}${u}` : u);
 
@@ -162,7 +172,8 @@ export function CatalogStudio() {
     setBusy('up');
     try {
       const url = await uploadSiteImage(f);
-      if (fileFor.current === 'cover') set({ cover: { ...cfg.cover, imgs: [url, ...cfg.cover.imgs].slice(0, 3) } });
+      if (fileFor.current.startsWith('art:')) setArt(fileFor.current.slice(4), { img: url });
+      else if (fileFor.current === 'cover') set({ cover: { ...cfg.cover, imgs: [url, ...cfg.cover.imgs].slice(0, 3) } });
       else set({ secImgs: { ...cfg.secImgs, [fileFor.current]: url } });
     } catch (e) {
       toast(`الصورة مارفعتش: ${errorMessage(e)}`, 'bad');
@@ -352,6 +363,62 @@ export function CatalogStudio() {
         <label style={lab}>النص (كل سطر فقرة)</label>
         <textarea style={{ ...inp, minHeight: 220 }} value={cfg.story.text} onChange={(e) => set({ story: { ...cfg.story, text: e.target.value } })} />
         <button type="button" className="secondary" style={{ marginTop: 6 }} onClick={() => set({ story: { ...cfg.story, text: STORY_TEXT } })}>↩️ رجّع النص الأصلي</button>
+      </Sec>
+
+      <Sec title={`📚 المقالات والإرشادات (${cfg.articles.filter((x) => x.on).length} مقال شغال)`} open>
+        <p style={{ fontSize: 13, color: 'var(--muted,#62767c)', margin: '0 0 8px' }}>
+          إرشادات تركيب، دليل اختيار الميكانيزم قبل التصميم، ومقالات من عندك. أي مقال بيتحط في الكتالوج كصفحات حلوة، والنص الطويل بيتقسّم على صفحات لوحده. تقدر تعدّل وتمسح وتضيف.
+        </p>
+        <details style={{ fontSize: 13, background: '#f4f8f9', borderRadius: 10, padding: '6px 10px', marginBottom: 8 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 700 }}>إزاي أكتب المقال؟</summary>
+          <div style={{ lineHeight: 1.9 }}>
+            سطر عادي = فقرة. <b>## عنوان</b> = عنوان فرعي. <b>1. نص</b> = خطوة مرقّمة. <b>- نص</b> = نقطة. <b>&gt; نص</b> = مربع نصيحة.
+          </div>
+        </details>
+        {cfg.articles.map((a, i) => (
+          <div key={a.id} style={{ border: '1px solid #dfe7ea', borderRadius: 12, padding: 10, marginBottom: 10, opacity: a.on ? 1 : 0.6 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                <input type="checkbox" style={{ width: 'auto' }} checked={a.on} onChange={(e) => setArt(a.id, { on: e.target.checked })} /> شغال
+              </label>
+              <input style={{ flex: 1, minWidth: 160, fontWeight: 800 }} value={a.title} placeholder="عنوان المقال" onChange={(e) => setArt(a.id, { title: e.target.value })} />
+              <button type="button" className="secondary" disabled={i === 0} onClick={() => moveArt(a.id, -1)}>↑</button>
+              <button type="button" className="secondary" disabled={i === cfg.articles.length - 1} onClick={() => moveArt(a.id, 1)}>↓</button>
+              <button type="button" className="secondary" onClick={() => window.confirm('تمسح المقال ده؟') && setCfg((c) => ({ ...c, articles: c.articles.filter((x) => x.id !== a.id) }))}>🗑️</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+              <select value={a.kind} onChange={(e) => setArt(a.id, { kind: e.target.value })}>
+                {['مقال', 'دليل الاختيار', 'تركيب', 'نصيحة', 'إرشادات', 'معلومة'].map((k) => (
+                  <option key={k}>{k}</option>
+                ))}
+              </select>
+              <select value={a.sec} onChange={(e) => setArt(a.id, { sec: e.target.value })}>
+                <option value="">في أول الكتالوج</option>
+                {secNames.map((n) => (
+                  <option key={n} value={n}>بعد منتجات: {n}</option>
+                ))}
+                <option value="__end">في آخر الكتالوج</option>
+              </select>
+            </div>
+            <textarea style={{ ...inp, minHeight: 170, marginTop: 6 }} value={a.body} placeholder="اكتب نص المقال هنا…" onChange={(e) => setArt(a.id, { body: e.target.value })} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {a.img && <img src={a.img} alt="" style={{ width: 70, height: 48, objectFit: 'cover', borderRadius: 8 }} />}
+              <button type="button" className="secondary" disabled={!!busy} onClick={() => { fileFor.current = 'art:' + a.id; file.current?.click(); }}>📷 {a.img ? 'غيّر الصورة' : 'صورة في أول المقال'}</button>
+              <button type="button" className="secondary" onClick={() => setPickSec(pickSec === 'art:' + a.id ? '' : 'art:' + a.id)}>اختار من صور المنتجات</button>
+              {a.img && <button type="button" className="secondary" onClick={() => setArt(a.id, { img: '' })}>شيل الصورة</button>}
+            </div>
+            {pickSec === 'art:' + a.id && (
+              <div style={{ marginTop: 6 }}>
+                <Thumbs urls={allImgs.slice(0, 60)} on={[a.img ?? '']} pick={(u) => { setArt(a.id, { img: u }); setPickSec(''); }} />
+              </div>
+            )}
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="primary" onClick={() => setCfg((c) => ({ ...c, articles: [...c.articles, { id: 'a-' + Date.now().toString(36), on: true, kind: 'مقال', title: '', body: '', sec: '' }] }))}>➕ مقال جديد</button>
+          <button type="button" className="secondary" onClick={() => window.confirm('ترجّع المقالات الافتراضية؟ هتتمسح تعديلاتك على المقالات.') && setCfg((c) => ({ ...c, articles: DEFAULT_ARTICLES }))}>↩️ رجّع المقالات الافتراضية</button>
+        </div>
       </Sec>
 
       <Sec title="📦 إيه اللي يطلع في الكتالوج؟">
