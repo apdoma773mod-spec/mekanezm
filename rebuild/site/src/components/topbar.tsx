@@ -12,9 +12,22 @@ type Sug = { id: string; name: string; img: string };
 const RK = 'mk_searches';
 const recentSearches = (): string[] => { try { return JSON.parse(localStorage.getItem(RK) || '[]'); } catch { return []; } };
 
+/** The published flip-book catalog lives on the backend; the button shows only when one exists. */
+function useCatalog() {
+  const [has, setHas] = useState(false);
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_NEW_BACKEND !== '1') return;
+    let alive = true;
+    fetch('/mkapi/web/public/catalog-latest', { method: 'HEAD' }).then(r => { if (alive) setHas(r.ok); }).catch(() => { /* hidden */ });
+    return () => { alive = false; };
+  }, []);
+  return has;
+}
+
 export function TopBar() {
   const { site, cartCount: n, open } = useShop();
   const cartCount = useMounted() ? n : 0;
+  const hasCatalog = useCatalog();
   const router = useRouter();
   const qs = useSearchParams();
   const [q, setQ] = useState(qs.get('q') ?? '');
@@ -74,6 +87,7 @@ export function TopBar() {
           </div>
         )}
       </form>
+      {hasCatalog && <a className="tb-cart" href="/mkapi/web/public/catalog-latest" target="_blank" rel="noopener" aria-label="الكتالوج (تقليب وتحميل PDF)" title="الكتالوج">📖</a>}
       <button className="tb-cart" onClick={() => open({ kind: 'cart' })} aria-label={`السلة (${cartCount})`}>🛒{cartCount > 0 && <i>{cartCount}</i>}</button>
     </div>
   );
