@@ -6,7 +6,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { getFile, putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
-import { cleanPhoto } from './clean-photo.js';
+import { cleanPhotoSafe } from './clean-photo.js';
 
 /**
  * 🤖 الكتالوج بالذكاء الاصطناعي (Gemini): لكل منتج
@@ -201,6 +201,7 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: SERPER, after: { set: !!key }, ip: actor.ip });
     return { serper: !!key };
   });
+  const thumbOf = new Map<string, string>();
   app.post('/catalog/ai/photos', { preHandler: app.requireAdmin, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request) => {
     const b = parse(z.object({ name: z.string().trim().min(1).max(200), brand: z.string().max(80).default(''), q: z.string().max(200).default('') }), request.body);
     const key = await getSerper();
@@ -213,10 +214,15 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       .filter((x) => x.imageUrl && /^https:\/\//.test(x.imageUrl) && (x.imageWidth ?? 600) >= 300)
       .slice(0, 16)
       .map((x) => ({ url: x.imageUrl!, thumb: x.thumbnailUrl || x.imageUrl!, title: String(x.title ?? '').slice(0, 120), site: String(x.domain ?? '').slice(0, 60), w: x.imageWidth ?? 0, h: x.imageHeight ?? 0 }));
+    for (const it of items) thumbOf.set(it.url, it.thumb);
+    if (thumbOf.size > 3000) for (const k of [...thumbOf.keys()].slice(0, 1000)) thumbOf.delete(k);
     return { q, items };
   });
   app.post('/catalog/ai/photos/save', { preHandler: app.requireAdmin }, async (request) => {
-    const { url, thumb } = parse(z.object({ url: z.string().url().max(2000), thumb: z.string().url().max(2000).optional() }), request.body);
+    const b = parse(z.object({ url: z.string().url().max(2000), thumb: z.string().url().max(2000).optional() }), request.body);
+    const url = b.url;
+    const thumb = b.thumb ?? thumbOf.get(b.url);
+    let lastWhy = '';
     // الأصلية الأول؛ لو الموقع منع التحميل (فيسبوك/إنستجرام…) أو مش صورة، نيجي على النسخة الصغيرة اللي جوجل نفسه مخزّنها
     for (const u of [url, thumb].filter((x): x is string => !!x && x.startsWith('https://'))) {
       const r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36', accept: 'image/avif,image/webp,image/*,*/*;q=0.8', referer: new URL(u).origin + '/' } }).catch(() => null);
@@ -224,12 +230,17 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       const buf = Buffer.from(await r.arrayBuffer());
       if (!buf.length || buf.length > 12 * 1024 * 1024) continue;
       // أي اسم تاجر/رقم/لوجو/سعر مكتوب على الصورة بيتشال قبل الحفظ
-      const done = await cleanPhoto(await geminiKey(db), buf).catch(() => null);
+      const done = await cleanPhotoSafe(await geminiKey(db), buf).catch(() => null);
       if (!done) continue;
+      if (done.rejected) {
+        lastWhy = done.why;
+        continue;
+      }
       const name = `${randomBytes(12).toString('hex')}.jpg`;
       await putFile(name, done.buf, 'image/jpeg');
       return { url: `/api/v1/work/files/${name}`, lowRes: u !== url, removed: done.removed, unchecked: done.unchecked };
     }
+    if (lastWhy) throw badRequest(`الصورة دي ماتحفظتش عشان مش مضمونة إنها نضيفة: ${lastWhy} — جرّب تاني أو اختار صورة تانية`);
     throw badRequest('الموقع ده مارضيش يدّي الصورة — اختار صورة تانية (يفضّل من موقع مش فيسبوك أو إنستجرام)');
   });
 

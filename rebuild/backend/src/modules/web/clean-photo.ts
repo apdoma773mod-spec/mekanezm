@@ -16,7 +16,7 @@ export interface CleanResult {
   unchecked: boolean;
 }
 
-export async function cleanPhoto(key: string | null, input: Buffer): Promise<CleanResult> {
+async function onePass(key: string | null, input: Buffer): Promise<CleanResult> {
   const sharp = (await import('sharp')).default;
   const base = await sharp(input).rotate().resize(1400, 1400, { fit: 'inside', withoutEnlargement: true }).toBuffer();
   const bm = await sharp(base).metadata();
@@ -50,10 +50,10 @@ Return JSON: {"boxes":[{"ymin":0,"xmin":0,"ymax":0,"xmax":0,"what":"short"}]} wi
   for (const b of boxes) {
     const wide = b.xmax - b.xmin >= 450;
     const tall = b.ymax - b.ymin >= 450;
-    if (wide && b.ymin <= 90 && b.ymax <= 300) top = Math.max(top, b.ymax);
-    else if (wide && b.ymax >= 910 && b.ymin >= 650) bottom = Math.min(bottom, b.ymin);
-    else if (tall && b.xmin <= 90 && b.xmax <= 300) left = Math.max(left, b.xmax);
-    else if (tall && b.xmax >= 910 && b.xmin >= 650) right = Math.min(right, b.xmin);
+    if (wide && b.ymin <= 90 && b.ymax <= 350) top = Math.max(top, b.ymax);
+    else if (wide && b.ymax >= 910 && b.ymin >= 600) bottom = Math.min(bottom, b.ymin);
+    else if (tall && b.xmin <= 90 && b.xmax <= 650) left = Math.max(left, b.xmax);
+    else if (tall && b.xmax >= 910 && b.xmin >= 350) right = Math.min(right, b.xmin);
     else rest.push(b);
   }
   let cx0 = Math.round((left / 1000) * W);
@@ -62,7 +62,7 @@ Return JSON: {"boxes":[{"ymin":0,"xmin":0,"ymax":0,"xmax":0,"what":"short"}]} wi
   let cy1 = Math.round((bottom / 1000) * H);
   let cropped = top > 0 || bottom < 1000 || left > 0 || right < 1000;
   // لو القص هياكل أكتر من ٤٠٪ من الصورة نسيبها ونمسح بدل ما نقص
-  if (cropped && ((cx1 - cx0) * (cy1 - cy0)) / (W * H) < 0.6) {
+  if (cropped && ((cx1 - cx0) * (cy1 - cy0)) / (W * H) < 0.3) {
     cx0 = 0;
     cy0 = 0;
     cx1 = W;
@@ -117,4 +117,47 @@ Return JSON: {"boxes":[{"ymin":0,"xmin":0,"ymax":0,"xmax":0,"what":"short"}]} wi
   }
   if (patches.length) cur = await sharp(cur).composite(patches.map((p) => ({ input: p.input, left: p.left, top: p.top }))).toBuffer();
   return { buf: await sharp(cur).jpeg({ quality: 86 }).toBuffer(), removed: patches.length + (cropped ? 1 : 0), cropped, unchecked: false };
+}
+
+/** هل لسه فيه أي حاجة بتاعة تاجر/موقع على الصورة؟ (فحص مستقل بعد التنضيف) */
+async function leftover(key: string, buf: Buffer): Promise<{ left: boolean; what: string }> {
+  const sharp = (await import('sharp')).default;
+  const small = await sharp(buf).resize(1024, 1024, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
+  const d = await geminiJson<{ remaining?: boolean; what?: string }>(
+    key,
+    `Inspect this product photo carefully. Does it still show ANY text, number, phone number, logo, brand/shop/company name, price, website, social-media handle or icon, or watermark that was ADDED to the picture by a seller or website (not something physically printed or engraved on the product itself)? Even small or faint ones count.
+Return JSON only: {"remaining":true|false,"what":"short description of what is left, or empty"}`,
+    { data: small.toString('base64'), mime: 'image/jpeg' },
+  );
+  return { left: d.remaining === true, what: String(d.what ?? '').slice(0, 120) };
+}
+
+export interface SafeResult extends CleanResult {
+  /** الصورة لسه عليها بيانات تاجر بعد كل المحاولات: ماتتحفظش */
+  rejected: boolean;
+  why: string;
+}
+
+/**
+ * تنضيف مضمون: لحد ٣ لفّات (تحديد + مسح/قص)، وبعد كل لفّة فحص مستقل. لو الفحص لسه شايف بيانات تاجر
+ * (أو Gemini مارضيش يشتغل) الصورة بتترفض بدل ما تتحفظ وعليها اسم تاجر.
+ */
+export async function cleanPhotoSafe(key: string | null, input: Buffer): Promise<SafeResult> {
+  if (!key) return { buf: input, removed: 0, cropped: false, unchecked: true, rejected: true, why: 'مفيش مفتاح Gemini للتنضيف' };
+  let cur = input;
+  let removed = 0;
+  let cropped = false;
+  let why = '';
+  for (let round = 0; round < 3; round++) {
+    const r = await onePass(key, cur);
+    if (r.unchecked) return { ...r, rejected: true, why: 'الذكاء الاصطناعي مارضيش يشتغل دلوقتي، جرّب تاني' };
+    cur = r.buf;
+    removed += r.removed;
+    cropped = cropped || r.cropped;
+    const v = await leftover(key, cur).catch(() => null);
+    if (!v) return { buf: cur, removed, cropped, unchecked: true, rejected: true, why: 'مقدرتش أتأكد إن الصورة نضيفة' };
+    if (!v.left) return { buf: cur, removed, cropped, unchecked: false, rejected: false, why: '' };
+    why = v.what;
+  }
+  return { buf: cur, removed, cropped, unchecked: false, rejected: true, why: `لسه عليها ${why || 'بيانات تاجر'}` };
 }
