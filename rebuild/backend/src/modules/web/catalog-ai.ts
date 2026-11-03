@@ -157,7 +157,8 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     if (!account && token) {
       const r = await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=5', { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }).catch(() => null);
       const j = (await r?.json().catch(() => null)) as { result?: { id?: string }[] } | null;
-      account = j?.result?.[0]?.id ?? '';
+      // توكن Workers AI مابيقدرش يعرض الحسابات: الحساب المعروف من إعدادات السيرفر (CATALOG_CF_ACCOUNT)
+      account = j?.result?.[0]?.id ?? (process.env.CATALOG_CF_ACCOUNT || '').trim();
       if (!account) throw badRequest('اتأكدت من الـ Token بس مقدرتش أعرف الحساب لوحده — الزق لينك صفحة Cloudflare الرئيسية في الخانة الأولى');
     }
     const actor = actorOf(request);
