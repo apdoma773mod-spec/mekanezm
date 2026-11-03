@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { productPath, sectionPath, visibleSections } from '@/lib/shop';
+import { norm, productPath, sectionPath, visibleSections } from '@/lib/shop';
 import { ev } from '@/lib/track';
 import { useMounted, useShop } from './shop-provider';
 
@@ -12,22 +12,9 @@ type Sug = { id: string; name: string; img: string };
 const RK = 'mk_searches';
 const recentSearches = (): string[] => { try { return JSON.parse(localStorage.getItem(RK) || '[]'); } catch { return []; } };
 
-/** The published flip-book catalog lives on the backend; the button shows only when one exists. */
-function useCatalog() {
-  const [has, setHas] = useState(false);
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_NEW_BACKEND !== '1') return;
-    let alive = true;
-    fetch('/mkapi/web/public/catalog-latest', { method: 'HEAD' }).then(r => { if (alive) setHas(r.ok); }).catch(() => { /* hidden */ });
-    return () => { alive = false; };
-  }, []);
-  return has;
-}
-
 export function TopBar() {
   const { site, cartCount: n, open } = useShop();
   const cartCount = useMounted() ? n : 0;
-  const hasCatalog = useCatalog();
   const router = useRouter();
   const qs = useSearchParams();
   const [q, setQ] = useState(qs.get('q') ?? '');
@@ -39,7 +26,20 @@ export function TopBar() {
     v = v.trim();
     setShow(false);
     if (v) { try { localStorage.setItem(RK, JSON.stringify([v, ...recentSearches().filter(x => x !== v)].slice(0, 6))); } catch { /* */ } ev('search', 'Search', { search_term: v }, { search_string: v }); }
-    router.push('/search' + (v ? '?q=' + encodeURIComponent(v) : ''));
+    if (!v) { router.push('/search'); return; }
+    void go(v);
+  };
+  /** Typing anything lands on its own page: a section by name, a single/exact product, else the search results. */
+  const go = async (v: string) => {
+    const w = norm(v);
+    const sec = w.length >= 2 && visibleSections(site).find(s => norm(s.name) === w || norm(s.name).includes(w));
+    if (sec) { router.push(sectionPath(sec.id)); return; }
+    try {
+      const list = (await (await fetch('/api/suggest?q=' + encodeURIComponent(v))).json()) as Sug[];
+      const hit = list.length === 1 ? list[0] : list.find(p => norm(p.name) === w);
+      if (hit) { router.push(productPath(hit.id)); return; }
+    } catch { /* offline: the search page tries again */ }
+    router.push('/search?q=' + encodeURIComponent(v));
   };
 
   useEffect(() => {
@@ -87,7 +87,6 @@ export function TopBar() {
           </div>
         )}
       </form>
-      {hasCatalog && <a className="tb-cart" href="/mkapi/web/public/catalog-latest" target="_blank" rel="noopener" aria-label="الكتالوج (تقليب وتحميل PDF)" title="الكتالوج">📖</a>}
       <button className="tb-cart" onClick={() => open({ kind: 'cart' })} aria-label={`السلة (${cartCount})`}>🛒{cartCount > 0 && <i>{cartCount}</i>}</button>
     </div>
   );

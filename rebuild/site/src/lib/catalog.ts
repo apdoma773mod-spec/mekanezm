@@ -10,8 +10,8 @@ const headers = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
 
 const EMPTY: Site = siteSchema.parse({});
 
-/** NEXT_PUBLIC_NEW_BACKEND=1 reads the catalog/stock from the new backend instead of Supabase. */
-const NEW = process.env.NEXT_PUBLIC_NEW_BACKEND === '1';
+/** SITE_FROM_BACKEND=1 (server env) reads the catalog/stock from the new backend instead of the site's own Supabase content (what /admin edits). */
+const NEW = process.env.SITE_FROM_BACKEND === '1';
 const nbUrl = (path: string) => `${(process.env.BACKEND_URL ?? '').replace(/\/$/, '')}/api/v1/web/public/${path}`;
 const nbHeaders = { 'ngrok-skip-browser-warning': '1' };
 // Last good copies, so a short backend outage doesn't empty the shop.

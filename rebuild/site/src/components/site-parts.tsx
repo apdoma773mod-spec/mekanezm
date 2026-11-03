@@ -5,6 +5,7 @@ import type { Settings } from '@/lib/schema';
 import { catalogUrl, shopPhones, waUrl } from '@/lib/shop';
 import { SOCIAL_ICONS, SOCIAL_NAMES } from '@/lib/social-icons';
 import { OpenBtn, Slider, type Slide } from './home';
+import { CatalogFooterLink } from './catalog-link';
 import { OpenNow } from './open-now';
 
 export function Socials({ site }: { site: Settings }) {
@@ -62,6 +63,7 @@ export function Footer({ site }: { site: Settings }) {
           <Link href="/contact">📞 تواصل معانا</Link>
           <OpenBtn modal={{ kind: 'req' }} className="lnk">📷 اطلب منتج مش موجود</OpenBtn>
           <Link href="/orders">📦 طلباتي وتتبّع الطلب</Link>
+          <CatalogFooterLink />
           <Link href="/story">🎬 المنتجات بالتفصيل</Link>
           <Link href="/custom">🛠️ تجهيز المنتجات</Link>
           <Link href="/kits">🧰 أطقم جاهزة</Link>

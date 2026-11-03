@@ -1,4 +1,5 @@
 import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
+import { CatalogBanner } from '@/components/catalog-link';
 import { OpenNow } from '@/components/open-now';
 import { Subscribe } from '@/components/subscribe';
 import { Footer, Header, Socials } from '@/components/site-parts';
@@ -47,6 +48,7 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <Header site={site} slides={slides} />
       <main id="main">
+        <CatalogBanner />
         <Categories />
         <nav className="qtools" aria-label="أدوات">
           <Link href="/kits"><span>🧰</span><b>أطقم جاهزة</b><small>جهّز مطبخك أو دولابك</small></Link>
