@@ -214,7 +214,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .lst .it b{display:block;font-size:19px;line-height:1.4}.lst .it small{display:block;color:var(--mut);font-size:13px;margin-top:3px}
 .lst .it span.n{margin-inline-start:auto;font-size:26px;font-weight:700;color:var(--mut);padding-inline-start:10px}
 /* ===== صفحة المنتج (تداخل صور وألوان) ===== */
-.pp .hd{position:absolute;top:0;left:0;right:0;height:44px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12.5px;color:#fff;border-bottom:1.5px solid #ffffff90}
+.pp .hd{position:absolute;top:0;left:0;right:0;height:44px;z-index:8;background:var(--tk);display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12.5px;color:#fff;border-bottom:1.5px solid #ffffff90}
 .pp .hd b{font-weight:800;letter-spacing:.04em}
 .pp h1{margin:0;line-height:1.3;font-weight:900}
 .pp .gl{width:64px;height:5px;border-radius:9px;background:var(--g);margin:12px 0 14px}
@@ -248,42 +248,40 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .pp .chip.k{display:flex;justify-content:space-between;gap:8px}.pp .chip.k b{display:inline;font-size:11px;color:var(--mut)}.pp .chip.k span{font-weight:800}
 .pp .glass{position:absolute;z-index:5;background:color-mix(in srgb,var(--tk) 90%,transparent);color:#fff;border-radius:var(--r,18px);padding:14px 16px;box-shadow:0 14px 30px #0a1a3a55}
 .pp .glass h1{font-size:25px;color:#fff}.pp .glass .gl{margin:8px 0 8px;width:48px;height:4px}.pp .glass p.intro{font-size:12.8px;line-height:1.85;color:#ffffffe6;margin:0}
-.pp .th{position:absolute;z-index:6;display:grid;gap:6px;grid-auto-flow:column;grid-auto-columns:1fr}
-.pp .th img{width:100%;height:100%;object-fit:cover;border-radius:max(4px,calc(var(--r,18px) - 6px));border:3px solid #fff;box-shadow:0 8px 18px #0a1a3a44;min-width:0}
 .pp .dim{width:130px;padding:4px}.pp .dim small{font-size:10.5px}
 .pp .ft2{background:var(--tk);color:#ffffffcc;height:44px}
 .pp .ctat{position:absolute;z-index:6;font-size:12px;line-height:1.7;font-weight:800;color:var(--tk)}.pp .ctat b{direction:ltr;display:inline-block;color:var(--t)}
-/* أ: صورة كاملة فوق + صورة ثانية طالعة + لوحة نص صغيرة */
-.la .i1{top:0;left:0;width:100%;height:calc(var(--u)*57)}
-.la .sh{position:absolute;left:0;right:0;top:0;height:calc(var(--u)*57);background:linear-gradient(180deg,#0a1a3acc 0,#0000 20%,#0000 72%,#0a1a3a66 100%)}
-.la .i2{left:28px;top:calc(var(--u)*43);width:calc(46% - 20px);height:calc(var(--u)*31)}
-.la .tx{right:28px;top:calc(var(--u)*51);width:calc(54% - 42px)}
-.la .pts{right:28px;top:calc(var(--u)*69);width:calc(54% - 42px)}
-.la .sp{left:28px;top:calc(var(--u)*76);width:calc(46% - 20px);grid-template-columns:1fr 1fr}
-.la .th{left:28px;top:calc(var(--u)*85);width:calc(46% - 20px);height:calc(var(--u)*9)}
-.la .ctat{right:28px;top:calc(var(--u)*89);width:calc(54% - 42px)}
-.la .code{top:56px;right:28px}.la .stk{top:56px;left:28px}.la .dim{right:28px;top:calc(var(--u)*9)}
-/* ب: صورة نصف الصفحة بحافة مائلة + لوح داكن + صورة ثانية على الحدّ */
-.lb .i1{left:0;top:0;width:68%;height:100%;clip-path:polygon(0 0,100% 0,84% 100%,0 100%)}
-.lb .pn{position:absolute;z-index:4;right:0;top:0;bottom:0;width:52%;background:linear-gradient(180deg,var(--tk),color-mix(in srgb,var(--tk) 72%,var(--t)));clip-path:polygon(26% 0,100% 0,100% 100%,0 100%)}
-.lb .tx{right:26px;top:70px;width:calc(40% - 10px);background:transparent;box-shadow:none;padding:0}
-.lb .sp{right:26px;top:calc(var(--u)*37);width:calc(40% - 10px)}
-.lb .i2{left:36%;top:calc(var(--u)*50);width:34%;height:calc(var(--u)*23);z-index:7}
-.lb .pts{right:26px;top:calc(var(--u)*75);width:calc(40% - 10px);gap:5px}.lb .pts .chip{padding:5px 9px;font-size:11.5px;line-height:1.5}
-.lb .th{left:24px;bottom:62px;width:30%;height:calc(var(--u)*10)}
-.lb .ctat{right:26px;top:calc(var(--u)*47);width:calc(40% - 10px);color:#fff}.lb .ctat b{color:var(--m)}
-.lb .code{top:58px;left:24px}.lb .stk{top:100px;left:24px}.lb .dim{left:24px;top:calc(var(--u)*14)}
-/* ج: شريط عنوان + صورة كبيرة بإطار + صورتين متداخلتين تحتها */
-.lc .bnd{position:absolute;z-index:2;left:0;right:0;top:0;height:calc(var(--u)*26);background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 62%,var(--t)));clip-path:polygon(0 0,100% 0,100% 88%,0 100%)}
-.lc .bnd h1{position:absolute;right:44px;top:64px;width:62%;font-size:27px;color:#fff}
-.lc .bnd p.intro{position:absolute;right:44px;top:calc(var(--u)*17);width:60%;font-size:12.5px;line-height:1.8;color:#ffffffdd;margin:0}
-.lc .i1{left:24px;right:24px;top:calc(var(--u)*17);height:calc(var(--u)*43);z-index:3}
-.lc .i2{left:24px;top:calc(var(--u)*53);width:calc(48% - 18px);height:calc(var(--u)*23);z-index:5}
-.lc .i3{right:24px;top:calc(var(--u)*57);width:calc(48% - 18px);height:calc(var(--u)*21);z-index:5}
-.lc .pts{left:24px;right:24px;top:calc(var(--u)*79);grid-template-columns:repeat(3,1fr)}
-.lc .sp{left:24px;right:24px;top:calc(var(--u)*88);grid-template-columns:repeat(3,1fr)}
-.lc .th{display:none}.lc .ctat{display:none}
-.lc .code{top:58px;left:30px;z-index:8}.lc .stk{top:100px;left:30px;z-index:8}.lc .dim{left:30px;top:calc(var(--u)*20);z-index:8}
+/* كل الصور كبيرة، وتحتها شبكة مربعات بتملا المساحة اللي فاضلة بالظبط (مفيش فراغات) */
+.pp{--ah:calc(var(--H,1123px) - 300px)}
+.pp .bx{position:absolute;z-index:6;left:24px;right:24px;top:calc(var(--H,1123px) - 288px);bottom:52px;display:grid;gap:8px;grid-template-rows:1fr auto}
+.pp .bx .r1{display:grid;gap:8px;grid-auto-flow:column;grid-auto-columns:1fr;min-height:0}
+.pp .bx .r2{display:grid;gap:8px;grid-auto-flow:column;grid-auto-columns:1fr}
+.pp .bx .chip{display:flex;flex-direction:column;justify-content:center;min-height:0;overflow:hidden}
+.pp .bx .chip.k{flex-direction:row;align-items:center;justify-content:space-between;padding:7px 10px}
+.pp .r1.n1 .chip{font-size:15px;line-height:1.9;padding:12px 16px}.pp .r1.n1 .chip b{font-size:12px}.pp .r1.n2 .chip{font-size:13.2px;line-height:1.75}.pp .chip.hl{background:linear-gradient(135deg,var(--t),color-mix(in srgb,var(--t) 60%,#000));color:#fff;border-inline-start-color:var(--m)}.pp .chip.hl b{color:var(--m)}
+.pp .nm{position:absolute;z-index:7;font-weight:900;color:#fff;text-shadow:0 3px 14px #000c;line-height:1.3}
+.pp .nm small{display:block;font-size:12px;font-weight:700;color:var(--m);letter-spacing:.06em;margin-bottom:2px}
+/* أ: صورة رئيسية بعرض الصفحة + صورتين كبار طالعين عليها */
+.la .i1{top:0;left:0;width:100%;height:calc(var(--ah)*.62)}
+.la .sh{position:absolute;z-index:3;left:0;right:0;top:0;height:calc(var(--ah)*.62);background:linear-gradient(180deg,#0a1a3ad9 0,#0000 26%,#0000 74%,#0a1a3a55 100%)}
+.la .i2{left:24px;top:calc(var(--ah)*.5);width:calc(50% - 30px);height:calc(var(--ah)*.5 - 6px);z-index:5}
+.la .i3{right:24px;top:calc(var(--ah)*.5);width:calc(50% - 30px);height:calc(var(--ah)*.5 - 6px);z-index:5}
+.la .nm{right:28px;top:56px;left:90px;font-size:24px}
+.la .code{top:56px;left:28px}.la .stk{top:98px;left:28px}.la .dim{right:28px;top:calc(var(--ah)*.34);z-index:8}
+/* ب: صورة طويلة على اليمين بحافة مائلة + صورتين فوق بعض */
+.lb .i1{left:0;top:0;width:64%;height:var(--ah);clip-path:polygon(0 0,100% 0,88% 100%,0 100%)}
+.lb .sh{position:absolute;z-index:3;left:0;top:0;width:64%;height:var(--ah);background:linear-gradient(180deg,#0a1a3acc 0,#0000 24%,#0000 100%)}
+.lb .i2{right:24px;top:52px;width:46%;height:calc((var(--ah) - 64px)*.5 - 4px);z-index:5}
+.lb .i3{right:24px;top:calc(52px + (var(--ah) - 64px)*.5 + 4px);width:46%;height:calc((var(--ah) - 64px)*.5 - 4px);z-index:5}
+.lb .nm{left:24px;top:56px;width:50%;font-size:23px}
+.lb .code{left:24px;top:calc(var(--ah) - 56px)}.lb .stk{left:24px;top:calc(var(--ah) - 98px)}.lb .dim{left:24px;top:calc(var(--ah)*.5);z-index:8}
+/* ج: شريط عنوان + صورة كبيرة بإطار + صورتين كبار متداخلين تحتها */
+.lc .bnd{position:absolute;z-index:2;left:0;right:0;top:0;height:calc(var(--ah)*.2 + 44px);background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 62%,var(--t)));clip-path:polygon(0 0,100% 0,100% 90%,0 100%)}
+.lc .nm{right:44px;top:58px;width:62%;font-size:24px;text-shadow:none}
+.lc .i1{left:24px;width:calc(100% - 48px);top:calc(var(--ah)*.2 + 14px);height:calc(var(--ah)*.5);z-index:3}
+.lc .i2{left:24px;top:calc(var(--ah)*.62 + 6px);width:calc(50% - 30px);height:calc(var(--ah)*.38 - 8px);z-index:5}
+.lc .i3{right:24px;top:calc(var(--ah)*.62 + 6px);width:calc(50% - 30px);height:calc(var(--ah)*.38 - 8px);z-index:5}
+.lc .code{left:30px;top:58px;z-index:8}.lc .stk{left:30px;top:100px;z-index:8}.lc .dim{left:30px;top:calc(var(--ah)*.3);z-index:8}
 `;
 
 /** رسم هندسي خفيف (شبكة + دوائر قياس) */
@@ -412,30 +410,29 @@ export function proPages(inp: CatInput): Built {
       index.push({ n: p.name, c: p.code, s: name, p: i });
       const d = splitDesc(p.desc ?? '');
       const photos = p.imgs.filter((u) => u !== p.dimImg);
-      const lay = cfg.layout === 'auto' ? ['a', 'b', 'c'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'a');
+      const lay = cfg.layout === 'auto' ? ['c', 'a', 'b'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'c');
       const p1 = photos[0] ?? '';
       const p2 = photos[1] || p1;
       const p3 = photos[2] || photos[1] || p1;
-      const restImgs = photos.slice(lay === 'c' ? 3 : 2, lay === 'c' ? 6 : 5);
       const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
       const code = `<span class="code">${esc(p.code)}</span>`;
-      const nSpec = lay === 'c' ? 3 : 4;
-      const specs: [string, string][] = [['الكود', p.code], ...d.specs.slice(0, nSpec - 1).map(([k, v]) => [cut(k, 14), cut(v, 22)] as [string, string])];
-      const sp = F.specs ? `<div class="chips sp">${specs.map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>` : '';
-      const nPts = lay === 'c' ? 3 : 3;
-      const pts = d.points.length ? `<div class="chips pts">${d.points.slice(0, nPts).map((x, k) => `<div class="chip"><b>${['الميزة الأولى', 'الميزة التانية', 'الميزة التالتة'][k]}</b>${esc(cut(x, lay === 'c' ? 70 : lay === 'b' ? 56 : 78))}</div>`).join('')}</div>` : '';
+      const specs: [string, string][] = [['الكود', p.code], ['القسم', cut(name, 22)], ...d.specs.slice(0, 2).map(([k, v]) => [cut(k, 14), cut(v, 20)] as [string, string])];
+      const r2 = F.specs ? `<div class="r2">${specs.slice(0, lay === 'b' ? 3 : 4).map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('')}</div>` : '';
+      const boxes: string[] = [];
+      if (d.intro) boxes.push(`<div class="chip hl"><b>عن المنتج</b>${esc(cut(d.intro, 120))}</div>`);
+      d.points.slice(0, 2).forEach((x, k) => boxes.push(`<div class="chip"><b>${k ? 'ميزة' : 'أهم ميزة'}</b>${esc(cut(x, 80))}</div>`));
+      const r1 = boxes.length ? `<div class="r1 n${boxes.length}">${boxes.join('')}</div>` : '<div></div>';
+      const bx = `<div class="bx">${r1}${r2}</div>`;
       const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
-      const th = F.gallery && restImgs.length ? `<div class="th">${restImgs.slice(0, 3).map((u) => `<img src="${esc(u)}" alt="">`).join('')}</div>` : '';
       const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
-      const ctat = `<div class="ctat">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>`;
-      const title = `<h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 125))}</p>` : ''}`;
+      const nm = `<div class="nm"><small>${esc(name)}</small>${esc(p.name)}</div>`;
       let inner = '';
       if (lay === 'a') {
-        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><div class="glass tx">${title}</div>${pts}${sp}${th}${ctat}`;
+        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
       } else if (lay === 'b') {
-        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="pn"></div>${hd}${code}${stk}${dim}<div class="glass tx">${title}</div>${sp}<img class="im i2 bd" src="${esc(p2)}" alt="">${pts}${th}`;
+        inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
       } else {
-        inner = `<div class="bnd"><h1>${esc(p.name)}</h1>${d.intro ? `<p class="intro">${esc(cut(d.intro, 110))}</p>` : ''}</div>${hd}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${pts}${sp}`;
+        inner = `<div class="bnd"></div>${hd}${nm}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${bx}`;
       }
       pages.push(`<section class="pg pp l${lay}">${tabs(si)}${inner}${foot(i)}</section>`);
       void pi;
@@ -468,13 +465,13 @@ export function buildFlipbook(inp: CatInput, opts: { close?: boolean; pdfUrl?: s
   const flipCss = `
 html,body{height:100%;margin:0;background:#1b2427;overflow:hidden;touch-action:manipulation}
 body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
-#bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px 0 ${opts.close ? '58px' : '10px'};color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:linear-gradient(180deg,#000b,#0000)}
+#bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px 0 ${opts.close ? '58px' : '10px'};color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:#0b1417}
 #bar a#b-pdf{flex:none;background:var(--g,#c9971f);color:#fff;border-radius:99px;padding:7px 12px;font:800 12.5px Cairo,sans-serif;text-decoration:none}#bar #b-x{background:#ffffff33;width:30px;height:30px;font-size:15px}@media (hover:none){#bar .nv{display:none}}#bar button{flex:none;background:#ffffff22;color:#fff;border:0;border-radius:99px;width:34px;height:34px;font:700 18px Cairo,sans-serif}
 #q{flex:1;min-width:0;border:0;border-radius:99px;padding:8px 14px;font:600 14px Cairo,sans-serif;background:#ffffffe8;color:#14262b;outline:none}
 #res{position:fixed;top:54px;right:10px;left:10px;max-width:460px;margin:0 auto;max-height:55vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 14px 40px #000a;z-index:40;display:none}
 #res div{padding:10px 14px;border-bottom:1px solid #e6eef0;font:600 14px Cairo,sans-serif;color:#14262b;display:flex;justify-content:space-between;gap:10px}
 #res div small{color:#62767c;font-weight:500}#res div b{color:var(--t);flex:none}
-#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:fixed;inset:50px 0 0 0;display:flex;align-items:center;justify-content:center}
 .fp{box-shadow:0 20px 60px #000a}
 .fp .page{background:#fff;overflow:hidden}
 .fp .pg{transform-origin:0 0;position:absolute;top:0;left:0}
@@ -483,7 +480,7 @@ body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
   const script = `
 (function(){
   var W=794,H=1123, IDX=${data};
-  var vw=innerWidth,vh=innerHeight,portrait=vw<vh*1.1;
+  var vw=innerWidth,vh=innerHeight-50,portrait=vw<vh*1.1;
   var colW=portrait?vw:vw/2;
   H=Math.max(1000,Math.min(1700,Math.round(W*vh/colW)));
   document.documentElement.style.setProperty('--H',H+'px');

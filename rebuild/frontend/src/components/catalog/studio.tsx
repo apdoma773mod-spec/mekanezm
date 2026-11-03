@@ -414,7 +414,7 @@ export function CatalogStudio() {
 
       {view && (
         <div id="catViewer" style={{ position: 'fixed', inset: 0, zIndex: 2147483000, background: '#12191b' }}>
-          <iframe title="الكتالوج" srcDoc={view} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, background: '#12191b' }} />
+          <iframe title="الكتالوج" srcDoc={view} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'env(safe-area-inset-bottom, 0px)', width: '100%', height: 'calc(100% - env(safe-area-inset-bottom, 0px))', border: 0, background: '#12191b' }} />
           <button type="button" id="catClose" aria-label="إغلاق الكتالوج" onClick={() => setView('')} style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', right: 10, width: 40, height: 40, borderRadius: 99, border: '2px solid #fff', background: '#000c', color: '#fff', fontSize: 20, fontWeight: 900, lineHeight: 1, cursor: 'pointer', zIndex: 2, padding: 0 }}>
             ✕
           </button>
