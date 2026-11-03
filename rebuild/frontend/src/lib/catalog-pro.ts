@@ -194,6 +194,9 @@ export interface CatCfg {
   extras: { index: boolean; codes: boolean; qr: boolean; icons: boolean; families: boolean; secColors: boolean; showroom: boolean; backQr: boolean };
   showroomImgs: string[];
   secTexts: Record<string, string>;
+  /** صورة «في الاستخدام» (درج راكب عليه المجرى، دولاب راكبة فيه المفصلة…): لكل قسم، ولمنتج معيّن بالكود */
+  secUse: Record<string, string>;
+  prodUse: Record<string, string>;
   /** نسخة المقالات الافتراضية: لما نضيف مقالات جديدة بتتضاف لوحدها للي حافظ إعدادات قديمة */
   articlesV?: number;
   /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
@@ -260,6 +263,8 @@ export const DEFAULT_CFG: CatCfg = {
   extras: { index: true, codes: true, qr: true, icons: true, families: true, secColors: false, showroom: true, backQr: true },
   showroomImgs: [],
   secTexts: {},
+  secUse: {},
+  prodUse: {},
   articlesV: 2,
 };
 
@@ -280,6 +285,8 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     extras: { ...d.extras, ...c?.extras },
     showroomImgs: Array.isArray(c?.showroomImgs) ? c.showroomImgs : [],
     secTexts: { ...c?.secTexts },
+    secUse: { ...c?.secUse },
+    prodUse: { ...c?.prodUse },
     style: { ...d.style, ...c?.style },
     gift: c?.gift,
   };
@@ -565,6 +572,42 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .lc .i2{left:24px;top:calc(var(--ah)*.62 + 6px);width:calc(50% - 30px);height:calc(var(--ah)*.38 - 8px);z-index:5}
 .lc .i3{right:24px;top:calc(var(--ah)*.62 + 6px);width:calc(50% - 30px);height:calc(var(--ah)*.38 - 8px);z-index:5}
 .lc .code{left:30px;top:58px;z-index:8}.lc .stk{left:30px;top:100px;z-index:8}.lc .dim{left:30px;top:calc(var(--ah)*.3);z-index:8}
+/* ===== صفحة المنتج: صورة المنتج كبيرة وواضحة + صورته في الاستخدام + كارت واحد فيه كل التفاصيل ===== */
+.pv{background:linear-gradient(180deg,#fff,#f2f5f8);--ph:calc(var(--H,1123px)*.45)}
+.pv .vt{position:absolute;top:58px;right:40px;left:40px;height:84px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+.pv .vt small{display:block;font-size:12.5px;font-weight:800;color:var(--t);letter-spacing:.03em}
+.pv .vt h1{font-size:27px;color:var(--tk);margin:2px 0 0;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pv .vt .ck{flex:none;text-align:left;font-weight:900;color:var(--tk);font-size:21px;line-height:1.2;border-bottom:4px solid var(--m);padding-bottom:3px}
+.pv .vt .ck small{color:var(--mut);font-weight:700;font-size:11px;text-align:left}.pv .vt .ck span{direction:ltr;display:inline-block}
+.pv .vt .nw2{display:inline-block;background:#e11d2e;color:#fff;font-size:11px;font-weight:900;border-radius:6px;padding:0 7px;margin-inline-start:6px;vertical-align:middle}
+.pv .ph{position:absolute;top:154px;right:40px;left:40px;height:var(--ph);border-radius:var(--r,18px);background:radial-gradient(circle at 55% 40%,#fff 0,#eef2f5 70%,#e3e9ee 100%);box-shadow:inset 0 0 0 1px #dde5ea}
+.pv .ph img.i1{position:absolute;top:16px;left:16px;width:calc(100% - 32px);height:calc(100% - 32px);object-fit:contain;mix-blend-mode:multiply}
+.pv.u .ph{left:calc(40px + 34%)}
+.pv .us{position:absolute;z-index:4;left:40px;top:calc(154px + var(--ph)*.1);width:38%;height:calc(var(--ph)*.9);border-radius:var(--r,18px);overflow:hidden;border:5px solid #fff;box-shadow:0 16px 34px #0a1a3a40;background:#dfe7ea}
+.pv .us img{width:100%;height:100%;object-fit:cover;display:block}
+.pv .us span{position:absolute;bottom:0;left:0;right:0;padding:18px 12px 8px;font-size:12.5px;font-weight:800;color:#fff;background:linear-gradient(180deg,#0000,#0a1a3acc)}
+.pv .vc{position:absolute;right:40px;left:40px;top:calc(154px + var(--ph) + 16px);bottom:58px;background:#fff;border-radius:var(--r,18px);box-shadow:0 12px 30px #0a1a3a1c;border-top:5px solid var(--m);display:grid;grid-template-columns:1.2fr 1fr;overflow:hidden}
+.pv .vc .a{padding:16px 22px 14px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.pv .vc .b{padding:14px 18px;background:#f6f9fb;border-inline-start:1px solid #e3eaee;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.pv .vc h3{margin:0 0 6px;font-size:13px;color:var(--t);font-weight:900;letter-spacing:.03em}
+.pv .vc p{margin:0 0 8px;font-size:14px;line-height:1.9;color:#26363b}
+.pv .vc ul{list-style:none;padding:0;margin:0;display:grid;gap:4px}
+.pv .vc li{position:relative;padding-inline-start:18px;font-size:13.2px;line-height:1.75;color:#26363b}
+.pv .vc li:before{content:"";position:absolute;right:2px;top:9px;width:7px;height:7px;background:var(--m);transform:rotate(45deg)}
+.pv .vc .ics{margin-top:10px;font-size:12.5px;color:var(--tk);font-weight:700;display:flex;flex-wrap:wrap;gap:4px 16px}
+.pv .vc .th{flex:1;min-height:0;margin-top:12px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.pv .vc .th img{position:static;width:100%;height:100%;min-height:0;object-fit:cover;border-radius:calc(var(--r,18px) - 6px);border:1px solid #e3eaee}
+.pv .vc table{width:100%;border-collapse:collapse;font-size:12.8px}
+.pv .vc td{padding:4px 2px;border-bottom:1px solid #e3eaee;vertical-align:top}
+.pv .vc td:first-child{color:var(--mut);width:42%}.pv .vc td:last-child{font-weight:800;color:var(--tk)}
+.pv .vc .sz td{width:auto}.pv .vc .sz td:nth-child(2){direction:ltr;text-align:left;color:var(--t);font-weight:900}
+.pv .ok{color:#0e7a3f}.pv .no{color:#b4382b}
+.pv .vc .dm{flex:1;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border-radius:calc(var(--r,18px) - 6px);border:1px solid #e3eaee;padding:4px}
+.pv .vc .dm img{flex:1;min-height:0;max-width:100%;object-fit:contain}.pv .vc .dm small{font-size:11px;font-weight:800;color:var(--mut)}
+.pv .vc .qa{margin-top:auto;flex:none;display:flex;align-items:center;gap:8px;font-size:11px;line-height:1.5;color:var(--tk)}.pv .vc .qa span{flex:1;min-width:0}
+.pv .vc .a.big p{font-size:16.5px;line-height:2}.pv .vc .a.big li{font-size:15px;line-height:1.9}.pv .vc .a.big h3{font-size:15px}.pv .vc .a.big .ics{font-size:14px}
+.pv .vc .qa .qr{width:58px;height:58px;border:1px solid #e3eaee}.pv .vc .qa b{display:block}
+.flip .pv .obs{bottom:auto;left:auto;right:56px;top:calc(154px + var(--ph) - 52px)}
 `;
 
 /** رسم هندسي خفيف (شبكة + دوائر قياس) */
@@ -761,35 +804,41 @@ export function proPages(inp: CatInput): Built {
         index.push({ n: p.name, c: p.code, s: name, p: i });
         const d = splitDesc(p.desc ?? '');
         const photos = p.imgs.filter((u) => u !== p.dimImg);
-        const lay = cfg.layout === 'auto' ? ['c', 'a', 'b'][(i + si) % 3]! : (['a', 'b', 'c'][Number(cfg.layout) - 1] ?? 'c');
-        const p1 = photos[0] ?? '';
-        const p2 = photos[1] || p1;
-        const p3 = photos[2] || photos[1] || p1;
-        const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
-        const code = `<span class="code">${esc(p.code)}</span>`;
-        const specs: [string, string][] = [['الكود', p.code], ['القسم', cut(name, 22)], ...d.specs.slice(0, 2).map(([k, v]) => [cut(k, 14), cut(v, 20)] as [string, string])];
-        const qrc = X.qr && wa ? `<div class="chip qrc">${qr(waLink(p.code))}<span><b>امسح واطلب</b>واتساب بالكود</span></div>` : '';
-        const vurl = p.video ? (/^https?:/.test(p.video) ? p.video : `https://youtu.be/${p.video}`) : '';
-        const qrv = X.qr && vurl ? `<div class="chip qrc">${qr(vurl)}<span><b>🎬 شوف الفيديو</b>امسح بالموبايل</span></div>` : '';
-        const r2 = F.specs || qrc ? `<div class="r2">${F.specs ? specs.slice(0, (lay === 'b' ? 2 : 3) - (qrv ? 1 : 0)).map(([k, v]) => `<div class="chip k"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join('') : ''}${qrv}${qrc}</div>` : '';
-        const boxes: string[] = [];
-        if (d.intro) boxes.push(`<div class="chip hl"><b>عن المنتج</b>${esc(cut(d.intro, 120))}</div>`);
-        d.points.slice(0, 2).forEach((x, k) => boxes.push(`<div class="chip"><b>${k ? 'ميزة' : 'أهم ميزة'}</b>${esc(cut(x, 80))}</div>`));
-        const r1 = boxes.length ? `<div class="r1 n${boxes.length}">${boxes.join('')}</div>` : '<div></div>';
-        const bx = `<div class="bx">${r1}${r2}</div>`;
-        const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
+        // صورة «في الاستخدام»: المرفوعة للمنتج، وإلا بتاعة القسم، وإلا صورة تانية للمنتج
+        const useImg = cfg.prodUse[p.code] || cfg.secUse[name] || '';
+        const side = useImg || photos[1] || '';
+        const hero = photos[0] || side;
+        const extra = photos.filter((u) => u !== hero && u !== side).slice(0, 3);
+        const us = side && side !== hero ? `<div class="us"><img class="im" src="${esc(side)}" alt="">${useImg ? '<span>📷 في الاستخدام</span>' : ''}</div>` : '';
         const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
-        const ic = icHtml(p);
-        const nm = `<div class="nm"><small>${esc(name)}${p.brand ? ` · ${esc(p.brand)}` : ''}</small>${esc(p.name)}${ic ? `<div class="fis">${ic}</div>` : ''}</div>`;
+        const vt = `<div class="vt"><div><small>${esc(name)}${p.brand ? ` · ${esc(p.brand)}` : ''}${p.isNew ? '<span class="nw2">جديد</span>' : ''}</small><h1>${esc(p.name)}</h1></div>${st.showCode ? `<div class="ck"><small>كود المنتج</small><span>${esc(p.code)}</span></div>` : ''}</div>`;
+        // الكارت: الوصف والمميزات (يمين) + المواصفات والمقاسات والرسم والـ QR (شمال)
+        const pts = d.points.slice(0, 4);
+        const txtLen = d.intro.length + pts.join('').length;
+        const intro = d.intro ? `<p>${esc(cut(d.intro, 260))}</p>` : `<p>${esc(p.name)} من ${esc(inp.shop)}. ${esc(cfg.cta)}</p>`;
+        const ics = icons(p);
+        const thumbs = txtLen < 260 && extra.length ? `<div class="th">${extra.map((u) => `<img class="im" src="${esc(u)}" alt="">`).join('')}</div>` : '';
+        const colA = `<div class="a${txtLen < 200 && !thumbs ? ' big' : ''}"><h3>عن المنتج</h3>${intro}${pts.length ? `<ul>${pts.map((x) => `<li>${esc(cut(x, 110))}</li>`).join('')}</ul>` : ''}${ics.length ? `<div class="ics">${ics.map((x) => `<span>${x.i} ${esc(x.t)}</span>`).join('')}</div>` : ''}${thumbs}</div>`;
+        const sizedOf = (q: CatProduct) => !!q.size || /[0-9٠-٩]+\s*(سم|مم|cm|mm|م)(\s|$)/i.test(q.name);
+        const fk = sizedOf(p) ? famKey(p.name) : '';
+        const sibs = fk ? list.filter((q) => sizedOf(q) && famKey(q.name) === fk) : [];
+        const sizeOf = (q: CatProduct) => q.size || (q.name.match(/[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\s*(?:سم|مم|cm|mm|م)?/i)?.[0] ?? '').trim() || q.name;
+        const rows: [string, string][] = [];
+        if (p.size && sibs.length < 2) rows.push(['المقاس', p.size]);
+        if (p.finish) rows.push(['التشطيب', p.finish]);
+        if (p.brand) rows.push(['الماركة', p.brand]);
+        if (p.unit) rows.push(['الوحدة', p.unit]);
+        for (const [k, v] of d.specs) if (!rows.some((r) => r[0] === k)) rows.push([cut(k, 16), cut(v, 30)]);
+        const stkTxt = F.stock && p.inStock !== undefined ? `<span class="${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
+        const spec = F.specs && (rows.length || stkTxt) ? `<div><h3>المواصفات</h3><table>${rows.slice(0, sibs.length > 1 ? 2 : 6).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}${stkTxt ? `<tr><td>التوفر</td><td>${stkTxt}</td></tr>` : ''}</table></div>` : '';
+        const sz = sibs.length > 1 ? `<div><h3>المقاسات المتاحة</h3><table class="sz">${sibs.slice(0, 4).map((q) => `<tr><td>${esc(sizeOf(q))}</td><td>${esc(q.code)}</td><td>${F.stock && q.inStock !== undefined ? (q.inStock ? '<span class="ok">●</span>' : '<span class="no">○</span>') : ''}</td></tr>`).join('')}${sibs.length > 4 ? `<tr><td colspan="3">+ ${nn(sibs.length - 4)} مقاس كمان (في فهرس الأكواد)</td></tr>` : ''}</table></div>` : '';
+        const dm = p.dimImg ? `<div class="dm"><img src="${esc(p.dimImg)}" alt=""><small>📐 رسم المقاسات</small></div>` : '';
+        const vurl = p.video ? (/^https?:/.test(p.video) ? p.video : `https://youtu.be/${p.video}`) : '';
+        const qa = X.qr && (wa || vurl) ? `<div class="qa">${wa ? `${qr(waLink(p.code))}<span><b>امسح واطلب</b>واتساب بالكود</span>` : ''}${vurl ? `${qr(vurl)}<span><b>🎬 الفيديو</b>امسح بالموبايل</span>` : ''}</div>` : '';
+        const colB = `<div class="b">${spec}${sz}${dm}${qa}</div>`;
         const ob = `<div class="obs"><button type="button" class="ob" data-code="${esc(p.code)}" data-name="${esc(p.name)}">＋ أضف للطلب</button><button type="button" class="zb">🔍 كبّر الصور</button></div>`;
-        const nw = p.isNew ? '<span class="nw">جديد</span>' : '';
-        let inner = '';
-        if (lay === 'a' || lay === 'b') {
-          inner = `<img class="im i1" src="${esc(p1)}" alt=""><div class="sh"></div>${hd}${nm}${code}${stk}${dim}<img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${bx}`;
-        } else {
-          inner = `<div class="bnd"></div>${hd}${nm}<img class="im i1 bd" src="${esc(p1)}" alt=""><img class="im i2 bd" src="${esc(p2)}" alt=""><img class="im i3 bd" src="${esc(p3)}" alt="">${code}${stk}${dim}${bx}`;
-        }
-        return `<section class="pg pp l${lay}" data-code="${esc(p.code)}"${scol(si)}>${tabs(si)}${inner}${nw}${ob}${foot(i)}</section>`;
+        const ph = `<div class="ph">${hero ? `<img class="im i1" src="${esc(hero)}" alt="">` : ''}</div>`;
+        return `<section class="pg pp pv${us ? ' u' : ''}" data-code="${esc(p.code)}"${scol(si)}>${hd}${vt}${ph}${us}<div class="vc">${colA}${colB}</div>${ob}${foot(i)}</section>`;
       });
     };
 

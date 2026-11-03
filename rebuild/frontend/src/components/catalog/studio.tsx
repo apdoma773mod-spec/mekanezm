@@ -47,6 +47,7 @@ export function CatalogStudio() {
   const [mode, setMode] = useState<'shop' | 'gift'>('shop');
   const [gift, setGift] = useState({ name: '', title: '', from: 'عبده', message: GIFT_MESSAGE });
   const [view, setView] = useState('');
+  const [useQ, setUseQ] = useState('');
   const [busy, setBusy] = useState('');
   const [link, setLink] = useState('');
   const [siteLink, setSiteLink] = useState('');
@@ -145,7 +146,7 @@ export function CatalogStudio() {
 
   const input = (absolute: boolean): CatInput => {
     const f = absolute ? abs : (u: string) => u;
-    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
+    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), secUse: Object.fromEntries(Object.entries(cfg.secUse).map(([k, v]) => [k, f(v)])), prodUse: Object.fromEntries(Object.entries(cfg.prodUse).map(([k, v]) => [k, f(v)])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
     return {
       shop: 'ميكانيزم',
       tagline: String((data as Record<string, unknown> | undefined)?.tagline ?? ''),
@@ -209,7 +210,9 @@ export function CatalogStudio() {
     setBusy('up');
     try {
       const url = await uploadSiteImage(f);
-      if (fileFor.current.startsWith('art:')) setArt(fileFor.current.slice(4), { img: url });
+      if (fileFor.current.startsWith('use:s:')) set({ secUse: { ...cfg.secUse, [fileFor.current.slice(6)]: url } });
+      else if (fileFor.current.startsWith('use:p:')) set({ prodUse: { ...cfg.prodUse, [fileFor.current.slice(6)]: url } });
+      else if (fileFor.current.startsWith('art:')) setArt(fileFor.current.slice(4), { img: url });
       else if (fileFor.current === 'showroom') set({ showroomImgs: [...cfg.showroomImgs, url].slice(0, 5) });
       else if (fileFor.current === 'cover') set({ cover: { ...cfg.cover, imgs: [url, ...cfg.cover.imgs].slice(0, 3) } });
       else set({ secImgs: { ...cfg.secImgs, [fileFor.current]: url } });
@@ -365,13 +368,36 @@ export function CatalogStudio() {
       </Sec>
 
       <Sec title="📄 شكل صفحة المنتج">
-        <label style={lab}>التصميم</label>
-        <select value={cfg.layout} onChange={(e) => set({ layout: e.target.value as CatCfg['layout'] })}>
-          <option value="auto">تلقائي (بينوّع بين التصاميم التلاتة)</option>
-          <option value="1">١ — صورة كاملة وكتلة لون بزاوية</option>
-          <option value="2">٢ — كتلة داكنة وصورة طالعة منها وشريط صور</option>
-          <option value="3">٣ — نصف صورة ولوح داكن</option>
-        </select>
+        <p className="bz-note" style={{ marginTop: 0 }}>صفحة المنتج: صورة المنتج كبيرة وواضحة، وجنبها صورته وهو راكب (مثلًا درج راكب عليه المجرى)، وتحتهم كارت واحد فيه الوصف والمواصفات والمقاسات.</p>
+        <label style={lab}>📷 صورة «في الاستخدام» لكل قسم (بتظهر على كل منتجات القسم، مثلًا: درج للمجاري، دولاب للمفصلات)</label>
+        {secNames.map((n) => {
+          const u = cfg.secUse[n] ?? '';
+          return (
+            <div key={n} style={{ display: 'flex', gap: 10, alignItems: 'center', borderTop: '1px solid #e8eef0', padding: '6px 0', flexWrap: 'wrap' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {u ? <img src={u} alt="" style={{ width: 70, height: 50, objectFit: 'cover', borderRadius: 8 }} /> : <span style={{ width: 70, textAlign: 'center', color: '#9aa9ad' }}>—</span>}
+              <b style={{ flex: 1, minWidth: 120 }}>{n}</b>
+              <button type="button" className="secondary" disabled={!!busy} onClick={() => { fileFor.current = `use:s:${n}`; file.current?.click(); }}>📷 ارفع</button>
+              {u && <button type="button" className="secondary" onClick={() => { const x = { ...cfg.secUse }; delete x[n]; set({ secUse: x }); }}>شيلها</button>}
+            </div>
+          );
+        })}
+        <label style={lab}>📷 صورة حقيقية لمنتج معيّن (بتغلب صورة القسم) — دوّر بالاسم أو الكود</label>
+        <input style={inp} value={useQ} placeholder="مثلًا: مجرى 45 أو P1003" onChange={(e) => setUseQ(e.target.value)} />
+        {(useQ.trim() ? all.filter((p) => `${p.name} ${p.code}`.includes(useQ.trim())).slice(0, 8) : all.filter((p) => cfg.prodUse[p.code])).map((p) => {
+          const u = cfg.prodUse[p.code] ?? '';
+          return (
+            <div key={p.code} style={{ display: 'flex', gap: 10, alignItems: 'center', borderTop: '1px solid #e8eef0', padding: '6px 0', flexWrap: 'wrap' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.imgs[0]} alt="" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 8 }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {u ? <img src={u} alt="" style={{ width: 70, height: 50, objectFit: 'cover', borderRadius: 8, border: '2px solid var(--primary,#087f8c)' }} /> : null}
+              <span style={{ flex: 1, minWidth: 140 }}>{p.name} <small style={{ color: '#62767c' }}>({p.code})</small></span>
+              <button type="button" className="secondary" disabled={!!busy} onClick={() => { fileFor.current = `use:p:${p.code}`; file.current?.click(); }}>📷 {u ? 'غيّر' : 'ارفع'}</button>
+              {u && <button type="button" className="secondary" onClick={() => { const x = { ...cfg.prodUse }; delete x[p.code]; set({ prodUse: x }); }}>شيلها</button>}
+            </div>
+          );
+        })}
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 10 }}>
           {(
             [
