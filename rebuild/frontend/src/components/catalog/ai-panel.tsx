@@ -45,7 +45,13 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
     setBusy((b) => ({ ...b, [p.code]: true }));
     setErrs((x) => ({ ...x, [p.code]: '' }));
     try {
-      const r = await api.post<AiOut>('/web/catalog/ai/product', { code: p.code, name: p.name, section: p.section ?? '', desc: (p.desc ?? '').slice(0, 3000), img: p.imgs.find((u) => u !== p.dimImg) ?? '' });
+      const req = () => api.post<AiOut & { pending?: boolean }>('/web/catalog/ai/product', { code: p.code, name: p.name, section: p.section ?? '', desc: (p.desc ?? '').slice(0, 3000), img: p.imgs.find((u) => u !== p.dimImg) ?? '' });
+      // السيرفر بيكمّل الشغل في الخلفية لو طوّل: نسأله تاني لحد ما يخلص
+      let r = await req();
+      for (let n = 0; r.pending && n < 8; n++) {
+        await new Promise((x) => setTimeout(x, 10000));
+        r = await req();
+      }
       const old = ai[p.code];
       const got: AiInfo = { desc: r.desc || old?.desc || '', features: r.features.length ? r.features : (old?.features ?? []), specs: r.specs.length ? r.specs : (old?.specs ?? []), img: r.img || old?.img || '', sources: r.sources, searched: r.desc || r.specs.length ? !!r.searched : old?.searched, at: new Date().toISOString() };
       const err = [r.textError && `الوصف والمقاسات: ${r.textError}`, r.imgError && `الصورة: ${r.imgError}`].filter(Boolean).join(' — ');

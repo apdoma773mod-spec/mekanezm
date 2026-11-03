@@ -148,10 +148,33 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     return { data: buf.toString('base64'), mime };
   };
 
+  /**
+   * الشغل بياخد أحيانًا أكتر من دقيقة (صورة + بحث)، والاتصال من الأيقونة (Vercel → ngrok) بيقطع قبلها.
+   * فالشغل بيكمّل في الخلفية لكل كود: الطلب بيستنى لحد ~٢٥ ثانية، ولو لسه بيقول «لسه بيشتغل»، والضغطة الجاية بتاخد النتيجة الجاهزة.
+   */
+  const jobs = new Map<string, { run: Promise<AiResult>; done?: AiResult; at: number }>();
+  const WAIT_MS = Number(process.env.CATALOG_AI_WAIT_MS) || 25000;
   app.post('/catalog/ai/product', { preHandler: app.requireAdmin, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request) => {
     const p = parse(body, request.body);
     const k = await getKey();
     if (!k) throw badRequest('محتاج مفتاح Gemini الأول (مجاني من aistudio.google.com)');
+    for (const [c, j] of jobs) if (Date.now() - j.at > 3600_000) jobs.delete(c);
+    let job = jobs.get(p.code);
+    if (!job || (job.done && Date.now() - job.at > 30 * 60_000)) {
+      const run = runJob(k.key, p);
+      job = { run, at: Date.now() };
+      jobs.set(p.code, job);
+      const jj = job;
+      void run.then((r) => void (jj.done = r)).catch(() => jobs.delete(p.code));
+    }
+    const got = job.done ?? (await Promise.race([job.run, new Promise<null>((r) => setTimeout(() => r(null), WAIT_MS))]));
+    if (!got) return { desc: '', features: [], specs: [], sources: [], searched: false, img: '', pending: true, textError: '⏳ لسه بيشتغل (الصورة بتاخد وقت) — دوس «اعمل» تاني كمان دقيقة وهتلاقيه جاهز' };
+    jobs.delete(p.code);
+    return got;
+  });
+
+  const runJob = async (key: string, p: z.infer<typeof body>): Promise<AiResult> => {
+    const k = { key };
     const photo = await loadImage(p.img);
     const imgPart = photo ? [{ inline_data: { mime_type: photo.mime, data: photo.data } }] : [];
     const out: AiResult = { desc: '', features: [], specs: [], sources: [], searched: false, img: '' };
@@ -201,5 +224,5 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       p.want.image ? image().catch((e) => void (out.imgError = friendly(e))) : null,
     ]);
     return out;
-  });
+  };
 }
