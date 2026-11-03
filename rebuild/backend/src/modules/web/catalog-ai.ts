@@ -158,8 +158,15 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       if (!/^[0-9a-f]{32}$/i.test(account)) throw badRequest('الـ Account ID غلط — ده ٣٢ حرف ورقم من صفحة Workers AI');
       if (!/^[!-~]{30,300}$/.test(token)) throw badRequest('الـ Token غلط — انسخه كامل');
       // نتأكد إنه شغال قبل ما نحفظه
-      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/models/search?per_page=1`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }).catch(() => null);
-      if (!r?.ok) throw badRequest('Cloudflare رفض البيانات دي — اتأكد من الـ Account ID والـ Token (صلاحية Workers AI)');
+      // تجربة حقيقية صغيرة (موديل نص صغير، كلمة واحدة) — نفس الصلاحية اللي الصور محتاجاها
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/@cf/meta/llama-3.2-1b-instruct`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ prompt: 'hi', max_tokens: 1 }), signal: AbortSignal.timeout(30000) }).catch(() => null);
+      if (!r?.ok) {
+        const j = (await r?.json().catch(() => null)) as { errors?: { code?: number; message?: string }[] } | null;
+        const e = j?.errors?.[0];
+        request.log.warn({ status: r?.status, cf: e }, 'cloudflare check failed');
+        const why = !r ? 'مفيش اتصال بـ Cloudflare' : r.status === 401 || r.status === 403 || e?.code === 10000 ? 'الـ Token مش مقبول للحساب ده (يمكن الـ Account ID مش بتاع نفس الحساب، أو الـ Token اتنسخ ناقص)' : r.status === 404 || e?.code === 7003 ? 'الـ Account ID غلط' : `${r.status} ${e?.message ?? ''}`;
+        throw badRequest(`Cloudflare رفض: ${why} — Cloudflare: ${String(e?.message ?? r?.status ?? '').slice(0, 120)}`);
+      }
       await db.setting.upsert({ where: { key: CF_SETTING }, create: { key: CF_SETTING, value: { account, token }, updatedById: actor.id }, update: { value: { account, token }, updatedById: actor.id } });
     }
     await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: CF_SETTING, after: { set: !!account }, ip: actor.ip });
