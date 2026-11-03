@@ -141,7 +141,7 @@ async function detectPeople(times,frame,prog){const m=await pose();const out=[];
  return out}
 /* الراس عند لحظة t (بيدمج أقرب عينتين عشان مايتنططش) */
 function headAt(t){const P=D&&D.people;
- if(!P){if(!S.smart||!V||V.videoWidth>V.videoHeight)return null;return {x0:.36,x1:.64,y0:.13,y1:.36,guess:1}}   // من غير كشف: تقدير لفيديو طولي
+ if(!P){if(!S.smart||!V||V.videoWidth>V.videoHeight)return null;return {x0:.30,x1:.70,y0:.08,y1:.42,guess:1}}   // من غير كشف: تقدير لفيديو طولي
  if(!P.length)return null;let lo=0,hi=P.length-1;while(lo<hi){const mid=(lo+hi+1)>>1;if(P[mid].t<=t)lo=mid;else hi=mid-1}
  const a=P[lo],b=P[Math.min(P.length-1,lo+1)];if(Math.abs(a.t-t)>1.6&&Math.abs(b.t-t)>1.6)return null;
  if(a.none&&b.none)return null;if(a.none)return b;if(b.none||b===a)return a;const k=Math.max(0,Math.min(1,(t-a.t)/Math.max(.01,b.t-a.t)));
@@ -238,7 +238,7 @@ function xf(t){const [W,H]=[CV.width,CV.height],vw=V.videoWidth,vh=V.videoHeight
  if(!side){if(w>=W)x=Math.min(0,Math.max(W-w,x));if(h>=H)y=Math.min(0,Math.max(H-h,y))}
  return {side,x,y,w,h,z,k0,vw,vh}}
 /* صندوق الراس على الكانفاس (مع هامش) — للكلام والكروت يبعدوا عنه */
-function headRect(t){if(!S.smart)return null;const hd=headAt(t);if(!hd)return null;const f=xf(t);if(f.side)return null;const u=CV.width/1080,m=24*u;
+function headRect(t){if(!S.smart)return null;const hd=headAt(t);if(!hd)return null;const f=xf(t);if(f.side)return null;const u=CV.width/1080,m=46*u;
  return [f.y+hd.y0*f.h-m,f.y+hd.y1*f.h+m]}
 /* بيدوّر على أقرب مكان لـ pref مايلمسش أي حاجة من avoid (كلها [من، لـ] على المحور الرأسي) */
 function freeY(h,pref,avoid){const H=CV.height,st=H*.02;
@@ -457,6 +457,7 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
  if(f.side){/* فيديو عرضي في ٩:١٦: خلفية مكبّرة غامقة + الفيديو كامل في النص */const kb=Math.max(W/f.vw,H/f.vh)*1.1;CX.globalAlpha=.35;CX.drawImage(V,(W-f.vw*kb)/2,(H-f.vh*kb)/2,f.vw*kb,f.vh*kb);CX.globalAlpha=1;CX.drawImage(V,(W-f.w)/2,(H-f.h)/2,f.w,f.h)}
  else CX.drawImage(V,f.x,f.y,f.w,f.h);
  applyLook(t,W,H);
+ const BR=brActive(t);if(BR)drawBroll(BR,t,W,H);else BRC.forEach(c=>{if(c.v&&!c.v.paused)c.v.pause()});
  if(O('trans')==='flash'){const d=lastCut(t);if(d!=null&&d<.16){CX.fillStyle=`rgba(255,255,255,${(.55*(1-d/.16)).toFixed(3)})`;CX.fillRect(0,0,W,H)}}
  const u=W/1080,F=`"${S.font}",Cairo,sans-serif`,acc=S.color;CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
  /* المقدمة والخاتمة بتوقيت الفيديو بعد القص (عشان ماتتشالش مع السكتات) */
@@ -469,7 +470,7 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
   const ly=y0+L.length*tsz*1.2-tsz*.2;CX.fillStyle=acc;CX.fillRect(W/2-W*.15*ease(ot/.6),ly,W*.3*ease(ot/.6),8*u);CX.font=`700 ${Math.round(40*u)}px ${F}`;CX.fillText(br.shop||'ميكانيزم',W/2,ly+48*u);CX.globalAlpha=1}
  /* الكروت وعناوين الأقسام (الوضع الآمن: مزاحة شوية بعيد عن أزرار المنصة اللي على اليمين) */
  if(O('safe')){CX.save();CX.translate(-W*.06,0)}
- EV.forEach((e,i)=>{if(!showEv(e)||t<e.s||t>e.e||inOut||inIntro)return;if(evY(e,i)==null)return;if(e.type==='anim'){drawAnimPanel(e,evY(e,i),t,W,H,u,F,acc);CX.globalAlpha=1;return}const a=ease((t-e.s)/.3),out=1-ease((t-e.e+.3)/.3),al=Math.min(a,out);if(al<=0)return;CX.globalAlpha=al;const y=evY(e,i),sc=.8+.2*back((t-e.s)/.4);
+ EV.forEach((e,i)=>{if(BR||!showEv(e)||t<e.s||t>e.e||inOut||inIntro)return;if(evY(e,i)==null)return;if(e.type==='anim'){drawAnimPanel(e,evY(e,i),t,W,H,u,F,acc);CX.globalAlpha=1;return}const a=ease((t-e.s)/.3),out=1-ease((t-e.e+.3)/.3),al=Math.min(a,out);if(al<=0)return;CX.globalAlpha=al;const y=evY(e,i),sc=.8+.2*back((t-e.s)/.4);
   CX.save();CX.translate(W/2,y);if(chipK(e)!==1)CX.scale(chipK(e),chipK(e));
   if(e.type==='topic'){/* عنوان قسم: شريط داخل من اليمين */const sl=(1-ease((t-e.s)/.45))*W;CX.translate(sl,0);CX.font=`900 ${Math.round(58*u)}px ${F}`;const tw=CX.measureText(e.label).width,bw=Math.min(W*.92,tw+140*u);
    dk(-bw/2,-62*u,bw,124*u,18*u,.86);CX.fillStyle=acc;CX.fillRect(bw/2-22*u,-62*u,22*u,124*u);CX.fillStyle='#fff';CX.fillText(e.label,-11*u,3*u)}
@@ -496,14 +497,14 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
    dk(-bw/2,-60*u,bw,120*u,60*u,.88);CX.lineWidth=4*u;CX.strokeStyle=acc;CX.stroke();drawIcon(ic,bw/2-60*u,0,46*u,t-e.s,acc);CX.fillStyle='#fff';CX.fillText(e.label,-45*u,3*u)}}
   CX.restore();CX.globalAlpha=1});
  /* ملصق الكلمة المهمة: إيموجي بينط + الكلمة كبيرة مايلة + خطوط انفجار */
- STK.forEach((x,i)=>{if(inOut||inIntro||t<x.s||t>x.e)return;const key='s'+i;let y=LAY.get(key);if(y==null){const cc=capAt(x.s);y=stackBase()-165*u;LAY.set(key,y)}
+ STK.forEach((x,i)=>{if(BR||inOut||inIntro||t<x.s||t>x.e)return;const key='s'+i;let y=LAY.get(key);if(y==null){const cc=capAt(x.s);y=stackBase()-165*u;LAY.set(key,y)}
   const p=(t-x.s)/.35,al=Math.min(1,p*1.6,(x.e-t)/.25);if(al<=0)return;CX.save();CX.globalAlpha=Math.max(0,al);CX.translate(W/2,y);
   const bs=Math.max(.01,back(p));CX.save();CX.rotate(-.07);CX.scale(bs,bs);
   CX.strokeStyle=acc;CX.lineWidth=7*u;CX.lineCap='round';const br2=ease((t-x.s)/.45);for(let k=0;k<10;k++){const a=k/10*Math.PI*2,r0=150*u+90*u*br2,r1=r0+40*u*(1-br2);CX.globalAlpha=Math.max(0,al*(1-br2*.85));CX.beginPath();CX.moveTo(Math.cos(a)*r0*1.5,Math.sin(a)*r0*.7);CX.lineTo(Math.cos(a)*r1*1.5,Math.sin(a)*r1*.7);CX.stroke()}
   CX.globalAlpha=Math.max(0,al);CX.font=`900 ${Math.round(128*u)}px ${F}`;CX.lineJoin='round';CX.lineWidth=18*u;CX.strokeStyle='#000';CX.strokeText(x.w,0,30*u);CX.fillStyle=acc;CX.fillText(x.w,0,30*u);CX.restore();
   const bob=Math.sin((t-x.s)*9)*10*u*Math.max(0,1-(t-x.s)/1.2);CX.font=`${Math.round(96*u)}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`;CX.fillText(x.em,0,-95*u+bob);CX.restore()});
  /* نداء للشراء في نص الفيديو */
- if(CTA&&!inOut&&t>=CTA.s&&t<=CTA.e){const p=ease((t-CTA.s)/.4),q=1-ease((t-CTA.e+.35)/.35),al=Math.min(p,q);if(al>0){let y=LAY.get('cta');if(y==null){const cc=capAt(CTA.s);y=stackBase()-70*u;LAY.set('cta',y)}
+ if(CTA&&!BR&&!inOut&&t>=CTA.s&&t<=CTA.e){const p=ease((t-CTA.s)/.4),q=1-ease((t-CTA.e+.35)/.35),al=Math.min(p,q);if(al>0){let y=LAY.get('cta');if(y==null){const cc=capAt(CTA.s);y=stackBase()-70*u;LAY.set('cta',y)}
   const txt='📞 '+[br.cta||'اطلب دلوقتي',br.phone?ar(br.phone):''].filter(Boolean).join(' • ');CX.font=`800 ${Math.round(46*u)}px ${F}`;const bw=Math.min(W*.92,CX.measureText(txt).width+100*u);
   CX.save();CX.globalAlpha=al;CX.translate(W/2,y+(1-p)*80*u);const pl=1+.04*Math.sin((t-CTA.s)*7);CX.scale(pl,pl);rr(-bw/2,-58*u,bw,116*u,58*u);CX.fillStyle=acc;CX.fill();CX.lineWidth=5*u;CX.strokeStyle='#fff';CX.stroke();CX.fillStyle='#111';CX.fillText(txt,0,4*u);CX.restore()}}
  /* الكلام */
@@ -569,6 +570,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  el.innerHTML=`<h1>🎬 مونتاج ذكي</h1><p class="mu">ارفع الفيديو اللي صورته — السيستم بيسمع كلامك، يشيل السكتات والإعادات، يكتب الكلام على الفيديو من غير ما يغطي وشك، ويظهر المقاسات والأصناف والأسعار والخطوات وقت ما تقولها، ويظبط الألوان. اختار الطريقة وبعدين «صدّر» أو «اعمله في الخلفية».</p>
  <div id="sm_auth"></div>
  <div class="p"><h2>١) الفيديو</h2><label class="b" style="width:100%;cursor:pointer">📹 اختار الفيديو<input type="file" id="sm_f" accept="video/*" style="display:none"></label><div id="sm_fi" class="mu"></div></div>
+ <div class="p"><h2>🎞️ فيديوهات الإدراج (اختياري)</h2><p class="mu" style="margin:0 0 6px">ارفع الفيديوهات اللي عايزها تظهر تحت وانت بتتكلم. كل ما تقول «هيظهرلكم فيديو تحت» أو «هتشوفوا» أو «يظهر»، بيظهر الفيديو اللي بعده بالترتيب في نص الشاشة تحت وشك، ويرجع لوحده. (بيشتغل في «اعمله هنا على الموبايل» مش في الخلفية).</p><label class="b o" style="width:100%;cursor:pointer">➕ ضيف فيديو إدراج<input type="file" id="sm_bf" accept="video/*" multiple style="display:none"></label><div id="sm_bi" class="mu"></div></div>
  <div class="p"><h2>٢) طريقة المونتاج</h2><div id="sm_tp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
   <details style="margin-top:10px" ${Object.keys(S.o).length?'open':''}><summary style="cursor:pointer;font-weight:800;padding:6px 0">⚙️ تخصيص (غيّر أي حاجة في القالب)</summary><div id="sm_op" style="margin-top:6px"></div></details>
   <div class="r2" style="margin-top:10px"><label>الخط<select id="sm_ft">${FONTS.map(f=>`<option value="${f[0]}" ${S.font===f[0]?'selected':''} style="font-family:'${f[0]}'">${f[1]}</option>`).join('')}</select></label>
@@ -585,6 +587,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
   <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
+  <div class="p"><h2>🎞️ أماكن فيديوهات الإدراج</h2><div id="sm_bl"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
  <div id="sm_out"></div>
  <div class="p" id="sm_jobsbox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">☁️ فيديوهاتي (في الخلفية)</h2><button type="button" class="b o" id="sm_rf" style="flex:none;padding:8px 14px">🔄 تحديث</button></div><small id="sm_rt" class="mu"></small><div id="sm_jobs" class="mu" style="margin-top:8px">⏳</div></div>`;
@@ -598,6 +601,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
+ $s('sm_bf').onchange=e=>{if(e.target.files&&e.target.files.length)addBrollFiles(e.target.files);e.target.value=''};$s('sm_bi').onclick=e=>{const b=e.target.closest('[data-brd]');if(!b)return;const c=BRC.splice(+b.dataset.brd,1)[0];try{c.v.pause();URL.revokeObjectURL(c.url)}catch(x){}paintBrIn();if(D){build();renderBR();draw(V.currentTime)}};paintBrIn();
  $s('sm_go').onclick=go;$s('sm_bg').onclick=cloudSubmit;$s('sm_rf').onclick=async()=>{const b=$s('sm_rf');b.disabled=true;b.textContent='⏳';await loadJobs();b.disabled=false;b.textContent='🔄 تحديث'};loadJobs();
  /* تحديث لوحده: كل ٥ ثواني لو فيه فيديو شغال، وأول ما ترجع للتطبيق */
  clearInterval(JT);let tick=0;JT=setInterval(()=>{tick++;if(!$s('sm_jobs')||document.visibilityState!=='visible')return;const act=Object.values(JOBS).some(j=>/uploading|queued|working/.test(j.status));if(act||tick%3===0)loadJobs()},5000);
@@ -749,6 +753,51 @@ function mount(){if($s('v-smart'))return;const s=document.createElement('section
  if(tiles)tiles.insertAdjacentHTML('afterbegin',`<button class="tile" data-go="skl"><span class="ic">🧠</span>سكيل من لينك</button>`);
  let sp=false;document.addEventListener('click',e=>{const b=e.target.closest('[data-go="skl"]');if(!b)return;if(!sp){sklPaint();sp=true}setTimeout(()=>{document.querySelectorAll('.v').forEach(x=>x.classList.toggle('on',x.id==='v-skl'));document.querySelectorAll('#rail button').forEach(x=>x.classList.toggle('on',x.dataset.go==='skl'));scrollTo(0,0)},0)});
  let painted=false;document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;if(b.dataset.go==='smart'){if(!painted){paint();painted=true}setTimeout(()=>{document.querySelectorAll('.v').forEach(x=>x.classList.toggle('on',x.id==='v-smart'));document.querySelectorAll('#rail button').forEach(x=>x.classList.toggle('on',x.dataset.go==='smart'))},0)}else if(V&&!V.paused)V.pause()})}
+/* ---------- 🎞️ فيديوهات الإدراج (B-roll): لما تقول «هيظهرلكم فيديو تحت» يظهر الفيديو التاني تحت وانت فوق ---------- */
+let BRC=[],BRL=[],BRM=[],BRX=new Set();   // BRC: الفيديوهات المرفوعة، BRL: أماكن الإدراج، BRM: اللي ضفتها بإيدك، BRX: اللي شلتها
+const BR_ESC=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function addBrollFiles(files){[...files].forEach(f=>{const url=URL.createObjectURL(f),v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;v.setAttribute('webkit-playsinline','');
+  const c={name:f.name,url,v,dur:0};v.onloadedmetadata=()=>{c.dur=v.duration||0;paintBrIn();if(D){build();renderBR();try{draw(V.currentTime)}catch(e){}}};v.load();BRC.push(c)});paintBrIn()}
+function paintBrIn(){const el=$s('sm_bi');if(el)el.innerHTML=BRC.length?BRC.map((c,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="flex:1">🎞️ ${i+1}. ${BR_ESC(c.name)} ${c.dur?'— '+fmt(c.dur):''}</span><button type="button" class="b o" data-brd="${i}" style="flex:none;padding:4px 10px">✕</button></div>`).join(''):''}
+/* كلمات التنبيه: الفعل «يظهر/هتشوف/هعرض…» أو «تحت» جنب «فيديو/دلوقتي/اهو». الإدراج بيبدأ لما الجملة تخلص */
+function brCues(){const W=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W.push({w:norm(w),e:c.s+d*(i+1)/n}))});
+ const hit=[];W.forEach((x,i)=>{const w=x.w;let ok=/ظهر/.test(w)||/^(هتشوف|هنشوف|شوفو|اتفرجو|هتتفرج|هعرض|اعرض|هنعرض|هتلاقو)/.test(w);
+  if(!ok&&w==='تحت'){const nb=W.slice(Math.max(0,i-3),i+4).map(y=>y.w).join(' ');ok=/فيديو|ظهر|اهو|دلوقتي|شوف|بص|هنا/.test(nb)}
+  if(!ok&&/^فيديو/.test(w)){const nb=W.slice(i,i+4).map(y=>y.w).join(' ');ok=/تحت|التاني|الاخر|ده/.test(nb)&&/ظهر|شوف|هتشوف|دلوقتي/.test(W.slice(Math.max(0,i-3),i+1).map(y=>y.w).join(' '))}
+  if(ok)hit.push(x.e)});
+ const out=[];hit.forEach(t=>{const l=out[out.length-1];if(l!=null&&t-l<3.2)out[out.length-1]=t;else out.push(t)});return out.filter(t=>t>.8)}
+function computeBroll(){BRL=[];if(!BRC.length||!D)return;const dur=D.dur||(V&&V.duration)||0;let cues=brCues();
+ const spare=BRC.length-cues.length;if(spare>0&&CAP.length){const used=cues.slice();for(let k=1;k<=spare;k++){const want=dur*k/(spare+1);const c=CAP.filter(x=>x.e<dur-2&&used.every(u=>Math.abs(u-x.e)>6)).sort((a,b)=>Math.abs(a.e-want)-Math.abs(b.e-want))[0];if(c){cues.push(c.e);used.push(c.e)}}}
+ cues.sort((a,b)=>a-b);const L=[];
+ cues.forEach((t,i)=>{if(BRX.has(Math.round(t)))return;const c=BRC[i%BRC.length],len=c&&c.dur;if(!len)return;const g=inGap(t);const s=g?g[1]:t,nx=cues[i+1]!=null?cues[i+1]-.2:1e9;const e=Math.min(s+Math.min(len,7),nx,dur||1e9);if(e-s>=1.8)L.push({s,e,c})});
+ BRM.forEach(m=>{const c=BRC[m.i];if(c&&c.dur)L.push({s:m.s,e:Math.min(m.s+Math.min(c.dur,7),dur||1e9),c,man:m})});
+ L.sort((a,b)=>a.s-b.s);BRL=L}
+/* مكان اللوحة: تحت راسك (بعيد عن الوش) وفوق الكلام */
+function brGeom(t){const [W,H]=[CV.width,CV.height],u=W/1080,hr=headRect(t),top=Math.max(H*.47,hr?hr[1]+10*u:0);
+ const cf=CF(),lh=Math.round(cf.sz*u*S.size)*1.34,bot=O('cap')==='none'?H*.93:capBottom()-2*lh-24*u;if(top>H*.62||bot-top<H*.17)return null;
+ const px=W*.04;return {x:px,y:top,w:W-2*px,h:bot-top}}
+function brActive(t){const b=BRL.find(x=>t>=x.s&&t<x.e);return b&&brGeom(t)?b:null}
+function brSync(b,t){const v=b.c.v;if(!v||v.readyState<2)return;const rel=Math.min(Math.max(0,t-b.s),Math.max(0,(b.c.dur||1)-.05)),pl=V&&!V.paused;
+ if(pl){if(Math.abs(v.currentTime-rel)>.4)v.currentTime=rel;if(v.paused)v.play().catch(()=>{})}else{if(!v.paused)v.pause();if(Math.abs(v.currentTime-rel)>.04)v.currentTime=rel}}
+function drawBroll(b,t,W,H){const g=brGeom(t),u=W/1080,acc=S.color,v=b.c.v;if(!g)return;brSync(b,t);
+ const pin=ease((t-b.s)/.4),pout=1-ease((t-b.e+.3)/.3),p=Math.min(pin,pout);if(p<=0)return;
+ const sl=(1-pin)*(H-g.y)*.3+(1-pout)*(H-g.y)*.2,sc=.96+.04*p;
+ CX.save();CX.globalAlpha=p;CX.translate(W/2,g.y+g.h/2+sl);CX.scale(sc,sc);const x=-g.w/2,y=-g.h/2,r=34*u;
+ CX.save();CX.shadowColor='rgba(0,0,0,.55)';CX.shadowBlur=40*u;CX.shadowOffsetY=10*u;rr(x,y,g.w,g.h,r);CX.fillStyle='#000';CX.fill();CX.restore();
+ CX.save();rr(x,y,g.w,g.h,r);CX.clip();
+ if(v&&v.videoWidth&&v.readyState>=2){const k=Math.max(g.w/v.videoWidth,g.h/v.videoHeight),dw=v.videoWidth*k,dh=v.videoHeight*k;CX.drawImage(v,x+(g.w-dw)/2,y+(g.h-dh)/2,dw,dh)}
+ else{CX.fillStyle='#111';CX.fillRect(x,y,g.w,g.h)}
+ const pr=Math.min(1,Math.max(0,(t-b.s)/Math.max(.1,b.e-b.s)));CX.fillStyle=acc;CX.fillRect(x,y+g.h-8*u,g.w*pr,8*u);CX.restore();
+ rr(x,y,g.w,g.h,r);CX.lineWidth=6*u;CX.strokeStyle=acc;CX.stroke();CX.restore();CX.globalAlpha=1}
+function renderBR(){const el=$s('sm_bl');if(!el)return;
+ if(!BRC.length){el.innerHTML='<p class="mu">ارفع فيديو الإدراج من «٢) فيديوهات الإدراج» وهيظهر هنا مكانه.</p>';return}
+ el.innerHTML=(BRL.map((b,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button type="button" class="b o" data-brs="${b.s}" style="flex:none;min-width:58px;padding:6px">${fmt(b.s)}</button><span style="flex:1">🎞️ ${BR_ESC(b.c.name)} (${(b.e-b.s).toFixed(1)}ث)</span><button type="button" class="b o" data-brx="${i}" style="flex:none;padding:6px 10px">✕</button></div>`).join('')||'<p class="mu">مفيش مكان إدراج — قول «هيظهرلكم فيديو تحت» في الفيديو، أو ضيف مكان بإيدك.</p>')+
+ `<button type="button" class="b o" id="sm_bad" style="width:100%">➕ ضيف الإدراج هنا (عند المشهد الحالي)</button>`;
+ el.onclick=e=>{const s=e.target.closest('[data-brs]');if(s){V.currentTime=+s.dataset.brs;draw(V.currentTime);return}
+  const x=e.target.closest('[data-brx]');if(x){const b=BRL[+x.dataset.brx];if(b.man)BRM=BRM.filter(m=>m!==b.man);else BRX.add(Math.round(b.s));computeBroll();renderBR();draw(V.currentTime);return}
+  if(e.target.id==='sm_bad'){if(!BRC.length)return say('ارفع فيديو الإدراج الأول');const i=BRM.length%BRC.length;BRM.push({s:+(V.currentTime||0).toFixed(2),i});computeBroll();renderBR();draw(V.currentTime)}}}
+const _build0=build;build=function(){const r=_build0.apply(this,arguments);try{computeBroll()}catch(e){console.warn('broll',e)}return r};
+const _renderLists0=renderLists;renderLists=function(){const r=_renderLists0.apply(this,arguments);try{renderBR()}catch(e){}return r};
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */
 (window.__ready&&window.__ready.then?window.__ready:Promise.resolve()).then(()=>setTimeout(mount,0),()=>setTimeout(mount,0));
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA}),_test:{build,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
