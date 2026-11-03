@@ -6,11 +6,13 @@ import type { ContactDto, ProductDto } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { waNum } from '@/components/hy/ui';
 import { useModal } from '@/components/modals/modal-host';
+import { CatalogStudio } from '@/components/catalog/studio';
 import { HtmlPreview } from '@/components/ui/html-preview';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
+import { buildProCatalog } from '@/lib/catalog-pro';
 import { money } from '@/lib/format';
 import { vn } from '@/lib/import-daily';
 import { useKv } from '@/lib/kv';
@@ -37,7 +39,8 @@ const TABS = [
   ['lapsed', '😴 عملاء غايبين'],
   ['points', '⭐ نقاط الصنايعية'],
   ['sup', '⚖️ مقارنة الموردين'],
-  ['cat', '📖 كتالوج'],
+  ['catpro', '🌟 كتالوج احترافي'],
+  ['cat', '📖 كتالوج بسيط'],
   ['log', '🕵️ سجل العمليات'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -1230,6 +1233,19 @@ function Catalog() {
   };
   const picked = prods.filter((p) => !off.has(p.category || 'بدون تصنيف') && (!stock || p.qty > 0)).map((p) => ({ p, img: imgOf(p) })).filter((x) => !needImg || x.img);
   const esc = (s: string) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  /** 🌟 الكتالوج الاحترافي: صفحة كاملة لكل منتج منشور على الموقع (صور كبيرة + مواصفات + مقاسات) */
+  const buildPro = () => {
+    const d = site.data?.data;
+    if (!d) return toast('بيانات الموقع لسه بتحمّل', 'bad');
+    const secName = Object.fromEntries(d.sections.map((x) => [x.id, x.name]));
+    const qtyOf = new Map(prods.map((p) => [String(p.code), p.qty]));
+    const list = d.products
+      .filter((p) => p.imgs?.length && (!stock || (qtyOf.get(String(p.code)) ?? 0) > 0))
+      .map((p) => ({ code: String(p.code || ''), name: p.name || String(p.code), desc: p.desc, imgs: p.imgs, dimImg: String((p as unknown as Record<string, unknown>).dimImg ?? ''), section: secName[p.sec] ?? '', inStock: (qtyOf.get(String(p.code)) ?? 0) > 0 }));
+    if (!list.length) return toast('مفيش منتجات منشورة على الموقع بصور بالشروط دي', 'bad');
+    const ph = (d as { phones?: string[] }).phones ?? [];
+    setView({ html: buildProCatalog({ shop, tagline: String((d as Record<string, unknown>).tagline ?? ''), phones: ph, address: String((d as Record<string, unknown>).address ?? ''), products: list }) });
+  };
   const build = () => {
     if (!picked.length) return toast('مفيش أصناف بالشروط دي', 'bad');
     const by: Record<string, typeof picked> = {};
@@ -1295,6 +1311,9 @@ ${Object.keys(by).sort().map((c) => `<h2>${esc(c)}</h2><div class="grid">${by[c]
         <button type="button" className="primary" onClick={build}>
           📖 اعمل الكتالوج
         </button>
+        <button type="button" className="secondary" id="catPro" onClick={buildPro}>
+          🌟 كتالوج احترافي (صفحة لكل منتج)
+        </button>
       </div>
       {view && <PrintPreview html={view.html} title="كتالوج المنتجات" onClose={() => setView(null)} />}
     </>
@@ -1336,6 +1355,7 @@ const VIEWS: Record<Tab, () => ReactNode> = {
   lapsed: () => <Lapsed />,
   points: () => <PointsTab />,
   sup: () => <Suppliers />,
+  catpro: () => <CatalogStudio />,
   cat: () => <Catalog />,
   log: () => <LogTab />,
 };

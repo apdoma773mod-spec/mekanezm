@@ -1,0 +1,459 @@
+/**
+ * 📖 الكتالوج الاحترافي (مولّد HTML نقي): غلاف فخم، إهداء/برقية اختياري، فهرس، حكاية ميكانيزم، وكل قسم:
+ * صفحة افتتاحية بصورة كاملة + قائمة بصور + صفحة لكل منتج على طريقة كتالوجات الشركات العالمية (صور متداخلة وكتل ألوان).
+ * مفيش أسعار (قاعدة المالك). ممكن يطلع PDF (A4 ورا بعض) أو كتاب بيتقلّب بإيدك مع خانة بحث.
+ */
+
+export interface CatProduct {
+  code: string;
+  name: string;
+  desc?: string;
+  imgs: string[];
+  dimImg?: string;
+  section: string;
+  inStock?: boolean;
+}
+
+export interface CatCfg {
+  colors: { main: string; dark: string; accent: string };
+  cover: { title: string; subtitle: string; note: string; imgs: string[] };
+  /** صورة افتتاح كل قسم، المفتاح اسم القسم */
+  secImgs: Record<string, string>;
+  layout: 'auto' | '1' | '2' | '3';
+  flags: { tabs: boolean; stock: boolean; specs: boolean; gallery: boolean; toc: boolean; story: boolean; search: boolean };
+  story: { title: string; text: string };
+  cta: string;
+  /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
+  gift?: { name: string; title: string; from: string; message: string };
+}
+
+export const STORY_TEXT = `بدأت الحكاية بفضول. فضول قديم لفهم السر وراء قطعة صغيرة اسمها الميكانيزم، وكيف لسوفت كلوز واحد أن يغيّر إحساس الدولاب كله ويوفّر الوقت والمجهود.
+تعلّمت الشغلانة بإيدي، وبدأت رحلتي بتروسيكل صغير أمرّ به على الورش: «السلام عليكم، أنا عبده، بوزّع إكسسوار ورش ولوازم نجارة. اتفرّج على اللي معايا، ولو احتجت حاجة خد رقمي وأجيبها لك». لفّيت الشوارع زيجزاج أدوّر على ورش النجارة والألمنيوم، ومع الوقت عرفني الصنايعية وكبر الشغل.
+بعدها فتحت محلًا صغيرًا في شارع المعرض، ثم وُلدت «ميكانيزم»: معرض محترم فيه ماكيت مطبخ وماكيت دريسنج، وجرارات ومفصلات تشوفها وتجربها بإيدك.
+اللي بينا مش بيع قطع… ده ثقة اتبنت بالسهر والتعب والمسؤولية، وبنكمّلها معاك.`;
+
+export const GIFT_MESSAGE = `تحية طيبة وبعد،
+يسعد ميكانيزم أن تُهدي إلى سيادتكم هذا الكتالوج، ثمرة سنوات من العمل والخبرة في عالم الحركة والإكسسوارات، آملين أن تجدوا فيه ما يُلهم أعمالكم ويُيسّر تنفيذها.
+ونتطلع إلى أن نكون دائمًا شريككم في النجاح.
+مع خالص التقدير،`;
+
+export const COLOR_PRESETS: { name: string; main: string; dark: string; accent: string }[] = [
+  { name: 'ميكانيزم (تيل وذهبي)', main: '#087f8c', dark: '#0b2e33', accent: '#c9971f' },
+  { name: 'أخضر زي جراس', main: '#0aa84f', dark: '#14262b', accent: '#c9971f' },
+  { name: 'كحلي ملكي', main: '#1f4fa3', dark: '#0a1a3a', accent: '#e0b44c' },
+  { name: 'أسود وذهبي', main: '#2b2b2b', dark: '#0d0d0d', accent: '#d4a437' },
+  { name: 'عنابي', main: '#8d1f3d', dark: '#2a0a14', accent: '#e0b44c' },
+  { name: 'برتقالي', main: '#e2711d', dark: '#2a1608', accent: '#ffd27a' },
+];
+
+export const DEFAULT_CFG: CatCfg = {
+  colors: { main: '#087f8c', dark: '#0b2e33', accent: '#c9971f' },
+  cover: { title: 'ميكانيزم', subtitle: 'كتالوج المنتجات', note: '', imgs: [] },
+  secImgs: {},
+  layout: 'auto',
+  flags: { tabs: true, stock: true, specs: true, gallery: true, toc: true, story: true, search: true },
+  story: { title: 'حكاية ميكانيزم', text: STORY_TEXT },
+  cta: 'للسعر والطلب كلمنا واتساب واذكر كود المنتج',
+};
+
+export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
+  const d = DEFAULT_CFG;
+  return {
+    ...d,
+    ...c,
+    colors: { ...d.colors, ...c?.colors },
+    cover: { ...d.cover, ...c?.cover },
+    secImgs: { ...c?.secImgs },
+    flags: { ...d.flags, ...c?.flags },
+    story: { ...d.story, ...c?.story },
+    gift: c?.gift,
+  };
+}
+
+export interface CatInput {
+  shop: string;
+  tagline?: string;
+  phones: string[];
+  address?: string;
+  products: CatProduct[];
+  cfg?: Partial<CatCfg>;
+}
+
+const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+const nn = (n: number) => n.toLocaleString('ar-EG');
+const safeColor = (c: string, d: string) => (/^#[0-9a-fA-F]{3,8}$/.test(c) ? c : d);
+const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
+
+/** النص الحر → مواصفات (سطر «المقاس: 50 سم») + جمل المميزات + مقدمة قصيرة */
+export function splitDesc(desc: string): { intro: string; specs: [string, string][]; points: string[] } {
+  const specs: [string, string][] = [];
+  const rest: string[] = [];
+  const skip = /^(اسم المنتج|التصنيف|الكود)$/;
+  const flat = desc.replace(/\r/g, '').replace(/\s+(نبذة عن المنتج|المميزات|المواصفات)\s*[:：]/g, '\n$1:');
+  for (const raw of flat.split('\n')) {
+    const t = raw.trim();
+    if (!t) continue;
+    const m = t.match(/^([^:：]{1,28})[:：]\s*(.+)$/);
+    if (m && !/^(نبذة عن المنتج|المميزات|المواصفات)$/.test(m[1]!.trim())) {
+      if (!skip.test(m[1]!.trim())) specs.push([m[1]!.trim(), m[2]!.trim()]);
+    } else rest.push(t.replace(/^(نبذة عن المنتج|المميزات|المواصفات)\s*[:：]\s*/, ''));
+  }
+  const sentences = rest
+    .join(' ')
+    .split(/(?<=[.!؟?])\s+|\s*[•●▪✔✅]\s*/)
+    .map((x) => x.trim())
+    .filter((x) => x.length > 3);
+  const intro = sentences.shift() ?? '';
+  return { intro, specs: specs.slice(0, 8), points: sentences.slice(0, 5) };
+}
+
+const CSS = `
+@page{size:A4;margin:0}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+:root{--t:#087f8c;--td:color-mix(in srgb,var(--t) 68%,#000);--tk:#0b2e33;--g:#c9971f;--gl:color-mix(in srgb,var(--g) 30%,#fff);--bg:#f4f8f9;--ink:#14262b;--mut:#62767c}
+body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;color:var(--ink);background:#fff;direction:rtl}
+.pg{width:794px;height:1123px;position:relative;overflow:hidden;page-break-after:always;background:#fff}
+.pg:last-child{page-break-after:auto}
+svg.bp{position:absolute;inset:0;width:100%;height:100%}
+/* ===== غلاف ===== */
+.cover{background:linear-gradient(170deg,var(--tk),color-mix(in srgb,var(--tk) 60%,var(--t)) 70%,var(--t));color:#fff}
+.cover .mos{position:absolute;top:0;left:0;right:0;height:640px;overflow:hidden}
+.cover .mos div{position:absolute;top:-40px;height:720px;background-size:cover;background-position:center;opacity:.9}
+.cover .mos div:nth-child(1){right:-60px;width:330px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%)}
+.cover .mos div:nth-child(2){right:220px;width:330px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);filter:saturate(1.1) brightness(.85)}
+.cover .mos div:nth-child(3){right:500px;width:360px;clip-path:polygon(22% 0,100% 0,78% 100%,0 100%);filter:brightness(.75)}
+.cover .mos:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 35%,var(--tk) 100%)}
+.cover .gear{position:absolute;left:-90px;top:430px;width:300px;opacity:.16}
+.cover .bx{position:absolute;right:60px;left:60px;bottom:70px}
+.cover .kick{letter-spacing:.42em;font-size:13px;font-weight:700;color:var(--gl)}
+.cover h1{font-size:118px;line-height:1.02;margin:10px 0 0;font-weight:900;background:linear-gradient(180deg,#fff 20%,var(--gl) 55%,var(--g) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 18px #0006)}
+.cover .ln{display:flex;align-items:center;gap:14px;margin:18px 0}
+.cover .ln i{height:2px;flex:1;background:linear-gradient(90deg,var(--g),transparent)}
+.cover .ln b{font-size:26px;font-weight:700}
+.cover .out{font-size:64px;font-weight:900;color:transparent;-webkit-text-stroke:1.5px #ffffff66;line-height:1;margin:6px 0 20px}
+.cover .stats{display:flex;gap:14px;margin-top:6px}
+.cover .stat{flex:1;border:1px solid #ffffff30;background:#ffffff12;border-radius:16px;padding:14px 18px;backdrop-filter:blur(2px)}
+.cover .stat b{display:block;font-size:34px;color:var(--gl)}.cover .stat span{font-size:13px;opacity:.85}
+.cover .cont{margin-top:20px;font-size:14px;opacity:.9;line-height:2}
+/* ===== إهداء / برقية ===== */
+.gft{background:linear-gradient(180deg,#fffdf7,#f7efdc);display:flex;align-items:center;justify-content:center}
+.gft .fr{width:640px;height:940px;border:2px solid var(--g);outline:1px solid var(--g);outline-offset:-12px;padding:70px 60px;position:relative;text-align:center;display:flex;flex-direction:column}
+.gft .orn{color:var(--g);font-size:30px;letter-spacing:.5em}
+.gft h2{font-size:24px;letter-spacing:.3em;color:var(--g);margin:6px 0 4px;font-weight:700}
+.gft .to{font-size:22px;color:var(--mut);margin-top:34px}
+.gft .nm{font-size:50px;font-weight:900;color:var(--tk);margin:4px 0 0;line-height:1.3}
+.gft .tt{font-size:18px;color:var(--t);font-weight:700}
+.gft .ln{width:90px;height:3px;background:var(--g);margin:22px auto}
+.gft .msg{font-size:20px;line-height:2.15;color:#2b3b3f;white-space:pre-line;text-align:center;flex:1}
+.gft .sg{margin-top:auto;font-size:18px;color:var(--mut)}.gft .sg b{display:block;font-size:30px;color:var(--tk);font-weight:900}
+/* ===== فهرس وحكاية ===== */
+.toc{padding:70px 64px}
+.toc h2{font-size:40px;margin:0 0 6px;color:var(--td)}
+.bar{width:70px;height:5px;border-radius:9px;background:var(--g)}
+.toc .bar{margin-bottom:28px}
+.toc .row{display:flex;align-items:baseline;gap:10px;padding:11px 0;border-bottom:1px dashed #cfdcdf;font-size:20px;font-weight:700}
+.toc .row i{flex:1;border-bottom:2px dotted #b9c9cc;transform:translateY(-5px)}
+.toc .row span{color:var(--t)}.toc .sub{display:block;font-weight:500;font-size:13px;color:var(--mut)}
+.sty{background:linear-gradient(160deg,var(--tk),color-mix(in srgb,var(--tk) 55%,var(--t)));color:#fff;padding:80px 64px}
+.sty .q{position:absolute;top:30px;left:40px;font-size:240px;font-weight:900;color:#ffffff12;line-height:1}
+.sty h2{font-size:56px;margin:0;position:relative;color:var(--gl)}
+.sty .bar{margin:16px 0 28px;position:relative}
+.sty p{font-size:19px;line-height:2.1;margin:0 0 12px;position:relative;opacity:.96}
+.sty .sg{font-size:22px;color:var(--gl);font-weight:700;margin-top:18px;position:relative}
+.note{padding:80px 60px;background:repeating-linear-gradient(#fff 0 39px,#e3ecee 39px 40px)}
+.note h2{font-size:30px;color:var(--td);margin:0 0 20px;background:#fff;display:inline-block;padding:0 10px}
+/* ===== تبويبات الأقسام ===== */
+.tabs{position:absolute;top:150px;left:0;display:flex;flex-direction:column;gap:3px;z-index:9}
+.tabs i{display:flex;align-items:center;justify-content:center;width:26px;min-height:44px;background:#ffffffcc;color:#7c8c91;font:900 15px Cairo,sans-serif;font-style:normal;border-radius:0 8px 8px 0;box-shadow:0 2px 6px #0003}
+.tabs i.on{background:var(--t);color:#fff;width:36px}
+/* ===== افتتاحية قسم + قائمة ===== */
+.opn{background:var(--tk);color:#fff}
+.opn img.bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.opn:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 38%,color-mix(in srgb,var(--tk) 94%,transparent) 100%)}
+.opn .tt{position:absolute;right:56px;left:56px;bottom:90px;z-index:2}
+.opn .tt small{letter-spacing:.3em;color:var(--gl);font-weight:700;font-size:13px}
+.opn .tt h2{font-size:64px;line-height:1.2;margin:8px 0 0}
+.opn .tt .bar{width:100px;height:6px;margin:20px 0}
+.opn .tt p{margin:0;font-size:19px;opacity:.9}
+.opn .no{position:absolute;top:36px;right:40px;z-index:2;font-size:120px;font-weight:900;color:#ffffff40;line-height:1}
+.lst{padding:70px 50px}
+.lst h2{font-size:34px;margin:0;color:var(--td)}.lst .bar{margin:10px 0 22px}
+.lst .it{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:2px solid var(--ink)}
+.lst .it:last-child{border-bottom:2px solid var(--ink)}
+.lst .it img{width:150px;height:96px;object-fit:cover;border-radius:10px;background:#eef3f4;flex:none}
+.lst .it b{display:block;font-size:19px;line-height:1.4}.lst .it small{display:block;color:var(--mut);font-size:13px;margin-top:3px}
+.lst .it span.n{margin-inline-start:auto;font-size:26px;font-weight:700;color:var(--mut);padding-inline-start:10px}
+/* ===== صفحة المنتج (تداخل صور وألوان) ===== */
+.pp .hd{position:absolute;top:0;left:0;right:0;height:44px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12.5px;color:#fff;border-bottom:1.5px solid #ffffff90}
+.pp .hd b{font-weight:800;letter-spacing:.04em}
+.pp h1{margin:0;line-height:1.3;font-weight:900}
+.pp .gl{width:64px;height:5px;border-radius:9px;background:var(--g);margin:12px 0 14px}
+.pp p.intro{font-size:15.5px;line-height:2;margin:0 0 10px}
+.pp ul.ft{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.pp ul.ft li{display:flex;gap:10px;align-items:flex-start;font-size:13.8px;line-height:1.75}
+.pp ul.ft li:before{content:"";flex:none;width:9px;height:9px;margin-top:9px;background:var(--g);transform:rotate(45deg)}
+.pp .code{position:absolute;z-index:8;background:var(--g);color:#fff;font-weight:900;font-size:17px;padding:5px 18px;border-radius:99px;direction:ltr;letter-spacing:.06em;box-shadow:0 6px 16px #0004}
+.pp .stk{position:absolute;z-index:8;border-radius:99px;padding:5px 14px;font-size:13px;font-weight:800;box-shadow:0 4px 12px #0003}
+.pp .stk.ok{background:#e4f8ec;color:#0e7a3f}.pp .stk.no{background:#fde8e6;color:#b4382b}
+.pp .card{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px #0b2e3338;position:absolute;z-index:6}
+.pp .card h3{margin:0;padding:8px 14px;background:var(--g);color:#fff;font-size:13.5px;letter-spacing:.04em}
+.pp .card table{width:100%;border-collapse:collapse;font-size:13px}
+.pp .card td{padding:6px 14px;border-top:1px solid #e6eef0}
+.pp .card tr:nth-child(even) td{background:#f6fafb}
+.pp .card td:first-child{color:var(--mut);width:42%}.pp .card td:last-child{font-weight:800}
+.pp .tiles{position:absolute;z-index:6;display:grid;gap:8px}
+.pp .tiles div{background-size:cover;background-position:center;border-radius:14px;border:4px solid #fff;box-shadow:0 8px 20px #0003}
+.pp .dim{position:absolute;z-index:7;background:#fff;border-radius:16px;padding:6px;box-shadow:0 14px 30px #0004;border:2px solid var(--g)}
+.pp .dim img{width:100%;display:block;border-radius:10px}.pp .dim small{display:block;text-align:center;font-weight:800;color:var(--td);font-size:12px;padding:3px 0 1px}
+.pp .ft2{position:absolute;bottom:0;left:0;right:0;height:46px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12px}
+.pp .ft2 b{direction:ltr}
+.pp .cta{position:absolute;z-index:8;font-size:13px;line-height:1.7}.pp .cta b{direction:ltr;display:inline-block}
+/* التخطيط ١: صورة كاملة + كتلة لون بزاوية */
+.l1 .bg{position:absolute;top:0;left:0;width:100%;height:720px;object-fit:cover}
+.l1 .shade{position:absolute;inset:0 0 auto 0;height:720px;background:linear-gradient(180deg,#0b2e3380 0,#0000 28%,#0000 60%,#0b2e3366 100%)}
+.l1 .pan{position:absolute;z-index:5;right:0;top:500px;bottom:0;width:480px;background:linear-gradient(160deg,var(--t),var(--td));clip-path:polygon(0 80px,100% 0,100% 100%,0 100%);padding:130px 50px 70px 44px;color:#fff}
+.l1 .pan:before{content:"";position:absolute;inset:0;background:radial-gradient(300px 220px at 90% 15%,#ffffff22,transparent)}
+.l1 h1{font-size:38px;position:relative}.l1 .pan *{position:relative}.l1 p.intro{color:#ffffffee}.l1 ul.ft li{color:#fff}
+.l1 .code{top:70px;right:44px}.l1 .stk{top:70px;left:50px}
+.l1 .card{left:40px;top:620px;width:262px}
+.l1 .tiles{left:40px;top:880px;width:262px;grid-template-columns:repeat(3,1fr)}.l1 .tiles div{height:84px}
+.l1 .dim{left:44px;top:140px;width:210px}
+.l1 .ft2{color:#fff}.l1 .ft2:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#fff 0,#fff 42%,transparent 42%);z-index:-1}
+.l1 .ft2{color:var(--mut)}.l1 .cta{left:40px;bottom:60px;width:262px;color:var(--td);font-weight:700}
+/* التخطيط ٢: كتلة داكنة كبيرة + صورة بتخرج منها + شريط صور */
+.l2 .blk{position:absolute;top:0;left:0;right:0;height:500px;background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 60%,var(--t)));color:#fff;clip-path:polygon(0 0,100% 0,100% 86%,0 100%)}
+.l2 .blk .tx{position:absolute;right:50px;top:96px;width:400px}
+.l2 h1{font-size:40px;color:#fff}.l2 p.intro{color:#ffffffe8}
+.l2 .hero{position:absolute;z-index:5;left:44px;top:150px;width:310px;height:590px;object-fit:cover;border-radius:26px;border:8px solid #fff;box-shadow:0 28px 50px #0b2e3366}
+.l2 .code{top:150px;left:60px}.l2 .stk{top:196px;left:60px}
+.l2 .card{right:44px;top:560px;width:380px}.l2 .cbox{position:absolute;z-index:6;right:44px;top:436px;width:380px;background:linear-gradient(135deg,var(--g),color-mix(in srgb,var(--g) 70%,#000));color:#fff;border-radius:18px;padding:14px 18px;font-size:14px;line-height:1.8;box-shadow:0 12px 26px #0004}.l2 .cbox b{direction:ltr;display:inline-block;font-size:17px}
+.l2 .ftxt{position:absolute;right:44px;top:560px;width:380px;z-index:3}
+.l2 .tiles{left:44px;right:44px;top:790px;grid-template-columns:repeat(4,1fr)}.l2 .tiles div{height:150px}
+.l2 .cap{position:absolute;left:44px;right:44px;top:960px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12.5px;line-height:1.7;color:#2b3b3f}
+.l2 .cap b{display:block;color:var(--t);font-size:13.5px;margin-bottom:2px}
+.l2 .dim{right:44px;top:360px;width:190px;z-index:9}
+.l2 .ft2{background:var(--tk);color:#ffffffcc}.l2 .cta{display:none}
+/* التخطيط ٣: صورة نصف الصفحة + لوح داكن بحافة مائلة */
+.l3 .ph{position:absolute;top:0;left:0;width:470px;height:1123px;object-fit:cover}
+.l3 .dk{position:absolute;z-index:5;top:0;bottom:0;right:0;width:470px;background:linear-gradient(180deg,var(--tk),color-mix(in srgb,var(--tk) 70%,var(--t)));clip-path:polygon(70px 0,100% 0,100% 100%,0 100%);color:#fff;padding:96px 46px 70px 100px}
+.l3 .dk:before{content:"";position:absolute;inset:0;background:radial-gradient(260px 200px at 20% 90%,color-mix(in srgb,var(--t) 50%,transparent),transparent)}
+.l3 .dk>*{position:relative}.l3 h1{font-size:34px}.l3 p.intro{color:#ffffffe0;font-size:14.5px}.l3 ul.ft li{color:#fff;font-size:13px}
+.l3 .card{left:300px;top:690px;width:300px;z-index:7;background:#ffffff}
+.l3 .tiles{left:40px;top:830px;width:230px;grid-template-columns:1fr 1fr;z-index:7}.l3 .tiles div{height:110px}
+.l3 .code{top:70px;left:44px}.l3 .stk{top:70px;left:150px}
+.l3 .dim{left:40px;top:140px;width:210px}
+.l3 .ft2{color:#ffffffcc;background:#00000066}.l3 .cta{display:none}
+`;
+
+/** رسم هندسي خفيف (شبكة + دوائر قياس) */
+const blueprint = (w: number, h: number, light = true) => {
+  const c = light ? '#087f8c' : '#ffffff';
+  const o = light ? 0.12 : 0.1;
+  const lines: string[] = [];
+  for (let x = 0; x <= w; x += 40) lines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${h}" stroke="${c}" stroke-opacity="${x % 200 === 0 ? o * 1.6 : o * 0.7}" stroke-width="${x % 200 === 0 ? 1.2 : 0.6}"/>`);
+  for (let y = 0; y <= h; y += 40) lines.push(`<line x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="${c}" stroke-opacity="${y % 200 === 0 ? o * 1.6 : o * 0.7}" stroke-width="${y % 200 === 0 ? 1.2 : 0.6}"/>`);
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const ring = (r: number) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-opacity="${o * 1.4}" stroke-dasharray="6 7"/>`;
+  return `<svg class="bp" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${lines.join('')}${ring(h * 0.22)}${ring(h * 0.36)}</svg>`;
+};
+
+const gearSvg = () => {
+  const teeth = 16;
+  let d = '';
+  for (let i = 0; i < teeth; i++) {
+    const a = (i / teeth) * Math.PI * 2;
+    const a2 = a + (Math.PI * 2) / teeth / 2;
+    const p = (r: number, t: number) => `${(150 + r * Math.cos(t)).toFixed(1)},${(150 + r * Math.sin(t)).toFixed(1)}`;
+    d += `${i ? 'L' : 'M'}${p(110, a)} L${p(138, a + 0.05)} L${p(138, a2 - 0.05)} L${p(110, a2)} `;
+  }
+  return `<svg class="gear" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><path d="${d}Z" fill="none" stroke="#fff" stroke-width="3"/><circle cx="150" cy="150" r="70" fill="none" stroke="#fff" stroke-width="3"/><circle cx="150" cy="150" r="26" fill="none" stroke="#fff" stroke-width="3"/></svg>`;
+};
+
+export interface SearchItem {
+  n: string;
+  c: string;
+  s: string;
+  p: number;
+}
+interface Built {
+  pages: string[];
+  css: string;
+  index: SearchItem[];
+  vars: string;
+}
+
+export function proPages(inp: CatInput): Built {
+  const cfg = mergeCfg(inp.cfg);
+  const phones = inp.phones.filter(Boolean);
+  const phoneTxt = phones.join(' · ');
+  const vars = `:root{--t:${safeColor(cfg.colors.main, '#087f8c')};--tk:${safeColor(cfg.colors.dark, '#0b2e33')};--g:${safeColor(cfg.colors.accent, '#c9971f')}}`;
+  const bySec = new Map<string, CatProduct[]>();
+  for (const p of inp.products) {
+    const k = p.section || 'منتجات متنوعة';
+    if (!bySec.has(k)) bySec.set(k, []);
+    bySec.get(k)!.push(p);
+  }
+  const secs = [...bySec.entries()];
+  const heroOf = (p: CatProduct) => p.imgs.find((u) => u !== p.dimImg) || p.imgs[0] || '';
+  const F = cfg.flags;
+
+  // ترتيب البداية: غلاف، إهداء؟، فهرس؟، حكاية؟ ثم (لو لازم) ورقة ملاحظات عشان القسم يبدأ على يسار الفتحة
+  const pre: string[] = [];
+  if (cfg.gift) pre.push('gift');
+  if (F.toc) pre.push('toc');
+  if (F.story) pre.push('story');
+  let idx = 1 + pre.length;
+  if (idx % 2 === 0) {
+    pre.push('note');
+    idx++;
+  }
+  const start = new Map<string, number>();
+  const prodPage = new Map<string, number>();
+  for (const [name, list] of secs) {
+    start.set(name, idx);
+    idx += 2;
+    for (const p of list) prodPage.set(p.code, idx++);
+    if (list.length % 2) idx++;
+  }
+  const total = idx + 1;
+  const pn = (i: number) => nn(i + 1);
+  const foot = (i: number) => `<div class="ft2"><span>${esc(inp.shop)}${inp.address ? ` — ${esc(inp.address)}` : ''}</span><b>${esc(phoneTxt)}</b><span>${pn(i)} / ${nn(total)}</span></div>`;
+  const tabs = (cur: number) => (F.tabs ? `<div class="tabs">${secs.map((_, i) => `<i class="${i === cur ? 'on' : ''}">${nn(i + 1)}</i>`).join('')}</div>` : '');
+
+  const pages: string[] = [];
+  const index: SearchItem[] = [];
+
+  // الغلاف
+  const covImgs = (cfg.cover.imgs.length ? cfg.cover.imgs : inp.products.map(heroOf).filter(Boolean)).slice(0, 3);
+  while (covImgs.length && covImgs.length < 3) covImgs.push(covImgs[covImgs.length - 1]!);
+  pages.push(`<section class="pg cover"><div class="mos">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>${gearSvg()}
+  <div class="bx"><div class="kick">PRODUCT CATALOG</div><h1>${esc(cfg.cover.title)}</h1>
+  <div class="ln"><b>${esc(cfg.cover.subtitle)}</b><i></i></div>
+  <div class="out">${new Date().getFullYear()}</div>
+  ${cfg.cover.note ? `<div class="cont" style="margin:-8px 0 14px;font-size:17px">${esc(cfg.cover.note)}</div>` : ''}
+  <div class="stats"><div class="stat"><b>${nn(inp.products.length)}</b><span>منتج</span></div><div class="stat"><b>${nn(secs.length)}</b><span>قسم</span></div><div class="stat"><b>${esc(phones[0] ?? '')}</b><span>واتساب وطلبات</span></div></div>
+  <div class="cont">${esc(inp.tagline || '')}${inp.address ? `<br>📍 ${esc(inp.address)}` : ''}</div></div></section>`);
+
+  for (const k of pre) {
+    if (k === 'gift' && cfg.gift) {
+      const g = cfg.gift;
+      pages.push(`<section class="pg gft"><div class="fr"><div class="orn">✦ ✦ ✦</div><h2>برقية إهداء</h2><div class="orn" style="font-size:16px">${esc(inp.shop)}</div>
+      <div class="to">إلى السيد / الأستاذ</div><div class="nm">${esc(g.name)}</div>${g.title ? `<div class="tt">${esc(g.title)}</div>` : ''}<div class="ln"></div>
+      <div class="msg">${esc(g.message || GIFT_MESSAGE)}</div><div class="sg">${esc(g.from ? 'مع تحيات' : '')}<b>${esc(g.from || inp.shop)}</b>${g.from ? esc(inp.shop) : ''}</div><div class="orn" style="margin-top:22px">✦ ✦ ✦</div></div></section>`);
+    } else if (k === 'toc') {
+      pages.push(`<section class="pg toc"><h2>الفهرس</h2><div class="bar"></div>${secs
+        .map(([n, l], i) => `<div class="row"><span>${nn(i + 1)}. ${esc(n)}<small class="sub">${nn(l.length)} منتج</small></span><i></i><span>${pn(start.get(n)!)}</span></div>`)
+        .join('')}</section>`);
+    } else if (k === 'story') {
+      pages.push(`<section class="pg sty"><div class="q">”</div><h2>${esc(cfg.story.title)}</h2><div class="bar"></div>${cfg.story.text
+        .split('\n')
+        .filter((x) => x.trim())
+        .map((x) => `<p>${esc(x)}</p>`)
+        .join('')}<div class="sg">— ${esc(inp.shop)}</div></section>`);
+    } else {
+      pages.push(`<section class="pg note"><h2>ملاحظات</h2></section>`);
+    }
+  }
+
+  secs.forEach(([name, list], si) => {
+    const sImg = cfg.secImgs[name] || heroOf(list[0]!);
+    pages.push(`<section class="pg opn">${sImg ? `<img class="bgi" src="${esc(sImg)}" alt="">` : ''}<div class="no">${nn(si + 1)}</div>${tabs(si)}<div class="tt"><small>SECTION ${si + 1}</small><h2>${esc(name)}</h2><div class="bar"></div><p>${nn(list.length)} منتج في القسم ده</p></div></section>`);
+    pages.push(`<section class="pg lst">${tabs(si)}<h2>${esc(name)}</h2><div class="bar"></div>${list
+      .map((p) => `<div class="it">${heroOf(p) ? `<img src="${esc(heroOf(p))}" alt="">` : ''}<div><b>${esc(p.name)}</b><small>كود ${esc(p.code)}</small></div><span class="n">${pn(prodPage.get(p.code)!)}</span></div>`)
+      .join('')}</section>`);
+    list.forEach((p, pi) => {
+      const i = prodPage.get(p.code)!;
+      index.push({ n: p.name, c: p.code, s: name, p: i });
+      const d = splitDesc(p.desc ?? '');
+      const photos = p.imgs.filter((u) => u !== p.dimImg);
+      const h = photos[0] ?? '';
+      const bleed = photos[1] || photos[0] || '';
+      const more = (photos.slice(1).length ? photos.slice(1) : photos).slice(0, 4);
+      const lay = cfg.layout === 'auto' ? String(((i + si) % 3) + 1) : cfg.layout;
+      const stk = F.stock && p.inStock !== undefined ? `<span class="stk ${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
+      const code = `<span class="code">${esc(p.code)}</span>`;
+      const specRows = [['كود المنتج', `<span dir="ltr">${esc(p.code)}</span>`], ['القسم', esc(name)], ...d.specs.slice(0, 2).map(([k, v]) => [esc(cut(k, 18)), esc(cut(v, 34))])];
+      const spec = F.specs ? `<div class="card"><h3>المواصفات</h3><table>${specRows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table></div>` : '';
+      const dim = p.dimImg ? `<div class="dim"><img src="${esc(p.dimImg)}" alt=""><small>📐 المقاسات</small></div>` : '';
+      const pts = d.points.length ? `<ul class="ft">${d.points.slice(0, lay === '3' ? 4 : 3).map((x) => `<li>${esc(cut(x, 150))}</li>`).join('')}</ul>` : '';
+      const tiles = F.gallery && more.length ? `<div class="tiles">${more.slice(0, lay === '2' ? 4 : lay === '1' ? 3 : 2).map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>` : '';
+      const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
+      const cta = `<div class="cta">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>`;
+      let inner = '';
+      if (lay === '1') {
+        inner = `<img class="bg" src="${esc(bleed)}" alt=""><div class="shade"></div>${hd}${code}${stk}${dim}
+        <div class="pan"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 200))}</p>` : ''}${pts}</div>${spec}${tiles}${cta}`;
+      } else if (lay === '2') {
+        const caps = d.points.slice(0, 4);
+        inner = `<div class="blk">${blueprint(794, 500, false)}<div class="tx"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 220))}</p>` : ''}</div></div>${hd}
+        <img class="hero" src="${esc(h || bleed)}" alt="">${code}${stk}${dim}<div class="cbox">${esc(cfg.cta)} <b>${esc(p.code)}</b></div>
+        ${spec || `<div class="ftxt">${pts}</div>`}${tiles}${caps.length ? `<div class="cap">${caps.map((x) => `<div>${esc(cut(x, 70))}</div>`).join('')}</div>` : ''}`;
+      } else {
+        inner = `<img class="ph" src="${esc(bleed)}" alt="">${hd}${code}${stk}${dim}
+        <div class="dk"><h1>${esc(p.name)}</h1><div class="gl"></div>${d.intro ? `<p class="intro">${esc(cut(d.intro, 200))}</p>` : ''}${pts}</div>${spec}${tiles}`;
+      }
+      pages.push(`<section class="pg pp l${lay}">${tabs(si)}${inner}${foot(i)}</section>`);
+      void pi;
+    });
+    if (list.length % 2) pages.push(`<section class="pg note">${tabs(si)}<h2>ملاحظات</h2></section>`);
+  });
+  pages.push(`<section class="pg cover" style="display:flex;align-items:center;justify-content:center;text-align:center"><div class="mos" style="height:100%;opacity:.35">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>${gearSvg()}<div style="position:relative"><h1 style="font-size:84px;margin:0;background:linear-gradient(180deg,#fff,var(--gl));-webkit-background-clip:text;background-clip:text;color:transparent">شكرًا لثقتكم</h1><div class="ln" style="justify-content:center"><i style="max-width:100px"></i></div><p style="font-size:22px;line-height:2;margin:0">${esc(inp.shop)}<br>نوصّل لحد عندك في كل المحافظات</p><div style="font-size:34px;font-weight:900;color:var(--gl);direction:ltr;margin-top:16px">${esc(phoneTxt)}</div></div></section>`);
+  return { pages, css: CSS, index, vars };
+}
+
+const HEAD = (inp: CatInput, b: Built, extra = '') =>
+  `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(inp.shop)} — كتالوج</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"><style>${b.css}${b.vars}${extra}</style></head>`;
+
+/** للطباعة / PDF: صفحات A4 ورا بعض */
+export function buildProCatalog(inp: CatInput): string {
+  const b = proPages(inp);
+  return `${HEAD(inp, b)}<body>${b.pages.join('')}</body></html>`;
+}
+
+/** 📖 كتاب بيتقلّب بإيدك (St.PageFlip) مع خانة بحث: اكتب اسم منتج أو كود أو قسم وروح للصفحة. */
+export function buildFlipbook(inp: CatInput): string {
+  const b = proPages(inp);
+  const cfg = mergeCfg(inp.cfg);
+  const flipCss = `
+html,body{height:100%;margin:0;background:#1b2427;overflow:hidden;touch-action:manipulation}
+body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
+#bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:#000a;backdrop-filter:blur(6px)}
+#bar button{flex:none;background:#ffffff22;color:#fff;border:0;border-radius:99px;width:34px;height:34px;font:700 18px Cairo,sans-serif}
+#q{flex:1;min-width:0;border:0;border-radius:99px;padding:8px 14px;font:600 14px Cairo,sans-serif;background:#ffffffe8;color:#14262b;outline:none}
+#res{position:fixed;top:54px;right:10px;left:10px;max-width:460px;margin:0 auto;max-height:55vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 14px 40px #000a;z-index:40;display:none}
+#res div{padding:10px 14px;border-bottom:1px solid #e6eef0;font:600 14px Cairo,sans-serif;color:#14262b;display:flex;justify-content:space-between;gap:10px}
+#res div small{color:#62767c;font-weight:500}#res div b{color:var(--t);flex:none}
+#stage{position:fixed;inset:50px 0 0 0;display:flex;align-items:center;justify-content:center}
+.fp{box-shadow:0 20px 60px #000a}
+.fp .page{background:#fff;overflow:hidden}
+.fp .pg{transform-origin:0 0;position:absolute;top:0;left:0}
+`;
+  const data = JSON.stringify(b.index).replace(/</g, '\\u003c');
+  const script = `
+(function(){
+  var W=794,H=1123, IDX=${data};
+  var vw=innerWidth,vh=innerHeight-50,portrait=vw<vh*1.1;
+  var pageH=Math.min(vh-16,(portrait?vw:vw/2)*H/W);
+  var pageW=pageH*W/H, k=pageW/W;
+  document.querySelectorAll('.page .pg').forEach(function(el){el.style.transform='scale('+k+')';});
+  var pf=new St.PageFlip(document.getElementById('book'),{width:Math.round(pageW),height:Math.round(pageH),size:'fixed',showCover:true,drawShadow:true,maxShadowOpacity:.5,flippingTime:700,usePortrait:true,mobileScrollSupport:false,swipeDistance:20,clickEventForward:false,startPage:0});
+  pf.loadFromHTML(document.querySelectorAll('.page'));
+  document.getElementById('b-prev').onclick=function(){pf.flipPrev();};
+  document.getElementById('b-next').onclick=function(){pf.flipNext();};
+  var q=document.getElementById('q'),res=document.getElementById('res');
+  function norm(s){return String(s).toLowerCase().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[\\u064B-\\u0652]/g,'');}
+  function show(){var t=norm(q.value.trim());if(!t){res.style.display='none';return;}
+    var out=IDX.filter(function(x){return norm(x.n+' '+x.c+' '+x.s).indexOf(t)>-1;}).slice(0,20);
+    res.innerHTML=out.length?out.map(function(x,i){return '<div data-p="'+x.p+'"><span>'+x.n+'<br><small>'+x.s+' · كود '+x.c+'</small></span><b>ص '+(x.p+1)+'</b></div>';}).join(''):'<div>مفيش نتيجة</div>';
+    res.style.display='block';}
+  q.addEventListener('input',show);
+  res.addEventListener('click',function(e){var d=e.target.closest('[data-p]');if(!d)return;pf.turnToPage(+d.getAttribute('data-p'));res.style.display='none';q.blur();});
+  document.addEventListener('click',function(e){if(!e.target.closest('#res')&&e.target!==q)res.style.display='none';});
+})();`;
+  const body = `<body><div id="bar"><button id="b-next" title="التالي">›</button><input id="q" type="search" placeholder="🔍 ابحث في الكتالوج: اسم منتج، كود، قسم…" autocomplete="off"><button id="b-prev" title="السابق">‹</button></div><div id="res"></div><div id="stage"><div id="book" class="fp">${b.pages.map((p) => `<div class="page">${p}</div>`).join('')}</div></div>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script>${script}</script></body></html>`;
+  void cfg;
+  return `${HEAD(inp, b, flipCss)}${body}`;
+}

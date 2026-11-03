@@ -57,12 +57,27 @@ export default async function webRoutes(app: FastifyInstance) {
   // ---- public (the shop page): what to show, and where orders go ----
   app.get('/public/site', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => ({ site: await readSite() }));
 
-  /** Which site products are in stock: code → true/false (no quantities, no prices). Same shape the old site_stock gave. */
-  app.get('/public/stock', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => {
-    const site = await readSite();
-    const codes = ((site.data.products as { code?: unknown }[] | undefined) ?? []).map((p) => String(p.code ?? '')).filter(Boolean);
-    const rows = codes.length ? await db.product.findMany({ where: { code: { in: codes }, deletedAt: null }, select: { code: true, qty: true } }) : [];
-    return Object.fromEntries(rows.map((r) => [r.code, Number(r.qty) > 0]));
+  /** 📖 Published catalogs: the system saves the finished page, anyone with the link can open it (random id, not guessable, not indexed). */
+  app.post('/catalog', { preHandler: app.requireAdmin, bodyLimit: 6 * 1024 * 1024 }, async (request) => {
+    const { html } = parse(z.object({ html: z.string().min(100).max(5_000_000) }), request.body);
+    const id = randomBytes(9).toString('base64url');
+    const actor = actorOf(request);
+    await db.setting.create({ data: { key: `catalog_pub_${id}`, value: { html } as unknown as Prisma.InputJsonValue, updatedById: actor.id } });
+    const old = await db.setting.findMany({ where: { key: { startsWith: 'catalog_pub_' } }, orderBy: { updatedAt: 'desc' }, skip: 30, select: { key: true } });
+    if (old.length) await db.setting.deleteMany({ where: { key: { in: old.map((o) => o.key) } } });
+    return { id };
+  });
+  app.get('/public/catalog/:id', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const { id } = parse(z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{6,40}$/) }), request.params);
+    const row = await db.setting.findUnique({ where: { key: `catalog_pub_${id}` } });
+    const html = (row?.value as { html?: string } | null)?.html;
+    if (!html) throw notFound('الكتالوج ده مش موجود');
+    return reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('content-security-policy', 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox')
+      .header('x-robots-tag', 'noindex, nofollow')
+      .header('cache-control', 'public, max-age=300')
+      .send(html);
   });
 
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
