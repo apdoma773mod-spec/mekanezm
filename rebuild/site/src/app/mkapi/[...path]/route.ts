@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const ALLOWED = /^web\/public\/(orders|requests|custom|media|track|track-custom|reviews|notify-me|visit)$/;
-const ALLOWED_GET = /^web\/public\/(stock|reviews)$/;
+const ALLOWED_GET = /^web\/public\/(stock|reviews|site)$/;
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const base = process.env.BACKEND_URL?.replace(/\/$/, '');

@@ -10,16 +10,39 @@ const headers = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
 
 const EMPTY: Site = siteSchema.parse({});
 
+/** NEXT_PUBLIC_NEW_BACKEND=1 reads the catalog/stock from the new backend instead of Supabase. */
+const NEW = process.env.NEXT_PUBLIC_NEW_BACKEND === '1';
+const nbUrl = (path: string) => `${(process.env.BACKEND_URL ?? '').replace(/\/$/, '')}/api/v1/web/public/${path}`;
+const nbHeaders = { 'ngrok-skip-browser-warning': '1' };
+// Last good copies, so a short backend outage doesn't empty the shop.
+let lastSite: unknown = null;
+let lastStock: Stock | null = null;
+
+async function readSiteData(): Promise<unknown> {
+  if (NEW) {
+    try {
+      const r = await fetch(nbUrl('site'), { headers: nbHeaders, next: { revalidate: REVALIDATE, tags: ['site'] }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) throw new Error(`site ${r.status}`);
+      const j = (await r.json()) as { site?: { data?: unknown } };
+      if (!j?.site?.data) throw new Error('site empty');
+      return (lastSite = j.site.data);
+    } catch (e) {
+      if (lastSite) { console.error('getSite: backend down, using last copy', e); return lastSite; }
+      throw e;
+    }
+  }
+  const r = await fetch(`${SB_URL}/rest/v1/site_content?id=eq.main&select=data`, {
+    headers,
+    next: { revalidate: REVALIDATE, tags: ['site'] },
+  });
+  if (!r.ok) throw new Error(`site_content ${r.status}`);
+  return ((await r.json()) as { data: unknown }[])[0]?.data ?? {};
+}
+
 /** The whole public shop content (name, phones, sections, products…). Cache tag `site`. */
 export const getSite = cache(async (): Promise<Site> => {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/site_content?id=eq.main&select=data`, {
-      headers,
-      next: { revalidate: REVALIDATE, tags: ['site'] },
-    });
-    if (!r.ok) throw new Error(`site_content ${r.status}`);
-    const rows = (await r.json()) as { data: unknown }[];
-    const s = siteSchema.parse(rows[0]?.data ?? {});
+    const s = siteSchema.parse(await readSiteData());
     s.pros = s.pros.filter(x => !x.hidden && x.name.trim() && x.phone.trim());
     const today = new Date().toISOString().slice(0, 10);
     s.products = s.products.filter(p => !p.hidden && !(p.from && today < p.from) && !(p.until && today > p.until)).map(withCover);
@@ -32,6 +55,14 @@ export const getSite = cache(async (): Promise<Site> => {
 
 /** Live stock from the system: product code → available. Cache tag `stock`. */
 export const getStock = cache(async (): Promise<Stock> => {
+  if (NEW) {
+    try {
+      const r = await fetch(nbUrl('stock'), { headers: nbHeaders, next: { revalidate: 60, tags: ['stock'] }, signal: AbortSignal.timeout(8000) });
+      const j = await r.json();
+      if (r.ok && j && typeof j === 'object' && !Array.isArray(j)) return (lastStock = j as Stock);
+    } catch { /* fall through to the last copy */ }
+    return lastStock ?? {};
+  }
   try {
     const r = await fetch(`${SB_URL}/rest/v1/rpc/site_stock`, {
       method: 'POST',
