@@ -149,9 +149,17 @@ export async function catalogAiRoutes(app: FastifyInstance) {
   app.put('/catalog/ai/cf', { preHandler: app.requireAdmin }, async (request) => {
     const b = parse(z.object({ account: z.string().max(200), token: z.string().max(400) }), request.body);
     const clean = (x: string) => x.replace(/[\s"'‎‏‪-‮]/g, '');
-    // ينفع يلزق لينك صفحة Cloudflare كلها (dash.cloudflare.com/<account id>/home) وإحنا نطلّع الـ ID منه
-    const account = clean(b.account).match(/[0-9a-f]{32}/i)?.[0] ?? clean(b.account);
-    const token = clean(b.token);
+    // مايهمش مين في أنهي خانة: الـ Token هو اللي مش ٣٢ حرف hex، والـ Account ID بيتطلع من أي لينك أو نص،
+    // ولو مش موجود بنجيبه من Cloudflare نفسه بالـ Token
+    const vals = [clean(b.account), clean(b.token)].filter(Boolean);
+    const token = vals.find((v) => !/^[0-9a-f]{32}$/i.test(v) && !/cloudflare\.com/i.test(v)) ?? '';
+    let account = vals.map((v) => (v === token ? '' : v.match(/[0-9a-f]{32}/i)?.[0] ?? '')).find(Boolean) ?? '';
+    if (!account && token) {
+      const r = await fetch('https://api.cloudflare.com/client/v4/accounts?per_page=5', { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }).catch(() => null);
+      const j = (await r?.json().catch(() => null)) as { result?: { id?: string }[] } | null;
+      account = j?.result?.[0]?.id ?? '';
+      if (!account) throw badRequest('اتأكدت من الـ Token بس مقدرتش أعرف الحساب لوحده — الزق لينك صفحة Cloudflare الرئيسية في الخانة الأولى');
+    }
     const actor = actorOf(request);
     if (!account && !token) await db.setting.deleteMany({ where: { key: CF_SETTING } });
     else {
