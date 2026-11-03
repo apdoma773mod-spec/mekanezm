@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { decodeJwt } from 'jose';
 
-const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '/contacts', '/cash', '/theme', '/camera', '/catalog'];
+const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '/contacts', '/cash', '/theme', '/camera', '/catalog', '/sources'];
 
 /**
  * UX-level gate only: sends signed-out visitors to /login and staff away from admin screens.
@@ -44,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|ico|webmanifest)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|ico|webmanifest|woff2)$).*)'],
 };

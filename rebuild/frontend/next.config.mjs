@@ -14,6 +14,10 @@ const nextConfig = {
     outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
   }),
   poweredByHeader: false,
+  async headers() {
+    // الخطوط مبتتغيرش: الجهاز يحتفظ بيها سنة ومايطلبهاش تاني
+    return [{ source: '/fonts/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }];
+  },
   reactStrictMode: true,
   async rewrites() {
     // The browser only ever talks to this origin, so auth cookies stay first-party.

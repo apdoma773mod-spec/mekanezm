@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { InboxCard, InboxTabs } from '@/components/inbox/inbox-tabs';
+import { BlockSender, SourceFromPhoto } from '@/components/inbox/photo-source';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
@@ -18,6 +19,7 @@ const LABEL: Record<WaPhotoRow['status'], string> = {
   transfer: 'اتسجلت تحويل',
   missing: 'مش موجودة',
   ignored: 'متجاهلة',
+  source: 'اتحفظت مصدر/مورد',
 };
 
 interface Tf {
@@ -138,7 +140,7 @@ function PhotoCard({ p, tab }: { p: WaPhotoRow; tab: InboxTab }) {
       {p.caption && <div style={{ whiteSpace: 'pre-wrap', margin: '6px 0', lineHeight: 1.8 }}>{p.caption}</div>}
       <a href={p.img} target="_blank" rel="noreferrer" style={{ display: 'block', margin: '8px 0' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={p.img} alt="صورة من الواتساب" style={{ maxWidth: '100%', maxHeight: 360, borderRadius: 12 }} />
+        <img src={p.thumb || p.img} alt="صورة من الواتساب" loading="lazy" decoding="async" style={{ maxWidth: '100%', maxHeight: 360, minHeight: 120, borderRadius: 12, background: '#eef2f4' }} />
       </a>
       {tab !== 'new' && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{LABEL[p.status]}{p.handledBy ? ` — ${p.handledBy}` : ''}</div>}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
@@ -154,9 +156,11 @@ function PhotoCard({ p, tab }: { p: WaPhotoRow; tab: InboxTab }) {
               ❌ مش موجودة
             </button>
             <TransferCheck p={p} onPaid={() => set('paid')} />
+            <SourceFromPhoto p={p} />
             <button type="button" className="secondary" disabled={busy} onClick={() => set('ignored')}>
               🙈 تجاهل
             </button>
+            <BlockSender p={p} />
           </>
         )}
         {tab !== 'new' && (

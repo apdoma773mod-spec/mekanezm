@@ -21,6 +21,13 @@ const last10 = (p: string) => p.replace(/\D/g, '').slice(-10);
 
 export async function bridgeRoutes(app: FastifyInstance) {
   const db = app.prisma;
+  /** أرقام «بتتجاهل دايمًا» (زرار 🚫 في صور الواتساب): حتى لو الجسر لسه ماخدش القواعد الجديدة، السيستم مابيستقبلش منهم */
+  const blocked = async (phone: string) => {
+    const d = last10(phone);
+    if (d.length < 10) return false;
+    const r = (await db.setting.findUnique({ where: { key: 'wa_rules' } }))?.value as { blockPhones?: string[] } | null;
+    return (r?.blockPhones ?? []).some((x) => last10(String(x)) === d);
+  };
   app.addHook('preHandler', async (request) => {
     checkBridge(app, request);
   });
@@ -58,6 +65,7 @@ export async function bridgeRoutes(app: FastifyInstance) {
       })
       .parse(request.body);
     // the site's single «إرسال الطلب» button also opens WhatsApp with the same order (رقم الطلب: xxxxxxxx): it is already in «طلبات الموقع», so keep it out of the new WhatsApp orders
+    if (await blocked(b.phone)) return { id: 'blocked' };
     const ref = /رقم الطلب:\s*([a-z0-9]{8})/i.exec(b.body)?.[1]?.toLowerCase();
     const dup = ref ? !!(await db.webOrder.findFirst({ where: { id: { startsWith: ref } }, select: { id: true } })) : false;
     try {
@@ -82,6 +90,7 @@ export async function bridgeRoutes(app: FastifyInstance) {
         img: z.string(),
       })
       .parse(request.body);
+    if (await blocked(b.phone)) return { id: 'blocked' };
     if (!PHOTO.test(b.img)) throw forbidden('مش صورة (jpeg/png/webp)');
     if (b.img.length > MAX_PHOTO_CHARS) throw forbidden('الصورة كبيرة');
     try {

@@ -50,6 +50,7 @@ const MAIN: NavItem[] = [
   { href: '/weborders', label: 'طلبات الموقع', icon: 'file', adminOnly: true, badge: 'web' },
   { href: '/site-content', label: 'محتوى الموقع', icon: '🌐', adminOnly: true },
   { href: '/catalog', label: 'الكتالوج', icon: '📖', adminOnly: true },
+  { href: '/sources', label: 'مصادر من بره', icon: '📇', adminOnly: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
   { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },

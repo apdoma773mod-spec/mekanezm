@@ -111,6 +111,25 @@ const IMAGE_PROMPT = (p: z.infer<typeof body>) =>
 const CF_PROMPT = (p: z.infer<typeof body>) =>
   `Photorealistic premium furniture-hardware catalog photo. Take the exact hardware product shown in image 0 ("${p.name}", category: ${p.section || 'furniture hardware'}) and show it installed and in use in its real place: for example a drawer runner mounted on the side of an open drawer, a hinge fitted on an open cabinet door, a corner pull-out unit swung out of an open kitchen corner cabinet, a pull-out basket inside a tall pantry cabinet, a lift-up fitting on a wall cabinet, a handle on a cabinet front. Keep the product's shape, colour and material the same as image 0 and make it the clear hero of the shot. Modern kitchen or wardrobe interior, soft natural daylight, clean premium look. No text, no logos, no watermark, no people.`;
 
+/** مفتاح Gemini: من .env أو اللي اتحفظ من صفحة الكتالوج */
+export async function geminiKey(db: FastifyInstance['prisma']): Promise<string | null> {
+  if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  const v = (await db.setting.findUnique({ where: { key: KEY_SETTING } }))?.value as { key?: string } | null;
+  return v?.key || null;
+}
+
+/** سؤال واحد لـ Gemini بصورة (اختياري) وبيرجّع JSON — بيعدّي على الموديلات المقفولة أو الزحمة */
+export async function geminiJson<T>(key: string, prompt: string, image?: { data: string; mime: string }): Promise<T> {
+  const parts = [{ text: prompt }, ...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : [])];
+  const b = await firstWorking('text', TEXT_MODELS, (m) => gemini(key, m, { contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 45000)).catch((e) => {
+    throw new Error(friendly(e));
+  });
+  const t = (b.candidates?.[0]?.content?.parts ?? []).map((x) => x.text || '').join('');
+  const j = t.match(/[[{][\s\S]*[\]}]/)?.[0];
+  if (!j) throw new Error('الذكاء الاصطناعي مارجّعش بيانات مفهومة، جرّب تاني');
+  return JSON.parse(j) as T;
+}
+
 export async function catalogAiRoutes(app: FastifyInstance) {
   const db = app.prisma;
   const getKey = async () => {
