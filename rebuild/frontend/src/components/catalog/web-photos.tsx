@@ -18,7 +18,7 @@ export function WebPhotos({ p, have, onSave }: { p: CatProduct; have: string[]; 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState(`${p.name}${p.brand ? ` ${p.brand}` : ''}`);
   const [hits, setHits] = useState<Hit[] | null>(null);
-  const [pick, setPick] = useState<string[]>([]);
+  const [pick, setPick] = useState<Hit[]>([]);
   const [busy, setBusy] = useState('');
 
   const search = async () => {
@@ -36,9 +36,9 @@ export function WebPhotos({ p, have, onSave }: { p: CatProduct; have: string[]; 
   const save = async () => {
     setBusy('save');
     const got: string[] = [];
-    for (const u of pick) {
+    for (const h of pick) {
       try {
-        got.push((await api.post<{ url: string }>('/web/catalog/ai/photos/save', { url: u })).url);
+        got.push((await api.post<{ url: string }>('/web/catalog/ai/photos/save', { url: h.url, thumb: h.thumb })).url);
       } catch (e) {
         toast(errorMessage(e), 'bad');
       }
@@ -81,13 +81,13 @@ export function WebPhotos({ p, have, onSave }: { p: CatProduct; have: string[]; 
       {hits && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(96px,1fr))', gap: 6 }}>
           {hits.map((h) => {
-            const on = pick.includes(h.url);
+            const on = pick.some((x) => x.url === h.url);
             return (
               <button
                 key={h.url}
                 type="button"
                 title={`${h.title} — ${h.site}`}
-                onClick={() => setPick(on ? pick.filter((x) => x !== h.url) : [...pick, h.url].slice(-3))}
+                onClick={() => setPick((on ? pick.filter((x) => x.url !== h.url) : [...pick, h]).slice(-3))}
                 style={{ padding: 0, border: on ? '3px solid var(--primary,#087f8c)' : '1px solid #dfe7ea', borderRadius: 10, overflow: 'hidden', background: '#fff', cursor: 'pointer', position: 'relative' }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}

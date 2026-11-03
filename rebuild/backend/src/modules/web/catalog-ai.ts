@@ -6,6 +6,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { getFile, putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
+import { cleanPhoto } from './clean-photo.js';
 
 /**
  * 🤖 الكتالوج بالذكاء الاصطناعي (Gemini): لكل منتج
@@ -215,18 +216,21 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     return { q, items };
   });
   app.post('/catalog/ai/photos/save', { preHandler: app.requireAdmin }, async (request) => {
-    const { url } = parse(z.object({ url: z.string().url().max(2000) }), request.body);
-    if (!/^https:\/\//.test(url)) throw badRequest('لينك الصورة لازم https');
-    const r = await fetch(url, { signal: AbortSignal.timeout(25000), headers: { 'user-agent': 'Mozilla/5.0', accept: 'image/*' } }).catch(() => null);
-    if (!r?.ok) throw badRequest('الموقع ده مارضيش يدّي الصورة — اختار صورة تانية');
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (!buf.length || buf.length > 12 * 1024 * 1024) throw badRequest('الصورة كبيرة قوي أو فاضية — اختار تانية');
-    const sharp = (await import('sharp')).default;
-    const out = await sharp(buf).rotate().resize(1400, 1400, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 86 }).toBuffer().catch(() => null);
-    if (!out) throw badRequest('ده مش ملف صورة — اختار تانية');
-    const name = `${randomBytes(12).toString('hex')}.jpg`;
-    await putFile(name, out, 'image/jpeg');
-    return { url: `/api/v1/work/files/${name}` };
+    const { url, thumb } = parse(z.object({ url: z.string().url().max(2000), thumb: z.string().url().max(2000).optional() }), request.body);
+    // الأصلية الأول؛ لو الموقع منع التحميل (فيسبوك/إنستجرام…) أو مش صورة، نيجي على النسخة الصغيرة اللي جوجل نفسه مخزّنها
+    for (const u of [url, thumb].filter((x): x is string => !!x && x.startsWith('https://'))) {
+      const r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36', accept: 'image/avif,image/webp,image/*,*/*;q=0.8', referer: new URL(u).origin + '/' } }).catch(() => null);
+      if (!r?.ok || !(r.headers.get('content-type') || '').startsWith('image/')) continue;
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (!buf.length || buf.length > 12 * 1024 * 1024) continue;
+      // أي اسم تاجر/رقم/لوجو/سعر مكتوب على الصورة بيتشال قبل الحفظ
+      const done = await cleanPhoto(await geminiKey(db), buf).catch(() => null);
+      if (!done) continue;
+      const name = `${randomBytes(12).toString('hex')}.jpg`;
+      await putFile(name, done.buf, 'image/jpeg');
+      return { url: `/api/v1/work/files/${name}`, lowRes: u !== url, removed: done.removed, unchecked: done.unchecked };
+    }
+    throw badRequest('الموقع ده مارضيش يدّي الصورة — اختار صورة تانية (يفضّل من موقع مش فيسبوك أو إنستجرام)');
   });
 
   app.put('/catalog/ai/key', { preHandler: app.requireAdmin }, async (request) => {
