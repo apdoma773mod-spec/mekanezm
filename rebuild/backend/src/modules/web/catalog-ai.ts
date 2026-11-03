@@ -53,19 +53,27 @@ const gemini = async (key: string, model: string, payload: unknown, ms: number) 
   return b;
 };
 
-/** يجرّب الموديلات بالترتيب ويعدّي اللي جوجل قفله */
-async function firstWorking<T>(models: string[], run: (m: string) => Promise<T>): Promise<T> {
+/** يجرّب الموديلات بالترتيب ويعدّي اللي جوجل قفله، وبيفتكر آخر موديل نجح (لكل نوع) عشان المرة الجاية تبقى أسرع */
+const lastOk = new Map<string, string>();
+async function firstWorking<T>(kind: string, models: string[], run: (m: string) => Promise<T>): Promise<T> {
   let last: Error = new Error('مفيش موديل شغال');
-  for (const m of models) {
+  const first = lastOk.get(kind);
+  const order = first ? [first, ...models.filter((m) => m !== first)] : models;
+  for (const m of order) {
     try {
-      return await run(m);
+      const r = await run(m);
+      lastOk.set(kind, m);
+      return r;
     } catch (e) {
       last = e as Error;
-      if (!SKIP.test(last.message)) throw last;
+      if (!SKIP.test(last.message) && !/timeout|abort/i.test(last.message)) throw last;
     }
   }
   throw last;
 }
+/** البحث في جوجل مالوش حصة على المفاتيح المجانية: لو اترفض نفتكر ده ساعة ومنضيّعش وقت عليه */
+let noSearchUntil = 0;
+let noImageUntil = 0;
 
 const friendly = (e: unknown) => {
   const m = String((e as Error)?.message || e);
@@ -151,12 +159,14 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     const text = async () => {
       let b: Awaited<ReturnType<typeof gemini>>;
       try {
-        b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p) }, ...imgPart] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3 } }, 90000));
+        if (Date.now() < noSearchUntil) throw new Error('quota (search)');
+        b = await firstWorking('search', TEXT_MODELS.slice(0, 3), (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p) }, ...imgPart] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3 } }, 40000));
         out.searched = true;
       } catch (e) {
-        if (!SKIP.test(String((e as Error).message))) throw e;
+        if (!SKIP.test(String((e as Error).message)) && !/timeout|abort/i.test(String((e as Error).message))) throw e;
+        if (/quota|RESOURCE_EXHAUSTED/i.test(String((e as Error).message))) noSearchUntil = Date.now() + 3600_000;
         // البحث مش متاح على المفتاح ده: من معلومات الموديل نفسه (بيتعلّم «راجعها»)
-        b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p).replace('ابحث في جوجل عن', 'من معلوماتك عن') }, ...imgPart] }], generationConfig: { temperature: 0.2 } }, 90000));
+        b = await firstWorking('text', TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p).replace('ابحث في جوجل عن', 'من معلوماتك عن') }, ...imgPart] }], generationConfig: { temperature: 0.2 } }, 45000));
       }
       const c = b.candidates?.[0];
       const t = (c?.content?.parts ?? []).map((x) => x.text || '').join('');
@@ -170,9 +180,13 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     };
     const image = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
-      const b = await firstWorking(IMAGE_MODELS, (m) =>
-        gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: ['IMAGE'] } }, 120000),
-      );
+      if (Date.now() < noImageUntil) throw new Error('quota (image)');
+      const b = await firstWorking('image', IMAGE_MODELS, (m) =>
+        gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: ['IMAGE'] } }, 60000),
+      ).catch((e) => {
+        if (/quota|RESOURCE_EXHAUSTED/i.test(String((e as Error).message))) noImageUntil = Date.now() + 3600_000;
+        throw e;
+      });
       const part = (b.candidates?.[0]?.content?.parts ?? []).find((x) => x.inlineData?.data || x.inline_data?.data);
       const data = part?.inlineData?.data || part?.inline_data?.data;
       const mime = part?.inlineData?.mimeType || part?.inline_data?.mime_type || 'image/png';
