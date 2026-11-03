@@ -3,6 +3,7 @@
 // The browser never loads the full catalog: cart/favorites keep a small snapshot of each product.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Item, Settings } from '@/lib/schema';
+import { flushQueuedOrders } from '@/lib/api';
 
 export type Modal =
   | { kind: 'cart' }
@@ -122,6 +123,14 @@ export function ShopProvider({ site, children }: { site: Settings; children: Rea
 export function useMounted() {
   const [m, setM] = useState(false);
   useEffect(() => setM(true), []);
+  // Orders saved while the backend was unreachable: retry on load, on reconnect and every minute.
+  useEffect(() => {
+    const go = () => { void flushQueuedOrders(); };
+    go();
+    window.addEventListener('online', go);
+    const t = setInterval(go, 60000);
+    return () => { window.removeEventListener('online', go); clearInterval(t); };
+  }, []);
   return m;
 }
 

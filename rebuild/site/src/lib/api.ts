@@ -7,16 +7,18 @@ import type { Ship, Stock } from './schema';
 const NEW = process.env.NEXT_PUBLIC_NEW_BACKEND === '1';
 
 /** POST JSON to the new backend; its `{id}` reply becomes the same `data: id-string` shape rpc() gives. */
-async function mk(path: string, body: unknown, raw = false): Promise<{ ok: boolean; data: string | null; message: string; json?: unknown }> {
+async function mk(path: string, body: unknown, raw = false): Promise<{ ok: boolean; data: string | null; message: string; json?: unknown; retry?: boolean }> {
   try {
     const r = await fetch(`/mkapi/web/public/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const t = await r.text();
     let j: { id?: string; message?: string; error?: string } | null = null;
     try { j = JSON.parse(t); } catch { /* not json */ }
-    if (raw) return { ok: r.ok, data: null, message: r.ok ? '' : j?.message || j?.error || t.slice(0, 200) || 'error', json: j };
+    // Backend asleep/unreachable: 5xx, or the tunnel's own HTML page instead of our JSON.
+    const retry = !r.ok && (r.status >= 500 || !j);
+    if (raw) return { ok: r.ok, data: null, message: r.ok ? '' : j?.message || j?.error || t.slice(0, 200) || 'error', json: j, retry };
     if (r.ok && j?.id) return { ok: true, data: String(j.id), message: '' };
-    return { ok: false, data: null, message: j?.message || j?.error || t.slice(0, 200) || 'error' };
-  } catch (e) { return { ok: false, data: null, message: String(e) }; }
+    return { ok: false, data: null, message: j?.message || j?.error || t.slice(0, 200) || 'error', retry };
+  } catch (e) { return { ok: false, data: null, message: String(e), retry: true }; }
 }
 
 const blobToB64 = (b: Blob) => new Promise<string>((res, rej) => {
@@ -50,8 +52,41 @@ export async function fetchStock(): Promise<Stock | null> {
   } catch { return null; }
 }
 
+// Orders that couldn't reach the backend wait here (this browser) and go out by themselves later.
+const QKEY = 'mk-order-queue';
+type Queued = { body: unknown; at: number };
+const readQ = (): Queued[] => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]'); } catch { return []; } };
+const writeQ = (q: Queued[]) => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch { /* storage blocked */ } };
+let flushing = false;
+/** Send every queued order; keeps the ones that still can't get through. Safe to call anytime. */
+export async function flushQueuedOrders() {
+  if (!NEW || flushing || typeof window === 'undefined') return;
+  const q = readQ();
+  if (!q.length) return;
+  flushing = true;
+  try {
+    const left: Queued[] = [];
+    for (const o of q) {
+      const r = await mk('orders', o.body);
+      if (!r.ok && r.retry && Date.now() - o.at < 7 * 864e5) left.push(o);
+    }
+    writeQ(left);
+  } finally { flushing = false; }
+}
+
 export async function placeOrder(name: string, phone: string, items: { code: string; qty: number }[], ship: Ship) {
-  if (NEW) return mk('orders', { customerName: name, phone, items, ship });
+  if (NEW) {
+    const body = { customerName: name, phone, items, ship };
+    const r = await mk('orders', body);
+    if (!r.ok && r.retry) {
+      const q = readQ();
+      if (typeof window !== 'undefined' && q.length < 10) {
+        writeQ([...q, { body, at: Date.now() }]);
+        return { ok: true, data: 'wait' + Math.random().toString(36).slice(2, 6), message: 'queued' };
+      }
+    }
+    return r;
+  }
   let r = await rpc<string>('place_order', { p_name: name, p_phone: phone || null, p_items: items, p_ship: ship });
   // Older database without the shipping parameter.
   if (!r.ok && /PGRST202|Could not find the function/i.test(r.message)) r = await rpc<string>('place_order', { p_name: name, p_phone: phone || null, p_items: items });

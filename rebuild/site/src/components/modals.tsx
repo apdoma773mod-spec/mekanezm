@@ -122,6 +122,7 @@ function CartSheet() {
       <Sheet onClose={close} label="تم تسجيل طلبك">
         <h3>تم تسجيل طلبك ✔</h3>
         {done.back && <p className="warn">📦 طلبك فيه أصناف بالحجز — هنكلمك على الواتساب ونقولك ميعاد الاستلام.</p>}
+        {ref.startsWith('wait') && <p className="warn">📶 السيستم مشغول دلوقتي، طلبك محفوظ على موبايلك وهيتبعت لوحده أول ما يرجع. ابعته كمان على الواتساب عشان نتأكد.</p>}
         <p>رقم طلبك: <b dir="ltr">{ref}</b></p>
         <p>{shipLine(done.ship)}</p>
         <p>هنتواصل معاك لتأكيد الطلب والسعر{done.ship.method === 'pickup' ? '' : ' ومصاريف ' + (done.ship.method === 'ship' ? 'الشحن' : 'التوصيل')}. تقدر كمان تبعتلنا نسخة على الواتساب.</p>
