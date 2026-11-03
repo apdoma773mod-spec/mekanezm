@@ -541,7 +541,8 @@ async function exportVid(){if(busy)return;if(typeof MediaRecorder==='undefined'|
  const mt=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mt)return say('التصدير مش مدعوم على الموبايل ده');
  busy=true;const btn=$s('sm_ex');btn.disabled=true;
  try{setupCanvas();V.pause();V.currentTime=GAPS.length&&GAPS[0][0]<=0?GAPS[0][1]:0;await new Promise(r=>{V.onseeked=()=>{V.onseeked=null;r()};setTimeout(r,800)});
-  const AC=window.AudioContext||window.webkitAudioContext;if(!V._ac){V._ac=new AC();V._src=V._ac.createMediaElementSource(V);V._dst=V._ac.createMediaStreamDestination();V._src.connect(V._dst);V._src.connect(V._ac.destination)}
+  const AC=window.AudioContext||window.webkitAudioContext;if(!V._ac){V._ac=new AC();V._src=V._ac.createMediaElementSource(V);V._dst=V._ac.createMediaStreamDestination();V._src.connect(V._ac.destination);const a=V._ac,hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=85;const pk=a.createBiquadFilter();pk.type='peaking';pk.frequency.value=3000;pk.Q.value=1;pk.gain.value=3;const cp=a.createDynamicsCompressor();cp.threshold.value=-26;cp.knee.value=8;cp.ratio.value=4;cp.attack.value=.005;cp.release.value=.2;const mg=a.createGain();mg.gain.value=1.7;hp.connect(pk);pk.connect(cp);cp.connect(mg);V._cl=[hp,mg]}
+  {const [hp,mg]=V._cl;try{V._src.disconnect(V._dst)}catch(e){}try{V._src.disconnect(hp)}catch(e){}try{mg.disconnect()}catch(e){}if(S.clean!==false){V._src.connect(hp);mg.connect(V._dst)}else V._src.connect(V._dst)}
   await V._ac.resume();const st=CV.captureStream(30);V._dst.stream.getAudioTracks().forEach(tr=>st.addTrack(tr));
   const ch=[];REC=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:S.q>=1080?8e6:5e6,audioBitsPerSecond:128000});REC.ondataavailable=e=>e.data&&e.data.size&&ch.push(e.data);
   const total=outDur();let rendered=0,lastT=V.currentTime;
@@ -581,6 +582,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label>حجم الكلام<input type="range" id="sm_sz" min="0.7" max="1.5" step="0.05" value="${S.size}"></label>
   <label>المقاس<select id="sm_as"><option value="916" ${S.aspect==='916'?'selected':''}>طولي ٩:١٦ (تيك توك/ريلز)</option><option value="orig" ${S.aspect==='orig'?'selected':''}>زي الفيديو الأصلي</option></select></label>
   <label>الجودة<select id="sm_q"><option value="1080" ${S.q==1080?'selected':''}>عالية 1080</option><option value="720" ${S.q==720?'selected':''}>متوسطة 720 (أسرع وأخف)</option></select></label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cln" ${S.clean!==false?'checked':''}> 🎙️ نضّف صوتي وثبّت علوّه في الفيديو المتصدّر</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
@@ -589,7 +591,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
-  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
+  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><button class="b o" id="sm_post" style="width:100%;margin-top:6px">📝 انسخ نص البوست (عنوان + وصف + هاشتاجات)</button><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>🎞️ أماكن فيديوهات الإدراج</h2><div id="sm_bl"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
@@ -601,7 +603,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_tp').onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;S.tpl=b.dataset.tp;S.o={};saveS();paintTpl();paintOpts();changed()};
  paintOpts();
  const ch=(id,k,f)=>{$s(id).oninput=$s(id).onchange=()=>{S[k]=f?f($s(id)):$s(id).value;saveS();if(D){if(k==='aspect'||k==='q')setupCanvas();LAY.clear();draw(V.currentTime)}}};
- ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_in','intro',x=>x.checked);ch('sm_fx','fx',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
+ ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_in','intro',x=>x.checked);ch('sm_fx','fx',x=>x.checked);ch('sm_cln','clean',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
@@ -631,6 +633,14 @@ async function go(){if(busy)return;if(!F)return say('اختار الفيديو �
  catch(e){if(e.message==='LOGIN'){pg.textContent='';const a=$s('sm_auth');a.innerHTML=loginBox();$s('sm_li').onclick=doLogin;a.scrollIntoView({behavior:'smooth'});say('سجّل دخول بحساب ميكانيزم الأول')}else{const m=/no longer available|اتقفل/i.test(e.message||'')?'موديل جوجل اتغيّر — حدّث الصفحة وجرّب تاني':(e.message||e);pg.textContent='❌ '+m;say('❌ '+m)}}
  finally{busy=false;b.disabled=false;b.textContent='✨ اعمل المونتاج تاني'}}
 /* ترجمة SRT بتوقيت الفيديو بعد القص + صورة غلاف من لقطة واضحة بعد المقدمة */
+function postText(){const b=brand()||{},T=(D&&D.title)||'',ws={};
+ const STOP=/^(اللي|الي|ده|دي|دول|كده|يعني|ازاي|انا|احنا|انت|هو|هي|ممكن|لازم|كمان|برضو|عشان|علشان|لان|لكن|يلا|فيه|علي|على|عندنا|عندك|بتاع|بتاعه|بتاعت|هنا|هناك|دلوقتي|النهارده|جدا|اوي|حاجه|حاجات|جماعه|وده|ودي|بقي|بقى|خالص|كل|مش|مع|من|في|او|ولا|لما|اللى)$/;
+ CAP.forEach(c=>c.w.forEach(w=>{const n=norm(w).replace(/[^\u0600-\u06FFa-z0-9]/gi,'');if(n.length>=4&&!STOP.test(n)&&!/^\d+$/.test(en(n)))ws[n]=(ws[n]||0)+1}));
+ const top=Object.keys(ws).sort((x,y)=>ws[y]-ws[x]||y.length-x.length).slice(0,6);
+ const first=(CAP.slice(0,4).map(c=>c.w.join(' ')).join(' ').split(/\s+/).slice(0,26).join(' ')).trim();
+ const tags=['#'+(b.shop||'ميكانيزم').replace(/\s+/g,'_')].concat(top.map(w=>'#'+w));
+ return [T?('🔥 '+T):'',first?(first+'…'):'',(b.cta||b.phone)?('📞 '+[b.cta||'اطلب دلوقتي',b.phone||''].filter(Boolean).join(' — ')):'',tags.join(' ')].filter(Boolean).join('\n\n')}
+async function copyPost(){if(!CAP.length)return say('اعمل التحليل الأول');const tx=postText();try{await navigator.clipboard.writeText(tx);say('✅ نص البوست اتنسخ — الصقه في فيسبوك/إنستجرام')}catch(e){try{await navigator.share({text:tx})}catch(x){prompt('انسخ النص ده:',tx)}}}
 function exportSrt(){const tc=t=>{const ms=Math.round(Math.max(0,t)*1000),p=(x,l)=>String(x).padStart(l,'0');return `${p(Math.floor(ms/3600000),2)}:${p(Math.floor(ms/60000)%60,2)}:${p(Math.floor(ms/1000)%60,2)},${p(ms%1000,3)}`};
  const L=CAP.filter(c=>!inGap(c.s)).map((c,i)=>`${i+1}
 ${tc(outT(c.s))} --> ${tc(Math.max(outT(c.s)+.3,outT(c.e)))}
@@ -639,7 +649,7 @@ ${c.w.join(' ')}
 async function exportCover(){const t=srcT(Math.max(2.8,Math.min(outDur()*.25,outDur()-.6)));await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2500)});draw(V.currentTime);CV.toBlob(b=>b&&dlBlob(b,(D.title||'غلاف')+'.jpg'),'image/jpeg',.92)}
 function wirePlayer(){$s('sm_pl').onclick=async()=>{if(V.paused){try{if(V._ac)await V._ac.resume();await V.play()}catch(e){}$s('sm_pl').textContent='⏸️'}else{V.pause();$s('sm_pl').textContent='▶️'}};
  V.onended=()=>{$s('sm_pl').textContent='▶️'};const sk=$s('sm_seek');sk.oninput=()=>{sk._drag=1;V.currentTime=sk.value/1000*(V.duration||0)};sk.onchange=()=>{sk._drag=0};
- $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
+ $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_post').onclick=copyPost;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
 function renderLists(){
  (D.seg||[]).forEach(g=>{if(g._o==null)g._o=g.t});
  $s('sm_cap').innerHTML=D.seg.map((g,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;${g.cut&&O('takes')?'opacity:.5':''}"><button type="button" class="b o" data-sk="${g.s}" style="flex:none;min-width:58px;padding:6px">${fmt(g.s)}</button><label title="شيل الجملة دي" style="flex:none;display:flex;align-items:center;gap:2px">✂️<input type="checkbox" data-sc="${i}" ${g.cut?'checked':''} style="width:20px;height:20px"></label><input data-sg="${i}" value="${esc(g.t)}" style="flex:1"></div>`).join('')||'<p class="mu">مفيش كلام</p>';
