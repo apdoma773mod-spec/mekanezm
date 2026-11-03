@@ -460,6 +460,7 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
  applyLook(t,W,H);
  const BR=brActive(t);if(BR)drawBroll(BR,t,W,H);else BRC.forEach(c=>{if(c.v&&!c.v.paused)c.v.pause()});
  drawFinish(t,W,H);
+ drawLogo(W,H,W/1080);musHook();musDuck(t);
  if(O('trans')==='flash'){const d=lastCut(t);if(d!=null&&d<.16){CX.fillStyle=`rgba(255,255,255,${(.55*(1-d/.16)).toFixed(3)})`;CX.fillRect(0,0,W,H)}}
  const u=W/1080,F=`"${S.font}",Cairo,sans-serif`,acc=S.color;CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
  /* المقدمة والخاتمة بتوقيت الفيديو بعد القص (عشان ماتتشالش مع السكتات) */
@@ -546,12 +547,12 @@ async function exportVid(){if(busy)return;if(typeof MediaRecorder==='undefined'|
   await V._ac.resume();const st=CV.captureStream(30);V._dst.stream.getAudioTracks().forEach(tr=>st.addTrack(tr));
   const ch=[];REC=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:S.q>=1080?8e6:5e6,audioBitsPerSecond:128000});REC.ondataavailable=e=>e.data&&e.data.size&&ch.push(e.data);
   const total=outDur();let rendered=0,lastT=V.currentTime;
-  const stop=new Promise(r=>REC.onstop=r);V.muted=false;REC.start(500);await V.play();
+  const stop=new Promise(r=>REC.onstop=r);V.muted=false;REC.start(500);await V.play();if(MU.buf)musStart();
   await new Promise(res=>{const tick=()=>{if(!REC)return res();const t=V.currentTime;if(t>lastT)rendered+=t-lastT;lastT=t;
     const g=inGap(t);if(g&&!V.seeking){if(g[1]>=V.duration-.05)return res();try{REC.pause()}catch(e){}V.currentTime=g[1];lastT=g[1];V.onseeked=()=>{V.onseeked=null;try{REC.resume()}catch(e){}}}
     btn.textContent='⏺️ بسجّل الفيديو… '+Math.min(99,Math.round(rendered/total*100))+'%';if(V.ended||t>=V.duration-0.05)return res();setTimeout(tick,60)};V.onended=()=>res();tick()});
   REC.stop();await stop;V.pause();const blob=new Blob(ch,{type:mt.split(';')[0]}),ext=/mp4/.test(mt)?'mp4':'webm',name='ميكانيزم-'+new Date().toISOString().slice(0,10)+'.'+ext,file=new File([blob],name,{type:blob.type});
-  REC=null;btn.textContent='💾 صدّر الفيديو';btn.disabled=false;busy=false;
+  musStop();REC=null;btn.textContent='💾 صدّر الفيديو';btn.disabled=false;busy=false;
   const out=$s('sm_out');out.innerHTML=`<div class="p"><h2>✅ الفيديو جاهز (${(blob.size/1048576).toFixed(1)} ميجا)</h2><video src="${URL.createObjectURL(blob)}" controls playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>
    <button class="b" id="sm_sh" style="width:100%;margin-top:8px">📤 شارك / احفظ في الصور</button><a class="b o" style="width:100%" download="${esc(name)}" href="${URL.createObjectURL(blob)}">⬇️ تنزيل الملف</a>
    <p class="mu">من «شارك» تقدر تحفظه في الصور أو تبعته على طول لتيك توك وإنستجرام وفيسبوك.${ext!=='mp4'?' (الصيغة WebM — لو المنصة رفضته نزّله واستخدم تحويل)':''}</p></div>`;
@@ -574,6 +575,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  el.innerHTML=`<h1>🎬 مونتاج ذكي</h1><p class="mu">ارفع الفيديو اللي صورته — السيستم بيسمع كلامك، يشيل السكتات والإعادات، يكتب الكلام على الفيديو من غير ما يغطي وشك، ويظهر المقاسات والأصناف والأسعار والخطوات وقت ما تقولها، ويظبط الألوان. اختار الطريقة وبعدين «صدّر» أو «اعمله في الخلفية».</p>
  <div id="sm_auth"></div>
  <div class="p"><h2>١) الفيديو</h2><label class="b" style="width:100%;cursor:pointer">📹 اختار الفيديو<input type="file" id="sm_f" accept="video/*" style="display:none"></label><div id="sm_fi" class="mu"></div></div>
+ <div class="p"><h2>🎵 موسيقى خلفية ولوجو (اختياري)</h2><p class="mu" style="margin:0 0 6px">الموسيقى بتوطى لوحدها وانت بتتكلم وتعلى في السكوت، وبتتسجل في الفيديو المتصدّر. اللوجو بيتحفظ مرة واحدة ويظهر فوق على الشمال في كل فيديو.</p><div style="display:flex;gap:6px"><label class="b o" style="flex:1;cursor:pointer">🎵 اختار موسيقى<input type="file" id="sm_mf" accept="audio/*,.mp3,.m4a,.aac,.wav" style="display:none"></label><label class="b o" style="flex:1;cursor:pointer">🏷️ ارفع اللوجو<input type="file" id="sm_lg" accept="image/*" style="display:none"></label></div><label class="mu" style="display:flex;gap:8px;align-items:center;margin-top:6px">علو الموسيقى<input type="range" id="sm_mv" min="5" max="80" value="30" style="flex:1"></label><div id="sm_mi" class="mu"></div><div id="sm_lgi" class="mu"></div></div>
  <div class="p"><h2>🎞️ فيديوهات الإدراج (اختياري)</h2><p class="mu" style="margin:0 0 6px">ارفع الفيديوهات اللي عايزها تظهر تحت وانت بتتكلم. كل ما تقول «هيظهرلكم فيديو تحت» أو «هتشوفوا» أو «يظهر»، بيظهر الفيديو اللي بعده بالترتيب في نص الشاشة تحت وشك، ويرجع لوحده. (بيشتغل في «اعمله هنا على الموبايل» مش في الخلفية).</p><label class="b o" style="width:100%;cursor:pointer">➕ ضيف فيديو إدراج<input type="file" id="sm_bf" accept="video/*" multiple style="display:none"></label><div id="sm_bi" class="mu"></div></div>
  <div class="p"><h2>٢) طريقة المونتاج</h2><div id="sm_tp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
   <details style="margin-top:10px" ${Object.keys(S.o).length?'open':''}><summary style="cursor:pointer;font-weight:800;padding:6px 0">⚙️ تخصيص (غيّر أي حاجة في القالب)</summary><div id="sm_op" style="margin-top:6px"></div></details>
@@ -607,6 +609,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
+ $s('sm_mf').onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)loadMusic(f)};$s('sm_mf').onclick=e=>{e.target.value=''};$s('sm_lg').onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)loadLogo(f)};$s('sm_mv').oninput=e=>{MU.vol=(+e.target.value)/100;if(V)musDuck(V.currentTime)};paintMu();
  $s('sm_bf').onchange=e=>{if(e.target.files&&e.target.files.length)addBrollFiles(e.target.files)};$s('sm_bf').onclick=e=>{e.target.value=''};$s('sm_bi').onclick=e=>{const b=e.target.closest('[data-brd]');if(!b)return;const c=BRC.splice(+b.dataset.brd,1)[0];try{c.v.pause();URL.revokeObjectURL(c.url)}catch(x){}paintBrIn();if(D){build();renderBR();draw(V.currentTime)}};paintBrIn();
  $s('sm_go').onclick=go;$s('sm_bg').onclick=cloudSubmit;$s('sm_rf').onclick=async()=>{const b=$s('sm_rf');b.disabled=true;b.textContent='⏳';await loadJobs();b.disabled=false;b.textContent='🔄 تحديث'};loadJobs();
  /* تحديث لوحده: كل ٥ ثواني لو فيه فيديو شغال، وأول ما ترجع للتطبيق */
@@ -877,6 +880,21 @@ function drawFinish(t,W,H){if(S.fx===false||O('look')==='off')return;
  const d=O('trans')!=='none'?lastCut(t):null;if(d!=null&&d<.4){const p=d/.4,x=-W*.4+W*1.8*p,w=W*.35,gr=CX.createLinearGradient(x-w,0,x+w,H*.5);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.5,`rgba(255,255,255,${(.22*(1-p)).toFixed(3)})`);gr.addColorStop(1,'rgba(255,255,255,0)');CX.globalCompositeOperation='lighter';CX.fillStyle=gr;CX.fillRect(0,0,W,H)}
  CX.restore()}
 const _build1=build;build=function(){const r=_build1.apply(this,arguments);try{buildFx()}catch(e){console.warn('fx',e)}return r};
+/* ---------- 🎵 موسيقى خلفية بتوطى لوحدها وانت بتتكلم + 🏷️ لوجو المحل ---------- */
+const MU={buf:null,name:'',vol:.3,src:null,g:null,ctx:null,pc:null,logo:null};
+try{const lg=localStorage.getItem('mkz-logo');if(lg){const im=new Image();im.onload=()=>{MU.logo=im};im.src=lg}}catch(e){}
+function musStop(){try{MU.src&&MU.src.stop()}catch(e){}try{MU.g&&MU.g.disconnect()}catch(e){}MU.src=null;MU.g=null}
+function musStart(){musStop();if(!MU.buf||!V)return;const rec=REC&&V._ac&&V._dst;const AC=window.AudioContext||window.webkitAudioContext;
+ const ctx=rec?V._ac:(MU.pc||(MU.pc=new AC()));try{ctx.resume()}catch(e){}const sr=ctx.createBufferSource();sr.buffer=MU.buf;sr.loop=true;const g=ctx.createGain();g.gain.value=MU.vol;sr.connect(g);g.connect(ctx.destination);if(rec)g.connect(V._dst);
+ sr.start(0,(V.currentTime||0)%MU.buf.duration);MU.src=sr;MU.g=g;MU.ctx=ctx}
+function musDuck(t){if(!MU.g||!MU.ctx)return;const talk=CAP.some(c=>t>=c.s-.15&&t<=c.e+.3);try{MU.g.gain.setTargetAtTime(MU.vol*(talk?.28:1),MU.ctx.currentTime,.15)}catch(e){}}
+function musHook(){if(!V||V._musHook)return;V._musHook=1;V.addEventListener('play',()=>{if(MU.buf)musStart()});V.addEventListener('pause',musStop);V.addEventListener('ended',musStop);V.addEventListener('seeked',()=>{if(MU.buf&&!V.paused)musStart()})}
+function paintMu(){const el=$s('sm_mi');if(el)el.innerHTML=MU.buf?`🎵 ${BR_ESC(MU.name)} — ${fmt(MU.buf.duration)} <button type="button" class="b o" id="sm_mx" style="padding:4px 10px">✕</button>`:'';const x=$s('sm_mx');if(x)x.onclick=()=>{musStop();MU.buf=null;paintMu()};
+ const lg=$s('sm_lgi');if(lg)lg.innerHTML=MU.logo?'🏷️ اللوجو متحفظ وهيظهر فوق على الشمال <button type="button" class="b o" id="sm_lgx" style="padding:4px 10px">✕</button>':'';const lx=$s('sm_lgx');if(lx)lx.onclick=()=>{MU.logo=null;try{localStorage.removeItem('mkz-logo')}catch(e){}paintMu();if(V)draw(V.currentTime)}}
+function loadMusic(f){const AC=window.AudioContext||window.webkitAudioContext,tmp=MU.pc||(MU.pc=new AC());const el=$s('sm_mi');if(el)el.textContent='⏳ بحمّل الموسيقى…';
+ f.arrayBuffer().then(ab=>new Promise((ok,bad)=>tmp.decodeAudioData(ab,ok,bad))).then(b=>{MU.buf=b;MU.name=f.name;paintMu();if(V&&!V.paused)musStart()}).catch(()=>{if(el)el.textContent='⚠️ مش قادر أقرأ ملف الموسيقى ده (جرّب MP3 أو M4A)'})}
+function loadLogo(f){const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,256/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);const url=c.toDataURL('image/png');try{localStorage.setItem('mkz-logo',url)}catch(e){}const i2=new Image();i2.onload=()=>{MU.logo=i2;paintMu();if(V)draw(V.currentTime)};i2.src=url};im.src=r.result};r.readAsDataURL(f)}
+function drawLogo(W,H,u){if(!MU.logo)return;const top=(O('letter')?H*.085:0)+(O('prog')?28*u:22*u),sh=O('safe')?W*.06:0,h=96*u,w=h*MU.logo.width/MU.logo.height;CX.save();CX.globalAlpha=.85;CX.shadowColor='rgba(0,0,0,.45)';CX.shadowBlur=10*u;CX.drawImage(MU.logo,22*u+sh,top,w,h);CX.restore()}
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */
 (window.__ready&&window.__ready.then?window.__ready:Promise.resolve()).then(()=>setTimeout(mount,0),()=>setTimeout(mount,0));
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA}),_test:{build,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,

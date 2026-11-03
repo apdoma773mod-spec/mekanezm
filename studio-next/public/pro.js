@@ -59,6 +59,14 @@
     const st = MediaRecorder.prototype.start;
     MediaRecorder.prototype.start = function () {
       rec++; acquire();
+      /* ١١) إشعار + اهتزاز لما الفيديو يخلص لو كنت قافل الصفحة، و١٢) عدّاد الفيديوهات اللي عملتها */
+      try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+      const t0 = Date.now();
+      this.addEventListener('stop', () => {
+        try { const k = 'mkz-pro-stats', s = JSON.parse(localStorage.getItem(k) || '{"n":0,"sec":0}'); s.n++; s.sec += Math.round((Date.now() - t0) / 1000); s.last = new Date().toISOString(); localStorage.setItem(k, JSON.stringify(s)); } catch (e) {}
+        try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch (e) {}
+        try { if (document.hidden && window.Notification && Notification.permission === 'granted') new Notification('🎬 الفيديو خلص', { body: 'ارجع للستوديو تحفظه أو تبعته', icon: 'icon-192.png' }); } catch (e) {}
+      }, { once: true });
       this.addEventListener('stop', () => { rec = Math.max(0, rec - 1); if (!rec) release(); }, { once: true });
       return st.apply(this, arguments);
     };
@@ -120,6 +128,36 @@
     addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); open() } });
     const fab = E('button', { id: 'pro-fab', title: 'بحث سريع (Ctrl+K)', textContent: '🔎', onclick: open }); fab.setAttribute('aria-label', 'بحث سريع');
     document.body.appendChild(fab);
+  });
+
+  /* ١٣) دليل أول مرة للمونتاج الذكي + لوحة «إنجازاتي» (عدد الفيديوهات ووقت التصدير) */
+  safe(() => {
+    const css = E('style', {}, `
+      #pro-tip{position:fixed;inset:0;z-index:99997;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
+      #pro-tip>div{width:min(440px,100%);background:var(--sf,#141416);color:var(--tx,#F3EFE6);border:1px solid var(--ln,#333);border-radius:18px;padding:18px;font:600 15px/1.8 Cairo,sans-serif;box-shadow:0 20px 60px #000a}
+      #pro-tip h3{margin:0 0 8px;font-size:19px}#pro-tip ol{margin:0;padding-inline-start:22px}#pro-tip button{margin-top:12px;width:100%;min-height:46px;border:0;border-radius:12px;background:var(--a2,#D4A537);color:#000;font:800 16px Cairo,sans-serif;cursor:pointer}
+      #pro-tip .st{margin-top:10px;padding:10px;border-radius:12px;background:var(--sf2,#222);font-size:14px}`);
+    document.head.appendChild(css);
+    const stats = () => { try { return JSON.parse(localStorage.getItem('mkz-pro-stats') || '{"n":0,"sec":0}') } catch (e) { return { n: 0, sec: 0 } } };
+    const show = () => {
+      const s = stats(), mins = Math.round(s.sec / 60);
+      const box = E('div', { id: 'pro-tip' }, `<div role="dialog" aria-label="إزاي تعمل مونتاج ذكي"><h3>🎬 المونتاج الذكي في ٥ خطوات</h3><ol>
+        <li>ارفع الفيديو الأساسي (اتكلم عادي قدام الكاميرا).</li>
+        <li>اختياري: ارفع <b>فيديوهات الإدراج</b> وقول في كلامك «هيظهرلكم فيديو تحت».</li>
+        <li>اختياري: <b>موسيقى خلفية</b> (بتوطى لوحدها وانت بتتكلم) و<b>لوجو</b> المحل.</li>
+        <li>اختار الطريقة ودوس <b>«✨ اعمله هنا على الموبايل»</b>.</li>
+        <li>راجع الكلام، صدّر، ودوس <b>📝 انسخ نص البوست</b> وانشر.</li></ol>
+        <div class="st">📊 إنجازاتك: <b>${s.n}</b> فيديو اتصدّر${mins ? ` • ${mins} دقيقة تصدير` : ''}</div><button type="button">يلا نبدأ</button></div>`);
+      box.addEventListener('click', e => { if (e.target === box || e.target.tagName === 'BUTTON') { box.remove(); try { localStorage.setItem('mkz-pro-tip', '1') } catch (e) {} } });
+      document.body.appendChild(box);
+    };
+    window.mkzGuide = show;
+    /* أول ما تفتح المونتاج الذكي لأول مرة */
+    document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('#rail button[data-go="smart"]'); if (!b) return; let seen = '1'; try { seen = localStorage.getItem('mkz-pro-tip') } catch (x) {} if (!seen) setTimeout(show, 600); });
+    /* ودايمًا من زرار ❓ جنب 🔎 */
+    const q = E('button', { id: 'pro-help', title: 'دليل وإنجازات', textContent: '❓', onclick: show }); q.setAttribute('aria-label', 'دليل المونتاج وإنجازاتي');
+    q.style.cssText = 'position:fixed;inset-inline-start:12px;bottom:calc(134px + env(safe-area-inset-bottom,0px));z-index:9999;width:42px;height:42px;border-radius:50%;border:1px solid var(--ln,#333);background:var(--sf,#141416);color:var(--tx,#F3EFE6);font-size:18px;cursor:pointer;opacity:.8';
+    document.body.appendChild(q);
   });
 
   /* ١٠) سرعة: اتصال مسبق بالخدمات (سوبابيز والخطوط) */
