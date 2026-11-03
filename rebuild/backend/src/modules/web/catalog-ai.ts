@@ -28,7 +28,8 @@ const body = z.object({
   section: z.string().trim().max(120).default(''),
   desc: z.string().max(3000).default(''),
   img: z.string().max(500).default(''),
-  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(true) }).default({}),
+  // الصور المتولّدة اتقفلت افتراضيًا (عبده ٢٠٢٦-١١-٠٣: الموديلات المجانية بتغيّر شكل القطعة وتركّبها غلط) — الوصف والمقاسات بس
+  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(process.env.CATALOG_AI_IMAGES === '1') }).default({}),
 });
 
 type Spec = { k: string; v: string };
@@ -271,8 +272,19 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       const sharp = (await import('sharp')).default;
       // الموديل بياخد صور مرجع أصغر من ٥١٢×٥١٢
       const ref = await sharp(Buffer.from(photo!.data, 'base64')).resize(500, 500, { fit: 'inside' }).jpeg({ quality: 90 }).toBuffer();
+      // الموديل المجاني ضعيف مع الطلب العام (بيرسم درج عادي): Gemini بيبص على صورة المنتج الأول ويكتب وصف دقيق للقطعة نفسها
+      // (شكلها، ألوانها، خاماتها) والمكان الصح اللي بتتركب فيه وإزاي تبان وهي شغالة — وده اللي بيترسم
+      const scene = await geminiJson<{ prompt?: string }>(
+        key,
+        `You write prompts for an image model that edits a reference photo. Look at the attached photo of a furniture/kitchen hardware product sold in Egypt ("${p.name}", category: ${p.section || 'hardware'}). Ignore any logo, frame or text overlay in the photo.
+Write ONE English prompt (max 110 words) that starts with "Image 0 shows" and: 1) describes exactly what this product is and its visible shape, parts, colours and materials precisely enough to recreate the SAME part; 2) asks to show THIS EXACT part from image 0 installed and working in its correct real place (e.g. drawer runner on the side of an open drawer seen close-up, hinge on an open cabinet door, corner unit trays swung out of a corner base cabinet, sliding wardrobe door track with doors, lift on a wall cabinet); 3) close-up so the part fills most of the frame and is the sharp hero; modern kitchen or wardrobe, soft daylight; no text, no logos, no people.
+Return JSON: {"prompt":"..."}`,
+        { data: photo!.data, mime: photo!.mime },
+      )
+        .then((d) => String(d.prompt ?? '').slice(0, 1200))
+        .catch(() => '');
       const fd = new FormData();
-      fd.append('prompt', CF_PROMPT(p));
+      fd.append('prompt', scene || CF_PROMPT(p));
       fd.append('input_image_0', new Blob([new Uint8Array(ref)], { type: 'image/jpeg' }), 'product.jpg');
       fd.append('width', '1024');
       fd.append('height', '768');
