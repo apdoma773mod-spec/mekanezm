@@ -7,6 +7,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
+import { catalogAiRoutes } from './catalog-ai.js';
 
 
 /**
@@ -48,6 +49,7 @@ const EMPTY: SiteDoc = { data: { theme: {}, sections: [], products: [] }, versio
 
 export default async function webRoutes(app: FastifyInstance) {
   const db = app.prisma;
+  await catalogAiRoutes(app);
   const readSite = async (): Promise<SiteDoc> => {
     const row = await db.setting.findUnique({ where: { key: SITE_KEY } });
     const v = row?.value as unknown as SiteDoc | null;

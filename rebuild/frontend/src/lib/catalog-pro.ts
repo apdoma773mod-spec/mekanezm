@@ -175,6 +175,15 @@ export const DEFAULT_ARTICLES: Article[] = [
   },
 ];
 
+export interface AiInfo {
+  desc: string;
+  features: string[];
+  specs: { k: string; v: string }[];
+  img: string;
+  sources?: string[];
+  at?: string;
+}
+
 export interface CatCfg {
   colors: { main: string; dark: string; accent: string; alt: string };
   cover: { title: string; subtitle: string; note: string; imgs: string[] };
@@ -197,6 +206,8 @@ export interface CatCfg {
   /** صورة «في الاستخدام» (درج راكب عليه المجرى، دولاب راكبة فيه المفصلة…): لكل قسم، ولمنتج معيّن بالكود */
   secUse: Record<string, string>;
   prodUse: Record<string, string>;
+  /** 🤖 اللي الذكاء الاصطناعي عمله لكل منتج (بالكود): وصف + مميزات + مقاسات التركيب + صورة القطعة وهي راكبة */
+  ai: Record<string, AiInfo>;
   /** نسخة المقالات الافتراضية: لما نضيف مقالات جديدة بتتضاف لوحدها للي حافظ إعدادات قديمة */
   articlesV?: number;
   /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
@@ -265,6 +276,7 @@ export const DEFAULT_CFG: CatCfg = {
   secTexts: {},
   secUse: {},
   prodUse: {},
+  ai: {},
   articlesV: 2,
 };
 
@@ -287,6 +299,7 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     secTexts: { ...c?.secTexts },
     secUse: { ...c?.secUse },
     prodUse: { ...c?.prodUse },
+    ai: { ...c?.ai },
     style: { ...d.style, ...c?.style },
     gift: c?.gift,
   };
@@ -802,10 +815,13 @@ export function proPages(inp: CatInput): Built {
       prodPage.set(p.code, entries.length);
       add((i) => {
         index.push({ n: p.name, c: p.code, s: name, p: i });
-        const d = splitDesc(p.desc ?? '');
+        const ai = cfg.ai[p.code];
+        const d0 = splitDesc(p.desc ?? '');
+        // لو الذكاء الاصطناعي عمل وصف ومقاسات، هما الأساس، والمواصفات القديمة بتكمّل
+        const d = ai && (ai.desc || ai.specs.length) ? { intro: ai.desc || d0.intro, points: ai.features.length ? ai.features : d0.points, specs: [...ai.specs.map((x) => [x.k, x.v] as [string, string]), ...d0.specs.filter(([k]) => !ai.specs.some((x) => x.k === k))] } : d0;
         const photos = p.imgs.filter((u) => u !== p.dimImg);
         // صورة «في الاستخدام»: المرفوعة للمنتج، وإلا بتاعة القسم، وإلا صورة تانية للمنتج
-        const useImg = cfg.prodUse[p.code] || cfg.secUse[name] || '';
+        const useImg = cfg.prodUse[p.code] || ai?.img || cfg.secUse[name] || '';
         const side = useImg || photos[1] || '';
         const hero = photos[0] || side;
         const extra = photos.filter((u) => u !== hero && u !== side).slice(0, 3);
@@ -823,14 +839,14 @@ export function proPages(inp: CatInput): Built {
         const fk = sizedOf(p) ? famKey(p.name) : '';
         const sibs = fk ? list.filter((q) => sizedOf(q) && famKey(q.name) === fk) : [];
         const sizeOf = (q: CatProduct) => q.size || (q.name.match(/[0-9٠-٩]+(?:[.,][0-9٠-٩]+)?\s*(?:سم|مم|cm|mm|م)?/i)?.[0] ?? '').trim() || q.name;
-        const rows: [string, string][] = [];
+        const rows: [string, string][] = ai ? ai.specs.map((x) => [cut(x.k, 18), cut(x.v, 30)] as [string, string]) : [];
         if (p.size && sibs.length < 2) rows.push(['المقاس', p.size]);
         if (p.finish) rows.push(['التشطيب', p.finish]);
         if (p.brand) rows.push(['الماركة', p.brand]);
         if (p.unit) rows.push(['الوحدة', p.unit]);
-        for (const [k, v] of d.specs) if (!rows.some((r) => r[0] === k)) rows.push([cut(k, 16), cut(v, 30)]);
+        for (const [k, v] of d.specs) if (!rows.some((r) => r[0] === k)) rows.push([cut(k, 18), cut(v, 30)]);
         const stkTxt = F.stock && p.inStock !== undefined ? `<span class="${p.inStock ? 'ok' : 'no'}">${p.inStock ? '● متوفر' : '○ حسب الطلب'}</span>` : '';
-        const spec = F.specs && (rows.length || stkTxt) ? `<div><h3>المواصفات</h3><table>${rows.slice(0, sibs.length > 1 ? 2 : 6).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}${stkTxt ? `<tr><td>التوفر</td><td>${stkTxt}</td></tr>` : ''}</table></div>` : '';
+        const spec = F.specs && (rows.length || stkTxt) ? `<div><h3>المواصفات</h3><table>${rows.slice(0, sibs.length > 1 ? 3 : 7).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}${stkTxt ? `<tr><td>التوفر</td><td>${stkTxt}</td></tr>` : ''}</table></div>` : '';
         const sz = sibs.length > 1 ? `<div><h3>المقاسات المتاحة</h3><table class="sz">${sibs.slice(0, 4).map((q) => `<tr><td>${esc(sizeOf(q))}</td><td>${esc(q.code)}</td><td>${F.stock && q.inStock !== undefined ? (q.inStock ? '<span class="ok">●</span>' : '<span class="no">○</span>') : ''}</td></tr>`).join('')}${sibs.length > 4 ? `<tr><td colspan="3">+ ${nn(sibs.length - 4)} مقاس كمان (في فهرس الأكواد)</td></tr>` : ''}</table></div>` : '';
         const dm = p.dimImg ? `<div class="dm"><img src="${esc(p.dimImg)}" alt=""><small>📐 رسم المقاسات</small></div>` : '';
         const vurl = p.video ? (/^https?:/.test(p.video) ? p.video : `https://youtu.be/${p.video}`) : '';

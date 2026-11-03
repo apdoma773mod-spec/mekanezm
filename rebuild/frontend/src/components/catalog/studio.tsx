@@ -2,10 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { CatalogAi } from '@/components/catalog/ai-panel';
 import { uploadSiteImage } from '@/components/modals/site-admin';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
-import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_ARTICLES, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type Article, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
+import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_ARTICLES, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type AiInfo, type Article, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
 import { printHtml } from '@/lib/print';
 import { useAllProductInfo, useAllProducts } from '@/lib/trade-queries';
 import { fetchSite, saveSite } from '@/lib/web-queries';
@@ -146,7 +147,7 @@ export function CatalogStudio() {
 
   const input = (absolute: boolean): CatInput => {
     const f = absolute ? abs : (u: string) => u;
-    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), secUse: Object.fromEntries(Object.entries(cfg.secUse).map(([k, v]) => [k, f(v)])), prodUse: Object.fromEntries(Object.entries(cfg.prodUse).map(([k, v]) => [k, f(v)])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
+    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), secUse: Object.fromEntries(Object.entries(cfg.secUse).map(([k, v]) => [k, f(v)])), prodUse: Object.fromEntries(Object.entries(cfg.prodUse).map(([k, v]) => [k, f(v)])), ai: Object.fromEntries(Object.entries(cfg.ai).map(([k, v]) => [k, { ...v, img: f(v.img) }])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
     return {
       shop: 'ميكانيزم',
       tagline: String((data as Record<string, unknown> | undefined)?.tagline ?? ''),
@@ -157,6 +158,16 @@ export function CatalogStudio() {
     };
   };
 
+  const cfgRef = useRef(cfg);
+  cfgRef.current = cfg;
+  const saveNow = () => saveSite((d) => void ((d as Record<string, unknown>).catalogCfg = cfgRef.current)).then(() => undefined);
+  const setAi = (code: string, v: AiInfo | null) =>
+    setCfg((c) => {
+      const ai = { ...c.ai };
+      if (v) ai[code] = v;
+      else delete ai[code];
+      return { ...c, ai };
+    });
   const save = async () => {
     setBusy('save');
     try {
@@ -264,6 +275,10 @@ export function CatalogStudio() {
             <textarea style={{ ...inp, minHeight: 150 }} value={gift.message} onChange={(e) => setGift({ ...gift, message: e.target.value })} />
           </>
         )}
+      </Sec>
+
+      <Sec title="🤖 صور القطعة وهي راكبة + الوصف + المقاسات (ذكاء اصطناعي)" open>
+        <CatalogAi products={picked} ai={cfg.ai} setAi={setAi} saveNow={saveNow} />
       </Sec>
 
       <Sec title={`🎨 الألوان (${COLOR_PRESETS.length} ثيم جاهز — اضغط واحد وكل ألوان الكتالوج تتغير)`} open>

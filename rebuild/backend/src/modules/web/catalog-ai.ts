@@ -1,0 +1,178 @@
+import { randomBytes } from 'node:crypto';
+import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+import { actorOf } from '../../lib/actor.js';
+import { writeAudit } from '../../lib/audit.js';
+import { badRequest } from '../../lib/errors.js';
+import { getFile, putFile } from '../../lib/files.js';
+import { parse } from '../../lib/validate.js';
+
+/**
+ * 🤖 الكتالوج بالذكاء الاصطناعي (Gemini): لكل منتج
+ *  - صورة للقطعة وهي راكبة (مجرى في درج، ماجيك كورنر في دولاب ركنة…) مبنية على صورة المنتج نفسه
+ *  - وصف احترافي + مميزات + مواصفات ومقاسات التركيب (عرض العلبة، مقاس الضلفة، العمق، الحمولة…) من مواقع الشركات بالبحث في جوجل
+ * المفتاح: GEMINI_API_KEY في backend/.env، أو اللي عبده بيحطه من صفحة الكتالوج (Setting ai_gemini_key).
+ */
+const KEY_SETTING = 'ai_gemini_key';
+const TEXT_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3-flash-preview'];
+const IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-2.0-flash-preview-image-generation'];
+const GONE = /no longer available|not found|is not supported|deprecated|unknown model|not available/i;
+
+const body = z.object({
+  code: z.string().trim().min(1).max(40),
+  name: z.string().trim().min(1).max(200),
+  section: z.string().trim().max(120).default(''),
+  desc: z.string().max(3000).default(''),
+  img: z.string().max(500).default(''),
+  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(true) }).default({}),
+});
+
+type Spec = { k: string; v: string };
+export interface AiResult {
+  desc: string;
+  features: string[];
+  specs: Spec[];
+  sources: string[];
+  img: string;
+  textError?: string;
+  imgError?: string;
+}
+
+const gemini = async (key: string, model: string, payload: unknown, ms: number) => {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(ms),
+    headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const b = (await r.json().catch(() => ({}))) as { error?: { message?: string }; candidates?: { content?: { parts?: { text?: string; inlineData?: { data: string; mimeType: string }; inline_data?: { data: string; mime_type: string } }[] }; groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] } }[] };
+  if (!r.ok) throw new Error(b.error?.message || `Gemini ${r.status}`);
+  return b;
+};
+
+/** يجرّب الموديلات بالترتيب ويعدّي اللي جوجل قفله */
+async function firstWorking<T>(models: string[], run: (m: string) => Promise<T>): Promise<T> {
+  let last: Error = new Error('مفيش موديل شغال');
+  for (const m of models) {
+    try {
+      return await run(m);
+    } catch (e) {
+      last = e as Error;
+      if (!GONE.test(last.message)) throw last;
+    }
+  }
+  throw last;
+}
+
+const friendly = (e: unknown) => {
+  const m = String((e as Error)?.message || e);
+  if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'المفتاح غلط — اتأكد إنك نسخته كامل';
+  if (/quota|RESOURCE_EXHAUSTED|rate/i.test(m)) return 'خلصت الحصة المجانية لجوجل النهارده أو الموديل ده محتاج تفعيل الدفع في Google AI Studio — جرّب بكرة';
+  if (/timeout|abort/i.test(m)) return 'جوجل اتأخر في الرد، جرّب تاني';
+  return m.slice(0, 200);
+};
+
+const TEXT_PROMPT = (p: z.infer<typeof body>) => `إنت خبير إكسسوارات مطابخ ودريسنج ومفصلات ومجاري أدراج وميكانيزمات (Blum, Hettich, Grass, Hafele, Kesseböhmer, Samet, Vauth-Sagel, Peka, Starax…).
+المنتج من محل «ميكانيزم» في مصر:
+- الاسم: ${p.name}
+- القسم: ${p.section || 'غير محدد'}
+- الكود: ${p.code}
+- الوصف الموجود عندنا: ${p.desc.slice(0, 1200) || 'مفيش'}
+${p.img ? '- مرفق صورة المنتج.' : ''}
+
+ابحث في جوجل عن المنتج ده أو أقرب منتج مطابق له عند الشركات المصنّعة، وهات مواصفاته الحقيقية، خصوصًا مقاسات التركيب اللي النجار محتاجها:
+عرض العلبة/الدولاب المناسب، مقاس الضلفة (العرض والارتفاع)، العمق الداخلي المطلوب، طول المجرى، الحمولة، سُمك الخشب، زاوية الفتح، الخامة، التشطيب، طريقة التركيب (يمين/شمال)… حسب نوع المنتج.
+لو معلومة مش متأكد منها متكتبهاش. متخترعش أرقام.
+
+رجّع JSON بس (من غير أي كلام قبله أو بعده) بالشكل ده:
+{"desc":"وصف احترافي جذاب بالعربي الفصيح البسيط في جملتين أو تلاتة، من غير مبالغة ومن غير أسعار","features":["ميزة قصيرة", "..."],"specs":[{"k":"عرض العلبة","v":"90 سم"},{"k":"مقاس الضلفة","v":"45 سم"}]}
+features من 3 لـ 5، و specs من 3 لـ 8 (الأهم الأول: مقاسات التركيب).`;
+
+const IMAGE_PROMPT = (p: z.infer<typeof body>) =>
+  `Create a photorealistic, high-end catalog photo showing THIS EXACT hardware product from the attached photo installed and in use in its real place (for example: a drawer runner mounted on an open drawer, a hinge on a cabinet door, a corner unit like Magic Corner pulled out of a kitchen corner cabinet, a pull-out basket inside a tall cabinet, a wardrobe lift inside a wardrobe, a handle on a cabinet front). Product: "${p.name}" (category: ${p.section || 'furniture hardware'}). Keep the product's shape, color and material identical to the attached photo and clearly visible as the hero. Modern kitchen or wardrobe interior, soft natural light, shallow depth of field, clean premium look. No text, no logos, no watermarks, no people.`;
+
+export async function catalogAiRoutes(app: FastifyInstance) {
+  const db = app.prisma;
+  const getKey = async () => {
+    if (process.env.GEMINI_API_KEY) return { key: process.env.GEMINI_API_KEY, source: 'env' as const };
+    const v = (await db.setting.findUnique({ where: { key: KEY_SETTING } }))?.value as { key?: string } | null;
+    return v?.key ? { key: v.key, source: 'saved' as const } : null;
+  };
+
+  app.get('/catalog/ai/key', { preHandler: app.requireAdmin }, async () => {
+    const k = await getKey();
+    return { set: !!k, source: k?.source ?? null };
+  });
+  app.put('/catalog/ai/key', { preHandler: app.requireAdmin }, async (request) => {
+    const { key } = parse(z.object({ key: z.string().trim().max(200) }), request.body);
+    const actor = actorOf(request);
+    if (!key) await db.setting.deleteMany({ where: { key: KEY_SETTING } });
+    else {
+      if (!/^[A-Za-z0-9_-]{20,}$/.test(key)) throw badRequest('شكل المفتاح مش مظبوط — انسخه كامل من Google AI Studio');
+      await db.setting.upsert({ where: { key: KEY_SETTING }, create: { key: KEY_SETTING, value: { key }, updatedById: actor.id }, update: { value: { key }, updatedById: actor.id } });
+    }
+    await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: KEY_SETTING, after: { set: !!key }, ip: actor.ip });
+    return { set: !!key };
+  });
+
+  const loadImage = async (u: string): Promise<{ data: string; mime: string } | null> => {
+    if (!u) return null;
+    const m = u.match(/\/api\/v1\/work\/files\/([a-z0-9-]+\.(jpg|jpeg|png|webp))$/i);
+    let buf: Buffer | null = null;
+    let mime = 'image/jpeg';
+    if (m) {
+      buf = await getFile(m[1]!);
+      const ext = m[2]!.toLowerCase();
+      mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    } else if (/^https:\/\//.test(u)) {
+      const r = await fetch(u, { signal: AbortSignal.timeout(20000) }).catch(() => null);
+      if (r?.ok) {
+        mime = (r.headers.get('content-type') || 'image/jpeg').split(';')[0]!;
+        buf = Buffer.from(await r.arrayBuffer());
+      }
+    }
+    if (!buf || !buf.length || buf.length > 8 * 1024 * 1024 || !mime.startsWith('image/')) return null;
+    return { data: buf.toString('base64'), mime };
+  };
+
+  app.post('/catalog/ai/product', { preHandler: app.requireAdmin, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request) => {
+    const p = parse(body, request.body);
+    const k = await getKey();
+    if (!k) throw badRequest('محتاج مفتاح Gemini الأول (مجاني من aistudio.google.com)');
+    const photo = await loadImage(p.img);
+    const imgPart = photo ? [{ inline_data: { mime_type: photo.mime, data: photo.data } }] : [];
+    const out: AiResult = { desc: '', features: [], specs: [], sources: [], img: '' };
+
+    const text = async () => {
+      const b = await firstWorking(TEXT_MODELS, (m) => gemini(k.key, m, { contents: [{ parts: [{ text: TEXT_PROMPT(p) }, ...imgPart] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0.3 } }, 90000));
+      const c = b.candidates?.[0];
+      const t = (c?.content?.parts ?? []).map((x) => x.text || '').join('');
+      const j = t.match(/\{[\s\S]*\}/)?.[0];
+      if (!j) throw new Error('الذكاء الاصطناعي مارجّعش بيانات مفهومة، جرّب تاني');
+      const d = JSON.parse(j) as { desc?: string; features?: string[]; specs?: Spec[] };
+      out.desc = String(d.desc ?? '').slice(0, 700);
+      out.features = (Array.isArray(d.features) ? d.features : []).map((x) => String(x).slice(0, 140)).filter(Boolean).slice(0, 5);
+      out.specs = (Array.isArray(d.specs) ? d.specs : []).filter((x) => x && x.k && x.v).map((x) => ({ k: String(x.k).slice(0, 40), v: String(x.v).slice(0, 80) })).slice(0, 8);
+      out.sources = (c?.groundingMetadata?.groundingChunks ?? []).map((g) => g.web?.uri || '').filter(Boolean).slice(0, 4);
+    };
+    const image = async () => {
+      if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
+      const b = await firstWorking(IMAGE_MODELS, (m) =>
+        gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: m.includes('2.0') ? ['TEXT', 'IMAGE'] : ['IMAGE'] } }, 120000),
+      );
+      const part = (b.candidates?.[0]?.content?.parts ?? []).find((x) => x.inlineData?.data || x.inline_data?.data);
+      const data = part?.inlineData?.data || part?.inline_data?.data;
+      const mime = part?.inlineData?.mimeType || part?.inline_data?.mime_type || 'image/png';
+      if (!data) throw new Error('جوجل مارجّعش صورة، جرّب تاني');
+      const ext = mime.includes('jpeg') || mime.includes('jpg') ? 'jpg' : mime.includes('webp') ? 'webp' : 'png';
+      const name = `${randomBytes(12).toString('hex')}.${ext}`;
+      await putFile(name, Buffer.from(data, 'base64'), mime);
+      out.img = `/api/v1/work/files/${name}`;
+    };
+    await Promise.all([
+      p.want.text ? text().catch((e) => void (out.textError = friendly(e))) : null,
+      p.want.image ? image().catch((e) => void (out.imgError = friendly(e))) : null,
+    ]);
+    return out;
+  });
+}
