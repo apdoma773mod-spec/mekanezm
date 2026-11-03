@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import type { AiInfo, CatProduct } from '@/lib/catalog-pro';
+import { WebPhotos } from './web-photos';
 
 interface AiOut extends AiInfo {
   textError?: string;
@@ -14,12 +15,12 @@ interface AiOut extends AiInfo {
  * 🤖 صورة للقطعة وهي راكبة + وصف + مقاسات التركيب من مواقع الشركات (Gemini) — لمنتج واحد أو لكل المنتجات مرة واحدة.
  * النتيجة بتتحفظ في إعدادات الكتالوج (cfg.ai) وصفحة المنتج بتستخدمها لوحدها.
  */
-export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProduct[]; ai: Record<string, AiInfo>; setAi: (code: string, v: AiInfo | null) => void; saveNow: () => Promise<void> }) {
+export function CatalogAi({ products, ai, setAi, saveNow, photos, setPhotos }: { products: CatProduct[]; ai: Record<string, AiInfo>; setAi: (code: string, v: AiInfo | null) => void; saveNow: () => Promise<void>; photos: Record<string, string[]>; setPhotos: (code: string, v: string[]) => void }) {
   const toast = useToast();
   const [keySet, setKeySet] = useState<boolean | null>(null);
   const [keyIn, setKeyIn] = useState('');
-  const [cf, setCf] = useState(false);
-  const [cfIn, setCfIn] = useState({ account: '', token: '' });
+  const [serper, setSerper] = useState(false);
+  const [serperIn, setSerperIn] = useState('');
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -28,7 +29,7 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   const stop = useRef(false);
 
   useEffect(() => {
-    api.get<{ set: boolean; cf?: boolean }>('/web/catalog/ai/key').then((r) => { setKeySet(r.set); setCf(!!r.cf); }).catch(() => setKeySet(false));
+    api.get<{ set: boolean; cf?: boolean; serper?: boolean }>('/web/catalog/ai/key').then((r) => { setKeySet(r.set); setSerper(!!r.serper); }).catch(() => setKeySet(false));
   }, []);
 
   const saveKey = async () => {
@@ -43,17 +44,16 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   };
 
   // النتيجة: got = اتعمل حاجة واتحفظت للمنتج (حتى لو جزء منها فشل، زي الصورة)
-  const saveCf = async () => {
+  const saveSerper = async () => {
     try {
-      const r = await api.put<{ cf: boolean }>('/web/catalog/ai/cf', cfIn);
-      setCf(r.cf);
-      setCfIn({ account: '', token: '' });
-      toast(r.cf ? '✔ الصور المجانية اشتغلت' : 'اتشالت بيانات Cloudflare');
+      const r = await api.put<{ serper: boolean }>('/web/catalog/ai/serper', { key: serperIn });
+      setSerper(r.serper);
+      setSerperIn('');
+      toast('✔ صور النت اشتغلت');
     } catch (e) {
       toast(errorMessage(e), 'bad');
     }
   };
-
   const one = async (p: CatProduct, single = false): Promise<{ got: boolean; err: boolean }> => {
     setBusy((b) => ({ ...b, [p.code]: true }));
     setErrs((x) => ({ ...x, [p.code]: '' }));
@@ -124,7 +124,7 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   return (
     <div>
       <p className="bz-note" style={{ marginTop: 0 }}>
-        الأداة بتبص على صورة المنتج واسمه وبتعمل لوحدها: <b>صورة للقطعة وهي راكبة</b> (المجرى في درج، الماجيك كورنر في دولاب الركنة…)، و<b>وصف احترافي</b>، و<b>مقاسات التركيب</b> من مواقع الشركات (عرض العلبة، مقاس الضلفة، العمق، الحمولة…). كل حاجة بتظهر في صفحة المنتج في الكتالوج على طول.
+        الأداة بتبص على صورة المنتج واسمه وبتعمل لوحدها <b>وصف احترافي</b> و<b>مقاسات التركيب</b>، وبتجيبلك <b>صور حقيقية شبه المنتج من النت</b> تختار منها من مواقع الشركات (عرض العلبة، مقاس الضلفة، العمق، الحمولة…). كل حاجة بتظهر في صفحة المنتج في الكتالوج على طول.
       </p>
       {!keySet ? (
         <div style={{ background: '#fff8e6', border: '1px solid #f5d38a', borderRadius: 12, padding: 12 }}>
@@ -141,21 +141,21 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
         </div>
       ) : (
         <>
-          {!cf ? (
+          {!serper ? (
             <div style={{ background: '#eef6ff', border: '1px solid #b9d6f5', borderRadius: 12, padding: 12, marginBottom: 10 }}>
-              <b>🖼️ الصور ببلاش (حوالي ٨٠ صورة في اليوم) من Cloudflare — مرة واحدة بس:</b>
+              <b>🖼️ صور حقيقية للمنتج من النت (٢٥٠٠ بحث ببلاش، من غير فيزا) — مرة واحدة بس:</b>
               <ol style={{ margin: '6px 0', paddingInlineStart: 20, fontSize: 14, lineHeight: 1.9 }}>
-                <li>اعمل حساب مجاني: <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">dash.cloudflare.com/sign-up</a></li>
-                <li>افتح <a href="https://dash.cloudflare.com/?to=/:account/ai/workers-ai" target="_blank" rel="noreferrer">صفحة Workers AI</a> ودوس «Use REST API».</li>
-                <li>انسخ الـ <b>Account ID</b> والزقه تحت.</li>
-                <li>دوس «Create a Workers AI API Token» ← «Create API Token»، وانسخ الـ <b>Token</b> والزقه تحت.</li>
+                <li>افتح <a href="https://serper.dev/signup" target="_blank" rel="noreferrer">serper.dev/signup</a> وادخل بحساب جوجل.</li>
+                <li>من القايمة دوس «API Key» وانسخ المفتاح.</li>
+                <li>الزقه هنا ودوس حفظ.</li>
               </ol>
-              <input value={cfIn.account} onChange={(e) => setCfIn({ ...cfIn, account: e.target.value })} placeholder="Account ID" autoComplete="off" style={{ width: '100%', marginBottom: 6 }} />
-              <input type="password" value={cfIn.token} onChange={(e) => setCfIn({ ...cfIn, token: e.target.value })} placeholder="API Token" autoComplete="off" style={{ width: '100%', marginBottom: 6 }} />
-              <button type="button" className="primary" disabled={!cfIn.account.trim() || !cfIn.token.trim()} onClick={() => void saveCf()}>💾 حفظ وتشغيل الصور</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="password" autoComplete="off" value={serperIn} onChange={(e) => setSerperIn(e.target.value)} placeholder="الزق مفتاح Serper هنا" style={{ flex: 1 }} />
+                <button type="button" className="primary" disabled={!serperIn.trim()} onClick={() => void saveSerper()}>💾 حفظ</button>
+              </div>
             </div>
           ) : (
-            <p style={{ ...sm, margin: '0 0 8px' }}>🖼️ الصور المجانية من Cloudflare شغالة ✔ (حوالي ٨٠ صورة في اليوم، وبتتجدد كل يوم الساعة ٢ بالليل)</p>
+            <p style={{ ...sm, margin: '0 0 8px' }}>🖼️ صور النت شغالة ✔ — دوس «🖼️ صور من النت» على أي منتج واختار الصور الشبهه</p>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {run ? (
@@ -187,6 +187,17 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
                   <button type="button" className={a ? 'secondary' : 'primary'} disabled={!!busy[p.code] || !!run} onClick={() => void one(p, true)}>
                     {busy[p.code] ? '⏳ بيشتغل…' : a ? '🔁 اعمل تاني' : '✨ اعمل'}
                   </button>
+                  {serper && (
+                    <WebPhotos
+                      p={p}
+                      have={photos[p.code] ?? []}
+                      onSave={async (v) => {
+                        setPhotos(p.code, v);
+                        await new Promise((x) => setTimeout(x, 80));
+                        await saveNow().catch((e) => toast(errorMessage(e), 'bad'));
+                      }}
+                    />
+                  )}
                   {a && (
                     <button type="button" className="secondary" onClick={() => setOpen(open === p.code ? '' : p.code)}>
                       👁️ شوف

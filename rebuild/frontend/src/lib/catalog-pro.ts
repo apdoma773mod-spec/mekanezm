@@ -210,6 +210,8 @@ export interface CatCfg {
   prodUse: Record<string, string>;
   /** 🤖 اللي الذكاء الاصطناعي عمله لكل منتج (بالكود): وصف + مميزات + مقاسات التركيب + صورة القطعة وهي راكبة */
   ai: Record<string, AiInfo>;
+  /** 🖼️ صور حقيقية تقريبية للمنتج من النت (بالكود)، اتنزّلت واتحفظت عندنا */
+  photos: Record<string, string[]>;
   /** نسخة المقالات الافتراضية: لما نضيف مقالات جديدة بتتضاف لوحدها للي حافظ إعدادات قديمة */
   articlesV?: number;
   /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
@@ -279,6 +281,7 @@ export const DEFAULT_CFG: CatCfg = {
   secUse: {},
   prodUse: {},
   ai: {},
+  photos: {},
   articlesV: 2,
 };
 
@@ -302,6 +305,7 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     secUse: { ...c?.secUse },
     prodUse: { ...c?.prodUse },
     ai: { ...c?.ai },
+    photos: { ...c?.photos },
     style: { ...d.style, ...c?.style },
     gift: c?.gift,
   };
@@ -821,7 +825,7 @@ export function proPages(inp: CatInput): Built {
         const d0 = splitDesc(p.desc ?? '');
         // لو الذكاء الاصطناعي عمل وصف ومقاسات، هما الأساس، والمواصفات القديمة بتكمّل
         const d = ai && (ai.desc || ai.specs.length) ? { intro: ai.desc || d0.intro, points: ai.features.length ? ai.features : d0.points, specs: [...ai.specs.map((x) => [x.k, x.v] as [string, string]), ...d0.specs.filter(([k]) => !ai.specs.some((x) => x.k === k))] } : d0;
-        const photos = p.imgs.filter((u) => u !== p.dimImg);
+        const photos = [...p.imgs.filter((u) => u !== p.dimImg), ...(cfg.photos[p.code] ?? [])];
         // صورة «في الاستخدام»: المرفوعة للمنتج، وإلا بتاعة القسم، وإلا صورة تانية للمنتج
         const useImg = cfg.prodUse[p.code] || ai?.img || cfg.secUse[name] || '';
         const side = useImg || photos[1] || '';

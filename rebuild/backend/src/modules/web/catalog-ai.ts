@@ -145,7 +145,7 @@ export async function catalogAiRoutes(app: FastifyInstance) {
   };
   app.get('/catalog/ai/key', { preHandler: app.requireAdmin }, async () => {
     const k = await getKey();
-    return { set: !!k, source: k?.source ?? null, cf: !!(await getCf()) };
+    return { set: !!k, source: k?.source ?? null, cf: !!(await getCf()), serper: !!(await getSerper()) };
   });
   app.put('/catalog/ai/cf', { preHandler: app.requireAdmin }, async (request) => {
     const b = parse(z.object({ account: z.string().max(200), token: z.string().max(400) }), request.body);
@@ -182,6 +182,53 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: CF_SETTING, after: { set: !!account }, ip: actor.ip });
     return { cf: !!account };
   });
+  /**
+   * 🖼️ صور حقيقية تقريبية للمنتج من النت (بحث صور جوجل عن طريق Serper: ٢٥٠٠ بحث مجاني من غير فيزا).
+   * عبده بيختار من النتايج، والصورة بتتنزّل وتتحفظ عندنا (مش لينك خارجي ممكن يقع).
+   */
+  const SERPER = 'ai_serper';
+  const getSerper = async () => ((await db.setting.findUnique({ where: { key: SERPER } }))?.value as { key?: string } | null)?.key || process.env.SERPER_API_KEY || '';
+  app.put('/catalog/ai/serper', { preHandler: app.requireAdmin }, async (request) => {
+    const key = parse(z.object({ key: z.string().max(200) }), request.body).key.replace(/[\s"'\u200e\u200f\u202a-\u202e]/g, '');
+    const actor = actorOf(request);
+    if (!key) await db.setting.deleteMany({ where: { key: SERPER } });
+    else {
+      const r = await fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': key, 'content-type': 'application/json' }, body: JSON.stringify({ q: 'kitchen hinge', num: 10 }), signal: AbortSignal.timeout(20000) }).catch(() => null);
+      if (!r?.ok) throw badRequest(`Serper رفض المفتاح ده (${r?.status ?? 'مفيش اتصال'}) — انسخه كامل من serper.dev ← API Key`);
+      await db.setting.upsert({ where: { key: SERPER }, create: { key: SERPER, value: { key }, updatedById: actor.id }, update: { value: { key }, updatedById: actor.id } });
+    }
+    await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: SERPER, after: { set: !!key }, ip: actor.ip });
+    return { serper: !!key };
+  });
+  app.post('/catalog/ai/photos', { preHandler: app.requireAdmin, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request) => {
+    const b = parse(z.object({ name: z.string().trim().min(1).max(200), brand: z.string().max(80).default(''), q: z.string().max(200).default('') }), request.body);
+    const key = await getSerper();
+    if (!key) throw badRequest('محتاج مفتاح Serper الأول (الخطوات في الأداة)');
+    const q = (b.q || `${b.name} ${b.brand}`).trim();
+    const r = await fetch('https://google.serper.dev/images', { method: 'POST', headers: { 'X-API-KEY': key, 'content-type': 'application/json' }, body: JSON.stringify({ q, gl: 'eg', hl: 'ar', num: 20 }), signal: AbortSignal.timeout(25000) }).catch(() => null);
+    if (!r?.ok) throw badRequest(r?.status === 403 || r?.status === 401 ? 'مفتاح Serper اتقفل أو البحث المجاني خلص' : `البحث مااشتغلش (${r?.status ?? 'مفيش اتصال'})`);
+    const j = (await r.json().catch(() => ({}))) as { images?: { title?: string; imageUrl?: string; thumbnailUrl?: string; imageWidth?: number; imageHeight?: number; domain?: string; link?: string }[] };
+    const items = (j.images ?? [])
+      .filter((x) => x.imageUrl && /^https:\/\//.test(x.imageUrl) && (x.imageWidth ?? 600) >= 300)
+      .slice(0, 16)
+      .map((x) => ({ url: x.imageUrl!, thumb: x.thumbnailUrl || x.imageUrl!, title: String(x.title ?? '').slice(0, 120), site: String(x.domain ?? '').slice(0, 60), w: x.imageWidth ?? 0, h: x.imageHeight ?? 0 }));
+    return { q, items };
+  });
+  app.post('/catalog/ai/photos/save', { preHandler: app.requireAdmin }, async (request) => {
+    const { url } = parse(z.object({ url: z.string().url().max(2000) }), request.body);
+    if (!/^https:\/\//.test(url)) throw badRequest('لينك الصورة لازم https');
+    const r = await fetch(url, { signal: AbortSignal.timeout(25000), headers: { 'user-agent': 'Mozilla/5.0', accept: 'image/*' } }).catch(() => null);
+    if (!r?.ok) throw badRequest('الموقع ده مارضيش يدّي الصورة — اختار صورة تانية');
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length || buf.length > 12 * 1024 * 1024) throw badRequest('الصورة كبيرة قوي أو فاضية — اختار تانية');
+    const sharp = (await import('sharp')).default;
+    const out = await sharp(buf).rotate().resize(1400, 1400, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 86 }).toBuffer().catch(() => null);
+    if (!out) throw badRequest('ده مش ملف صورة — اختار تانية');
+    const name = `${randomBytes(12).toString('hex')}.jpg`;
+    await putFile(name, out, 'image/jpeg');
+    return { url: `/api/v1/work/files/${name}` };
+  });
+
   app.put('/catalog/ai/key', { preHandler: app.requireAdmin }, async (request) => {
     // المفتاح بيتلزق من الموبايل ساعات بمسافات أو سطر جديد أو علامات تنصيص، والمفاتيح الجديدة لجوجل فيها نقط (AQ.…)
     const key = parse(z.object({ key: z.string().max(400) }), request.body).key.replace(/[\s"'‎‏‪-‮]/g, '');

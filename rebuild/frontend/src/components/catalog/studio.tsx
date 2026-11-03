@@ -147,7 +147,7 @@ export function CatalogStudio() {
 
   const input = (absolute: boolean): CatInput => {
     const f = absolute ? abs : (u: string) => u;
-    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), secUse: Object.fromEntries(Object.entries(cfg.secUse).map(([k, v]) => [k, f(v)])), prodUse: Object.fromEntries(Object.entries(cfg.prodUse).map(([k, v]) => [k, f(v)])), ai: Object.fromEntries(Object.entries(cfg.ai).map(([k, v]) => [k, { ...v, img: f(v.img) }])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
+    const c: CatCfg = { ...cfg, secImgs: Object.fromEntries(Object.entries(cfg.secImgs).map(([k, v]) => [k, f(v)])), secUse: Object.fromEntries(Object.entries(cfg.secUse).map(([k, v]) => [k, f(v)])), prodUse: Object.fromEntries(Object.entries(cfg.prodUse).map(([k, v]) => [k, f(v)])), ai: Object.fromEntries(Object.entries(cfg.ai).map(([k, v]) => [k, { ...v, img: f(v.img) }])), photos: Object.fromEntries(Object.entries(cfg.photos).map(([k, v]) => [k, v.map(f)])), cover: { ...cfg.cover, imgs: cfg.cover.imgs.map(f) }, gift: mode === 'gift' && gift.name.trim() ? { ...gift } : undefined };
     return {
       shop: 'ميكانيزم',
       tagline: String((data as Record<string, unknown> | undefined)?.tagline ?? ''),
@@ -277,8 +277,8 @@ export function CatalogStudio() {
         )}
       </Sec>
 
-      <Sec title="🤖 صور القطعة وهي راكبة + الوصف + المقاسات (ذكاء اصطناعي)" open>
-        <CatalogAi products={picked} ai={cfg.ai} setAi={setAi} saveNow={saveNow} />
+      <Sec title="🤖 الوصف والمقاسات + صور حقيقية من النت (ذكاء اصطناعي)" open>
+        <CatalogAi products={picked} ai={cfg.ai} setAi={setAi} saveNow={saveNow} photos={cfg.photos} setPhotos={(code, v) => setCfg((c) => ({ ...c, photos: { ...c.photos, [code]: v } }))} />
       </Sec>
 
       <Sec title={`🎨 الألوان (${COLOR_PRESETS.length} ثيم جاهز — اضغط واحد وكل ألوان الكتالوج تتغير)`} open>
