@@ -458,6 +458,7 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
  else CX.drawImage(V,f.x,f.y,f.w,f.h);
  applyLook(t,W,H);
  const BR=brActive(t);if(BR)drawBroll(BR,t,W,H);else BRC.forEach(c=>{if(c.v&&!c.v.paused)c.v.pause()});
+ drawFinish(t,W,H);
  if(O('trans')==='flash'){const d=lastCut(t);if(d!=null&&d<.16){CX.fillStyle=`rgba(255,255,255,${(.55*(1-d/.16)).toFixed(3)})`;CX.fillRect(0,0,W,H)}}
  const u=W/1080,F=`"${S.font}",Cairo,sans-serif`,acc=S.color;CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
  /* المقدمة والخاتمة بتوقيت الفيديو بعد القص (عشان ماتتشالش مع السكتات) */
@@ -503,6 +504,7 @@ function draw(t){const [W,H]=[CV.width,CV.height];CX.setTransform(1,0,0,1,0,0);C
   CX.strokeStyle=acc;CX.lineWidth=7*u;CX.lineCap='round';const br2=ease((t-x.s)/.45);for(let k=0;k<10;k++){const a=k/10*Math.PI*2,r0=150*u+90*u*br2,r1=r0+40*u*(1-br2);CX.globalAlpha=Math.max(0,al*(1-br2*.85));CX.beginPath();CX.moveTo(Math.cos(a)*r0*1.5,Math.sin(a)*r0*.7);CX.lineTo(Math.cos(a)*r1*1.5,Math.sin(a)*r1*.7);CX.stroke()}
   CX.globalAlpha=Math.max(0,al);CX.font=`900 ${Math.round(128*u)}px ${F}`;CX.lineJoin='round';CX.lineWidth=18*u;CX.strokeStyle='#000';CX.strokeText(x.w,0,30*u);CX.fillStyle=acc;CX.fillText(x.w,0,30*u);CX.restore();
   const bob=Math.sin((t-x.s)*9)*10*u*Math.max(0,1-(t-x.s)/1.2);CX.font=`${Math.round(96*u)}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`;CX.fillText(x.em,0,-95*u+bob);CX.restore()});
+ if(!BR&&!inOut&&!inIntro)drawFx(t,W,H,u,F,acc);
  /* نداء للشراء في نص الفيديو */
  if(CTA&&!BR&&!inOut&&t>=CTA.s&&t<=CTA.e){const p=ease((t-CTA.s)/.4),q=1-ease((t-CTA.e+.35)/.35),al=Math.min(p,q);if(al>0){let y=LAY.get('cta');if(y==null){const cc=capAt(CTA.s);y=stackBase()-70*u;LAY.set('cta',y)}
   const txt='📞 '+[br.cta||'اطلب دلوقتي',br.phone?ar(br.phone):''].filter(Boolean).join(' • ');CX.font=`800 ${Math.round(46*u)}px ${F}`;const bw=Math.min(W*.92,CX.measureText(txt).width+100*u);
@@ -578,6 +580,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label>حجم الكلام<input type="range" id="sm_sz" min="0.7" max="1.5" step="0.05" value="${S.size}"></label>
   <label>المقاس<select id="sm_as"><option value="916" ${S.aspect==='916'?'selected':''}>طولي ٩:١٦ (تيك توك/ريلز)</option><option value="orig" ${S.aspect==='orig'?'selected':''}>زي الفيديو الأصلي</option></select></label>
   <label>الجودة<select id="sm_q"><option value="1080" ${S.q==1080?'selected':''}>عالية 1080</option><option value="720" ${S.q==720?'selected':''}>متوسطة 720 (أسرع وأخف)</option></select></label>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
  <button class="b" id="sm_bg" style="width:100%;min-height:56px;font-size:18px">☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)</button>
@@ -597,7 +600,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_tp').onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;S.tpl=b.dataset.tp;S.o={};saveS();paintTpl();paintOpts();changed()};
  paintOpts();
  const ch=(id,k,f)=>{$s(id).oninput=$s(id).onchange=()=>{S[k]=f?f($s(id)):$s(id).value;saveS();if(D){if(k==='aspect'||k==='q')setupCanvas();LAY.clear();draw(V.currentTime)}}};
- ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_in','intro',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
+ ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_in','intro',x=>x.checked);ch('sm_fx','fx',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا'};V.load()};
@@ -798,6 +801,55 @@ function renderBR(){const el=$s('sm_bl');if(!el)return;
   if(e.target.id==='sm_bad'){if(!BRC.length)return say('ارفع فيديو الإدراج الأول');const i=BRM.length%BRC.length;BRM.push({s:+(V.currentTime||0).toFixed(2),i});computeBroll();renderBR();draw(V.currentTime)}}}
 const _build0=build;build=function(){const r=_build0.apply(this,arguments);try{computeBroll()}catch(e){console.warn('broll',e)}return r};
 const _renderLists0=renderLists;renderLists=function(){const r=_renderLists0.apply(this,arguments);try{renderBR()}catch(e){}return r};
+/* ---------- ✨ لمسات ذكية: شارات وأرقام متحركة بتطلع من كلامك (من غير ما تعتمد على السيرفر) وبتبعد عن وشك ---------- */
+let FXL=[];
+const FXB=[[/ضمان|مضمون/,'warranty','ضمان',null],[/اصلي|اوريجينال|براند|مستورد|جوده|جودة/,'original','جودة أصلية',null],[/توصيل|شحن/,'shipping','توصيل',null],[/تركيب|تثبيت|يتركب/,'tools','تركيب',null],
+ [/واتساب|كلمنا|اتصل|اتصلو|رسايل|تليفون/,'contact','تواصل معانا',null],[/مقاسات|الوان|انواع|موديلات|اشكال/,'options','اختيارات كتير',null],
+ [/رخيص|خصم|عرض|سعر|اسعار|فلوس/,null,'سعر مميز','💰'],[/سريع|بسرعه|فورا|بسرع/,null,'سريع','⚡'],[/قوي|تقيل|يشيل|متين|يتحمل/,null,'قوي ومتين','💪'],[/هادي|بهدوء|من غير صوت/,null,'هادي','🤫'],[/جديد|وصل|لسه/,null,'جديد','🆕'],[/احذر|خلي بالك|غلط|مشكله/,null,'خلي بالك','⚠️']];
+const FXU=/^(سم|ملي|مم|متر|م|كيلو|كجم|جرام|جنيه|ج|الف|%|سنه|سنين|سنوات|ثانيه|ثواني|دقيقه|دقايق|درجه|كيلوجرام)/;
+function buildFx(){FXL=[];if(S.fx===false||!CAP.length)return;
+ const W=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W.push({raw:w,w:norm(w),s:c.s+d*i/n,e:c.s+d*(i+1)/n}))});
+ const near=(a,b,ty)=>EV.some(x=>showEv(x)&&(!ty||ty.includes(x.type))&&x.s<b&&x.e>a);
+ let lastEnd=-9;const NUM=[],BDG=[];
+ W.forEach((x,i)=>{
+  /* أرقام: ٦٠ سم، ٥٠٠ جنيه، ١٠ سنين ضمان */
+  const num=en(x.raw).replace(/[^0-9.,]/g,'').replace(',','.');
+  if(num&&/^\d+(\.\d+)?$/.test(num)&&W[i+1]){const u2=norm(W[i+1].raw);if(FXU.test(u2)&&x.s>lastEnd+.4&&!near(x.s-.4,x.s+2,['measure','price'])){const unit=W[i+1].raw;NUM.push({s:x.s,e:x.s+2.6,kind:'num',val:parseFloat(num),unit,label:''});lastEnd=x.s+2.6;return}}
+  const b=FXB.find(r=>r[0].test(x.w));if(!b||x.s<.6)return;
+  if(near(x.s-.3,x.s+1.6,['product','point','step','anim','warn','measure','price']))return;
+  BDG.push({s:x.s,e:x.s+1.9,kind:'badge',icon:b[1],em:b[3],label:b[2]})});
+ /* ماتبقاش كتير: أقصى شارة كل ٣ ثواني تقريبًا */
+ const out=[];BDG.forEach(f=>{const l=out[out.length-1];if(NUM.some(n=>f.s<n.e+.3&&f.e>n.s-.3))return;if(!l||f.s-l.s>=2.6)out.push(f)});FXL=NUM.concat(out).sort((a,b)=>a.s-b.s)}
+function fxSide(t,w){const [W,H]=[CV.width,CV.height],u=W/1080,hd=headAt(t),f=xf(t);let hx0=W*.35,hx1=W*.65,hy=H*.2;
+ if(hd&&!f.side){hx0=f.x+hd.x0*f.w-30*u;hx1=f.x+hd.x1*f.w+30*u;hy=f.y+(hd.y0+hd.y1)/2*f.h}
+ const m=24*u,sh=O('safe')?W*.06:0,right=W-m-w,left=m+sh,fitsL=m+w<hx0,fitsR=right-sh>hx1;
+ let x=null;if(fitsR&&fitsL)x=((hx0+hx1)/2<W/2)?right:left;else if(fitsR)x=right;else if(fitsL)x=left;
+ const top=headRect(t),y=Math.max(H*.1,Math.min(H*.42,hy));
+ if(x==null){/* الوش واخد العرض: نحطها فوق الراس لو فيه مكان، وإلا نشيلها */if(top&&top[0]>H*.16)return {x:(W-w)/2,y:Math.max(H*.08,top[0]-70*u)};return null}
+ return {x,y}}
+function drawFx(t,W,H,u,F,acc){if(S.fx===false)return;const f=FXL.find(x=>t>=x.s&&t<x.e);if(!f)return;
+ const dt=t-f.s,a=Math.min(ease(dt/.28),1-ease((t-f.e+.3)/.3));if(a<=0)return;
+ const lab=f.kind==='num'?(f.unit):f.label;CX.save();CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
+ CX.font=`800 ${Math.round(40*u)}px ${F}`;const tw=CX.measureText(lab).width;
+ if(f.kind==='badge'){const bw=Math.min(W*.62,tw+190*u),bh=96*u,p=fxSide(t,bw);if(!p){CX.restore();return}
+  const k=p.x+bw/2<W/2?-1:1,sl=(1-ease(dt/.35))*k*W*.25,fl=Math.sin(dt*3)*4*u,sc=.9+.1*back(dt/.4);
+  CX.globalAlpha=a;CX.translate(p.x+bw/2+sl,p.y+fl);CX.scale(sc,sc);
+  /* موجة بتتفتح ورا الأيقونة */const pr=cl(dt/.7);CX.save();CX.globalAlpha=a*(1-pr)*.6;CX.beginPath();CX.arc(bw/2-bh/2,0,bh/2+pr*70*u,0,7);CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();CX.restore();
+  dk(-bw/2,-bh/2,bw,bh,bh/2,.82);CX.lineWidth=3*u;CX.strokeStyle=acc;CX.stroke();
+  if(f.icon)drawIcon(f.icon,bw/2-bh/2,0,bh*.4,dt,acc);else{CX.beginPath();CX.arc(bw/2-bh/2,0,bh*.4,0,7);CX.fillStyle=acc;CX.fill();CX.font=`${Math.round(bh*.46)}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`;CX.fillText(f.em,bw/2-bh/2,3*u)}
+  CX.fillStyle='#fff';CX.font=`800 ${Math.round(40*u)}px ${F}`;CX.fillText(f.label,-bh/2+6*u,3*u)}
+ else{/* رقم بيعدّ جوه حلقة بتتملي */const R=118*u,bw=R*2+Math.max(0,tw-40*u)+60*u,p=fxSide(t,bw);if(!p){CX.restore();return}
+  const k=p.x+bw/2<W/2?-1:1,sl=(1-ease(dt/.35))*k*W*.25,sc=.9+.1*back(dt/.4);CX.globalAlpha=a;CX.translate(p.x+bw/2+sl,p.y);CX.scale(sc,sc);
+  dk(-bw/2,-R-18*u,bw,(R+18*u)*2,(R+18*u),.82);const q=ease(dt/.9);CX.lineWidth=12*u;CX.lineCap='round';CX.strokeStyle='rgba(255,255,255,.18)';CX.beginPath();CX.arc(0,0,R-14*u,0,7);CX.stroke();
+  CX.strokeStyle=acc;CX.beginPath();CX.arc(0,0,R-14*u,-Math.PI/2,-Math.PI/2+Math.PI*2*q);CX.stroke();
+  const shown=Number.isInteger(f.val)?Math.round(f.val*q):(Math.round(f.val*q*10)/10);CX.fillStyle=acc;CX.font=`900 ${Math.round(92*u)}px ${F}`;CX.fillText(ar(String(shown)),0,-14*u);CX.fillStyle='#fff';CX.font=`800 ${Math.round(38*u)}px ${F}`;CX.fillText(f.unit,0,52*u)}
+ CX.restore();CX.globalAlpha=1}
+/* لمسة سينمائية: تعتيم خفيف على الأطراف + لمعة بتعدّي مع كل قطع */
+function drawFinish(t,W,H){if(S.fx===false||O('look')==='off')return;
+ CX.save();const g=CX.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.28)');CX.fillStyle=g;CX.fillRect(0,0,W,H);
+ const d=O('trans')!=='none'?lastCut(t):null;if(d!=null&&d<.4){const p=d/.4,x=-W*.4+W*1.8*p,w=W*.35,gr=CX.createLinearGradient(x-w,0,x+w,H*.5);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.5,`rgba(255,255,255,${(.22*(1-p)).toFixed(3)})`);gr.addColorStop(1,'rgba(255,255,255,0)');CX.globalCompositeOperation='lighter';CX.fillStyle=gr;CX.fillRect(0,0,W,H)}
+ CX.restore()}
+const _build1=build;build=function(){const r=_build1.apply(this,arguments);try{buildFx()}catch(e){console.warn('fx',e)}return r};
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */
 (window.__ready&&window.__ready.then?window.__ready:Promise.resolve()).then(()=>setTimeout(mount,0),()=>setTimeout(mount,0));
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA}),_test:{build,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
