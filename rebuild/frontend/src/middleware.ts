@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { decodeJwt } from 'jose';
 
-const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '/contacts', '/cash', '/theme', '/camera'];
+const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '/contacts', '/cash', '/theme', '/camera', '/catalog'];
 
 /**
  * UX-level gate only: sends signed-out visitors to /login and staff away from admin screens.

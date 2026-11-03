@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { uploadSiteImage } from '@/components/modals/site-admin';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
-import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_CFG, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
+import { buildFlipbook, buildProCatalog, COLOR_PRESETS, DEFAULT_CFG, FONTS, GIFT_MESSAGE, mergeCfg, STORY_TEXT, type CatCfg, type CatInput, type CatProduct } from '@/lib/catalog-pro';
 import { printHtml } from '@/lib/print';
 import { useAllProducts } from '@/lib/trade-queries';
 import { fetchSite, saveSite } from '@/lib/web-queries';
@@ -49,9 +49,17 @@ export function CatalogStudio() {
   const [view, setView] = useState('');
   const [busy, setBusy] = useState('');
   const [link, setLink] = useState('');
+  const [siteLink, setSiteLink] = useState('');
   const [pickSec, setPickSec] = useState('');
   const file = useRef<HTMLInputElement>(null);
   const fileFor = useRef<string>('');
+
+  useEffect(() => {
+    const h = (e: MessageEvent) => e.data === 'catalog-close' && setView('');
+    window.addEventListener('message', h);
+    api.get<{ current: string | null }>('/web/catalog/current').then((r) => r.current && setSiteLink(`${location.origin}/api/v1/web/public/catalog-latest`)).catch(() => {});
+    return () => window.removeEventListener('message', h);
+  }, []);
 
   useEffect(() => {
     if (loaded || !site.data) return;
@@ -117,17 +125,31 @@ export function CatalogStudio() {
     }
     return true;
   };
-  const publish = async () => {
+  const publish = async (current: boolean) => {
     if (!check()) return;
-    setBusy('pub');
+    setBusy(current ? 'site' : 'pub');
     try {
-      const { id } = await api.post<{ id: string }>('/web/catalog', { html: buildFlipbook(input(false)) });
-      setLink(`${location.origin}/api/v1/web/public/catalog/${id}`);
-      toast('✔ اتعمل اللينك');
+      const { id } = await api.post<{ id: string }>('/web/catalog', { html: buildFlipbook(input(false), { pdfUrl: '__PDF__' }), print: buildProCatalog(input(false), { autoPrint: true }), current });
+      if (current) {
+        setSiteLink(`${location.origin}/api/v1/web/public/catalog-latest`);
+        toast('✔ الكتالوج اتنشر للعملاء على الموقع');
+      } else {
+        setLink(`${location.origin}/api/v1/web/public/catalog/${id}`);
+        toast('✔ اتعمل اللينك');
+      }
     } catch (e) {
       toast(errorMessage(e), 'bad');
     }
     setBusy('');
+  };
+  const unpublishSite = async () => {
+    try {
+      await api.delete('/web/catalog/current');
+      setSiteLink('');
+      toast('✔ اتشال الكتالوج من الموقع');
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
   };
   const upload = async (fs: FileList | null) => {
     const f = fs?.[0];
@@ -187,28 +209,67 @@ export function CatalogStudio() {
         )}
       </Sec>
 
-      <Sec title="🎨 الألوان">
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {COLOR_PRESETS.map((p) => (
-            <button key={p.name} type="button" className="secondary" style={{ padding: '4px 10px', display: 'flex', gap: 6, alignItems: 'center' }} onClick={() => set({ colors: { main: p.main, dark: p.dark, accent: p.accent } })}>
-              <i style={{ width: 14, height: 14, borderRadius: 4, background: p.main, display: 'inline-block' }} />
-              <i style={{ width: 14, height: 14, borderRadius: 4, background: p.dark, display: 'inline-block' }} />
-              <i style={{ width: 14, height: 14, borderRadius: 4, background: p.accent, display: 'inline-block' }} /> {p.name}
-            </button>
-          ))}
+      <Sec title={`🎨 الألوان (${COLOR_PRESETS.length} ثيم جاهز — اضغط واحد وكل ألوان الكتالوج تتغير)`} open>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 8 }}>
+          {COLOR_PRESETS.map((p) => {
+            const on = cfg.colors.main === p.main && cfg.colors.dark === p.dark && cfg.colors.accent === p.accent && cfg.colors.alt === p.alt;
+            return (
+              <button key={p.name} type="button" onClick={() => set({ colors: { main: p.main, dark: p.dark, accent: p.accent, alt: p.alt } })} style={{ border: on ? '3px solid var(--primary,#087f8c)' : '1px solid #dfe7ea', borderRadius: 12, padding: 6, background: '#fff', cursor: 'pointer', textAlign: 'center' }}>
+                <div style={{ display: 'flex', height: 34, borderRadius: 8, overflow: 'hidden' }}>
+                  <i style={{ flex: 2, background: p.dark }} />
+                  <i style={{ flex: 3, background: p.main }} />
+                  <i style={{ flex: 1, background: p.alt }} />
+                  <i style={{ flex: 1, background: p.accent }} />
+                </div>
+                <small style={{ display: 'block', marginTop: 4, color: '#14262b', fontWeight: 700 }}>{p.name}</small>
+              </button>
+            );
+          })}
         </div>
-        <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+        <p style={{ fontSize: 13, color: 'var(--muted,#62767c)', margin: '10px 0 2px' }}>أو اختار ألوانك بنفسك:</p>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           {(
             [
-              ['main', 'اللون الأساسي (الكتل)'],
-              ['dark', 'اللون الغامق (الخلفيات)'],
-              ['accent', 'لون التمييز (الذهبي)'],
+              ['main', 'الأساسي (الكتل)'],
+              ['dark', 'الغامق (الخلفيات)'],
+              ['accent', 'الذهبي (الخطوط)'],
+              ['alt', 'الأصفر المانجو (الشارات)'],
             ] as const
           ).map(([k, l]) => (
             <label key={k} style={{ fontSize: 13 }}>
               {l}
               <br />
               <input type="color" value={cfg.colors[k]} onChange={(e) => set({ colors: { ...cfg.colors, [k]: e.target.value } })} style={{ width: 70, height: 36, padding: 0 }} />
+            </label>
+          ))}
+        </div>
+      </Sec>
+
+      <Sec title="✨ الخط والستايل">
+        <label style={lab}>الخط</label>
+        <select value={cfg.style.font} onChange={(e) => set({ style: { ...cfg.style, font: e.target.value } })}>
+          {FONTS.map((f) => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
+        <label style={lab}>استدارة الزوايا: {cfg.style.radius}</label>
+        <input type="range" min={0} max={40} value={cfg.style.radius} onChange={(e) => set({ style: { ...cfg.style, radius: +e.target.value } })} style={{ width: '100%' }} />
+        <label style={lab}>شكل الغلاف</label>
+        <select value={cfg.style.coverStyle} onChange={(e) => set({ style: { ...cfg.style, coverStyle: e.target.value as CatCfg['style']['coverStyle'] } })}>
+          <option value="mosaic">٣ صور مائلة متداخلة</option>
+          <option value="full">صورة واحدة كاملة</option>
+          <option value="minimal">بسيط من غير صور</option>
+        </select>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 10 }}>
+          {(
+            [
+              ['pattern', 'الرسم الهندسي في الخلفيات'],
+              ['showCode', 'شارة كود المنتج'],
+              ['showFooter', 'شريط أسفل الصفحة'],
+            ] as const
+          ).map(([k, l]) => (
+            <label key={k} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14 }}>
+              <input type="checkbox" style={{ width: 'auto' }} checked={cfg.style[k]} onChange={(e) => set({ style: { ...cfg.style, [k]: e.target.checked } })} /> {l}
             </label>
           ))}
         </div>
@@ -315,16 +376,28 @@ export function CatalogStudio() {
         </p>
       </Sec>
 
-      <div style={{ position: 'sticky', bottom: 0, background: 'var(--card,#fff)', borderTop: '1px solid #dfe7ea', padding: '10px 0', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ position: 'sticky', bottom: 0, background: 'var(--card,#fff)', borderTop: '1px solid #dfe7ea', padding: '10px 0', display: 'flex', gap: 8, flexWrap: 'wrap', zIndex: 5 }}>
+        <button type="button" className="primary" id="catOpen" onClick={() => check() && setView(buildFlipbook(input(true), { close: true }))}>📖 افتح الكتالوج</button>
         <button type="button" className="secondary" disabled={!!busy} onClick={() => void save()}>💾 احفظ الإعدادات</button>
-        <button type="button" className="primary" id="catPreview" onClick={() => check() && setView(buildFlipbook(input(true)))}>👀 معاينة الكتاب</button>
         <button type="button" className="secondary" onClick={() => check() && printHtml(buildProCatalog(input(true)))}>🖨️ PDF / طباعة</button>
-        <button type="button" className="primary" id="catPub" disabled={!!busy} onClick={() => void publish()}>{busy === 'pub' ? '⏳…' : '🔗 اعمل لينك للإرسال'}</button>
+        <button type="button" className="secondary" id="catPub" disabled={!!busy} onClick={() => void publish(false)}>{busy === 'pub' ? '⏳…' : '🔗 لينك للإرسال'}</button>
+        <button type="button" className="primary" id="catSite" disabled={!!busy} onClick={() => void publish(true)}>{busy === 'site' ? '⏳…' : '🌐 انشره للعملاء على الموقع'}</button>
       </div>
+
+      {siteLink && (
+        <div style={{ ...box, background: '#eef6ff', marginTop: 10 }}>
+          <b>🌐 منشور للعملاء:</b> زرار الكتالوج على الموقع بيفتح آخر كتالوج نشرته (بنفس التقليب، وفيه تحميل PDF).
+          <input readOnly value={siteLink} dir="ltr" style={{ ...inp, marginTop: 6 }} onFocus={(e) => e.target.select()} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <a className="secondary" style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cfdcdf' }} href={siteLink} target="_blank" rel="noreferrer">↗️ افتحه</a>
+            <button type="button" className="secondary" onClick={() => void unpublishSite()}>🚫 شيله من الموقع</button>
+          </div>
+        </div>
+      )}
 
       {link && (
         <div style={{ ...box, background: '#e9f7ef', marginTop: 10 }}>
-          <b>✔ اللينك جاهز:</b>
+          <b>✔ لينك للإرسال جاهز:</b>
           <input readOnly value={link} dir="ltr" style={{ ...inp, marginTop: 6 }} onFocus={(e) => e.target.select()} />
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <button type="button" className="secondary" onClick={() => void navigator.clipboard?.writeText(link).then(() => toast('✔ اتنسخ'))}>📋 انسخ</button>
@@ -334,12 +407,7 @@ export function CatalogStudio() {
         </div>
       )}
 
-      {view && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 2147483000, background: '#000c', display: 'flex', flexDirection: 'column' }}>
-          <button type="button" className="secondary" onClick={() => setView('')} style={{ margin: 8, alignSelf: 'flex-start' }}>✕ إغلاق المعاينة</button>
-          <iframe title="معاينة الكتالوج" srcDoc={view} sandbox="allow-scripts" style={{ flex: 1, border: 0, background: '#fff' }} />
-        </div>
-      )}
+      {view && <iframe id="catViewer" title="الكتالوج" srcDoc={view} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', border: 0, background: '#12191b', zIndex: 2147483000 }} />}
     </div>
   );
 }

@@ -15,13 +15,14 @@ export interface CatProduct {
 }
 
 export interface CatCfg {
-  colors: { main: string; dark: string; accent: string };
+  colors: { main: string; dark: string; accent: string; alt: string };
   cover: { title: string; subtitle: string; note: string; imgs: string[] };
   /** صورة افتتاح كل قسم، المفتاح اسم القسم */
   secImgs: Record<string, string>;
   layout: 'auto' | '1' | '2' | '3';
   flags: { tabs: boolean; stock: boolean; specs: boolean; gallery: boolean; toc: boolean; story: boolean; search: boolean };
   story: { title: string; text: string };
+  style: { font: string; radius: number; coverStyle: 'mosaic' | 'full' | 'minimal'; pattern: boolean; showCode: boolean; showFooter: boolean };
   cta: string;
   /** إهداء لشخص: فاضي/undefined = نسخة ميكانيزم العادية */
   gift?: { name: string; title: string; from: string; message: string };
@@ -37,24 +38,52 @@ export const GIFT_MESSAGE = `تحية طيبة وبعد،
 ونتطلع إلى أن نكون دائمًا شريككم في النجاح.
 مع خالص التقدير،`;
 
-export const COLOR_PRESETS: { name: string; main: string; dark: string; accent: string }[] = [
-  { name: 'ميكانيزم (تيل وذهبي)', main: '#087f8c', dark: '#0b2e33', accent: '#c9971f' },
-  { name: 'أخضر زي جراس', main: '#0aa84f', dark: '#14262b', accent: '#c9971f' },
-  { name: 'كحلي ملكي', main: '#1f4fa3', dark: '#0a1a3a', accent: '#e0b44c' },
-  { name: 'أسود وذهبي', main: '#2b2b2b', dark: '#0d0d0d', accent: '#d4a437' },
-  { name: 'عنابي', main: '#8d1f3d', dark: '#2a0a14', accent: '#e0b44c' },
-  { name: 'برتقالي', main: '#e2711d', dark: '#2a1608', accent: '#ffd27a' },
+export const COLOR_PRESETS: { name: string; main: string; dark: string; accent: string; alt: string }[] = [
+  { name: 'هوية ميكانيزم (كحلي ومانجو وذهبي)', main: '#16357a', dark: '#0a1a3a', accent: '#c9971f', alt: '#f5a623' },
+  { name: 'ميكانيزم (تيل وذهبي)', main: '#087f8c', dark: '#0b2e33', accent: '#c9971f', alt: '#c9971f' },
+  { name: 'أخضر زي جراس', main: '#0aa84f', dark: '#14262b', accent: '#c9971f', alt: '#c9971f' },
+  { name: 'كحلي ملكي', main: '#1f4fa3', dark: '#0a1a3a', accent: '#e0b44c', alt: '#e0b44c' },
+  { name: 'أسود وذهبي', main: '#2b2b2b', dark: '#0d0d0d', accent: '#d4a437', alt: '#d4a437' },
+  { name: 'عنابي', main: '#8d1f3d', dark: '#2a0a14', accent: '#e0b44c', alt: '#e0b44c' },
+  { name: 'برتقالي دافي', main: '#e2711d', dark: '#2a1608', accent: '#ffd27a', alt: '#ffd27a' },
+  { name: 'أزرق سماوي', main: '#1597d5', dark: '#07263a', accent: '#ffb400', alt: '#ffb400' },
+  { name: 'بنفسجي ملكي', main: '#6a3fb5', dark: '#1c0f38', accent: '#f0c75e', alt: '#f0c75e' },
+  { name: 'أحمر ناري', main: '#c62828', dark: '#2b0b0b', accent: '#ffcf6b', alt: '#ffcf6b' },
+  { name: 'زيتي هادي', main: '#5b7a3a', dark: '#1b2612', accent: '#e3c16f', alt: '#e3c16f' },
+  { name: 'رمادي عصري', main: '#556b78', dark: '#10191e', accent: '#ffb347', alt: '#ffb347' },
+  { name: 'بني خشبي', main: '#8a5a35', dark: '#26170d', accent: '#e8c07a', alt: '#e8c07a' },
+  { name: 'تركواز فاتح', main: '#14b8a6', dark: '#0a2e2a', accent: '#f59e0b', alt: '#f59e0b' },
+  { name: 'وردي أنيق', main: '#d6457f', dark: '#3a0f23', accent: '#ffd0a1', alt: '#ffd0a1' },
+  { name: 'أخضر زمردي', main: '#0f8f6a', dark: '#06261d', accent: '#e6c35c', alt: '#e6c35c' },
+  { name: 'ذهبي فاخر', main: '#b8860b', dark: '#1f1606', accent: '#fff1c1', alt: '#fff1c1' },
+  { name: 'كحلي وتيل', main: '#0f5c7a', dark: '#071c27', accent: '#ffcc66', alt: '#ffcc66' },
+  { name: 'نبيتي وذهبي', main: '#6d1030', dark: '#1f0610', accent: '#f2c76b', alt: '#f2c76b' },
+  { name: 'أسود وأحمر', main: '#e11d2e', dark: '#0c0c0c', accent: '#ffffff', alt: '#ffffff' },
+  { name: 'أزرق نيلي', main: '#2a3eb1', dark: '#0b1033', accent: '#ffd166', alt: '#ffd166' },
+  { name: 'أخضر ليموني', main: '#7cb518', dark: '#1c2b05', accent: '#ffffff', alt: '#ffffff' },
+  { name: 'قهوة وكريمي', main: '#6f4e37', dark: '#1d130d', accent: '#e9d8b4', alt: '#e9d8b4' },
+  { name: 'سماوي وبرتقالي', main: '#00a6c0', dark: '#05222a', accent: '#ff7a1a', alt: '#ff7a1a' },
+  { name: 'أرجواني داكن', main: '#8e2de2', dark: '#12062a', accent: '#ffd86b', alt: '#ffd86b' },
+  { name: 'فحمي وتيل', main: '#0e7c86', dark: '#0a0f12', accent: '#e5b84b', alt: '#e5b84b' },
+  { name: 'أخضر غابات', main: '#1e6b3a', dark: '#0a1f13', accent: '#d9b857', alt: '#d9b857' },
+  { name: 'مرجاني', main: '#ef6f5e', dark: '#33120d', accent: '#ffe0a3', alt: '#ffe0a3' },
+  { name: 'أزرق جليدي', main: '#3d8bfd', dark: '#0a1a33', accent: '#ffffff', alt: '#ffffff' },
+  { name: 'خمري وكريمي', main: '#7a1f2e', dark: '#25090e', accent: '#f3e3c3', alt: '#f3e3c3' },
+  { name: 'أسود مطفي', main: '#3a3a3a', dark: '#080808', accent: '#c0c0c0', alt: '#c0c0c0' },
 ];
 
 export const DEFAULT_CFG: CatCfg = {
-  colors: { main: '#087f8c', dark: '#0b2e33', accent: '#c9971f' },
+  colors: { main: '#16357a', dark: '#0a1a3a', accent: '#c9971f', alt: '#f5a623' },
   cover: { title: 'ميكانيزم', subtitle: 'كتالوج المنتجات', note: '', imgs: [] },
   secImgs: {},
   layout: 'auto',
   flags: { tabs: true, stock: true, specs: true, gallery: true, toc: true, story: true, search: true },
   story: { title: 'حكاية ميكانيزم', text: STORY_TEXT },
+  style: { font: 'Cairo', radius: 18, coverStyle: 'mosaic', pattern: true, showCode: true, showFooter: true },
   cta: 'للسعر والطلب كلمنا واتساب واذكر كود المنتج',
 };
+
+export const FONTS = ['Cairo', 'Tajawal', 'Almarai', 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', 'El Messiri', 'Changa'];
 
 export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
   const d = DEFAULT_CFG;
@@ -66,6 +95,7 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     secImgs: { ...c?.secImgs },
     flags: { ...d.flags, ...c?.flags },
     story: { ...d.story, ...c?.story },
+    style: { ...d.style, ...c?.style },
     gift: c?.gift,
   };
 }
@@ -110,7 +140,7 @@ export function splitDesc(desc: string): { intro: string; specs: [string, string
 const CSS = `
 @page{size:A4;margin:0}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-:root{--t:#087f8c;--td:color-mix(in srgb,var(--t) 68%,#000);--tk:#0b2e33;--g:#c9971f;--gl:color-mix(in srgb,var(--g) 30%,#fff);--bg:#f4f8f9;--ink:#14262b;--mut:#62767c}
+:root{--t:#087f8c;--td:color-mix(in srgb,var(--t) 68%,#000);--tk:#0b2e33;--g:#c9971f;--m:#f5a623;--gl:color-mix(in srgb,var(--g) 30%,#fff);--bg:#f4f8f9;--ink:#14262b;--mut:#62767c}
 body{margin:0;font-family:Cairo,Tahoma,"Segoe UI",sans-serif;color:var(--ink);background:#fff;direction:rtl}
 .pg{width:794px;height:1123px;position:relative;overflow:hidden;page-break-after:always;background:#fff}
 .pg:last-child{page-break-after:auto}
@@ -125,7 +155,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .cover .mos:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 35%,var(--tk) 100%)}
 .cover .gear{position:absolute;left:-90px;top:430px;width:300px;opacity:.16}
 .cover .bx{position:absolute;right:60px;left:60px;bottom:70px}
-.cover .kick{letter-spacing:.42em;font-size:13px;font-weight:700;color:var(--gl)}
+.cover .kick{letter-spacing:.42em;font-size:13px;font-weight:700;color:var(--m)}
 .cover h1{font-size:118px;line-height:1.02;margin:10px 0 0;font-weight:900;background:linear-gradient(180deg,#fff 20%,var(--gl) 55%,var(--g) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 18px #0006)}
 .cover .ln{display:flex;align-items:center;gap:14px;margin:18px 0}
 .cover .ln i{height:2px;flex:1;background:linear-gradient(90deg,var(--g),transparent)}
@@ -133,7 +163,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .cover .out{font-size:64px;font-weight:900;color:transparent;-webkit-text-stroke:1.5px #ffffff66;line-height:1;margin:6px 0 20px}
 .cover .stats{display:flex;gap:14px;margin-top:6px}
 .cover .stat{flex:1;border:1px solid #ffffff30;background:#ffffff12;border-radius:16px;padding:14px 18px;backdrop-filter:blur(2px)}
-.cover .stat b{display:block;font-size:34px;color:var(--gl)}.cover .stat span{font-size:13px;opacity:.85}
+.cover .stat b{display:block;font-size:34px;color:var(--m)}.cover .stat span{font-size:13px;opacity:.85}
 .cover .cont{margin-top:20px;font-size:14px;opacity:.9;line-height:2}
 /* ===== إهداء / برقية ===== */
 .gft{background:linear-gradient(180deg,#fffdf7,#f7efdc);display:flex;align-items:center;justify-content:center}
@@ -165,13 +195,13 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 /* ===== تبويبات الأقسام ===== */
 .tabs{position:absolute;top:150px;left:0;display:flex;flex-direction:column;gap:3px;z-index:9}
 .tabs i{display:flex;align-items:center;justify-content:center;width:26px;min-height:44px;background:#ffffffcc;color:#7c8c91;font:900 15px Cairo,sans-serif;font-style:normal;border-radius:0 8px 8px 0;box-shadow:0 2px 6px #0003}
-.tabs i.on{background:var(--t);color:#fff;width:36px}
+.tabs i.on{background:var(--m);color:var(--tk);width:36px}
 /* ===== افتتاحية قسم + قائمة ===== */
 .opn{background:var(--tk);color:#fff}
 .opn img.bgi{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .opn:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0000 38%,color-mix(in srgb,var(--tk) 94%,transparent) 100%)}
 .opn .tt{position:absolute;right:56px;left:56px;bottom:90px;z-index:2}
-.opn .tt small{letter-spacing:.3em;color:var(--gl);font-weight:700;font-size:13px}
+.opn .tt small{letter-spacing:.3em;color:var(--m);font-weight:700;font-size:13px}
 .opn .tt h2{font-size:64px;line-height:1.2;margin:8px 0 0}
 .opn .tt .bar{width:100px;height:6px;margin:20px 0}
 .opn .tt p{margin:0;font-size:19px;opacity:.9}
@@ -191,19 +221,19 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .pp p.intro{font-size:15.5px;line-height:2;margin:0 0 10px}
 .pp ul.ft{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
 .pp ul.ft li{display:flex;gap:10px;align-items:flex-start;font-size:13.8px;line-height:1.75}
-.pp ul.ft li:before{content:"";flex:none;width:9px;height:9px;margin-top:9px;background:var(--g);transform:rotate(45deg)}
-.pp .code{position:absolute;z-index:8;background:var(--g);color:#fff;font-weight:900;font-size:17px;padding:5px 18px;border-radius:99px;direction:ltr;letter-spacing:.06em;box-shadow:0 6px 16px #0004}
+.pp ul.ft li:before{content:"";flex:none;width:9px;height:9px;margin-top:9px;background:var(--m);transform:rotate(45deg)}
+.pp .code{position:absolute;z-index:8;background:var(--m);color:var(--tk);font-weight:900;font-size:17px;padding:5px 18px;border-radius:99px;direction:ltr;letter-spacing:.06em;box-shadow:0 6px 16px #0004}
 .pp .stk{position:absolute;z-index:8;border-radius:99px;padding:5px 14px;font-size:13px;font-weight:800;box-shadow:0 4px 12px #0003}
 .pp .stk.ok{background:#e4f8ec;color:#0e7a3f}.pp .stk.no{background:#fde8e6;color:#b4382b}
-.pp .card{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px #0b2e3338;position:absolute;z-index:6}
-.pp .card h3{margin:0;padding:8px 14px;background:var(--g);color:#fff;font-size:13.5px;letter-spacing:.04em}
+.pp .card{background:#fff;border-radius:var(--r,18px);overflow:hidden;box-shadow:0 14px 34px #0b2e3338;position:absolute;z-index:6}
+.pp .card h3{margin:0;padding:8px 14px;background:var(--m);color:var(--tk);font-size:13.5px;letter-spacing:.04em}
 .pp .card table{width:100%;border-collapse:collapse;font-size:13px}
 .pp .card td{padding:6px 14px;border-top:1px solid #e6eef0}
 .pp .card tr:nth-child(even) td{background:#f6fafb}
 .pp .card td:first-child{color:var(--mut);width:42%}.pp .card td:last-child{font-weight:800}
 .pp .tiles{position:absolute;z-index:6;display:grid;gap:8px}
-.pp .tiles div{background-size:cover;background-position:center;border-radius:14px;border:4px solid #fff;box-shadow:0 8px 20px #0003}
-.pp .dim{position:absolute;z-index:7;background:#fff;border-radius:16px;padding:6px;box-shadow:0 14px 30px #0004;border:2px solid var(--g)}
+.pp .tiles div{background-size:cover;background-position:center;border-radius:calc(var(--r,18px) - 4px);border:4px solid #fff;box-shadow:0 8px 20px #0003}
+.pp .dim{position:absolute;z-index:7;background:#fff;border-radius:var(--r,18px);padding:6px;box-shadow:0 14px 30px #0004;border:2px solid var(--g)}
 .pp .dim img{width:100%;display:block;border-radius:10px}.pp .dim small{display:block;text-align:center;font-weight:800;color:var(--td);font-size:12px;padding:3px 0 1px}
 .pp .ft2{position:absolute;bottom:0;left:0;right:0;height:46px;z-index:8;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:12px}
 .pp .ft2 b{direction:ltr}
@@ -224,7 +254,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .l2 .blk{position:absolute;top:0;left:0;right:0;height:500px;background:linear-gradient(165deg,var(--tk),color-mix(in srgb,var(--tk) 60%,var(--t)));color:#fff;clip-path:polygon(0 0,100% 0,100% 86%,0 100%)}
 .l2 .blk .tx{position:absolute;right:50px;top:96px;width:400px}
 .l2 h1{font-size:40px;color:#fff}.l2 p.intro{color:#ffffffe8}
-.l2 .hero{position:absolute;z-index:5;left:44px;top:150px;width:310px;height:590px;object-fit:cover;border-radius:26px;border:8px solid #fff;box-shadow:0 28px 50px #0b2e3366}
+.l2 .hero{position:absolute;z-index:5;left:44px;top:150px;width:310px;height:590px;object-fit:cover;border-radius:calc(var(--r,18px) + 8px);border:8px solid #fff;box-shadow:0 28px 50px #0b2e3366}
 .l2 .code{top:150px;left:60px}.l2 .stk{top:196px;left:60px}
 .l2 .card{right:44px;top:560px;width:380px}.l2 .cbox{position:absolute;z-index:6;right:44px;top:436px;width:380px;background:linear-gradient(135deg,var(--g),color-mix(in srgb,var(--g) 70%,#000));color:#fff;border-radius:18px;padding:14px 18px;font-size:14px;line-height:1.8;box-shadow:0 12px 26px #0004}.l2 .cbox b{direction:ltr;display:inline-block;font-size:17px}
 .l2 .ftxt{position:absolute;right:44px;top:560px;width:380px;z-index:3}
@@ -287,7 +317,9 @@ export function proPages(inp: CatInput): Built {
   const cfg = mergeCfg(inp.cfg);
   const phones = inp.phones.filter(Boolean);
   const phoneTxt = phones.join(' · ');
-  const vars = `:root{--t:${safeColor(cfg.colors.main, '#087f8c')};--tk:${safeColor(cfg.colors.dark, '#0b2e33')};--g:${safeColor(cfg.colors.accent, '#c9971f')}}`;
+  const st = cfg.style;
+  const fam = (FONTS.includes(st.font) ? st.font : 'Cairo');
+  const vars = `:root{--r:${Math.max(0, Math.min(40, Number(st.radius) || 0))}px;--ff:'${fam}'}body{font-family:'${fam}',Cairo,Tahoma,sans-serif}${st.pattern ? '' : ' svg.bp{display:none}'}${st.showCode ? '' : ' .pp .code{display:none}'}${st.showFooter ? '' : ' .pp .ft2{display:none}'}:root{--t:${safeColor(cfg.colors.main, '#087f8c')};--tk:${safeColor(cfg.colors.dark, '#0b2e33')};--g:${safeColor(cfg.colors.accent, '#c9971f')};--m:${safeColor(cfg.colors.alt, '#f5a623')}}`;
   const bySec = new Map<string, CatProduct[]>();
   for (const p of inp.products) {
     const k = p.section || 'منتجات متنوعة';
@@ -327,7 +359,9 @@ export function proPages(inp: CatInput): Built {
   // الغلاف
   const covImgs = (cfg.cover.imgs.length ? cfg.cover.imgs : inp.products.map(heroOf).filter(Boolean)).slice(0, 3);
   while (covImgs.length && covImgs.length < 3) covImgs.push(covImgs[covImgs.length - 1]!);
-  pages.push(`<section class="pg cover"><div class="mos">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>${gearSvg()}
+  const cs = cfg.style.coverStyle;
+  const mosHtml = cs === 'minimal' ? '' : cs === 'full' && covImgs[0] ? `<div class="mos" style="height:100%"><div style="inset:0;width:100%;right:0;top:0;height:100%;clip-path:none;background-image:url('${esc(covImgs[0])}');opacity:.55"></div></div>` : `<div class="mos">${covImgs.map((u) => `<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`;
+  pages.push(`<section class="pg cover">${mosHtml}${gearSvg()}
   <div class="bx"><div class="kick">PRODUCT CATALOG</div><h1>${esc(cfg.cover.title)}</h1>
   <div class="ln"><b>${esc(cfg.cover.subtitle)}</b><i></i></div>
   <div class="out">${new Date().getFullYear()}</div>
@@ -402,24 +436,30 @@ export function proPages(inp: CatInput): Built {
   return { pages, css: CSS, index, vars };
 }
 
+const fontQ = (inp: CatInput) => {
+  const f = mergeCfg(inp.cfg).style.font;
+  return (FONTS.includes(f) ? f : 'Cairo').replace(/ /g, '+');
+};
+
 const HEAD = (inp: CatInput, b: Built, extra = '') =>
-  `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(inp.shop)} — كتالوج</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"><style>${b.css}${b.vars}${extra}</style></head>`;
+  `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(inp.shop)} — كتالوج</title><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=${fontQ(inp)}:wght@400;600;700;900&family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"><style>${b.css}${b.vars}${extra}</style></head>`;
 
 /** للطباعة / PDF: صفحات A4 ورا بعض */
-export function buildProCatalog(inp: CatInput): string {
+export function buildProCatalog(inp: CatInput, opts: { autoPrint?: boolean } = {}): string {
   const b = proPages(inp);
-  return `${HEAD(inp, b)}<body>${b.pages.join('')}</body></html>`;
+  const auto = opts.autoPrint ? '<script>addEventListener("load",function(){setTimeout(function(){print()},1800)})</script>' : '';
+  return `${HEAD(inp, b)}<body>${b.pages.join('')}${auto}</body></html>`;
 }
 
 /** 📖 كتاب بيتقلّب بإيدك (St.PageFlip) مع خانة بحث: اكتب اسم منتج أو كود أو قسم وروح للصفحة. */
-export function buildFlipbook(inp: CatInput): string {
+export function buildFlipbook(inp: CatInput, opts: { close?: boolean; pdfUrl?: string } = {}): string {
   const b = proPages(inp);
   const cfg = mergeCfg(inp.cfg);
   const flipCss = `
 html,body{height:100%;margin:0;background:#1b2427;overflow:hidden;touch-action:manipulation}
 body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
 #bar{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:8px;padding:0 10px;color:#fff;font:700 13px Cairo,sans-serif;z-index:30;background:#000a;backdrop-filter:blur(6px)}
-#bar button{flex:none;background:#ffffff22;color:#fff;border:0;border-radius:99px;width:34px;height:34px;font:700 18px Cairo,sans-serif}
+#bar a#b-pdf{flex:none;background:var(--g,#c9971f);color:#fff;border-radius:99px;padding:7px 12px;font:800 12.5px Cairo,sans-serif;text-decoration:none}#bar #b-x{background:#ffffff33;width:30px;height:30px;font-size:15px}@media (hover:none){#bar .nv{display:none}}#bar button{flex:none;background:#ffffff22;color:#fff;border:0;border-radius:99px;width:34px;height:34px;font:700 18px Cairo,sans-serif}
 #q{flex:1;min-width:0;border:0;border-radius:99px;padding:8px 14px;font:600 14px Cairo,sans-serif;background:#ffffffe8;color:#14262b;outline:none}
 #res{position:fixed;top:54px;right:10px;left:10px;max-width:460px;margin:0 auto;max-height:55vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 14px 40px #000a;z-index:40;display:none}
 #res div{padding:10px 14px;border-bottom:1px solid #e6eef0;font:600 14px Cairo,sans-serif;color:#14262b;display:flex;justify-content:space-between;gap:10px}
@@ -439,6 +479,7 @@ body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
   document.querySelectorAll('.page .pg').forEach(function(el){el.style.transform='scale('+k+')';});
   var pf=new St.PageFlip(document.getElementById('book'),{width:Math.round(pageW),height:Math.round(pageH),size:'fixed',showCover:true,drawShadow:true,maxShadowOpacity:.5,flippingTime:700,usePortrait:true,mobileScrollSupport:false,swipeDistance:20,clickEventForward:false,startPage:0});
   pf.loadFromHTML(document.querySelectorAll('.page'));
+  var bx=document.getElementById('b-x');if(bx){var done=false;var closeIt=function(e){if(e)e.preventDefault();if(done)return;done=true;parent.postMessage('catalog-close','*');};bx.addEventListener('click',closeIt);bx.addEventListener('pointerup',closeIt);bx.addEventListener('touchend',closeIt);}
   document.getElementById('b-prev').onclick=function(){pf.flipPrev();};
   document.getElementById('b-next').onclick=function(){pf.flipNext();};
   var q=document.getElementById('q'),res=document.getElementById('res');
@@ -451,7 +492,7 @@ body{background:radial-gradient(900px 600px at 50% 40%,#2a3a3e,#12191b)}
   res.addEventListener('click',function(e){var d=e.target.closest('[data-p]');if(!d)return;pf.turnToPage(+d.getAttribute('data-p'));res.style.display='none';q.blur();});
   document.addEventListener('click',function(e){if(!e.target.closest('#res')&&e.target!==q)res.style.display='none';});
 })();`;
-  const body = `<body><div id="bar"><button id="b-next" title="التالي">›</button><input id="q" type="search" placeholder="🔍 ابحث في الكتالوج: اسم منتج، كود، قسم…" autocomplete="off"><button id="b-prev" title="السابق">‹</button></div><div id="res"></div><div id="stage"><div id="book" class="fp">${b.pages.map((p) => `<div class="page">${p}</div>`).join('')}</div></div>
+  const body = `<body><div id="bar">${opts.close ? '<button id="b-x" title="إغلاق">✕</button>' : ''}<input id="q" type="search" placeholder="🔍 ابحث في الكتالوج: اسم منتج، كود، قسم…" autocomplete="off">${opts.pdfUrl ? `<a id="b-pdf" href="${esc(opts.pdfUrl)}" target="_blank" rel="noopener">⬇️ PDF</a>` : ''}<button id="b-prev" class="nv" title="السابق">‹</button><button id="b-next" class="nv" title="التالي">›</button></div><div id="res"></div><div id="stage"><div id="book" class="fp">${b.pages.map((p) => `<div class="page">${p}</div>`).join('')}</div></div>
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
 <script>${script}</script></body></html>`;
   void cfg;

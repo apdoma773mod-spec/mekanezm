@@ -6,7 +6,6 @@ import type { ContactDto, ProductDto } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { waNum } from '@/components/hy/ui';
 import { useModal } from '@/components/modals/modal-host';
-import { CatalogStudio } from '@/components/catalog/studio';
 import { HtmlPreview } from '@/components/ui/html-preview';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
@@ -39,7 +38,6 @@ const TABS = [
   ['lapsed', '😴 عملاء غايبين'],
   ['points', '⭐ نقاط الصنايعية'],
   ['sup', '⚖️ مقارنة الموردين'],
-  ['catpro', '🌟 كتالوج احترافي'],
   ['cat', '📖 كتالوج بسيط'],
   ['log', '🕵️ سجل العمليات'],
 ] as const;
@@ -1355,7 +1353,6 @@ const VIEWS: Record<Tab, () => ReactNode> = {
   lapsed: () => <Lapsed />,
   points: () => <PointsTab />,
   sup: () => <Suppliers />,
-  catpro: () => <CatalogStudio />,
   cat: () => <Catalog />,
   log: () => <LogTab />,
 };

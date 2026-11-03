@@ -57,27 +57,63 @@ export default async function webRoutes(app: FastifyInstance) {
   // ---- public (the shop page): what to show, and where orders go ----
   app.get('/public/site', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => ({ site: await readSite() }));
 
-  /** 📖 Published catalogs: the system saves the finished page, anyone with the link can open it (random id, not guessable, not indexed). */
-  app.post('/catalog', { preHandler: app.requireAdmin, bodyLimit: 6 * 1024 * 1024 }, async (request) => {
-    const { html } = parse(z.object({ html: z.string().min(100).max(5_000_000) }), request.body);
+  /** 📖 Published catalogs: the system saves the finished pages (book + printable), anyone with the link can open them (random id, not guessable, not indexed). `current` = the one the site's «الكتالوج» button opens. */
+  const CAT = 'catalog_pub_';
+  const CAT_CURRENT = 'catalog_current';
+  const catHeaders = (reply: import('fastify').FastifyReply, modals: boolean) =>
+    reply
+      .header('content-type', 'text/html; charset=utf-8')
+      .header('content-security-policy', `sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox${modals ? ' allow-modals' : ''}`)
+      .header('x-robots-tag', 'noindex, nofollow')
+      .header('cache-control', 'public, max-age=120');
+  app.post('/catalog', { preHandler: app.requireAdmin, bodyLimit: 12 * 1024 * 1024 }, async (request) => {
+    const { html, print, current } = parse(z.object({ html: z.string().min(100).max(5_000_000), print: z.string().max(5_000_000).default(''), current: z.boolean().default(false) }), request.body);
     const id = randomBytes(9).toString('base64url');
     const actor = actorOf(request);
-    await db.setting.create({ data: { key: `catalog_pub_${id}`, value: { html } as unknown as Prisma.InputJsonValue, updatedById: actor.id } });
-    const old = await db.setting.findMany({ where: { key: { startsWith: 'catalog_pub_' } }, orderBy: { updatedAt: 'desc' }, skip: 30, select: { key: true } });
-    if (old.length) await db.setting.deleteMany({ where: { key: { in: old.map((o) => o.key) } } });
-    return { id };
+    await db.setting.create({ data: { key: CAT + id, value: { html, print } as unknown as Prisma.InputJsonValue, updatedById: actor.id } });
+    if (current) await db.setting.upsert({ where: { key: CAT_CURRENT }, create: { key: CAT_CURRENT, value: { id }, updatedById: actor.id }, update: { value: { id }, updatedById: actor.id } });
+    const keep = new Set<string>([CAT + id]);
+    const cur = (await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null;
+    if (cur?.id) keep.add(CAT + cur.id);
+    const old = await db.setting.findMany({ where: { key: { startsWith: CAT } }, orderBy: { updatedAt: 'desc' }, skip: 30, select: { key: true } });
+    const drop = old.map((o) => o.key).filter((k) => !keep.has(k));
+    if (drop.length) await db.setting.deleteMany({ where: { key: { in: drop } } });
+    return { id, current };
   });
+  app.get('/catalog/current', { preHandler: app.requireAdmin }, async () => ({ current: ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id ?? null }));
+  app.delete('/catalog/current', { preHandler: app.requireAdmin }, async () => {
+    await db.setting.deleteMany({ where: { key: CAT_CURRENT } });
+    return { ok: true };
+  });
+  const idParams = z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{6,40}$/) });
+  const catRow = async (id: string) => (await db.setting.findUnique({ where: { key: CAT + id } }))?.value as { html?: string; print?: string } | undefined;
   app.get('/public/catalog/:id', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
-    const { id } = parse(z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{6,40}$/) }), request.params);
-    const row = await db.setting.findUnique({ where: { key: `catalog_pub_${id}` } });
-    const html = (row?.value as { html?: string } | null)?.html;
+    const { id } = parse(idParams, request.params);
+    const html = (await catRow(id))?.html;
     if (!html) throw notFound('الكتالوج ده مش موجود');
-    return reply
-      .header('content-type', 'text/html; charset=utf-8')
-      .header('content-security-policy', 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox')
-      .header('x-robots-tag', 'noindex, nofollow')
-      .header('cache-control', 'public, max-age=300')
-      .send(html);
+    return catHeaders(reply, false).send(html.replaceAll('__PDF__', `${id}/print`));
+  });
+  /** The same catalog laid out page after page, opens the browser's print box (save as PDF). */
+  app.get('/public/catalog/:id/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const { id } = parse(idParams, request.params);
+    const html = (await catRow(id))?.print;
+    if (!html) throw notFound('الكتالوج ده مش موجود');
+    return catHeaders(reply, true).send(html);
+  });
+  /** The site's button: always the catalog the owner marked as current. */
+  app.get('/public/catalog-latest', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
+    if (!id) throw notFound('مفيش كتالوج منشور حاليًا');
+    const row = await catRow(id);
+    if (!row?.html) throw notFound('مفيش كتالوج منشور حاليًا');
+    void request;
+    return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(row.html.replaceAll('__PDF__', 'catalog-latest/print'));
+  });
+  app.get('/public/catalog-latest/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (_request, reply) => {
+    const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
+    const html = id ? (await catRow(id))?.print : '';
+    if (!html) throw notFound('مفيش كتالوج منشور حاليًا');
+    return catHeaders(reply, true).header('cache-control', 'public, max-age=60').send(html);
   });
 
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
