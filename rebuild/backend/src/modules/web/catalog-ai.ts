@@ -104,11 +104,12 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     return { set: !!k, source: k?.source ?? null };
   });
   app.put('/catalog/ai/key', { preHandler: app.requireAdmin }, async (request) => {
-    const { key } = parse(z.object({ key: z.string().trim().max(200) }), request.body);
+    // المفتاح بيتلزق من الموبايل ساعات بمسافات أو سطر جديد أو علامات تنصيص، والمفاتيح الجديدة لجوجل فيها نقط (AQ.…)
+    const key = parse(z.object({ key: z.string().max(400) }), request.body).key.replace(/[\s"'‎‏‪-‮]/g, '');
     const actor = actorOf(request);
     if (!key) await db.setting.deleteMany({ where: { key: KEY_SETTING } });
     else {
-      if (!/^[A-Za-z0-9_-]{20,}$/.test(key)) throw badRequest('شكل المفتاح مش مظبوط — انسخه كامل من Google AI Studio');
+      if (!/^[\x21-\x7e]{20,300}$/.test(key)) throw badRequest('شكل المفتاح مش مظبوط — انسخه كامل من Google AI Studio');
       await db.setting.upsert({ where: { key: KEY_SETTING }, create: { key: KEY_SETTING, value: { key }, updatedById: actor.id }, update: { value: { key }, updatedById: actor.id } });
     }
     await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: KEY_SETTING, after: { set: !!key }, ip: actor.ip });
