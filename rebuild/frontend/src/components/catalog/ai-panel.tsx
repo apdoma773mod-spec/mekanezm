@@ -18,6 +18,8 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   const toast = useToast();
   const [keySet, setKeySet] = useState<boolean | null>(null);
   const [keyIn, setKeyIn] = useState('');
+  const [cf, setCf] = useState(false);
+  const [cfIn, setCfIn] = useState({ account: '', token: '' });
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errs, setErrs] = useState<Record<string, string>>({});
@@ -26,7 +28,7 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   const stop = useRef(false);
 
   useEffect(() => {
-    api.get<{ set: boolean }>('/web/catalog/ai/key').then((r) => setKeySet(r.set)).catch(() => setKeySet(false));
+    api.get<{ set: boolean; cf?: boolean }>('/web/catalog/ai/key').then((r) => { setKeySet(r.set); setCf(!!r.cf); }).catch(() => setKeySet(false));
   }, []);
 
   const saveKey = async () => {
@@ -41,6 +43,17 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
   };
 
   // النتيجة: got = اتعمل حاجة واتحفظت للمنتج (حتى لو جزء منها فشل، زي الصورة)
+  const saveCf = async () => {
+    try {
+      const r = await api.put<{ cf: boolean }>('/web/catalog/ai/cf', cfIn);
+      setCf(r.cf);
+      setCfIn({ account: '', token: '' });
+      toast(r.cf ? '✔ الصور المجانية اشتغلت' : 'اتشالت بيانات Cloudflare');
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
+  };
+
   const one = async (p: CatProduct, single = false): Promise<{ got: boolean; err: boolean }> => {
     setBusy((b) => ({ ...b, [p.code]: true }));
     setErrs((x) => ({ ...x, [p.code]: '' }));
@@ -128,6 +141,22 @@ export function CatalogAi({ products, ai, setAi, saveNow }: { products: CatProdu
         </div>
       ) : (
         <>
+          {!cf ? (
+            <div style={{ background: '#eef6ff', border: '1px solid #b9d6f5', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <b>🖼️ الصور ببلاش (حوالي ٨٠ صورة في اليوم) من Cloudflare — مرة واحدة بس:</b>
+              <ol style={{ margin: '6px 0', paddingInlineStart: 20, fontSize: 14, lineHeight: 1.9 }}>
+                <li>اعمل حساب مجاني: <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noreferrer">dash.cloudflare.com/sign-up</a></li>
+                <li>افتح <a href="https://dash.cloudflare.com/?to=/:account/ai/workers-ai" target="_blank" rel="noreferrer">صفحة Workers AI</a> ودوس «Use REST API».</li>
+                <li>انسخ الـ <b>Account ID</b> والزقه تحت.</li>
+                <li>دوس «Create a Workers AI API Token» ← «Create API Token»، وانسخ الـ <b>Token</b> والزقه تحت.</li>
+              </ol>
+              <input value={cfIn.account} onChange={(e) => setCfIn({ ...cfIn, account: e.target.value })} placeholder="Account ID" autoComplete="off" style={{ width: '100%', marginBottom: 6 }} />
+              <input type="password" value={cfIn.token} onChange={(e) => setCfIn({ ...cfIn, token: e.target.value })} placeholder="API Token" autoComplete="off" style={{ width: '100%', marginBottom: 6 }} />
+              <button type="button" className="primary" disabled={!cfIn.account.trim() || !cfIn.token.trim()} onClick={() => void saveCf()}>💾 حفظ وتشغيل الصور</button>
+            </div>
+          ) : (
+            <p style={{ ...sm, margin: '0 0 8px' }}>🖼️ الصور المجانية من Cloudflare شغالة ✔ (حوالي ٨٠ صورة في اليوم، وبتتجدد كل يوم الساعة ٢ بالليل)</p>
+          )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {run ? (
               <>

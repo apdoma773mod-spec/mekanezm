@@ -14,6 +14,9 @@ import { parse } from '../../lib/validate.js';
  * المفتاح: GEMINI_API_KEY في backend/.env، أو اللي عبده بيحطه من صفحة الكتالوج (Setting ai_gemini_key).
  */
 const KEY_SETTING = 'ai_gemini_key';
+/** الصور ببلاش: Cloudflare Workers AI (حوالي ١٠٠٠٠ «نيورون» في اليوم مجانًا ≈ ٨٠ صورة) بموديل FLUX.2 klein بياخد صورة المنتج نفسه كمرجع */
+const CF_SETTING = 'ai_cf';
+const CF_MODEL = process.env.CATALOG_CF_MODEL || '@cf/black-forest-labs/flux-2-klein-4b';
 // جوجل بيقفل موديلات قديمة للمستخدمين الجداد ويغيّر الأسماء كتير: بنجرب من الأحدث، وأي موديل مقفول/زحمة/مالوش حصة بنعدّي للي بعده
 const TEXT_MODELS = (process.env.CATALOG_TEXT_MODELS || 'gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-3-flash-preview,gemini-flash-latest,gemini-3.5-flash-lite').split(',');
 const IMAGE_MODELS = (process.env.CATALOG_IMAGE_MODELS || 'gemini-3.1-flash-image,gemini-3.1-flash-image-preview,gemini-3-pro-image,gemini-3-pro-image-preview,gemini-2.5-flash-image').split(',');
@@ -78,6 +81,8 @@ let noImageUntil = 0;
 const friendly = (e: unknown) => {
   const m = String((e as Error)?.message || e);
   if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'المفتاح غلط — اتأكد إنك نسخته كامل';
+  if (/^quota \(image\)/.test(m)) return 'الصور: فعّل الصور المجانية من Cloudflare (الخطوات فوق في الأداة)، أو فعّل الدفع في جوجل';
+  if (/Cloudflare|كمّل بكرة/.test(m)) return m.slice(0, 200);
   if (/quota|RESOURCE_EXHAUSTED/i.test(m)) return 'جوجل مش مدّي حصة مجانية للحاجة دي على المفتاح ده (محتاج تفعيل الدفع Billing في Google AI Studio)، أو الحصة خلصت النهارده';
   if (/high demand|overloaded|UNAVAILABLE/i.test(m)) return 'سيرفرات جوجل زحمة دلوقتي، جرّب كمان شوية';
   if (/timeout|abort/i.test(m)) return 'جوجل اتأخر في الرد، جرّب تاني';
@@ -103,6 +108,9 @@ features من 3 لـ 5، و specs من 3 لـ 8 (الأهم الأول: مقاس
 const IMAGE_PROMPT = (p: z.infer<typeof body>) =>
   `Create a photorealistic, high-end catalog photo showing THIS EXACT hardware product from the attached photo installed and in use in its real place (for example: a drawer runner mounted on an open drawer, a hinge on a cabinet door, a corner unit like Magic Corner pulled out of a kitchen corner cabinet, a pull-out basket inside a tall cabinet, a wardrobe lift inside a wardrobe, a handle on a cabinet front). Product: "${p.name}" (category: ${p.section || 'furniture hardware'}). Keep the product's shape, color and material identical to the attached photo and clearly visible as the hero. Modern kitchen or wardrobe interior, soft natural light, shallow depth of field, clean premium look. No text, no logos, no watermarks, no people.`;
 
+const CF_PROMPT = (p: z.infer<typeof body>) =>
+  `Photorealistic premium furniture-hardware catalog photo. Take the exact hardware product shown in image 0 ("${p.name}", category: ${p.section || 'furniture hardware'}) and show it installed and in use in its real place: for example a drawer runner mounted on the side of an open drawer, a hinge fitted on an open cabinet door, a corner pull-out unit swung out of an open kitchen corner cabinet, a pull-out basket inside a tall pantry cabinet, a lift-up fitting on a wall cabinet, a handle on a cabinet front. Keep the product's shape, colour and material the same as image 0 and make it the clear hero of the shot. Modern kitchen or wardrobe interior, soft natural daylight, clean premium look. No text, no logos, no watermark, no people.`;
+
 export async function catalogAiRoutes(app: FastifyInstance) {
   const db = app.prisma;
   const getKey = async () => {
@@ -111,9 +119,31 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     return v?.key ? { key: v.key, source: 'saved' as const } : null;
   };
 
+  const getCf = async () => {
+    const v = (await db.setting.findUnique({ where: { key: CF_SETTING } }))?.value as { account?: string; token?: string } | null;
+    return v?.account && v.token ? { account: v.account, token: v.token } : null;
+  };
   app.get('/catalog/ai/key', { preHandler: app.requireAdmin }, async () => {
     const k = await getKey();
-    return { set: !!k, source: k?.source ?? null };
+    return { set: !!k, source: k?.source ?? null, cf: !!(await getCf()) };
+  });
+  app.put('/catalog/ai/cf', { preHandler: app.requireAdmin }, async (request) => {
+    const b = parse(z.object({ account: z.string().max(200), token: z.string().max(400) }), request.body);
+    const clean = (x: string) => x.replace(/[\s"'‎‏‪-‮]/g, '');
+    const account = clean(b.account);
+    const token = clean(b.token);
+    const actor = actorOf(request);
+    if (!account && !token) await db.setting.deleteMany({ where: { key: CF_SETTING } });
+    else {
+      if (!/^[0-9a-f]{32}$/i.test(account)) throw badRequest('الـ Account ID غلط — ده ٣٢ حرف ورقم من صفحة Workers AI');
+      if (!/^[!-~]{30,300}$/.test(token)) throw badRequest('الـ Token غلط — انسخه كامل');
+      // نتأكد إنه شغال قبل ما نحفظه
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/models/search?per_page=1`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }).catch(() => null);
+      if (!r?.ok) throw badRequest('Cloudflare رفض البيانات دي — اتأكد من الـ Account ID والـ Token (صلاحية Workers AI)');
+      await db.setting.upsert({ where: { key: CF_SETTING }, create: { key: CF_SETTING, value: { account, token }, updatedById: actor.id }, update: { value: { account, token }, updatedById: actor.id } });
+    }
+    await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: CF_SETTING, after: { set: !!account }, ip: actor.ip });
+    return { cf: !!account };
   });
   app.put('/catalog/ai/key', { preHandler: app.requireAdmin }, async (request) => {
     // المفتاح بيتلزق من الموبايل ساعات بمسافات أو سطر جديد أو علامات تنصيص، والمفاتيح الجديدة لجوجل فيها نقط (AQ.…)
@@ -201,9 +231,41 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       out.specs = (Array.isArray(d.specs) ? d.specs : []).filter((x) => x && x.k && x.v).map((x) => ({ k: String(x.k).slice(0, 40), v: String(x.v).slice(0, 80) })).slice(0, 8);
       out.sources = (c?.groundingMetadata?.groundingChunks ?? []).map((g) => g.web?.uri || '').filter(Boolean).slice(0, 4);
     };
+    const cfImage = async (cf: { account: string; token: string }) => {
+      const sharp = (await import('sharp')).default;
+      // الموديل بياخد صور مرجع أصغر من ٥١٢×٥١٢
+      const ref = await sharp(Buffer.from(photo!.data, 'base64')).resize(500, 500, { fit: 'inside' }).jpeg({ quality: 90 }).toBuffer();
+      const fd = new FormData();
+      fd.append('prompt', CF_PROMPT(p));
+      fd.append('input_image_0', new Blob([new Uint8Array(ref)], { type: 'image/jpeg' }), 'product.jpg');
+      fd.append('width', '1024');
+      fd.append('height', '768');
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cf.account}/ai/run/${CF_MODEL}`, { method: 'POST', headers: { authorization: `Bearer ${cf.token}` }, body: fd, signal: AbortSignal.timeout(90000) });
+      const j = (await r.json().catch(() => ({}))) as { result?: { image?: string }; errors?: { message?: string; code?: number }[] };
+      if (!r.ok || !j.result?.image) {
+        const m = j.errors?.[0]?.message || `Cloudflare ${r.status}`;
+        throw new Error(/neuron|limit|quota|exceeded|429/i.test(m + r.status) ? 'خلصت صور Cloudflare المجانية النهارده (حوالي ٨٠ صورة في اليوم) — كمّل بكرة' : 'Cloudflare: ' + m.slice(0, 160));
+      }
+      const name = `${randomBytes(12).toString('hex')}.jpg`;
+      const img = await sharp(Buffer.from(j.result.image, 'base64')).jpeg({ quality: 88 }).toBuffer();
+      await putFile(name, img, 'image/jpeg');
+      out.img = `/api/v1/work/files/${name}`;
+    };
     const image = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
-      if (Date.now() < noImageUntil) throw new Error('quota (image)');
+      const cf = await getCf();
+      if (Date.now() < noImageUntil) {
+        if (cf) return cfImage(cf);
+        throw new Error('quota (image) — فعّل الصور المجانية من Cloudflare');
+      }
+      try {
+        await geminiImage();
+      } catch (e) {
+        if (cf && SKIP.test(String((e as Error).message))) return cfImage(cf);
+        throw e;
+      }
+    };
+    const geminiImage = async () => {
       const b = await firstWorking('image', IMAGE_MODELS, (m) =>
         gemini(k.key, m, { contents: [{ parts: [{ text: IMAGE_PROMPT(p) }, ...imgPart] }], generationConfig: { responseModalities: ['IMAGE'] } }, 60000),
       ).catch((e) => {
