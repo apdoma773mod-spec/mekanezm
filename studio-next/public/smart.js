@@ -231,6 +231,7 @@ function xf(t){const [W,H]=[CV.width,CV.height],vw=V.videoWidth,vh=V.videoHeight
  else if(mo==='punch'){z+=shotIdx(t)%2?.1:0;if(ze)z+=.05*pulse(ze)}
  else if(mo==='ken'){const [a,b]=shotSpan(t);z+=.02+.08*Math.max(0,Math.min(1,(t-a)/Math.max(1,b-a)))}
  if(mo!=='none'){const st=STK.find(x=>t>=x.s&&t<x.e);if(st)z+=.045*ease((t-st.s)/.25)*(1-ease((t-st.e+.3)/.3))}
+ const _fz=S.fx!==false&&mo!=='ken'?FXL.find(x=>t>=x.s&&t<x.s+.45):null;if(_fz)z+=.055*(1-ease((t-_fz.s)/.45));
  if(O('trans')==='zoom'){const d=lastCut(t);if(d!=null)z+=.09*(1-ease(d/.25))}
  /* الزووم بيتمركز على الراس عشان الوش يفضل في الكادر */
  const hd=!side&&headAt(t);let ax=W/2,ay=H/2;if(hd&&!hd.guess){ax=dx+(hd.x0+hd.x1)/2*dw;ay=dy+(hd.y0+hd.y1)/2*dh}
@@ -584,7 +585,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
  <button class="b" id="sm_bg" style="width:100%;min-height:56px;font-size:18px">☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)</button>
- <p class="mu" style="margin:4px 0 10px">بيرفع الفيديو، وبعدها السيرفر هو اللي بيسمع ويعمل المونتاج ويطلّعه جاهز — تلاقيه تحت في «فيديوهاتي». بياخد من دقيقتين لـ ٢٠ دقيقة على حسب طول الفيديو (لحد ١٠ دقايق). سيب الشاشة مفتوحة لحد ما الرفع يخلص — ولو وقف اختار نفس الفيديو تاني وهيكمّل. 💡 صوّر بـ 1080p بدل 4K: الفيديو بيبقى أصغر ٣ مرات والرفع أسرع بكتير.</p>
+ <p class="mu" style="margin:4px 0 10px"><b>⚠️ فيديو الإدراج واللمسات الذكية بتشتغل في زرار «اعمله هنا» بس (مش الخلفية).</b> بيرفع الفيديو، وبعدها السيرفر هو اللي بيسمع ويعمل المونتاج ويطلّعه جاهز — تلاقيه تحت في «فيديوهاتي». بياخد من دقيقتين لـ ٢٠ دقيقة على حسب طول الفيديو (لحد ١٠ دقايق). سيب الشاشة مفتوحة لحد ما الرفع يخلص — ولو وقف اختار نفس الفيديو تاني وهيكمّل. 💡 صوّر بـ 1080p بدل 4K: الفيديو بيبقى أصغر ٣ مرات والرفع أسرع بكتير.</p>
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
@@ -760,13 +761,13 @@ function mount(){if($s('v-smart'))return;const s=document.createElement('section
 let BRC=[],BRL=[],BRM=[],BRX=new Set();   // BRC: الفيديوهات المرفوعة، BRL: أماكن الإدراج، BRM: اللي ضفتها بإيدك، BRX: اللي شلتها
 const BR_ESC=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function addBrollFiles(files){[...files].forEach(f=>{const url=URL.createObjectURL(f),v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;v.setAttribute('webkit-playsinline','');
-  const c={name:f.name,url,v,dur:0};v.onloadedmetadata=()=>{c.dur=v.duration||0;paintBrIn();if(D){build();renderBR();try{draw(V.currentTime)}catch(e){}}};v.load();BRC.push(c)});paintBrIn()}
-function paintBrIn(){const el=$s('sm_bi');if(el)el.innerHTML=BRC.length?BRC.map((c,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="flex:1">🎞️ ${i+1}. ${BR_ESC(c.name)} ${c.dur?'— '+fmt(c.dur):''}</span><button type="button" class="b o" data-brd="${i}" style="flex:none;padding:4px 10px">✕</button></div>`).join(''):''}
+  const c={name:f.name,url,v,dur:0};const upd=()=>{if(v.duration&&isFinite(v.duration)&&c.dur!==v.duration){c.dur=v.duration;c.bad=0;paintBrIn();if(D){build();renderBR();try{draw(V.currentTime)}catch(e){}}}};v.onloadedmetadata=upd;v.ondurationchange=upd;v.onloadeddata=upd;v.load();const pr=v.play();if(pr&&pr.then)pr.then(()=>{v.pause();try{v.currentTime=0}catch(e){}}).catch(()=>{});BRC.push(c);setTimeout(()=>{if(!c.dur){c.bad=1;paintBrIn()}},8000)});paintBrIn()}
+function paintBrIn(){const el=$s('sm_bi');if(el)el.innerHTML=BRC.length?BRC.map((c,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="flex:1">🎞️ ${i+1}. ${BR_ESC(c.name)} ${c.dur?'— '+fmt(c.dur):c.bad?'⚠️ مش قادر أقرأ الفيديو ده':'⏳ بحمّل…'}</span><button type="button" class="b o" data-brd="${i}" style="flex:none;padding:4px 10px">✕</button></div>`).join(''):''}
 /* كلمات التنبيه: الفعل «يظهر/هتشوف/هعرض…» أو «تحت» جنب «فيديو/دلوقتي/اهو». الإدراج بيبدأ لما الجملة تخلص */
 function brCues(){const W=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W.push({w:norm(w),e:c.s+d*(i+1)/n}))});
  const hit=[];W.forEach((x,i)=>{const w=x.w;let ok=/ظهر/.test(w)||/^(هتشوف|هنشوف|شوفو|اتفرجو|هتتفرج|هعرض|اعرض|هنعرض|هتلاقو)/.test(w);
   if(!ok&&w==='تحت'){const nb=W.slice(Math.max(0,i-3),i+4).map(y=>y.w).join(' ');ok=/فيديو|ظهر|اهو|دلوقتي|شوف|بص|هنا/.test(nb)}
-  if(!ok&&/^فيديو/.test(w)){const nb=W.slice(i,i+4).map(y=>y.w).join(' ');ok=/تحت|التاني|الاخر|ده/.test(nb)&&/ظهر|شوف|هتشوف|دلوقتي/.test(W.slice(Math.max(0,i-3),i+1).map(y=>y.w).join(' '))}
+  if(!ok&&/^فيديو/.test(w)){const nb=W.slice(i,i+4).map(y=>y.w).join(' ');ok=/تحت|التاني|تاني|الاخر/.test(nb)}
   if(ok)hit.push(x.e)});
  const out=[];hit.forEach(t=>{const l=out[out.length-1];if(l!=null&&t-l<3.2)out[out.length-1]=t;else out.push(t)});return out.filter(t=>t>.8)}
 function computeBroll(){BRL=[];if(!BRC.length||!D)return;const dur=D.dur||(V&&V.duration)||0;let cues=brCues();
@@ -805,7 +806,7 @@ const _renderLists0=renderLists;renderLists=function(){const r=_renderLists0.app
 let FXL=[];
 const FXB=[[/ضمان|مضمون/,'warranty','ضمان',null],[/اصلي|اوريجينال|براند|مستورد|جوده|جودة/,'original','جودة أصلية',null],[/توصيل|شحن/,'shipping','توصيل',null],[/تركيب|تثبيت|يتركب/,'tools','تركيب',null],
  [/واتساب|كلمنا|اتصل|اتصلو|رسايل|تليفون/,'contact','تواصل معانا',null],[/مقاسات|الوان|انواع|موديلات|اشكال/,'options','اختيارات كتير',null],
- [/رخيص|خصم|عرض|سعر|اسعار|فلوس/,null,'سعر مميز','💰'],[/سريع|بسرعه|فورا|بسرع/,null,'سريع','⚡'],[/قوي|تقيل|يشيل|متين|يتحمل/,null,'قوي ومتين','💪'],[/هادي|بهدوء|من غير صوت/,null,'هادي','🤫'],[/جديد|وصل|لسه/,null,'جديد','🆕'],[/احذر|خلي بالك|غلط|مشكله/,null,'خلي بالك','⚠️']];
+ [/رخيص|خصم|عرض|سعر|اسعار|فلوس/,null,'سعر مميز','💰'],[/سريع|بسرعه|فورا|بسرع/,null,'سريع','⚡'],[/قوي|تقيل|يشيل|متين|يتحمل/,null,'قوي ومتين','💪'],[/هادي|بهدوء|من غير صوت/,null,'هادي','🤫'],[/جديد|وصل|لسه/,null,'جديد','🆕'],[/احذر|خلي بالك|غلط|مشكله/,null,'خلي بالك','⚠️'],[/^(عشان|علشان|لان|لانه)$/,null,'السبب','💡'],[/^(اولا|ثانيا|ثالثا)$/,null,'خطوة جديدة','👉']];
 const FXU=/^(سم|ملي|مم|متر|م|كيلو|كجم|جرام|جنيه|ج|الف|%|سنه|سنين|سنوات|ثانيه|ثواني|دقيقه|دقايق|درجه|كيلوجرام)/;
 function buildFx(){FXL=[];if(S.fx===false||!CAP.length)return;
  const W=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W.push({raw:w,w:norm(w),s:c.s+d*i/n,e:c.s+d*(i+1)/n}))});
@@ -819,7 +820,13 @@ function buildFx(){FXL=[];if(S.fx===false||!CAP.length)return;
   if(near(x.s-.3,x.s+1.6,['product','point','step','anim','warn','measure','price']))return;
   BDG.push({s:x.s,e:x.s+1.9,kind:'badge',icon:b[1],em:b[3],label:b[2]})});
  /* ماتبقاش كتير: أقصى شارة كل ٣ ثواني تقريبًا */
- const out=[];BDG.forEach(f=>{const l=out[out.length-1];if(NUM.some(n=>f.s<n.e+.3&&f.e>n.s-.3))return;if(!l||f.s-l.s>=2.6)out.push(f)});FXL=NUM.concat(out).sort((a,b)=>a.s-b.s)}
+ const out=[];BDG.forEach(f=>{const l=out[out.length-1];if(NUM.some(n=>f.s<n.e+.3&&f.e>n.s-.3))return;if(!l||f.s-l.s>=2.6)out.push(f)});const base=NUM.concat(out),KW=[];
+ if(!O('stk')){let last=-9;const STOPW=/^(اللي|الي|ده|دي|دول|كده|يعني|ازاي|انا|احنا|انت|هو|هي|ممكن|لازم|كمان|برضو|عشان|علشان|لان|لكن|يلا|اصل|فيه|علي|على|عندنا|عندك|بتاع|بتاعه|بتاعت|هنا|هناك|دلوقتي|النهارده|جدا|اوي|حاجه|حاجات|الحاجه|بتاعنا|جماعه|يا جماعه)$/;
+  CAP.forEach(c=>{if(c.s<last+2.1||c.s<.8)return;const k1=(c.kw||[]).map(norm),cand=c.w.map((x,i)=>({x,n:norm(x),i})).filter(o=>o.n.length>=4&&!STOPW.test(o.n)&&!/^\d+$/.test(en(o.n)));
+   const w=cand.find(o=>k1.some(k=>k&&(o.n===k||k.split(/\s+/).includes(o.n))))||cand.slice().sort((a,b)=>b.n.length-a.n.length)[0];if(!w)return;
+   const d=Math.max(.2,c.e-c.s),ts=c.s+d*w.i/c.w.length,item={s:ts,e:ts+1.5,kind:'kw',word:w.x.replace(/[.,،؟!?:«»"]/g,''),em:emojiFor(c.w.join(' '))};
+   if(base.some(n=>item.s<n.e+.2&&item.e>n.s-.2)||EV.some(x=>showEv(x)&&x.s<item.e&&x.e>item.s))return;KW.push(item);last=ts})}
+ FXL=base.concat(KW).sort((a,b)=>a.s-b.s)}
 function fxSide(t,w){const [W,H]=[CV.width,CV.height],u=W/1080,hd=headAt(t),f=xf(t);let hx0=W*.35,hx1=W*.65,hy=H*.2;
  if(hd&&!f.side){hx0=f.x+hd.x0*f.w-30*u;hx1=f.x+hd.x1*f.w+30*u;hy=f.y+(hd.y0+hd.y1)/2*f.h}
  const m=24*u,sh=O('safe')?W*.06:0,right=W-m-w,left=m+sh,fitsL=m+w<hx0,fitsR=right-sh>hx1;
@@ -829,8 +836,9 @@ function fxSide(t,w){const [W,H]=[CV.width,CV.height],u=W/1080,hd=headAt(t),f=xf
  return {x,y}}
 function drawFx(t,W,H,u,F,acc){if(S.fx===false)return;const f=FXL.find(x=>t>=x.s&&t<x.e);if(!f)return;
  const dt=t-f.s,a=Math.min(ease(dt/.28),1-ease((t-f.e+.3)/.3));if(a<=0)return;
- const lab=f.kind==='num'?(f.unit):f.label;CX.save();CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
+ const lab=f.kind==='num'?(f.unit):f.kind==='kw'?f.word:f.label;CX.save();CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
  CX.font=`800 ${Math.round(40*u)}px ${F}`;const tw=CX.measureText(lab).width;
+ if(f.kind==='kw'){drawKw(f,t,W,H,u,F,acc,dt,a);CX.restore();return}
  if(f.kind==='badge'){const bw=Math.min(W*.62,tw+190*u),bh=96*u,p=fxSide(t,bw);if(!p){CX.restore();return}
   const k=p.x+bw/2<W/2?-1:1,sl=(1-ease(dt/.35))*k*W*.25,fl=Math.sin(dt*3)*4*u,sc=.9+.1*back(dt/.4);
   CX.globalAlpha=a;CX.translate(p.x+bw/2+sl,p.y+fl);CX.scale(sc,sc);
@@ -844,6 +852,15 @@ function drawFx(t,W,H,u,F,acc){if(S.fx===false)return;const f=FXL.find(x=>t>=x.s
   CX.strokeStyle=acc;CX.beginPath();CX.arc(0,0,R-14*u,-Math.PI/2,-Math.PI/2+Math.PI*2*q);CX.stroke();
   const shown=Number.isInteger(f.val)?Math.round(f.val*q):(Math.round(f.val*q*10)/10);CX.fillStyle=acc;CX.font=`900 ${Math.round(92*u)}px ${F}`;CX.fillText(ar(String(shown)),0,-14*u);CX.fillStyle='#fff';CX.font=`800 ${Math.round(38*u)}px ${F}`;CX.fillText(f.unit,0,52*u)}
  CX.restore();CX.globalAlpha=1}
+/* كلمة مهمة كبيرة بإيموجي بينط في نص الجسم (بين الراس والكلام) */
+function drawKw(f,t,W,H,u,F,acc,dt,a){const hr=headRect(t),cap=O('cap')==='none'?H*.93:capBottom()-2*Math.round(CF().sz*u*S.size)*1.34-40*u;
+ const top=hr?hr[1]+50*u:H*.34;if(cap-top<260*u)return;const y=Math.min(cap-110*u,Math.max(top+110*u,(top+cap)/2));
+ const sc=Math.max(.01,back(dt/.4)),out=1-ease((t-f.e+.25)/.25);let sz=Math.round(124*u);CX.font=`900 ${sz}px ${F}`;const mw=W*.8;let tw=CX.measureText(f.word).width;if(tw>mw){sz=Math.round(sz*mw/tw);CX.font=`900 ${sz}px ${F}`;tw=CX.measureText(f.word).width}
+ CX.globalAlpha=a*out;CX.translate(W/2,y);CX.rotate(-.05);CX.scale(sc,sc);
+ CX.strokeStyle=acc;CX.lineWidth=6*u;CX.lineCap='round';const br=ease(dt/.45);for(let k=0;k<8;k++){const an=k/8*Math.PI*2,r0=tw*.5+60*u+70*u*br,r1=r0+34*u*(1-br);CX.globalAlpha=Math.max(0,a*out*(1-br*.8));CX.beginPath();CX.moveTo(Math.cos(an)*r0,Math.sin(an)*r0*.5);CX.lineTo(Math.cos(an)*r1,Math.sin(an)*r1*.5);CX.stroke()}
+ CX.globalAlpha=a*out;CX.fillStyle=acc;const uw=(tw+40*u)*ease(dt/.3);CX.fillRect(tw/2+20*u-uw,sz*.52,uw,14*u);
+ CX.lineJoin='round';CX.lineWidth=16*u;CX.strokeStyle='#000';CX.strokeText(f.word,0,0);CX.fillStyle='#fff';CX.fillText(f.word,0,0);
+ const bob=Math.sin(dt*9)*9*u*Math.max(0,1-dt/1.1);CX.font=`${Math.round(88*u)}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`;CX.fillText(f.em||'✨',0,-sz*.95+bob)}
 /* لمسة سينمائية: تعتيم خفيف على الأطراف + لمعة بتعدّي مع كل قطع */
 function drawFinish(t,W,H){if(S.fx===false||O('look')==='off')return;
  CX.save();const g=CX.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.28)');CX.fillStyle=g;CX.fillRect(0,0,W,H);
