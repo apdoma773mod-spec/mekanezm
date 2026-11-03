@@ -55,6 +55,7 @@ export default async function Home() {
           <Link href="/tools"><span>🧮</span><b>حاسبات النجار</b><small>الدراعات القلاب، المفصلات، المجرى</small></Link>
           <Link href="/works"><span>🏗️</span><b>من شغلنا</b><small>صور حقيقية</small></Link>
           <Link href="/brands"><span>🏷️</span><b>البراندات</b><small>بلوم، جراس، هيتتش، ويل ماكس</small></Link>
+          <Link href="/directions" className="wide"><span>🗺️</span><b>خريطة: تجيلنا إزاي</b><small>الطريق خطوة بخطوة من جامعة الدول والدائري</small></Link>
         </nav>
         {top.length > 0 && <ProductRow id="top-row" title="⭐ الأكثر طلباً" href="/search?top=1" items={top.slice(0, ROW).map(card)} total={top.length} priority />}
         {rows.map(({ s, ps }, i) => (

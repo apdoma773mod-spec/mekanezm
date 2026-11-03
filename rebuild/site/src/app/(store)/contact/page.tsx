@@ -41,6 +41,7 @@ export default async function Contact() {
             <h2>📍 العنوان</h2>
             <p style={{ margin: 0 }}>{site.address || 'أرض اللواء – الجيزة'}</p>
             <a href={site.mapUrl || MAP_URL} target="_blank" rel="noopener">🗺️ افتح على الخريطة</a>
+            <Link style={{ display: 'block', marginTop: 6 }} href="/directions">🧭 تجيلنا إزاي خطوة بخطوة</Link>
           </div>
           <div>
             <h2>🕒 مواعيد الشغل</h2>

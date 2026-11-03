@@ -221,3 +221,4 @@ body:has(.adm) { background: radial-gradient(900px 480px at 92% -6%, #d9a73a22, 
 .ad-tbl th, .ad-tbl td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); }
 .ad-tbl tr.bad td { color: #b3261e; }
 .ad-tbl tr.upd td:last-child { color: #8a4b00; }
+.ad-route { border: 1px solid var(--line, #ddd); border-radius: 12px; padding: 10px; margin-bottom: 10px; }

@@ -77,6 +77,8 @@ export const siteSchema = z.object({
   logo: str.default(''),
   mapUrl: str.default(''),
   policy: str.default(''),
+  /** «تجيلنا إزاي»: written directions per starting point (see lib/directions.ts). */
+  routes: z.array(z.object({ from: str.default(''), text: str.default(''), note: str.default('') })).default([]),
   deliveryNote: str.default(''),
   catalog: z.boolean().optional(),
   theme: z.object({ accent: z.string().optional() }).passthrough().default({}),

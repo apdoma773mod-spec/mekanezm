@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
 import { PROS } from '@/lib/config';
+import { DEFAULT_ROUTES, type Route } from '@/lib/directions';
 import { KINDS, SKILLS } from '@/lib/pros';
 import { Imgs, uid7 } from './ui';
 
@@ -101,6 +102,8 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
   const P: string[] = Array.isArray(d.phones) ? d.phones : [];
   const [wa, setWa] = useState<string>(d.phone ?? ''), [p1, setP1] = useState(P[0] ?? ''), [p2, setP2] = useState(P[1] ?? '');
   const [hours, setHours] = useState<string>(d.hours ?? ''), [map, setMap] = useState<string>(d.mapUrl ?? ''), [cat, setCat] = useState(d.catalog !== false);
+  const [routes, setRoutes] = useState<Route[]>(Array.isArray(d.routes) && d.routes.length ? d.routes.map((r: Rec) => ({ from: r.from ?? '', text: r.text ?? '', note: r.note ?? '' })) : DEFAULT_ROUTES);
+  const setRoute = (i: number, v: Partial<Route>) => setRoutes(routes.map((x, k) => (k === i ? { ...x, ...v } : x)));
   const [busy, setBusy] = useState(''), [msg, setMsg] = useState<Record<string, string>>({});
   const run = async (k: string, edit: (x: Rec) => void) => {
     setBusy(k); setMsg(m => ({ ...m, [k]: '⏳…' }));
@@ -147,6 +150,22 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
         <div className="ad-sv"><button className="pri" disabled={!!busy} onClick={() => run('contact', x => {
           x.phone = wa.trim() || x.phone; x.phones = [p1.trim(), p2.trim()].filter(Boolean); x.hours = hours.trim(); x.mapUrl = map.trim(); x.catalog = cat;
         })}>💾 حفظ التواصل</button><span className={msg.contact?.startsWith('✗') ? 'err' : 'mut'}>{msg.contact}</span></div>
+      </section>
+      <section className="ad-s">
+        <h2>🗺️ تجيلنا إزاي</h2>
+        <p className="mut">بتظهر في صفحة «خريطة: تجيلنا إزاي». كل طريق: منين، والخطوات (كل خطوة في سطر)، وملاحظة مهمة تظهر بلون مميز.</p>
+        {routes.map((r, i) => (
+          <div key={i} className="ad-route">
+            <label>جاي منين<input value={r.from} onChange={e => setRoute(i, { from: e.target.value })} placeholder="مثلاً: جاي من جامعة الدول" /></label>
+            <label>الخطوات <small>(كل خطوة في سطر)</small><textarea rows={4} value={r.text} onChange={e => setRoute(i, { text: e.target.value })} /></label>
+            <label>ملاحظة مهمة <small>(اختياري)</small><input value={r.note} onChange={e => setRoute(i, { note: e.target.value })} /></label>
+            <button type="button" className="lnk" onClick={() => setRoutes(routes.filter((_, k) => k !== i))}>✕ شيل الطريق ده</button>
+          </div>
+        ))}
+        <button type="button" className="sec" onClick={() => setRoutes([...routes, { from: '', text: '', note: '' }])}>＋ طريق تاني</button>
+        <div className="ad-sv"><button className="pri" disabled={!!busy} onClick={() => run('routes', x => {
+          x.routes = routes.map(r => ({ from: r.from.trim(), text: r.text.trim(), note: r.note.trim() })).filter(r => r.from || r.text);
+        })}>💾 حفظ الطريق</button><span className={msg.routes?.startsWith('✗') ? 'err' : 'mut'}>{msg.routes}</span></div>
       </section>
     </>
   );

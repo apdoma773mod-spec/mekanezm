@@ -26,7 +26,8 @@ export function Placeholder({ section }: { section?: string }) {
 export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolean; priority?: boolean; fresh?: boolean }) {
   const { site, fav, toggleFav, add, open, cart, setQty } = useShop();
   const n = cart[p.id]?.q ?? 0;
-  const img = images(p)[0];
+  const all = images(p);
+  const img = all[0];
   const sec = sectionOf(site, p);
   const item = toItem(p, ok);
   const addIt = () => { add(item); evProduct('add_to_cart', 'AddToCart', p); };
@@ -34,6 +35,14 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
     <div className="card">
       <div className="imw lq" style={lqip(img)}>
         {img ? <Image src={img} alt={p.name} fill sizes="(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
+        {/* Second photo fades in on hover (desktop only, loaded lazily). */}
+        {all[1] && <Image className="alt" src={all[1]} alt="" fill sizes="340px" loading="lazy" />}
+        {(p.brand || all.length > 1) && (
+          <span className="imtags">
+            {p.brand && <span className="brandp">{p.brand}</span>}
+            {all.length > 1 && <span className="nph" aria-label={`${all.length} صور`}>📷 {all.length}</span>}
+          </span>
+        )}
         <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
         <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
       </div>
@@ -46,6 +55,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
           {fresh && !p.badge && <span className="newc">جديد</span>}
         </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
+        {p.desc && <p className="cdesc">{p.desc}</p>}
         {!ok && <button type="button" className="bellt" onClick={() => open({ kind: 'notify', item })}>🔔 نبّهني لما يتوفر</button>}
         <div className="cf">
           {n > 0 ? (
