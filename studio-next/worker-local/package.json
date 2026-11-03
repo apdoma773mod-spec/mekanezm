@@ -1,0 +1,16 @@
+{
+  "name": "mkz-studio-worker-local",
+  "private": true,
+  "type": "module",
+  "description": "تفريغ الكلام بـ Whisper على جهاز المحل (مجاني، من غير مفاتيح)",
+  "scripts": {
+    "transcribe": "node transcribe.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.7.1",
+    "ffmpeg-static": "5.2.0"
+  },
+  "overrides": {
+    "onnxruntime-node": "npm:onnxruntime-web@1.22.0-dev.20250409-89f8206ba4"
+  }
+}
