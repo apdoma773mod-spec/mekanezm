@@ -825,13 +825,17 @@ export function proPages(inp: CatInput): Built {
         const d0 = splitDesc(p.desc ?? '');
         // لو الذكاء الاصطناعي عمل وصف ومقاسات، هما الأساس، والمواصفات القديمة بتكمّل
         const d = ai && (ai.desc || ai.specs.length) ? { intro: ai.desc || d0.intro, points: ai.features.length ? ai.features : d0.points, specs: [...ai.specs.map((x) => [x.k, x.v] as [string, string]), ...d0.specs.filter(([k]) => !ai.specs.some((x) => x.k === k))] } : d0;
-        const photos = [...p.imgs.filter((u) => u !== p.dimImg), ...(cfg.photos[p.code] ?? [])];
+        const own = p.imgs.filter((u) => u !== p.dimImg);
+        const web = cfg.photos[p.code] ?? [];
+        const photos = [...own, ...web];
         // صورة «في الاستخدام»: المرفوعة للمنتج، وإلا بتاعة القسم، وإلا صورة تانية للمنتج
-        const useImg = cfg.prodUse[p.code] || ai?.img || cfg.secUse[name] || '';
-        const side = useImg || photos[1] || '';
-        const hero = photos[0] || side;
-        const extra = photos.filter((u) => u !== hero && u !== side).slice(0, 3);
-        const us = side && side !== hero ? `<div class="us"><img class="im" src="${esc(side)}" alt="">${useImg ? '<span>📷 في الاستخدام</span>' : ''}</div>` : '';
+        // صور النت اللي عبده اختارها ليها الأولوية، وبعدها صورته هو، وصورة الذكاء الاصطناعي آخر حاجة
+        // صور الذكاء الاصطناعي المتولّدة (ai.img) مابتتعرضش خالص: عبده رفضها. بس صورة المنتج الحقيقية وصور النت اللي هو اختارها
+        const useImg = cfg.prodUse[p.code] || web[0] || cfg.secUse[name] || '';
+        const side = useImg || own[1] || '';
+        const hero = own[0] || side;
+        const extra = [...web, ...own.slice(1)].filter((u, i, a) => u !== hero && u !== side && a.indexOf(u) === i).slice(0, 3);
+        const us = side && side !== hero ? `<div class="us"><img class="im" src="${esc(side)}" alt="">${useImg ? `<span>${cfg.prodUse[p.code] ? '📷 في الاستخدام' : '📷 صورة مشابهة'}</span>` : ''}</div>` : '';
         const hd = `<div class="hd"><span>${esc(inp.shop)}</span><b>${esc(name)}</b></div>`;
         const vt = `<div class="vt"><div><small>${esc(name)}${p.brand ? ` · ${esc(p.brand)}` : ''}${p.isNew ? '<span class="nw2">جديد</span>' : ''}</small><h1>${esc(p.name)}</h1></div>${st.showCode ? `<div class="ck"><small>كود المنتج</small><span>${esc(p.code)}</span></div>` : ''}</div>`;
         // الكارت: الوصف والمميزات (يمين) + المواصفات والمقاسات والرسم والـ QR (شمال)
@@ -839,7 +843,7 @@ export function proPages(inp: CatInput): Built {
         const txtLen = d.intro.length + pts.join('').length;
         const intro = d.intro ? `<p>${esc(cut(d.intro, 260))}</p>` : `<p>${esc(p.name)} من ${esc(inp.shop)}. ${esc(cfg.cta)}</p>`;
         const ics = icons(p);
-        const thumbs = txtLen < 260 && extra.length ? `<div class="th">${extra.map((u) => `<img class="im" src="${esc(u)}" alt="">`).join('')}</div>` : '';
+        const thumbs = (txtLen < 260 || web.length) && extra.length ? `<div class="th">${extra.map((u) => `<img class="im" src="${esc(u)}" alt="">`).join('')}</div>` : '';
         const colA = `<div class="a${txtLen < 200 && !thumbs ? ' big' : ''}"><h3>عن المنتج</h3>${intro}${pts.length ? `<ul>${pts.map((x) => `<li>${esc(cut(x, 110))}</li>`).join('')}</ul>` : ''}${ics.length ? `<div class="ics">${ics.map((x) => `<span>${x.i} ${esc(x.t)}</span>`).join('')}</div>` : ''}${thumbs}</div>`;
         const sizedOf = (q: CatProduct) => !!q.size || /[0-9٠-٩]+\s*(سم|مم|cm|mm|م)(\s|$)/i.test(q.name);
         const fk = sizedOf(p) ? famKey(p.name) : '';
