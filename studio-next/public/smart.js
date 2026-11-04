@@ -80,7 +80,7 @@ let F=null,V=null,D=null,CAP=[],EV=[],GAPS=[],CUTT=[],STK=[],CTA=null,busy=false
 /* ---------- ١) الصوت: سحب + تقسيم ---------- */
 async function pcmFromFile(file,prog){
  const AC=window.AudioContext||window.webkitAudioContext;
- if(file.size<=140e6){try{
+ if(file.size<=260e6&&!window.__forceRT){try{
   prog('🎧 بسحب الصوت من الفيديو…');const buf=await file.arrayBuffer(),ac=new AC();
   const ab=await new Promise((ok,no)=>{const p=ac.decodeAudioData(buf,ok,no);if(p&&p.then)p.then(ok,no)});ac.close&&ac.close();
   const off=new OfflineAudioContext(1,Math.ceil(ab.duration*16000),16000),src=off.createBufferSource();src.buffer=ab;src.connect(off.destination);src.start();
@@ -89,8 +89,9 @@ async function pcmFromFile(file,prog){
  return await new Promise((ok,no)=>{const v=document.createElement('video');v.src=URL.createObjectURL(file);v.playsInline=true;v.muted=false;
   const ac=new AC(),src=ac.createMediaElementSource(v),sp=ac.createScriptProcessor(4096,1,1),parts=[],g=ac.createGain();g.gain.value=0;
   src.connect(sp);sp.connect(g);g.connect(ac.destination);const rate=ac.sampleRate;
-  sp.onaudioprocess=e=>{parts.push(new Float32Array(e.inputBuffer.getChannelData(0)));prog('🎧 بسمع الفيديو… '+fmt(v.currentTime)+' من '+fmt(v.duration))};
-  v.onended=()=>{sp.disconnect();ac.close&&ac.close();let n=parts.reduce((a,p)=>a+p.length,0),all=new Float32Array(n),o=0;parts.forEach(p=>{all.set(p,o);o+=p.length});
+  sp.onaudioprocess=e=>{parts.push(new Float32Array(e.inputBuffer.getChannelData(0)));prog('🎧 بسمع الفيديو… '+fmt(v.currentTime)+' من '+fmt(v.duration)+' — سيب الشاشة مفتوحة لحد ما يخلص')};
+  const wake=()=>{if(v.ended||!v.paused||document.visibilityState!=='visible')return;ac.resume().then(()=>v.play()).catch(()=>{})};document.addEventListener('visibilitychange',wake);v.onpause=()=>{if(!v.ended)setTimeout(wake,400)};const wd=setInterval(wake,2500);
+  v.onended=()=>{document.removeEventListener('visibilitychange',wake);clearInterval(wd);sp.disconnect();ac.close&&ac.close();let n=parts.reduce((a,p)=>a+p.length,0),all=new Float32Array(n),o=0;parts.forEach(p=>{all.set(p,o);o+=p.length});
    const k=rate/16000,out=new Float32Array(Math.floor(n/k));for(let i=0;i<out.length;i++)out[i]=all[Math.floor(i*k)];URL.revokeObjectURL(v.src);ok(out)};
   v.onerror=()=>no(new Error('الفيديو مش بيشتغل على الموبايل ده'));ac.resume().then(()=>v.play()).catch(no)})}
 function wav64(f32){const n=f32.length,b=new ArrayBuffer(44+n*2),d=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)d.setUint8(o+i,s.charCodeAt(i))};
@@ -625,7 +626,7 @@ async function phonePeople(pg){if(!S.smart||!V||V.videoWidth>V.videoHeight)retur
  const seek=t=>new Promise(r=>{const done=()=>{V.removeEventListener('seeked',done);r(V)};V.addEventListener('seeked',done);V.currentTime=t;setTimeout(done,1500)});
  try{pg.textContent='👀 بدور على مكانك في الفيديو…';D.people=await detectPeople(times,seek,p=>{pg.textContent='👀 بدور على مكانك في الفيديو… '+p+'%'});V.currentTime=0}
  catch(e){console.warn('pose',e);pg.textContent='⚠️ ماقدرتش أحدد مكانك — هستخدم تقدير'}}
-async function go(){if(busy)return;if(!F)return say('اختار الفيديو الأول');const b=$s('sm_go'),pg=$s('sm_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';
+async function go(){if(busy)return;if(!F)return say('اختار الفيديو الأول');const b=$s('sm_go'),pg=$s('sm_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';let wl=null;const getWl=()=>{try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}};getWl();const wlv=()=>{if(document.visibilityState==='visible'&&busy)getWl()};document.addEventListener('visibilitychange',wlv);
  const key='mkz-ai2:'+F.name+':'+F.size;
  try{let cached=null;try{cached=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   D=cached||await analyze(m=>pg.textContent=m);
@@ -638,7 +639,7 @@ async function go(){if(busy)return;if(!F)return say('اختار الفيديو �
   pg.textContent='✔ '+D.seg.length+' جملة • '+D.ev.length+' توضيح'+(cutN?' • '+cutN+' إعادة هتتشال':'')+(cached?' (من قبل كده)':'');
   $s('sm_res').style.display='';setupCanvas();renderLists();loop();wirePlayer();$s('sm_res').scrollIntoView({behavior:'smooth'})}
  catch(e){if(e.message==='LOGIN'){pg.textContent='';const a=$s('sm_auth');a.innerHTML=loginBox();$s('sm_li').onclick=doLogin;a.scrollIntoView({behavior:'smooth'});say('سجّل دخول بحساب ميكانيزم الأول')}else{const m=/no longer available|اتقفل/i.test(e.message||'')?'موديل جوجل اتغيّر — حدّث الصفحة وجرّب تاني':(e.message||e);pg.textContent='❌ '+m;say('❌ '+m)}}
- finally{busy=false;b.disabled=false;b.textContent='✨ اعمل المونتاج تاني'}}
+ finally{document.removeEventListener('visibilitychange',wlv);try{wl&&wl.release()}catch(e){}busy=false;b.disabled=false;b.textContent='✨ اعمل المونتاج تاني'}}
 /* ترجمة SRT بتوقيت الفيديو بعد القص + صورة غلاف من لقطة واضحة بعد المقدمة */
 function postText(){const b=brand()||{},T=(D&&D.title)||'',ws={};
  const STOP=/^(اللي|الي|ده|دي|دول|كده|يعني|ازاي|انا|احنا|انت|هو|هي|ممكن|لازم|كمان|برضو|عشان|علشان|لان|لكن|يلا|فيه|علي|على|عندنا|عندك|بتاع|بتاعه|بتاعت|هنا|هناك|دلوقتي|النهارده|جدا|اوي|حاجه|حاجات|جماعه|وده|ودي|بقي|بقى|خالص|كل|مش|مع|من|في|او|ولا|لما|اللى)$/;
