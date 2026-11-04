@@ -92,7 +92,7 @@ export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) 
         <section className="ad-s" aria-label="من المخزن">
           <h3>📦 من المخزن — لسه مش على الموقع <small>دوس على المنتج تكمّله وتنشره، بياناته وصوره من السيستم بتيجي لوحدها</small></h3>
           <div className="ad-list">{sysOnly.map(x => (
-            <div key={x.id} className="ad-row">
+            <div key={x.id}>
               <button type="button" className="ad-li" onClick={() => setEdit({ sys: x })}>
                 <span className="th">📦</span>
                 <span className="tx"><b>{x.name}</b><small>كود {x.code} · {x.category || 'من غير قسم'} · متاح {x.qty}</small></span>
