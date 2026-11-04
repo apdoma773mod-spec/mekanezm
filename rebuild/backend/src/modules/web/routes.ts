@@ -137,7 +137,9 @@ export default async function webRoutes(app: FastifyInstance) {
     clearInterval(timer);
     await flush().catch(() => {});
   });
-  app.post('/public/catalog/hit', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } }, bodyLimit: 4096 }, async (request) => {
+  app.post('/public/catalog/hit', { config: { rateLimit: { max: 240, timeWindow: '1 minute' } }, bodyLimit: 4096 }, async (request, reply) => {
+    // the catalog page lives in a sandboxed frame: its beacon reply must be readable cross-origin
+    void reply.header('cross-origin-resource-policy', 'cross-origin');
     let b: unknown = request.body;
     if (typeof b === 'string') {
       try {
@@ -160,19 +162,21 @@ export default async function webRoutes(app: FastifyInstance) {
     await flush();
     return { stats: ((await db.setting.findUnique({ where: { key: STATS } }))?.value as Stats | undefined) ?? { days: {}, views: {}, adds: {}, q: {} } };
   });
+  /** Pictures are cached for a year by the phone: a copy cached while the server still blocked them (cross-origin) stays blocked. A new address makes the phone ask again. */
+  const fresh = (html: string) => html.replace(/(\/api\/v1\/work\/files\/[a-z0-9-]+\.(?:jpg|jpeg|png|webp))(?![?\w])/g, '$1?v=2');
   const catRow = async (id: string) => (await db.setting.findUnique({ where: { key: CAT + id } }))?.value as { html?: string; print?: string } | undefined;
   app.get('/public/catalog/:id', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { id } = parse(idParams, request.params);
     const html = (await catRow(id))?.html;
     if (!html) throw notFound('الكتالوج ده مش موجود');
-    return catHeaders(reply, false).send(html.replaceAll('__PDF__', `${id}/print`).replaceAll('__HIT__', 'hit'));
+    return catHeaders(reply, false).send(fresh(html).replaceAll('__PDF__', `${id}/print`).replaceAll('__HIT__', 'hit'));
   });
   /** The same catalog laid out page after page, opens the browser's print box (save as PDF). */
   app.get('/public/catalog/:id/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { id } = parse(idParams, request.params);
     const html = (await catRow(id))?.print;
     if (!html) throw notFound('الكتالوج ده مش موجود');
-    return catHeaders(reply, true).send(html);
+    return catHeaders(reply, true).send(fresh(html));
   });
   /** The site's button: always the catalog the owner marked as current. */
   app.get('/public/catalog-latest', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
@@ -181,13 +185,13 @@ export default async function webRoutes(app: FastifyInstance) {
     const row = await catRow(id);
     if (!row?.html) throw notFound('مفيش كتالوج منشور حاليًا');
     void request;
-    return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(row.html.replaceAll('__PDF__', 'catalog-latest/print').replaceAll('__HIT__', 'catalog/hit'));
+    return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(fresh(row.html).replaceAll('__PDF__', 'catalog-latest/print').replaceAll('__HIT__', 'catalog/hit'));
   });
   app.get('/public/catalog-latest/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (_request, reply) => {
     const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
     const html = id ? (await catRow(id))?.print : '';
     if (!html) throw notFound('مفيش كتالوج منشور حاليًا');
-    return catHeaders(reply, true).header('cache-control', 'public, max-age=60').send(html);
+    return catHeaders(reply, true).header('cache-control', 'public, max-age=60').send(fresh(html));
   });
 
   app.post('/public/orders', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request) => {
