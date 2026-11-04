@@ -47,15 +47,18 @@ export async function liveCatalogInput(db: PrismaClient): Promise<CatInput> {
       .filter((p) => p.imgs.length);
   } else {
     const secName = Object.fromEntries((data.sections ?? []).map((s) => [s.id, s.name]));
+    // صور المنتج: بتاعة الموقع، ولو مالوش صور على الموقع ناخد صوره من السيستم (عبده بيرفع من المكانين)
+    const sysImgs = new Map((await db.productInfo.findMany({ select: { productId: true, imgs: true } })).map((i) => [i.productId, Array.isArray(i.imgs) ? (i.imgs as string[]) : []]));
+    const imgsOf = (p: SiteProduct) => (p.imgs?.length ? p.imgs : sysImgs.get(byCode.get(String(p.code))?.id ?? '') ?? []);
     products = (data.products ?? [])
-      .filter((p) => p.imgs?.length)
+      .filter((p) => imgsOf(p).length)
       .map((p) => {
         const sp = byCode.get(String(p.code));
         return {
           code: String(p.code || ''),
           name: p.name || String(p.code),
           desc: p.desc,
-          imgs: p.imgs ?? [],
+          imgs: imgsOf(p),
           dimImg: String(p.dimImg ?? ''),
           section: secName[p.sec ?? ''] ?? '',
           inStock: Number(sp?.qty ?? 0) > 0,
