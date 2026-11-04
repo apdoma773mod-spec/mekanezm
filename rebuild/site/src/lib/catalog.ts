@@ -27,8 +27,9 @@ async function readSiteData(): Promise<unknown> {
       if (!j?.site?.data) throw new Error('site empty');
       return (lastSite = j.site.data);
     } catch (e) {
+      // Backend down: the last copy we saw, else the site's own Supabase content, so the shop never opens empty.
       if (lastSite) { console.error('getSite: backend down, using last copy', e); return lastSite; }
-      throw e;
+      console.error('getSite: backend down, using Supabase copy', e);
     }
   }
   const r = await fetch(`${SB_URL}/rest/v1/site_content?id=eq.main&select=data`, {

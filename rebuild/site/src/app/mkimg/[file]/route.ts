@@ -6,7 +6,9 @@ import sharp from 'sharp';
 export const runtime = 'nodejs';
 
 const FILE = /^[0-9a-f]{24}\.(?:jpe?g|png|webp)$/i;
-const SOURCE = 'https://mekanezm-admin.vercel.app/api/v1/work/files/';
+// Straight from the backend when this site runs next to it; otherwise through the system panel's public address.
+const BACKEND = process.env.BACKEND_URL?.replace(/\/$/, '');
+const SOURCE = BACKEND ? `${BACKEND}/api/v1/work/files/` : 'https://mekanezm-admin.vercel.app/api/v1/work/files/';
 const WIDTHS = [256, 640, 1200, 1920];
 
 // The shop PC sits behind a tunnel that chokes on many parallel downloads: fetch each original once, three at a time.
@@ -24,7 +26,7 @@ async function original(file: string): Promise<Buffer> {
       for (let i = 0; ; i++) {
         if (i) await new Promise(r => setTimeout(r, 1500 * i));
         try {
-          const r = await fetch(SOURCE + file, { signal: AbortSignal.timeout(30000) });
+          const r = await fetch(SOURCE + file, { headers: { 'ngrok-skip-browser-warning': '1' }, signal: AbortSignal.timeout(30000) });
           if (!r.ok || !(r.headers.get('content-type') ?? '').startsWith('image/')) throw new Error(`source ${r.status}`);
           return Buffer.from(await r.arrayBuffer());
         } catch (e) { if (i >= 2) throw e; }
