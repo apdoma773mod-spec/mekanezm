@@ -279,7 +279,7 @@ export function PurchaseImport() {
 
   return (
     <Portal>
-      <div id="mkPvImp" style={{ position: 'fixed', inset: 0, zIndex: 56, background: 'var(--bg,#f5f7f8)', color: 'var(--text,#18343a)', overflow: 'auto', direction: 'rtl', padding: '12px 14px 90px' }}>
+      <div id="mkPvImp" style={{ position: 'fixed', inset: 0, zIndex: 56, background: 'var(--bg,#f5f7f8)', color: 'var(--text,#18343a)', overflow: 'auto', direction: 'rtl', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 14px 90px' }}>
         {step === 'start' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
