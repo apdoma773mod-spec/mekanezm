@@ -205,7 +205,8 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
         const opt = (k: string, v: string) => { if (v.trim()) o[k] = v.trim(); else delete o[k]; };
-        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('from', f.from); opt('until', f.until); opt('avail', f.avail);
+        delete o.from; delete o.until; // the date window is gone from the screen: a product is always shown
+        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('avail', f.avail);
         const tg = f.tags.split(/[,،\n]/).map(x => x.trim()).filter(Boolean);
         if (tg.length) o.tags = tg; else delete o.tags;
         if (f.dirMode === 'off') o.dir = { off: true };
@@ -289,10 +290,8 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
         <label>كلمات بحث إضافية <small>(بالفاصلة — العميل يلاقي المنتج بيها: مثلاً «بلوم، مجرى مخفي»)</small><input value={f.tags} onChange={e => set('tags', e.target.value)} /></label>
       </section>
       <section className="ad-s">
-        <h3>📦 التوفر والجدولة</h3>
+        <h3>📦 التوفر</h3>
         <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
-        <div className="ad-two"><label>يظهر من تاريخ<input type="date" dir="ltr" value={f.from} onChange={e => set('from', e.target.value)} /></label><label>يختفي بعد تاريخ<input type="date" dir="ltr" value={f.until} onChange={e => set('until', e.target.value)} /></label></div>
-        <small className="mut">سيب التواريخ فاضية لو عايزه يظهر دايماً.</small>
       </section>
       <section className="ad-s">
         <h3>🔎 ظهور في جوجل</h3>
