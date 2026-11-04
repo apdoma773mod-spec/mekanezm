@@ -294,11 +294,6 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
         <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
       </section>
       <section className="ad-s">
-        <h3>🔎 ظهور في جوجل</h3>
-        <label>عنوان الصفحة <small>(اختياري)</small><input value={f.seoTitle} maxLength={70} onChange={e => set('seoTitle', e.target.value)} /></label>
-        <label>وصف جوجل <small>({f.seoDesc.length}/155)</small><textarea rows={2} maxLength={155} value={f.seoDesc} onChange={e => set('seoDesc', e.target.value)} /></label>
-      </section>
-      <section className="ad-s">
         <h3>👁️ الظهور</h3>
         <label className="ad-ck"><input type="checkbox" checked={f.top} onChange={e => set('top', e.target.checked)} /> ⭐ منتج مميز <small>بيظهر في «الأكثر طلباً» في أول الموقع</small></label>
         <label className="ad-ck"><input type="checkbox" checked={f.hidden} onChange={e => set('hidden', e.target.checked)} /> 🙈 مخفي من الموقع <small>مبيظهرش للزباين، ولسه موجود هنا</small></label>
