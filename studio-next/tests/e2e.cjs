@@ -37,7 +37,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
      await new Promise(res=>{const f=()=>{const t=(performance.now()-t0)/1000;x.fillStyle=label==='MAIN'?'#1f3354':'#7a1d1d';x.fillRect(0,0,480,854);if(label==='MAIN'){x.fillStyle='#f6a98a';x.beginPath();x.arc(240+Math.sin(t)*20,250,90,0,7);x.fill()}x.fillStyle='#fff';x.font='bold 60px sans-serif';x.textAlign='center';x.fillText(label,240,500);x.font='30px sans-serif';x.fillText(t.toFixed(1),240,560);if(t<sec)requestAnimationFrame(f);else res()};f()});
      rec.stop();await done;o.stop();return new File([new Blob(ch,{type:'video/webm'})],label+'.webm',{type:'video/webm'})})`;
   await send('DOM.enable');const doc=await send('DOM.getDocument',{depth:1});const q=async sel=>(await send('DOM.querySelector',{nodeId:doc.result.root.nodeId,selector:sel})).result.nodeId;
-  const MEDIA=process.argv[4];await send('DOM.setFileInputFiles',{nodeId:await q('#sm_f'),files:[MEDIA+'/main.mp4']});await sleep(1200);if(!process.env.NOBR)await send('DOM.setFileInputFiles',{nodeId:await q('#sm_bf'),files:[MEDIA+'/broll.mp4']});console.log('picked real files');
+  const MEDIA=process.argv[4];await send('DOM.setFileInputFiles',{nodeId:await q('#sm_f'),files:[MEDIA+'/fixture-main.mp4']});await sleep(1200);if(!process.env.NOBR)await send('DOM.setFileInputFiles',{nodeId:await q('#sm_bf'),files:[MEDIA+'/fixture-broll.mp4']});console.log('picked real files');
   await sleep(2500);
   console.log('bi', await ev(`document.getElementById('sm_bi').textContent.trim()`));
   // كلام اختبار: نسخة بتحاكي كلامك + «صفر» بدل سفرة
