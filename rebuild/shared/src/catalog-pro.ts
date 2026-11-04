@@ -4,6 +4,8 @@
  * مفيش أسعار (قاعدة المالك). ممكن يطلع PDF (A4 ورا بعض) أو كتاب بيتقلّب بإيدك مع خانة بحث.
  */
 
+import { STORY_PHOTOS } from './story-photos.js';
+
 export interface CatProduct {
   code: string;
   name: string;
@@ -255,13 +257,18 @@ export interface CatCfg {
   gift?: { name: string; title: string; from: string; message: string };
 }
 
-export const OLD_STORY_START = 'بدأت الحكاية بفضول';
-export const STORY_TEXT = `الحكاية ما بدأتش بمحل ولا بمعرض. بدأت بسؤال صغير: ليه دولاب اتعمل بإتقان بيتعب صاحبه بعد سنة، ودرج كان بيتفتح بسلاسة بقى يزيق ويتعلّق؟
-عبده كان شايف الإجابة بعينه في الورش: الخشب سليم، والصنعة سليمة، والعطل دايمًا في قطعة حديد صغيرة اتشرت بأرخص سعر. مفصلة بتفك، مجرى بيلوّي، ميكانيزم ما استحملش. والصنايعي هو اللي يتحاسب، والعميل يفتكر إن الشغل هو اللي وحش.
-فنزل الورش بنفسه، بشنطة قطع وجملة واحدة: «جرّب بإيدك، ولو ما عجبكش ما تشتريش». كان بيسمع أكتر ما بيتكلم. يسمع الصنايعي وهو بيحكي عن الليلة اللي بات فيها قلقان إن الباب يرجع له، وعن اليوم اللي اتحاسب فيه على غلطة مش غلطته. ومن الحكايات دي اتعلّم الشغلانة.
-ولا كان الطريق مفروش. جت مواسم قفلت فيها البضاعة، وجت شحنة وصلت غير اللي اتطلب، وجت شهور السؤال فيها مكانش «هنكبر إزاي» لكن «هنكمّل إزاي». الشغل وقع أكتر من مرة. وكل مرة كان بيقوم وهو فاهم حاجة جديدة، وبيرجّع لكل واحد وثق فيه حقه كاملًا قبل ما يخطو الخطوة اللي بعدها. واسمه عند الصنايعية اتبنى من هنا، قبل أي إعلان.
-بعدها اتغيّر السؤال: بدل ما نبيع قطعة، نبيع راحة البال. اتفتح المعرض، وفيه ماكيت مطبخ وماكيت دريسنج، علشان الصنايعي والعميل يجرّبوا الحركة قبل الشراء، ويشوفوا الدرج وهو بيقفل لوحده قبل ما يتركب.
+export const OLD_STORY_STARTS = ['بدأت الحكاية بفضول', 'الحكاية ما بدأتش بمحل'];
+/** «---» بيقسم الحكاية على صفحات، وكل صفحة ليها صورة من STORY_PHOTOS بالترتيب. */
+export const STORY_TEXT = `قبل اللافتة المنوّرة وقبل المعرض، كان فيه تروسيكل أزرق. عليه كراتين فوق بعض، وخشب مربوط بحبل برتقالي، وقطاعات ألمنيوم طالعة من وراه لحد ما تقرّب من الشارع.
+منه بدأت الحكاية، وبسؤال واحد كان شاغل عبده: ليه دولاب اتعمل بإتقان بيتعب صاحبه بعد سنة، ودرج كان بيتفتح بسلاسة بقى يزيق ويتعلّق؟
+الإجابة كانت قدامه في كل ورشة دخلها: الخشب سليم والصنعة سليمة، والعطل دايمًا في قطعة حديد صغيرة اتشرت بأرخص سعر. والصنايعي هو اللي يتحاسب، والعميل يفتكر إن الشغل هو اللي وحش.
+---
+فبقى التروسيكل هو المحل، والزحمة هي الطريق. وجملة واحدة بيقولها لكل صنايعي: «جرّب بإيدك، ولو ما عجبكش ما تشتريش». وكان بيسمع أكتر ما بيتكلم؛ يسمع الصنايعي وهو بيحكي عن الليلة اللي بات فيها قلقان إن الباب يرجع له.
+ولا كان الطريق مفروش. جت مواسم اتقفلت فيها الأبواب، وجت شحنة غير اللي اتطلب، وجت شهور السؤال فيها مكانش «هنكبر إزاي» لكن «هنكمّل إزاي». الشغل وقع أكتر من مرة. وفي كل مرة كان التروسيكل أول حاجة بتتحرك؛ شاله في عز الأزمة، وصبر معاه، ووقّفه على رجليه. وعبده كان بيقوم وهو فاهم حاجة جديدة، وبيرجّع لكل واحد وثق فيه حقه كاملًا قبل أي خطوة بعدها.
+---
+ولما اتفتح المعرض، فضل التروسيكل أيقونة الحكاية: أول شاهد، وآخر حاجة هننسى فضلها. وفي المعرض ماكيت مطبخ وماكيت دريسنج، علشان الصنايعي والعميل يجرّبوا الحركة بإيديهم قبل الشراء.
 ومن الطريق ده طلعت لنا قاعدة لسه ماشيين عليها: الخشب بيفضل مكانه، لكن الميكانيزم هو اللي بيتحرك ألف مرة في اليوم. فاختار الميكانيزم الأول، وخد المقاس صريح، وسيب الباقي علينا.`;
+export const STORY_CAPTIONS = ['التروسيكل.. أول معرض لميكانيزم', 'وكان دايمًا واقف جنبه', 'واللافتة اتنوّرت'];
 
 export const GIFT_MESSAGE = `تحية طيبة وبعد،
 يسعد ميكانيزم أن تُهدي إلى سيادتكم هذا الكتالوج، ثمرة سنوات من العمل والخبرة في عالم الحركة والإكسسوارات، آملين أن تجدوا فيه ما يُلهم أعمالكم ويُيسّر تنفيذها.
@@ -336,7 +343,7 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     cover: { ...d.cover, ...c?.cover },
     secImgs: { ...c?.secImgs },
     flags: { ...d.flags, ...c?.flags },
-    story: c?.story?.text && !c.story.text.startsWith(OLD_STORY_START) ? { ...d.story, ...c.story } : { ...d.story, ...c?.story, text: d.story.text },
+    story: c?.story?.text && !OLD_STORY_STARTS.some((o) => c.story!.text!.startsWith(o)) ? { ...d.story, ...c.story } : { ...d.story, ...c?.story, text: d.story.text },
     articles: Array.isArray(c?.articles)
       ? [
           ...d.articles.filter((a) => (c.articlesV ?? 1) < 3 && NEW_IN_V3.includes(a.id) && !c.articles!.some((x) => x.id === a.id)),
@@ -480,7 +487,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .sty h2{font-size:56px;margin:0;position:relative;color:var(--gl)}
 .sty .bar{margin:16px 0 28px;position:relative}
 .sty p{font-size:19px;line-height:2.1;margin:0 0 12px;position:relative;opacity:.96}
-.sty .sg{font-size:22px;color:var(--gl);font-weight:700;margin-top:18px;position:relative}
+.sty.ph{padding:56px 60px 40px;display:flex;flex-direction:column}.sty.ph h2{font-size:46px}.sty.ph p{font-size:17.5px;line-height:2}.sty .sf{margin:auto 0 0;padding-top:14px;position:relative;text-align:center}.sty .sf img{display:block;margin:0 auto;max-width:100%;max-height:calc(var(--H,1123px)*.42);border:6px solid #fff;border-radius:var(--r,18px);box-shadow:0 18px 40px #0008;transform:rotate(-1.2deg)}.sty .sf figcaption{margin-top:14px;color:var(--gl);font-weight:800;font-size:17px;letter-spacing:.02em}.sty .sg{font-size:22px;color:var(--gl);font-weight:700;margin-top:18px;position:relative}
 .note{padding:80px 60px;background:repeating-linear-gradient(#fff 0 39px,#e3ecee 39px 40px)}
 .note h2{font-size:30px;color:var(--td);margin:0 0 20px;background:#fff;display:inline-block;padding:0 10px}
 /* ===== تبويبات الأقسام ===== */
@@ -830,11 +837,16 @@ export function proPages(inp: CatInput): Built {
     });
   }
   if (F.story) {
-    add(() => `<section class="pg sty"><div class="q">”</div><h2>${esc(cfg.story.title)}</h2><div class="bar"></div>${cfg.story.text
-      .split('\n')
-      .filter((x) => x.trim())
-      .map((x) => `<p>${esc(x)}</p>`)
-      .join('')}<div class="sg">— ${esc(inp.shop)}</div></section>`);
+    const keys = ['thumb', 'parked', 'sign'];
+    const parts = cfg.story.text.split(/^s*---+s*$/m).map((x) => x.trim()).filter(Boolean);
+    const photos = parts.length === 3 && cfg.story.text === STORY_TEXT;
+    parts.forEach((part, k) => {
+      add(() => `<section class="pg sty${photos ? ' ph' : ''}"><div class="q">”</div>${k === 0 ? `<h2>${esc(cfg.story.title)}</h2><div class="bar"></div>` : '<div class="bar" style="margin-top:0"></div>'}${part
+        .split('\n')
+        .filter((x) => x.trim())
+        .map((x) => `<p>${esc(x)}</p>`)
+        .join('')}${photos ? `<figure class="sf"><img src="${STORY_PHOTOS[keys[k]!]}" alt=""><figcaption>${esc(STORY_CAPTIONS[k]!)}</figcaption></figure>` : ''}${k === parts.length - 1 ? `<div class="sg">— ${esc(inp.shop)}</div>` : ''}</section>`);
+    });
   }
 
   // معرضنا: صور المعرض (من الإدارة) في كولاج
