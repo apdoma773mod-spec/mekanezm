@@ -10,6 +10,17 @@ const ADMIN_PATHS = ['/users', '/settings', '/audit', '/products', '/returns', '
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
+  // 🖥️ الأيقونة (Vercel) بتعدّي كل الصفحات لنسخة الشاشة اللي على جهاز المحل (من خلال السيرفر وngrok):
+  // كده أي تعديل في الشاشة يوصل لعبده فورًا من غير ما يستنى حد Vercel اليومي. لو المتغير مش متحدد: الشاشة بتشتغل من هنا عادي.
+  const ui = process.env.SHOP_UI_ORIGIN?.replace(/\/$/, '');
+  if (ui && !pathname.startsWith('/api/')) {
+    const headers = new Headers(req.headers);
+    headers.set('ngrok-skip-browser-warning', '1');
+    return NextResponse.rewrite(new URL(`${pathname}${search}`, ui), { request: { headers } });
+  }
+  // الملفات الثابتة مش محتاجة أي فحص
+  if (pathname.startsWith('/_next/') || /\.(?:png|svg|ico|webmanifest|woff2)$/.test(pathname)) return NextResponse.next();
+
   // Behind ngrok's free plan: forward /api/* ourselves so we can send the header that skips its browser warning page.
   if (pathname.startsWith('/api/')) {
     const base = process.env.BACKEND_URL?.replace(/\/$/, '');
@@ -44,5 +55,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|svg|ico|webmanifest|woff2)$).*)'],
+  // كل حاجة بتعدّي على الـ middleware عشان وضع «الشاشة من جهاز المحل» يقدر يعدّي الملفات الثابتة كمان
+  matcher: ['/:path*'],
 };
