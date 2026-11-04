@@ -3,7 +3,7 @@
 // Admin → products: search, add, edit (photos, section, description + specs, video, featured, hidden, left/right guidance), delete.
 // Products are matched with the system by CODE (stock and orders use it), so the code must be the system's own product code.
 import { useMemo, useState } from 'react';
-import { saveDoc, type Rec, type SiteDoc } from './api';
+import { saveDoc, SITE_URL, type Rec, type SiteDoc } from './api';
 import { HandDiagram } from './hand-stub';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from './lib/hand';
 import { Imgs, uid7 } from './ui';
@@ -241,7 +241,7 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
       </section>
       <div className="ad-bar">
         <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
-        {cur && <a className="lnk" href={'/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
+        {cur && <a className="lnk" href={SITE_URL + '/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={duplicate}>⧉ نسخة منه</button>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={remove}>🗑️ حذف</button>}
         <button className="pri" disabled={busy} onClick={save}>💾 {cur ? 'حفظ ونشر' : 'إضافة ونشر'}</button>
