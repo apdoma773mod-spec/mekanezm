@@ -13,6 +13,8 @@ const nextConfig = {
     output: 'standalone',
     outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
   }),
+  // جهاز المحل بيبني النسخة الجديدة في فولدر تاني والقديمة شغالة، وبعدين يبدّل في ثواني (الأيقونة ماتقفش وقت التحديث)
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   poweredByHeader: false,
   async headers() {
     // الخطوط مبتتغيرش: الجهاز يحتفظ بيها سنة ومايطلبهاش تاني

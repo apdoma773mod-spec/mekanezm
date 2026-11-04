@@ -28,6 +28,9 @@ export async function proxyUi(request: FastifyRequest, reply: FastifyReply): Pro
     // تحويل لصفحة تانية (مثلًا لصفحة الدخول): يفضل على نفس الدومين اللي عبده فاتح منه
     reply.header(k, k === 'location' ? v.replace(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i, '') : v);
   });
+  // الصفحات نفسها ماتتخزنش في Vercel ولا الموبايل (Next بيقول «خزّنها سنة» للصفحات الثابتة = الأيقونة تفضل على نسخة قديمة ملفاتها اتشالت).
+  // الملفات الثابتة بأسماء فيها بصمة (/_next/static) هي بس اللي تتخزن.
+  if (!request.url.startsWith('/_next/static/')) reply.header('cache-control', 'private, no-cache, no-store, max-age=0, must-revalidate');
   const cookies = r.headers.getSetCookie?.() ?? [];
   if (cookies.length) reply.header('set-cookie', cookies);
   reply.code(r.status);
