@@ -80,22 +80,22 @@ export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[
   async function pick(fl: FileList | File[] | null) {
     const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
     if (!list.length) return;
-    setErr(''); const added: string[] = [];
+    setErr(''); let done = 0;
     for (let i = 0; i < list.length; i++) {
       setBusy(`⏳ بيرفع ${i + 1} من ${list.length}…`);
-      try { added.push(await sendPhoto(list[i]!)); } catch (e) { setErr(`وقف عند الصورة ${i + 1}: ${(e as Error).message}`); break; }
+      try { onAdd([await sendPhoto(list[i]!)]); done++; } catch (e) { setErr(`وقف عند الصورة ${i + 1} من ${list.length}: ${(e as Error).message}`); break; }
     }
-    if (added.length) onAdd(added);
-    setBusy('');
+    setBusy(done === list.length ? `✔ اترفع ${done} صورة` : '');
   }
   return (
     <div className="ad-img wide" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); void pick(e.dataTransfer.files); }}>
       <div className="ad-imgb">
         <b>{label}</b>
         <button type="button" className="sec" disabled={!!busy} onClick={() => file.current?.click()}>{busy || '📷 اختار صور (تقدر تختار كذا واحدة)'}</button>
+        <small className="mut">لو اخترت صور كتير استنى بعد ما تدوس ✓: الآيفون بياخد وقت يجهّزها، وبعدها هتشوف عداد الرفع. الصور بتظهر في القايمة واحدة واحدة، وفي الآخر دوس «حفظ ونشر».</small>
         {err && <small className="err">{err}</small>}
       </div>
-      <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { void pick(e.target.files); e.target.value = ''; }} />
+      <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { setBusy('⏳ بيجهّز الصور…'); void pick(e.target.files); e.target.value = ''; }} />
     </div>
   );
 }

@@ -12,7 +12,7 @@ export function shrinkImage(f: Blob, max: number, quality = 0.8): Promise<Blob> 
       c.width = Math.round(im.width * k);
       c.height = Math.round(im.height * k);
       c.getContext('2d')!.drawImage(im, 0, 0, c.width, c.height);
-      c.toBlob(b => (b ? res(b) : rej(new Error('img'))), 'image/jpeg', quality);
+      c.toBlob(b => { c.width = 0; c.height = 0; im.src = ''; if (b) res(b); else rej(new Error('img')); }, 'image/jpeg', quality);
     };
     im.src = url;
   });

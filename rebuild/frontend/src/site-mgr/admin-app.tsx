@@ -85,6 +85,7 @@ export function AdminApp() {
     setSaved('✔ اتحفظ ونزل على الموقع'); publishNow();
   };
 
+  const addSlides = (us: string[]) => setF(x => (x ? { ...x, slides: [...x.slides, ...us] } : x));
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF(x => (x ? { ...x, [k]: v } : x));
 
   async function save() {
@@ -156,7 +157,7 @@ export function AdminApp() {
               <div className="ad-mv"><button type="button" onClick={() => up('slides', move(f.slides, i, -1))} disabled={i === 0} aria-label="فوق">↑</button><button type="button" onClick={() => up('slides', move(f.slides, i, 1))} disabled={i === f.slides.length - 1} aria-label="تحت">↓</button></div>
             </div>
           ))}
-          <AddMany label={`+ إضافة بنرات جديدة (${f.slides.length} حالياً)`} onAdd={us => up('slides', [...f.slides, ...us])} />
+          <AddMany label={`+ إضافة بنرات جديدة (${f.slides.length} حالياً)`} onAdd={addSlides} />
         </section>
         <section className="ad-s">
           <h2>🏷️ اللوجو والصورة الرئيسية</h2>
