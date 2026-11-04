@@ -81,10 +81,24 @@ export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[
     const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
     if (!list.length) return;
     setErr(''); let done = 0;
+    // keep the screen awake while uploading (a locked iPhone pauses the page); come back and re-take it if the page was hidden
+    type WL = { release: () => Promise<void> };
+    let lock: WL | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<WL> } };
+    const take = async () => { try { lock = (await nav.wakeLock?.request('screen')) ?? null; } catch { /* not allowed: carry on */ } };
+    const vis = () => { if (document.visibilityState === 'visible') void take(); };
+    document.addEventListener('visibilitychange', vis);
+    await take();
     for (let i = 0; i < list.length; i++) {
-      setBusy(`⏳ بيرفع ${i + 1} من ${list.length}…`);
-      try { onAdd([await sendPhoto(list[i]!)]); done++; } catch (e) { setErr(`وقف عند الصورة ${i + 1} من ${list.length}: ${(e as Error).message}`); break; }
+      let ok = false, last = '';
+      for (let t = 0; t < 4 && !ok; t++) {
+        setBusy(t ? `⏳ بيعيد المحاولة للصورة ${i + 1} من ${list.length}…` : `⏳ بيرفع ${i + 1} من ${list.length}… (سيب الشاشة مفتوحة)`);
+        try { onAdd([await sendPhoto(list[i]!)]); ok = true; done++; } catch (e) { last = (e as Error).message; await new Promise(r => setTimeout(r, 2500 * (t + 1))); }
+      }
+      if (!ok) { setErr(`وقف عند الصورة ${i + 1} من ${list.length} (${last}). اللي اترفع قبلها اتضاف، اختار الباقي تاني.`); break; }
     }
+    document.removeEventListener('visibilitychange', vis);
+    try { await (lock as WL | null)?.release(); } catch { /* ignore */ }
     setBusy(done === list.length ? `✔ اترفع ${done} صورة` : '');
   }
   return (
@@ -92,7 +106,7 @@ export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[
       <div className="ad-imgb">
         <b>{label}</b>
         <button type="button" className="sec" disabled={!!busy} onClick={() => file.current?.click()}>{busy || '📷 اختار صور (تقدر تختار كذا واحدة)'}</button>
-        <small className="mut">لو اخترت صور كتير استنى بعد ما تدوس ✓: الآيفون بياخد وقت يجهّزها، وبعدها هتشوف عداد الرفع. الصور بتظهر في القايمة واحدة واحدة، وفي الآخر دوس «حفظ ونشر».</small>
+        <small className="mut">لو اخترت صور كتير استنى بعد ما تدوس ✓: الآيفون بياخد وقت يجهّزها، وبعدها هتشوف عداد الرفع. سيب الشاشة مفتوحة: لو اتقفلت الصفحة بتقف (الموقع بيحاول يمنع القفل التلقائي). الصور بتظهر في القايمة واحدة واحدة، وفي الآخر دوس «حفظ ونشر».</small>
         {err && <small className="err">{err}</small>}
       </div>
       <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { setBusy('⏳ بيجهّز الصور…'); void pick(e.target.files); e.target.value = ''; }} />
