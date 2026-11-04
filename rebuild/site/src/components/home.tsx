@@ -38,6 +38,8 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
     return () => clearInterval(t);
   }, [L.length, tick]);
   if (!L.length) return null;
+  // With dozens or hundreds of banners only the current photo and its neighbours stay loaded.
+  const near = (k: number) => { const d = Math.abs(k - i); return Math.min(d, L.length - d) <= 1; };
   const go = (n: number) => { setI((n + L.length) % L.length); setTick(t => t + 1); };
   return (
     <div className="slider">
@@ -46,7 +48,7 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
         <div className="trk" style={{ transform: `translateX(${-i * 100}%)` }}>
           {L.map((s, k) => (
             <div className="slide" key={k} aria-hidden={k !== i}>
-              {k <= far && <Image className="bg" src={s.img} alt="" fill sizes="(max-width:1100px) 100vw, 1100px" priority={k === 0} />}
+              {(k === i || (far > 0 && near(k))) && <Image className="bg" src={s.img} alt="" fill sizes="(max-width:1100px) 100vw, 1100px" priority={k === 0} />}
               <div>
                 <p className="h">{s.t}</p>
                 <p>{s.s}</p>
@@ -56,7 +58,9 @@ export function Slider({ slides: L }: { slides: Slide[] }) {
           ))}
         </div>
       </div>
-      <div className="dts">{L.map((_, k) => <button key={k} className={k === i ? 'on' : ''} onClick={() => go(k)} aria-label={`صورة ${k + 1}`} />)}</div>
+      {L.length > 8
+        ? <div className="dts"><span className="dcount">{i + 1} / {L.length}</span></div>
+        : <div className="dts">{L.map((_, k) => <button key={k} className={k === i ? 'on' : ''} onClick={() => go(k)} aria-label={`صورة ${k + 1}`} />)}</div>}
     </div>
   );
 }

@@ -51,6 +51,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dts { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 7px; background: #0006; padding: 6px 10px; border-radius: 14px; }
 .dts button, .cdt i { width: 9px; height: 9px; border-radius: 5px; background: #fff8; transition: .3s; border: 0; padding: 0; }
 .dts button.on { width: 26px; background: #fff; }
+.dcount { color: #fff; font-size: 12px; font-weight: 700; padding: 0 4px; }
 .ticker { margin-top: 14px; background: var(--accent); color: #fff; overflow: hidden; direction: ltr; font-weight: 700; font-size: 15px; padding: 9px 0; }
 .tk-track { display: flex; width: max-content; animation: mq var(--mqd, 30s) linear infinite; will-change: transform; }
 .tk-track > div { display: flex; flex: none; }
