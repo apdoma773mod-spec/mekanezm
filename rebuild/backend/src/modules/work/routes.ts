@@ -87,7 +87,12 @@ export default async function workRoutes(app: FastifyInstance) {
     const { name } = parse(z.object({ name: fileName }), request.params);
     const buf = await getFile(name);
     if (!buf) throw notFound('الملف مش موجود');
-    return reply.header('content-type', MIME[name.split('.').pop()!] ?? 'application/octet-stream').header('cache-control', 'public, max-age=31536000, immutable').send(buf);
-
+    // cross-origin ON PURPOSE: the catalog opens in a sandboxed frame (opaque origin) and the published copy is a separate page;
+    // with helmet's default `same-origin` the browser silently refuses every uploaded picture there (web photos, AI photos)
+    return reply
+      .header('content-type', MIME[name.split('.').pop()!] ?? 'application/octet-stream')
+      .header('cache-control', 'public, max-age=31536000, immutable')
+      .header('cross-origin-resource-policy', 'cross-origin')
+      .send(buf);
   });
 }
