@@ -58,7 +58,10 @@ export default async function webRoutes(app: FastifyInstance) {
   };
 
   // ---- public (the shop page): what to show, and where orders go ----
-  app.get('/public/site', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => ({ site: await readSite() }));
+  /** صور اترفعت من السيستم بتتخزن بعنوان ناقص (/api/v1/work/files/…) والموقع على دومين تاني مايعرفهوش: بنكمّله لعنوان كامل بيعدّي على السيرفر. */
+  const FILES_BASE = (process.env.PUBLIC_FILES_BASE || 'https://mekanezm-admin.vercel.app').replace(/\/$/, '');
+  const absFiles = <T,>(v: T): T => JSON.parse(JSON.stringify(v).replace(/"\/api\/v1\/work\/files\//g, `"${FILES_BASE}/api/v1/work/files/`)) as T;
+  app.get('/public/site', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async () => ({ site: absFiles(await readSite()) }));
 
   /** 📖 Published catalogs: the system saves the finished pages (book + printable), anyone with the link can open them (random id, not guessable, not indexed). `current` = the one the site's «الكتالوج» button opens. */
   const CAT = 'catalog_pub_';

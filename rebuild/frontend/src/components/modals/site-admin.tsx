@@ -89,7 +89,7 @@ function ImgsEditor({ imgs, onChange }: { imgs: string[]; onChange: (v: string[]
 }
 
 /** ⭐ Reviews visitors left on the site: waiting for the owner to approve (it joins the list below) or reject. */
-function PendingReviews({ onChanged }: { onChanged: () => void }) {
+export function PendingReviews({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
   const [list, setList] = useState<{ id: string; name: string; rating: number; body: string }[]>([]);
   const load = () =>

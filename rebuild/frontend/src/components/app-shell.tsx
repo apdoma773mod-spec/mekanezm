@@ -48,7 +48,7 @@ const MAIN: NavItem[] = [
   { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true, pro: 'mkSideFf' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/weborders', label: 'طلبات الموقع', icon: 'file', adminOnly: true, badge: 'web' },
-  { href: '/site-content', label: 'محتوى الموقع', icon: '🌐', adminOnly: true },
+  { href: '/site', label: 'إدارة الموقع', icon: '🌐', adminOnly: true },
   { href: '/catalog', label: 'الكتالوج', icon: '📖', adminOnly: true },
   { href: '/sources', label: 'مصادر من بره', icon: '📇', adminOnly: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
