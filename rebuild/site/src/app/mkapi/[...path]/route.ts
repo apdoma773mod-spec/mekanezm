@@ -37,7 +37,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
       headers: { 'ngrok-skip-browser-warning': '1', 'x-forwarded-for': req.headers.get('x-forwarded-for') ?? '' },
       cache: 'no-store',
     });
-    return new NextResponse(await r.text(), { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'application/json' } });
+    let body = await r.text();
+    // The catalog page points at the system's own /api/v1/work/files/… (relative): here that would be a 404 and white pictures.
+    // Send those through the site's resizing image route instead.
+    if (path.startsWith('web/public/catalog-latest')) {
+      body = body.replace(/(?:https?:\/\/[^"')\s]+)?\/api\/v1\/work\/files\/([0-9a-f]{24}\.(?:jpe?g|png|webp))(?:\?[^"')\s]*)?/gi, '/mkimg/$1?w=1200');
+    }
+    return new NextResponse(body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'application/json' } });
   } catch {
     return NextResponse.json({ message: 'backend unreachable' }, { status: 502 });
   }
