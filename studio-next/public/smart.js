@@ -826,9 +826,10 @@ function computeBroll(){BRL=[];if(!BRC.length||!D)return;const dur=D.dur||(V&&V.
  BRM.forEach(m=>{const c=BRC[m.i];if(c&&c.dur)L.push({s:m.s,e:Math.min(m.s+Math.min(c.dur,7),dur||1e9),c,man:m})});
  L.sort((a,b)=>a.s-b.s);BRL=L}
 /* مكان اللوحة: تحت راسك (بعيد عن الوش) وفوق الكلام */
-function brGeom(t){const [W,H]=[CV.width,CV.height],u=W/1080,hr=headRect(t),top=Math.max(H*.545,hr?hr[1]+10*u:0);
- const cf=CF(),lh=Math.round(cf.sz*u*S.size)*1.34,bot=O('cap')==='none'?H*.93:capBottom()-2*lh-24*u;if(top>H*.62||bot-top<H*.17)return null;
- const px=W*.04;return {x:px,y:top,w:W-2*px,h:bot-top}}
+function brGeom(t){const [W,H]=[CV.width,CV.height],u=W/1080,hr=headRect(t),top=Math.max(H*.47,hr?hr[1]+10*u:0);
+ const cf=CF(),lh=Math.round(cf.sz*u*S.size)*1.34,bot=O('cap')==='none'?H*.93:capBottom()-2*lh-24*u;if(top>H*.62||bot-top<H*.15)return null;
+ /* المساحة المتاحة بين الوش والكلام: نحط الفيديو في الجزء الأوطى منها (مش لازق في الوش) */
+ const hd=Math.min(bot-top,H*.34),px=W*.04;return {x:px,y:top+(bot-top-hd)*.8,w:W-2*px,h:hd}}
 function brActive(t){const b=BRL.find(x=>t>=x.s&&t<x.e);return b&&brGeom(t)?b:null}
 function brSync(b,t){const v=b.c.v;if(!v||v.readyState<2)return;const rel=Math.min(Math.max(0,t-b.s),Math.max(0,(b.c.dur||1)-.05)),pl=V&&!V.paused;
  if(pl){if(Math.abs(v.currentTime-rel)>.4)v.currentTime=rel;if(v.paused)v.play().catch(()=>{})}else{if(!v.paused)v.pause();if(Math.abs(v.currentTime-rel)>.04)v.currentTime=rel}}
