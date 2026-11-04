@@ -9,7 +9,7 @@ import { PendingReviews } from '@/components/modals/site-admin';
 import { ProsTab, ReviewsTab, ShipTab, WorksTab } from './content';
 import { ProductsTab } from './products';
 import { ImportTab } from './import';
-import { Img, move, uid7 } from './ui';
+import { AddMany, Img, move, uid7 } from './ui';
 import { DEFAULTS, HEX, THEME_KEYS, WOOD_AREAS, WOOD_KEYS, woodById, type ThemeMap } from './lib/theme';
 import { ThemeTab } from './theme-tab';
 import { Ico } from './icons';
@@ -156,7 +156,7 @@ export function AdminApp() {
               <div className="ad-mv"><button type="button" onClick={() => up('slides', move(f.slides, i, -1))} disabled={i === 0} aria-label="فوق">↑</button><button type="button" onClick={() => up('slides', move(f.slides, i, 1))} disabled={i === f.slides.length - 1} aria-label="تحت">↓</button></div>
             </div>
           ))}
-          <Img value="" onChange={u => u && up('slides', [...f.slides, u])} label="+ إضافة بنر جديد" wide />
+          <AddMany label={`+ إضافة بنرات جديدة (${f.slides.length} حالياً)`} onAdd={us => up('slides', [...f.slides, ...us])} />
         </section>
         <section className="ad-s">
           <h2>🏷️ اللوجو والصورة الرئيسية</h2>

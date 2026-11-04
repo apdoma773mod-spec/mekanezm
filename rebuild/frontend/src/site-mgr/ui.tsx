@@ -72,3 +72,30 @@ export function Imgs({ value, onChange }: { value: string[]; onChange: (u: strin
     </div>
   );
 }
+
+/** «+ إضافة بنرات»: pick or drop many photos at once; they are added in the order chosen, with progress. */
+export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[]) => void }) {
+  const [busy, setBusy] = useState(''), [err, setErr] = useState('');
+  const file = useRef<HTMLInputElement>(null);
+  async function pick(fl: FileList | File[] | null) {
+    const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
+    if (!list.length) return;
+    setErr(''); const added: string[] = [];
+    for (let i = 0; i < list.length; i++) {
+      setBusy(`⏳ بيرفع ${i + 1} من ${list.length}…`);
+      try { added.push(await sendPhoto(list[i]!)); } catch (e) { setErr(`وقف عند الصورة ${i + 1}: ${(e as Error).message}`); break; }
+    }
+    if (added.length) onAdd(added);
+    setBusy('');
+  }
+  return (
+    <div className="ad-img wide" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); void pick(e.dataTransfer.files); }}>
+      <div className="ad-imgb">
+        <b>{label}</b>
+        <button type="button" className="sec" disabled={!!busy} onClick={() => file.current?.click()}>{busy || '📷 اختار صور (تقدر تختار كذا واحدة)'}</button>
+        {err && <small className="err">{err}</small>}
+      </div>
+      <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { void pick(e.target.files); e.target.value = ''; }} />
+    </div>
+  );
+}
