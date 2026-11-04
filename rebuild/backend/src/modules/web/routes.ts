@@ -8,6 +8,7 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
 import { catalogAiRoutes } from './catalog-ai.js';
+import { dropLiveCatalog, liveCatalog } from './catalog-live.js';
 
 
 /**
@@ -180,14 +181,25 @@ export default async function webRoutes(app: FastifyInstance) {
   });
   /** The site's button: always the catalog the owner marked as current. */
   app.get('/public/catalog-latest', { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }, async (request, reply) => {
+    void request;
+    // الكتالوج اللي على الموقع بيتبني على السيرفر من آخر إعدادات ومنتجات (دايمًا محدّث). لو حصل خطأ: آخر نسخة اتنشرت
+    try {
+      return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(fresh(await liveCatalog(db, 'book', { pdfUrl: 'catalog-latest/print', hitUrl: 'catalog/hit' })));
+    } catch (e) {
+      request.log.error(e, 'live catalog failed');
+    }
     const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
     if (!id) throw notFound('مفيش كتالوج منشور حاليًا');
     const row = await catRow(id);
     if (!row?.html) throw notFound('مفيش كتالوج منشور حاليًا');
-    void request;
     return catHeaders(reply, false).header('cache-control', 'public, max-age=60').send(fresh(row.html).replaceAll('__PDF__', 'catalog-latest/print').replaceAll('__HIT__', 'catalog/hit'));
   });
   app.get('/public/catalog-latest/print', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (_request, reply) => {
+    try {
+      return catHeaders(reply, true).header('cache-control', 'public, max-age=60').send(fresh(await liveCatalog(db, 'print', { pdfUrl: '', hitUrl: '' })));
+    } catch (e) {
+      _request.log.error(e, 'live catalog print failed');
+    }
     const id = ((await db.setting.findUnique({ where: { key: CAT_CURRENT } }))?.value as { id?: string } | null)?.id;
     const html = id ? (await catRow(id))?.print : '';
     if (!html) throw notFound('مفيش كتالوج منشور حاليًا');
@@ -336,6 +348,8 @@ export default async function webRoutes(app: FastifyInstance) {
       await writeAudit(tx, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: SITE_KEY, ip: actor.ip });
       return doc;
     });
+    // الكتالوج اللي على الموقع يتبني من جديد بالإعدادات/الصور الجديدة في أول فتحة
+    dropLiveCatalog();
     return { site: next };
   });
 }
