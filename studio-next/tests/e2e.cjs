@@ -62,7 +62,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   };
   const st2=JSON.parse(await ev('JSON.stringify({c:mkzSmart.state().CNT.map(c=>[c.s,c.e,c.xt,c.m,c.rg||0]),b:(mkzSmart.state().BRL||[]).map(b=>[b.s,b.e])})'));console.log('plan',JSON.stringify(st2));let n=0;for(const c of st2.c){await shot('cnt'+(++n)+'a',c[0]+1.0);await shot('cnt'+n+'b',c[1]-0.8)}n=0;for(const b of st2.b){await shot('br'+(++n),b[0]+1.2)}
   console.log('applied', await ev('document.getElementById("sm_ap").innerText'));
-  console.log('buttons', await ev('JSON.stringify(["sm_go","sm_bg"].map(i=>[i,document.getElementById(i).className,document.getElementById(i).textContent.trim().slice(0,40)]))'));
+  console.log('buttons', await ev('JSON.stringify(["sm_go"].map(i=>[i,document.getElementById(i).className,document.getElementById(i).textContent.trim().slice(0,40)]))'));
   await ev('(()=>{const t=document.getElementById("pro-tip");t&&t.remove()})()');for(const [nm,id] of [['ap','sm_ap'],['btn','sm_go']]){await ev('document.getElementById("'+id+'").scrollIntoView({block:"center"})');await sleep(600);const r=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(OUT+'/'+nm+'.png',Buffer.from(r.result.data,'base64'))}
   console.log('errors', JSON.stringify(logs.filter(l => !/GoTrueClient/.test(l)).slice(0, 8)));
   ws.close(); chrome.kill(); process.exit(0);
