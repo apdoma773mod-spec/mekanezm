@@ -594,7 +594,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  <button class="b o" id="sm_go" style="width:100%;min-height:50px">✨ أو اعمله هنا على الموبايل (مع معاينة وتعديل)</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
-  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><button class="b o" id="sm_post" style="width:100%;margin-top:6px">📝 انسخ نص البوست (عنوان + وصف + هاشتاجات)</button><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
+  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><button class="b o" id="sm_post" style="width:100%;margin-top:6px">📝 انسخ نص البوست (عنوان + وصف + هاشتاجات)</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_scb" style="flex:1">📊 قوة الفيديو</button><button class="b o" id="sm_chb" style="flex:1">⏱️ انسخ الفصول</button><button class="b o" id="sm_pv" style="flex:1">▶️ معاينة ١٠ث</button></div><div id="sm_sc" class="mu" style="white-space:pre-line;margin-top:6px"></div><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>🎞️ أماكن فيديوهات الإدراج</h2><div id="sm_bl"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
@@ -645,6 +645,26 @@ function postText(){const b=brand()||{},T=(D&&D.title)||'',ws={};
  const tags=['#'+(b.shop||'ميكانيزم').replace(/\s+/g,'_')].concat(top.map(w=>'#'+w));
  return [T?('🔥 '+T):'',first?(first+'…'):'',(b.cta||b.phone)?('📞 '+[b.cta||'اطلب دلوقتي',b.phone||''].filter(Boolean).join(' — ')):'',tags.join(' ')].filter(Boolean).join('\n\n')}
 async function copyPost(){if(!CAP.length)return say('اعمل التحليل الأول');const tx=postText();try{await navigator.clipboard.writeText(tx);say('✅ نص البوست اتنسخ — الصقه في فيسبوك/إنستجرام')}catch(e){try{await navigator.share({text:tx})}catch(x){prompt('انسخ النص ده:',tx)}}}
+/* 📊 تقييم قوة الفيديو قبل النشر + نصايح */
+function scoreVideo(){const dur=Math.max(1,outDur()||(V&&V.duration)||1),words=CAP.reduce((n,c)=>n+c.w.length,0),wps=words/dur,tips=[];let sc=0;
+ const add=(ok,pts,tip)=>{if(ok)sc+=pts;else tips.push(tip)};
+ add(!!(D&&D.title&&D.title.length>=6),14,'اكتب عنوان للفيديو (بيطلع كهوك أول ثانيتين)');
+ add(wps>=1.8&&wps<=3.8,18,wps<1.8?'الكلام بطيء — شيل السكوت أو اقصّ الإعادات':'الكلام سريع أوي — الكابشن مش هيلحق يتقري');
+ add(dur>=15&&dur<=75,14,dur<15?'الفيديو قصير جدًا (أقل من ١٥ ثانية)':'الفيديو طويل للريلز (أكتر من ٧٥ ثانية) — جرّب تقسمه');
+ add(FXL.length+FX2.length>=Math.floor(dur/8),14,'قليل اللمسات — فعّل «✨ لمسات ذكية» أو قول كلمات زي «ضمان/توصيل/بكام»');
+ add(BRC.length>0,8,'مفيش فيديو إدراج — الفيديو التاني بيكسر الملل');
+ add(!!(brand().phone||brand().cta),10,'ضيف رقم التليفون في بيانات المحل عشان يظهر النداء');
+ add(O('cap')!=='none',10,'شغّل الترجمة — أغلب الناس بتتفرج من غير صوت');
+ add(!!MU.buf,6,'ضيف موسيقى خلفية خفيفة');
+ add(!!MU.logo,6,'ارفع لوجو المحل');
+ return {sc:Math.min(100,sc),tips,dur,wps}}
+function showScore(){if(!CAP.length)return say('اعمل التحليل الأول');const r=scoreVideo(),el=$s('sm_sc');if(el)el.textContent=(r.sc>=80?'🟢 ':r.sc>=55?'🟡 ':'🔴 ')+'قوة الفيديو: '+ar(String(r.sc))+' / ١٠٠'+(r.tips.length?'\nعشان يبقى أقوى:\n• '+r.tips.join('\n• '):'\nجاهز للنشر 👌')}
+/* ⏱️ فصول يوتيوب من أقسام الفيديو */
+function copyChapters(){if(!CAP.length)return say('اعمل التحليل الأول');const ch=(D&&D.ch)||[],mm=t=>{t=Math.max(0,Math.round(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')},L=[];
+ ch.forEach((c,i)=>{const t0=Array.isArray(c)?c[0]:(c&&c.s)||0,cap=CAP.find(x=>x.s>=t0-.2)||CAP[0],name=(c&&c.t)||(cap?cap.w.slice(0,4).join(' '):'قسم '+(i+1));L.push((i?mm(outT(t0)):'0:00')+' '+name)});
+ if(L.length<3)return say('الفيديو مفيهوش فصول كفاية (محتاج ٣ على الأقل)');const tx=L.join('\n');(navigator.clipboard?navigator.clipboard.writeText(tx):Promise.reject()).then(()=>say('✅ الفصول اتنسخت — الصقها في وصف اليوتيوب')).catch(()=>prompt('انسخ الفصول:',tx))}
+/* ▶️ معاينة سريعة ١٠ ثواني من الأول بدل التصدير الكامل */
+function quickPreview(){if(!V)return;V.muted=false;try{V.currentTime=0}catch(e){}V.play().catch(()=>{});clearTimeout(quickPreview._t);quickPreview._t=setTimeout(()=>{try{V.pause()}catch(e){}},10000)}
 function exportSrt(){const tc=t=>{const ms=Math.round(Math.max(0,t)*1000),p=(x,l)=>String(x).padStart(l,'0');return `${p(Math.floor(ms/3600000),2)}:${p(Math.floor(ms/60000)%60,2)}:${p(Math.floor(ms/1000)%60,2)},${p(ms%1000,3)}`};
  const L=CAP.filter(c=>!inGap(c.s)).map((c,i)=>`${i+1}
 ${tc(outT(c.s))} --> ${tc(Math.max(outT(c.s)+.3,outT(c.e)))}
@@ -653,7 +673,7 @@ ${c.w.join(' ')}
 async function exportCover(){const t=srcT(Math.max(2.8,Math.min(outDur()*.25,outDur()-.6)));await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2500)});draw(V.currentTime);CV.toBlob(b=>b&&dlBlob(b,(D.title||'غلاف')+'.jpg'),'image/jpeg',.92)}
 function wirePlayer(){$s('sm_pl').onclick=async()=>{if(V.paused){try{if(V._ac)await V._ac.resume();await V.play()}catch(e){}$s('sm_pl').textContent='⏸️'}else{V.pause();$s('sm_pl').textContent='▶️'}};
  V.onended=()=>{$s('sm_pl').textContent='▶️'};const sk=$s('sm_seek');sk.oninput=()=>{sk._drag=1;V.currentTime=sk.value/1000*(V.duration||0)};sk.onchange=()=>{sk._drag=0};
- $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_post').onclick=copyPost;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
+ $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_post').onclick=copyPost;$s('sm_scb').onclick=showScore;$s('sm_chb').onclick=copyChapters;$s('sm_pv').onclick=quickPreview;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
 function renderLists(){
  (D.seg||[]).forEach(g=>{if(g._o==null)g._o=g.t});
  $s('sm_cap').innerHTML=D.seg.map((g,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;${g.cut&&O('takes')?'opacity:.5':''}"><button type="button" class="b o" data-sk="${g.s}" style="flex:none;min-width:58px;padding:6px">${fmt(g.s)}</button><label title="شيل الجملة دي" style="flex:none;display:flex;align-items:center;gap:2px">✂️<input type="checkbox" data-sc="${i}" ${g.cut?'checked':''} style="width:20px;height:20px"></label><input data-sg="${i}" value="${esc(g.t)}" style="flex:1"></div>`).join('')||'<p class="mu">مفيش كلام</p>';
@@ -905,7 +925,9 @@ const FX2R=[
  ['pin',/^(عنوان|عنواننا|فرع|فروع|مكاننا|المعرض|تعالو|تعالوا|زورونا|زورنا)$/,1],
  ['follow',/^(تابعونا|تابعنا|اشترك|اشتركو|لايك|فولو|شير|شيرو)$/,1],
  ['arrow',/^(بص|بصو|بصوا|شايفين|شايف|شوفو|شوفوا|هنا)$/,1],
- ['party',/^(مبروك|خصم|هديه|هدية|مجانا|ببلاش|عرض|عروض)$/,1]];
+ ['party',/^(مبروك|خصم|هديه|هدية|مجانا|ببلاش|عرض|عروض)$/,1],
+ ['know',/^(تعرف|تعرفو|تعرفوا|عارفين|عارف|هل تعلم|عارفين ان)$/,1],
+ ['limit',/^(لفتره محدوده|لفترة محدودة|لحد اخر|اخر يوم|النهارده بس|الحق|متفوتش|متفوتوش|محدوده|محدودة)$/,1]];
 const STEPW=/^(اولا|ثانيا|ثالثا|رابعا|الخطوه|خطوه|اول حاجه|تاني حاجه|تالت حاجه|اخر حاجه)$/;
 function buildFx2(){FX2=[];STEPS=[];if(S.fx===false||!CAP.length)return;
  const busy=(a,b)=>FXL.some(f=>a<f.e+.2&&b>f.s-.2)||EV.some(x=>showEv(x)&&x.s<b&&x.e>a)||FX2.some(f=>a<f.e+.3&&b>f.s-.3);
@@ -947,6 +969,10 @@ function drawFx2(t,W,H,u,F,acc){if(S.fx===false)return;CX.save();CX.direction='r
   CX.fillStyle='#fff';CX.font=`900 ${Math.round(40*u)}px ${F}`;CX.fillText(dt>.75?'✓ متابَع':'تابعنا',-30*u,3*u);emo('👍',bw/2-56*u,0,56*u);const hx=-bw/2+90*u+(1-ease(dt/.6))*120*u,hy=bh/2+10*u+(1-ease(dt/.6))*60*u;emo('👆',hx,hy,64*u)}
  else if(f.k==='arrow'){if(!roomMid){CX.restore();return}const y=midY+Math.sin(dt*10)*16*u;CX.translate(W/2,y);CX.scale(pop,pop);CX.fillStyle=acc;CX.strokeStyle='#000';CX.lineWidth=8*u;CX.lineJoin='round';
   CX.beginPath();CX.moveTo(-30*u,-90*u);CX.lineTo(30*u,-90*u);CX.lineTo(30*u,0);CX.lineTo(70*u,0);CX.lineTo(0,80*u);CX.lineTo(-70*u,0);CX.lineTo(-30*u,0);CX.closePath();CX.stroke();CX.fill();CX.fillStyle='#fff';CX.font=`900 ${Math.round(44*u)}px ${F}`;CX.lineWidth=10*u;CX.strokeText('بص هنا',0,-130*u);CX.fillText('بص هنا',0,-130*u)}
+ else if(f.k==='know'){const tx=(f.next||'').replace(/^(ان|إن|أن)s+/,'').split(' ').slice(0,4).join(' ');let sz=Math.round(36*u);CX.font=`800 ${sz}px ${F}`;const tw=Math.max(CX.measureText(tx||'تعرف؟').width,CX.measureText('💡 تعرف إن؟').width),bw=Math.min(W*.8,tw+110*u),bh=150*u,p=pos(bw);if(!p){CX.restore();return}
+  CX.translate(p.x+bw/2,p.y);CX.scale(pop,pop);dk(-bw/2,-bh/2,bw,bh,28*u,.9);CX.lineWidth=3*u;CX.strokeStyle=acc;CX.stroke();CX.fillStyle=acc;CX.font=`900 ${Math.round(40*u)}px ${F}`;CX.fillText('💡 تعرف إن؟',0,-30*u);if(tx){CX.fillStyle='#fff';CX.font=`800 ${sz}px ${F}`;CX.fillText(tx+'…',0,34*u,bw-40*u)}}
+ else if(f.k==='limit'){const bw=520*u,bh=96*u,p=pos(bw);if(!p){CX.restore();return}const pl=1+Math.sin(dt*8)*.04;CX.translate(p.x+bw/2,p.y);CX.scale(pop*pl,pop*pl);rr(-bw/2,-bh/2,bw,bh,bh/2);CX.shadowColor='rgba(0,0,0,.45)';CX.shadowBlur=18*u;CX.fillStyle='#d32f2f';CX.fill();CX.shadowBlur=0;CX.lineWidth=4*u;CX.strokeStyle='#fff';CX.stroke();
+  CX.fillStyle='#fff';CX.font=`900 ${Math.round(40*u)}px ${F}`;CX.fillText('العرض لفترة محدودة',-26*u,3*u);CX.font=`${Math.round(52*u)}px "Apple Color Emoji","Noto Color Emoji","Segoe UI Emoji",sans-serif`;CX.fillText('⏳',bw/2-58*u,0)}
  else if(f.k==='party'){/* قصاصات ملونة بتنزل فوق، بعيد عن الوش */const cols=['#FFD54F','#4FC3F7','#EF5350','#66BB6A','#AB47BC',acc];for(let i=0;i<46;i++){const r1=Math.sin(i*12.9898)*43758.5453%1,r2=Math.sin(i*78.233)*12345.678%1,x=W*Math.abs(r1),y0=-40*u-Math.abs(r2)*H*.2,y=y0+dt*H*.55*(.7+Math.abs(r2)*.6);
   if(hr&&x>W*.26&&x<W*.74&&y>hr[0]-20*u&&y<hr[1])continue;CX.save();CX.translate(x+Math.sin(dt*6+i)*18*u,y);CX.rotate(dt*5+i);CX.fillStyle=cols[i%cols.length];CX.fillRect(-9*u,-5*u,18*u,10*u);CX.restore()}
   if(roomMid){CX.translate(W/2,midY);CX.scale(pop,pop);emo('🎉',0,0,140*u)}}
@@ -962,7 +988,7 @@ function sfxTick(t){if(!V||V.paused||V.seeking){SFX_last=t;return}if(SFX_last<0|
 const _build2=build;build=function(){const r=_build2.apply(this,arguments);try{buildFx2()}catch(e){console.warn('fx2',e)}return r};
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */
 (window.__ready&&window.__ready.then?window.__ready:Promise.resolve()).then(()=>setTimeout(mount,0),()=>setTimeout(mount,0));
-window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS}),_test:{build,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
+window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS}),_test:{build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
  animList:()=>animList(),setDsl:m=>{D.dsl=Object.assign(D.dsl||{},m||{})},
