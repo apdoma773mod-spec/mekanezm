@@ -814,6 +814,9 @@ button.pvpbtn { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 .pro-area button { padding: 0 16px; border: 0; border-radius: 14px; background: var(--accent); color: #fff; font-size: 18px; }
 
 /* سوق الفضلة */
+.scrap-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: min(46vw, 220px); aspect-ratio: 1; margin: 14px auto; border-radius: 24px; background: color-mix(in srgb, var(--accent) 70%, #1a3a1a); color: #fff; text-decoration: none; box-shadow: var(--sh); }
+.scrap-tile svg { width: 55%; height: auto; }
+.scrap-tile b { font-size: 30px; font-weight: 900; }
 .scrap-strip { background: color-mix(in srgb, var(--accent) 70%, #1a3a1a); }
 .sc-top { display: flex; gap: 8px; margin: 0 0 12px; }
 .sc-top > * { flex: 1; text-align: center; padding: 12px; border-radius: 14px; font-weight: 800; text-decoration: none; border: 1.5px solid var(--accent); font: inherit; font-weight: 800; cursor: pointer; }

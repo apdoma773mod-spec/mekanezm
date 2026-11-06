@@ -89,7 +89,7 @@ export default async function Home() {
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
-        <Link className="trade-strip scrap-strip" href="/scraps"><span>♻️</span><b>عندك فضلة أو محتاج حتة صغيرة؟</b><small>سوق فضلة النجارين: ألواح وخشب وألمونيوم، ببلاش</small></Link>
+        <Link className="scrap-tile" href="/scraps" aria-label="فضلة"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="14" width="48" height="36" rx="4" fill="#d9b98a" stroke="#fff" strokeWidth="3"/><path d="M8 28h34M24 14v36" stroke="#fff" strokeWidth="2" strokeDasharray="4 4" fill="none"/><path d="M44 50l12-12" stroke="#fff" strokeWidth="3"/></svg><b>فضلة</b></Link>
         <Link className="trade-strip help-strip" href="/help"><span>🙋</span><b>محتاج حد ينفّذ الشغل؟</b><small>احكيلنا محتاج إيه ونرشّحلك نجار أو مهندس مستقل</small></Link>
         <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
