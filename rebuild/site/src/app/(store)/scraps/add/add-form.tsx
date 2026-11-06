@@ -13,6 +13,20 @@ const remember = (id: string, secret: string) => {
   try { const a = JSON.parse(localStorage.getItem(SCRAP_KEY) || '[]'); a.push({ id, secret }); localStorage.setItem(SCRAP_KEY, JSON.stringify(a.slice(-200))); } catch { /* */ }
 };
 const BLANK = { material: '', brand: '', code: '', color: '', thick: '', len: '', wid: '', qty: '1', note: '' };
+const PREF_KEY = 'mk_scrap_prefs', RECENT_KEY = 'mk_scrap_recent';
+const LEN_CHIPS = [30, 40, 50, 60, 80, 100, 120, 150];
+const WID_CHIPS = [10, 15, 20, 25, 30, 40, 50, 60];
+const LEVELS: [number, string][] = [[1, 'مبتدئ 🌱'], [5, 'نشيط ⭐'], [15, 'محترف 🔧'], [40, 'نجم السوق 🏅'], [100, 'أسطورة الفضلة 👑']];
+const levelOf = (n: number) => {
+  let i = -1; LEVELS.forEach(([t], k) => { if (n >= t) i = k; });
+  return { name: i < 0 ? 'لسه ماسجّلتش' : LEVELS[i][1], next: LEVELS[i + 1] ?? null };
+};
+const myCount = () => { try { return (JSON.parse(localStorage.getItem(SCRAP_KEY) || '[]') as unknown[]).length; } catch { return 0; } };
+const getRecent = (): string[] => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; } };
+const Progress = ({ n }: { n: number }) => {
+  const l = levelOf(n);
+  return <p className="mut" style={{ margin: '0 0 8px' }}>🏆 سجّلت <b>{n}</b> فضلة · مستواك: <b>{l.name}</b>{l.next ? ` · فاضل ${l.next[0] - n} للمستوى الجاي (${l.next[1]})` : ''}</p>;
+};
 
 export function AddForm() {
   const [cat, setCat] = useState<Cat>('sheet');
@@ -26,10 +40,22 @@ export function AddForm() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(0);
+  const [cnt, setCnt] = useState(0), [recent, setRecent] = useState<string[]>([]), [editWho, setEditWho] = useState(false);
   const file = useRef<HTMLInputElement>(null);
-  useEffect(() => { const m = getMe(); setWho(w => ({ ...w, name: m.name, phone: m.phone })); try { setWho(w => ({ ...w, area: localStorage.getItem('mk_scrap_area') || '' })); } catch { /* */ } }, []);
+  const cam = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const m = getMe(); setWho(w => ({ ...w, name: m.name, phone: m.phone }));
+    try { setWho(w => ({ ...w, area: localStorage.getItem('mk_scrap_area') || '' })); } catch { /* */ }
+    try {
+      const p = JSON.parse(localStorage.getItem(PREF_KEY) || 'null');
+      if (p) { setCat(p.cat || 'sheet'); setF(x => ({ ...x, ...p.f, len: '', wid: '', qty: '1' })); setCond(p.cond || 'new'); setMode(p.mode || 'ask'); setEdge(!!p.edge); setGrain(!!p.grain); }
+    } catch { /* */ }
+    setCnt(myCount()); setRecent(getRecent());
+  }, []);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF(x => ({ ...x, [k]: e.target.value }));
   const setW = (k: keyof typeof who) => (e: { target: { value: string } }) => setWho(x => ({ ...x, [k]: e.target.value }));
+  const whoOk = who.name.trim().length >= 2 && who.phone.replace(/\D/g, '').length >= 10 && who.area.trim().length >= 2;
+  const qty = Math.max(1, Math.round(num(f.qty) || 1));
 
   async function pick(fs: FileList | null) {
     const list = [...(fs ?? [])].slice(0, 3 - pics.length);
@@ -47,23 +73,30 @@ export function AddForm() {
     if (cat !== 'alu' && !thick) return setMsg('اختار السمك');
     if (cat === 'sheet' && !f.material) return setMsg('اختار نوع اللوح');
     if (mode === 'price' && !num(price)) return setMsg('اكتب السعر');
-    if (who.name.trim().length < 2) return setMsg('اكتب اسمك');
-    if (who.phone.replace(/\D/g, '').length < 10) return setMsg('اكتب رقم واتساب صحيح');
-    if (who.area.trim().length < 2) return setMsg('اكتب منطقتك');
+    if (who.name.trim().length < 2) { setEditWho(true); return setMsg('اكتب اسمك'); }
+    if (who.phone.replace(/\D/g, '').length < 10) { setEditWho(true); return setMsg('اكتب رقم واتساب صحيح'); }
+    if (who.area.trim().length < 2) { setEditWho(true); return setMsg('اكتب منطقتك'); }
     setBusy(true); setMsg('⏳ جاري النشر…');
     try {
       const imgs: string[] = [];
       for (const p of pics) imgs.push(await uploadRequestImage(p.blob));
       const r = await scrapAdd({
         category: cat, material: f.material, brand: /غير ذلك/.test(f.brand) ? '' : f.brand.trim(), code: f.code.trim(), color: f.color.trim(),
-        thick: thick || undefined, len, wid: cat === 'alu' ? undefined : wid || undefined, qty: Math.max(1, Math.round(num(f.qty) || 1)),
+        thick: thick || undefined, len, wid: cat === 'alu' ? undefined : wid || undefined, qty,
         cond, edge, grain, price_mode: mode, price: mode === 'price' ? num(price) : undefined,
         area: who.area.trim(), name: who.name.trim(), phone: who.phone.trim(), note: f.note.trim(), imgs,
       });
       if (!r.ok || !r.data) throw new Error(r.message);
       remember(r.data.id, r.data.secret);
       saveMe({ name: who.name, phone: who.phone });
-      try { localStorage.setItem('mk_scrap_area', who.area); } catch { /* */ }
+      try {
+        localStorage.setItem('mk_scrap_area', who.area);
+        localStorage.setItem(PREF_KEY, JSON.stringify({ cat, f: { material: f.material, brand: f.brand, code: f.code, color: f.color, thick: f.thick }, cond, mode, edge, grain }));
+        const key = cat === 'alu' ? String(len) : `${len}×${wid}`;
+        const rec = [key, ...getRecent().filter(k => k !== key)].slice(0, 6);
+        localStorage.setItem(RECENT_KEY, JSON.stringify(rec)); setRecent(rec);
+      } catch { /* */ }
+      setCnt(myCount());
       ev('generate_lead', 'Lead', { method: 'scrap_add', category: cat });
       setDone(n => n + 1); setBusy(false); setMsg('');
     } catch (e) {
@@ -75,16 +108,27 @@ export function AddForm() {
   if (done) return (
     <div className="info-cards"><div>
       <h2>✔ اتنشرت فضلتك</h2>
-      هتظهر لأي نجار بيدوّر على المقاس ده. لما تتباع افتح <Link href="/scraps/mine">فضلتي</Link> وشيلها.
+      <Progress n={cnt} />
+      كل حتة بتسجّلها بتوفّر على نجار لوح كامل. وهتظهر لأي نجار بيدوّر على المقاس ده. لما تتباع افتح <Link href="/scraps/mine">فضلتي</Link> وشيلها.
       <div className="sc-top" style={{ marginTop: 10 }}>
-        <button type="button" className="pri" onClick={() => { setDone(0); setF(x => ({ ...BLANK, material: x.material, brand: x.brand })); setPics([]); }}>➕ ضيف حتة تانية</button>
-        <Link className="sec" href="/scraps">🔎 دوّر على فضلة</Link>
+        <button type="button" className="pri" onClick={() => { setDone(0); setF(x => ({ ...x, len: '', wid: '', qty: '1', note: '' })); setPics([]); }}>➕ حتة تانية بنفس الخامة</button>
+        <button type="button" className="sec" onClick={() => { setDone(0); setPics([]); }}>⎘ نفس المقاس تاني</button>
       </div>
+      <div className="sc-top"><Link className="sec" href="/scraps">🔎 دوّر على فضلة</Link></div>
     </div></div>
   );
   return (
     <div className="info-cards form">
       <div>
+        <Progress n={cnt} />
+        <b>📷 صوّر الحتة (اختياري، أسرع طريقة)</b>
+        <div className="tpics">
+          {pics.map((p, i) => <span key={p.url}><img src={p.url} alt="" /><button type="button" onClick={() => setPics(x => x.filter((_, k) => k !== i))} aria-label="شيل الصورة">✕</button></span>)}
+          {pics.length < 3 && <button type="button" className="tadd" onClick={() => cam.current?.click()}>📷<small>كاميرا</small></button>}
+          {pics.length < 3 && <button type="button" className="tadd" onClick={() => file.current?.click()}>🖼<small>من الموبايل</small></button>}
+        </div>
+        <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={e => { pick(e.target.files); e.target.value = ''; }} />
+        <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { pick(e.target.files); e.target.value = ''; }} />
         <div className="sc-cats">{CATS.map(([k, n]) => <button key={k} type="button" className={cat === k ? 'on' : ''} onClick={() => { setCat(k); setF(x => ({ ...x, material: '', brand: '', code: '' })); }}>{n}</button>)}</div>
         {cat === 'sheet' && <>
           <label>نوع اللوح<select value={f.material} onChange={set('material')}><option value="">اختار</option>{SHEET_MATERIALS.map(m => <option key={m}>{m}</option>)}</select></label>
@@ -92,7 +136,6 @@ export function AddForm() {
           <datalist id="sc-brands2">{SHEET_BRANDS.map(b => <option key={b} value={b} />)}</datalist>
           <label>كود اللون <small>(مكتوب على اللوح أو الفاتورة)</small><input list="sc-codes2" value={f.code} onChange={set('code')} maxLength={30} /></label>
           <datalist id="sc-codes2">{codesFor(f.brand).map(c => <option key={c} value={c} />)}</datalist>
-          <label>اسم اللون <small>(اختياري)</small><input value={f.color} onChange={set('color')} maxLength={40} placeholder="مثلاً: جوزي غامق" /></label>
         </>}
         {cat === 'solid' && <label>نوع الخشب<select value={f.material} onChange={set('material')}><option value="">اختار</option>{SOLID_SPECIES.map(m => <option key={m}>{m}</option>)}</select></label>}
         {cat === 'alu' && <>
@@ -104,32 +147,50 @@ export function AddForm() {
           <div className="chips2">{COMMON_THICK.map(t => <button key={t} type="button" className={'sc-chip' + (f.thick === String(t) ? ' on' : '')} onClick={() => setF(x => ({ ...x, thick: String(t) }))}>{t}</button>)}
             <input className="sc-in" inputMode="decimal" value={COMMON_THICK.map(String).includes(f.thick) ? '' : f.thick} onChange={set('thick')} placeholder="غيره" aria-label="سمك تاني" /></div>
         </>}
+      </div>
+      <div>
+        <h2>المقاس</h2>
+        {recent.length > 0 && <>
+          <b>مقاسات سجّلتها قبل كده (دوسّ)</b>
+          <div className="chips2">{recent.map(k => <button key={k} type="button" className="sc-chip" onClick={() => { const [l, w] = k.split('×'); setF(x => ({ ...x, len: l, wid: w ?? '' })); }}>{k.replace('×', ' × ')}</button>)}</div>
+        </>}
+        <b>الطول (سم)</b>
+        <div className="chips2">{LEN_CHIPS.map(t => <button key={t} type="button" className={'sc-chip' + (f.len === String(t) ? ' on' : '')} onClick={() => setF(x => ({ ...x, len: String(t) }))}>{t}</button>)}</div>
         <div className="sc-dims">
           <label>الطول (سم)<input inputMode="decimal" value={f.len} onChange={set('len')} /></label>
           {cat !== 'alu' && <label>العرض (سم)<input inputMode="decimal" value={f.wid} onChange={set('wid')} /></label>}
-          <label>العدد<input inputMode="numeric" value={f.qty} onChange={set('qty')} /></label>
         </div>
-        <label>الحالة<select value={cond} onChange={e => setCond(e.target.value)}><option value="new">جديدة</option><option value="used">مستعملة</option><option value="scratched">فيها خدش</option></select></label>
-        {cat === 'sheet' && <label className="agree"><input type="checkbox" checked={edge} onChange={e => setEdge(e.target.checked)} /> متقفّلة حرف</label>}
-        {cat !== 'alu' && <label className="agree"><input type="checkbox" checked={grain} onChange={e => setGrain(e.target.checked)} /> ليها اتجاه عرق (متتلفش)</label>}
+        {cat !== 'alu' && <>
+          <b>العرض (سم)</b>
+          <div className="chips2">{WID_CHIPS.map(t => <button key={t} type="button" className={'sc-chip' + (f.wid === String(t) ? ' on' : '')} onClick={() => setF(x => ({ ...x, wid: String(t) }))}>{t}</button>)}</div>
+        </>}
+        <b>العدد</b>
+        <div className="chips2">
+          <button type="button" className="sc-chip" onClick={() => setF(x => ({ ...x, qty: String(Math.max(1, qty - 1)) }))} aria-label="أقل">−</button>
+          <span className="sc-chip on" style={{ minWidth: 44, textAlign: 'center' }}>{qty}</span>
+          <button type="button" className="sc-chip" onClick={() => setF(x => ({ ...x, qty: String(qty + 1) }))} aria-label="أكتر">+</button>
+        </div>
+        <details style={{ margin: '8px 0' }}>
+          <summary>تفاصيل اختيارية (الحالة، السعر، ملاحظة)</summary>
+          <label>الحالة<select value={cond} onChange={e => setCond(e.target.value)}><option value="new">جديدة</option><option value="used">مستعملة</option><option value="scratched">فيها خدش</option></select></label>
+          {cat === 'sheet' && <label className="agree"><input type="checkbox" checked={edge} onChange={e => setEdge(e.target.checked)} /> متقفّلة حرف</label>}
+          {cat !== 'alu' && <label className="agree"><input type="checkbox" checked={grain} onChange={e => setGrain(e.target.checked)} /> ليها اتجاه عرق (متتلفش)</label>}
+          {cat === 'sheet' && <label>اسم اللون <small>(اختياري)</small><input value={f.color} onChange={set('color')} maxLength={40} placeholder="مثلاً: جوزي غامق" /></label>}
+          <label>تبيعها إزاي؟<select value={mode} onChange={e => setMode(e.target.value)}><option value="ask">نتفق على السعر</option><option value="price">بسعر محدد</option><option value="free">ببلاش</option><option value="swap">بدل</option></select></label>
+          {mode === 'price' && <label>السعر (جنيه)<input inputMode="numeric" value={price} onChange={e => setPrice(e.target.value)} /></label>}
+          <label>ملاحظة <small>(اختياري)</small><textarea rows={2} value={f.note} onChange={set('note')} maxLength={300} placeholder="مثلاً: فيها شرخ صغير في الركن" /></label>
+        </details>
       </div>
       <div>
-        <h2>السعر والصور</h2>
-        <label>تبيعها إزاي؟<select value={mode} onChange={e => setMode(e.target.value)}><option value="ask">نتفق على السعر</option><option value="price">بسعر محدد</option><option value="free">ببلاش</option><option value="swap">بدل</option></select></label>
-        {mode === 'price' && <label>السعر (جنيه)<input inputMode="numeric" value={price} onChange={e => setPrice(e.target.value)} /></label>}
-        <div className="tpics">
-          {pics.map((p, i) => <span key={p.url}><img src={p.url} alt="" /><button type="button" onClick={() => setPics(x => x.filter((_, k) => k !== i))} aria-label="شيل الصورة">✕</button></span>)}
-          {pics.length < 3 && <button type="button" className="tadd" onClick={() => file.current?.click()}>📷<small>صورة</small></button>}
-        </div>
-        <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { pick(e.target.files); e.target.value = ''; }} />
-        <label>ملاحظة <small>(اختياري)</small><textarea rows={2} value={f.note} onChange={set('note')} maxLength={300} placeholder="مثلاً: فيها شرخ صغير في الركن" /></label>
-      </div>
-      <div>
-        <h2>بياناتك</h2>
-        <label>الاسم<input value={who.name} onChange={setW('name')} maxLength={80} autoComplete="name" /></label>
-        <label>رقم الواتساب<input value={who.phone} onChange={setW('phone')} type="tel" inputMode="tel" maxLength={20} autoComplete="tel" placeholder="01xxxxxxxxx" /></label>
-        <label>المنطقة<input value={who.area} onChange={setW('area')} maxLength={80} placeholder="مثلاً: فيصل، الجيزة" /></label>
-        <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg || 'الرقم بيظهر بس لمن حد يدوس «اطلبها».'}</p>
+        {whoOk && !editWho ? (
+          <p className="mut" style={{ margin: '0 0 8px' }}>هتتسجّل باسم <b>{who.name}</b> · {who.area} · {who.phone} <button type="button" className="sc-chip" onClick={() => setEditWho(true)}>تعديل</button></p>
+        ) : <>
+          <h2>بياناتك (مرة واحدة بس)</h2>
+          <label>الاسم<input value={who.name} onChange={setW('name')} maxLength={80} autoComplete="name" /></label>
+          <label>رقم الواتساب<input value={who.phone} onChange={setW('phone')} type="tel" inputMode="tel" maxLength={20} autoComplete="tel" placeholder="01xxxxxxxxx" /></label>
+          <label>المنطقة<input value={who.area} onChange={setW('area')} maxLength={80} placeholder="مثلاً: فيصل، الجيزة" /></label>
+        </>}
+        <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg || 'الرقم بيظهر بس لمن حد يدوس «اطلبها». بياناتك وآخر اختياراتك بتتحفظ.'}</p>
         <button className="pri" style={{ width: '100%' }} onClick={go} disabled={busy}>انشر الفضلة</button>
       </div>
     </div>
