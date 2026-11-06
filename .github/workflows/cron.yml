@@ -1,0 +1,22 @@
+# ⏰ The scheduled jobs of the system (daily copy, end-of-day report, automatic messages, back-in-stock, cameras).
+# Vercel has no always-on process, so GitHub (free) calls the backend every 5 minutes. Needs the repo secrets CRON_URL and CRON_SECRET.
+name: Scheduled jobs
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+concurrency:
+  group: cron-tick
+  cancel-in-progress: false
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call the backend
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$CRON_URL" || { echo "CRON_URL not set yet"; exit 0; }
+          curl -fsS -m 120 -X POST -H "x-cron-secret: $CRON_SECRET" "$CRON_URL/api/v1/cron/tick"
