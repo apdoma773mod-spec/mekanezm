@@ -12,6 +12,7 @@ import { ImportTab } from './import';
 import { AddMany, Img, move, uid7 } from './ui';
 import { DEFAULTS, HEX, THEME_KEYS, WOOD_AREAS, WOOD_KEYS, woodById, type ThemeMap } from './lib/theme';
 import { ThemeTab } from './theme-tab';
+import { SectionsTab } from './sections-tab';
 import { Ico } from './icons';
 
 type Sec = { id: string; name: string; img: string };
@@ -214,23 +215,7 @@ export function AdminApp() {
         </Fold>
       </>}
 
-      {tab === 'sections' && (
-        <section className="ad-s">
-          <div className="ad-top"><h2>🗂️ الأقسام</h2><button className="pri" onClick={() => up('sections', [...f.sections, { id: uid7(), name: 'قسم جديد', img: '' }])}>＋ قسم جديد</button></div>
-          <p className="mut">غيّر اسم القسم أو صورته أو ترتيبه. القسم الفاضي (من غير منتجات) مبيظهرش على الموقع. القسم اللي فيه منتجات مينفعش يتحذف.</p>
-          {f.sections.map((s, i) => (
-            <div key={s.id} className="ad-sec">
-              <Img value={s.img} onChange={u => up('sections', f.sections.map((x, k) => (k === i ? { ...x, img: u } : x)))} label="صورة القسم" />
-              <div className="ad-sn">
-                <input value={s.name} maxLength={50} aria-label="اسم القسم" onChange={e => up('sections', f.sections.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} />
-                <small className="mut">{count(s.id)} منتج</small>
-                {!count(s.id) && <button type="button" className="lnk" onClick={() => setF(x => (x ? { ...x, sections: x.sections.filter((_, k) => k !== i), removed: [...x.removed, s.id] } : x))}>🗑️ احذف القسم</button>}
-              </div>
-              <div className="ad-mv"><button type="button" onClick={() => up('sections', move(f.sections, i, -1))} disabled={i === 0} aria-label="فوق">↑</button><button type="button" onClick={() => up('sections', move(f.sections, i, 1))} disabled={i === f.sections.length - 1} aria-label="تحت">↓</button></div>
-            </div>
-          ))}
-        </section>
-      )}
+      {tab === 'sections' && <SectionsTab sections={f.sections} count={count} onChange={s => up('sections', s)} onRemove={id => setF(x => (x ? { ...x, sections: x.sections.filter(s => s.id !== id), removed: [...x.removed, id] } : x))} />}
 
       {tab === 'more' && (
         <section className="ad-s ad-more">
