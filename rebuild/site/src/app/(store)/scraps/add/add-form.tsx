@@ -6,6 +6,7 @@ import { shrinkImage } from '@/lib/images';
 import { getMe, saveMe } from '@/lib/me';
 import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
 import { ev } from '@/lib/track';
+import { WOOD_LIB } from '@/lib/woods';
 
 const num = (v: string) => { const n = Number(String(v).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(',', '.')); return Number.isFinite(n) && n > 0 ? n : 0; };
 export const SCRAP_KEY = 'mk_scraps';
@@ -28,6 +29,52 @@ const Progress = ({ n }: { n: number }) => {
   return <p className="mut" style={{ margin: '0 0 8px' }}>🏆 سجّلت <b>{n}</b> فضلة · مستواك: <b>{l.name}</b>{l.next ? ` · فاضل ${l.next[0] - n} للمستوى الجاي (${l.next[1]})` : ''}</p>;
 };
 
+type Piece = { len: string; wid: string; qty: number };
+const PLAIN_COLORS: [string, string][] = [['أبيض', '#f4f4f1'], ['بيج', '#d9c9a8'], ['رمادي فاتح', '#b5b5b2'], ['رمادي غامق', '#555759'], ['أسود', '#1d1d1d'], ['أحمر', '#a8322d'], ['أزرق', '#2f4f7f'], ['أخضر', '#4a6b4a']];
+const COLOR_SWATCHES: [string, string][] = [...WOOD_LIB.map(w => [w.name, w.tones[1]] as [string, string]), ...PLAIN_COLORS];
+const fix = (v: string) => String(v).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/،/g, '.');
+/** «١٨ جوزي ٧٠×٣٠ × ٢» or one piece per line → pieces (+ thickness if written). */
+function parseLines(text: string, cat: Cat): { pieces: Piece[]; thick: string } {
+  const pieces: Piece[] = []; let thick = '';
+  for (const raw of fix(text).split(/\n|;|؛/)) {
+    let line = raw.trim(); if (!line) continue;
+    const m = line.match(/(\d+(?:\.\d+)?)\s*[x×*✕]\s*(\d+(?:\.\d+)?)(?:\s*[x×*✕]\s*(\d+))?/i);
+    if (m && cat !== 'alu') {
+      line = line.replace(m[0], ' ');
+      const t = (line.match(/\d+(?:\.\d+)?/g) || []).find(n => COMMON_THICK.includes(Number(n)));
+      if (t && !thick) thick = t;
+      pieces.push({ len: m[1], wid: m[2], qty: Math.max(1, Number(m[3] || 1)) });
+    } else if (cat === 'alu') {
+      const n = line.match(/\d+(?:\.\d+)?/g);
+      if (n) pieces.push({ len: n[0], wid: '', qty: Math.max(1, Number(n[1] || 1)) });
+    }
+  }
+  return { pieces, thick };
+}
+
+/** Drag on the rectangle to set the size (cm): for people who do not like typing numbers. */
+function DrawBox({ maxL, maxW, len, wid, onSet }: { maxL: number; maxW: number; len: number; wid: number; onSet: (l: number, w: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const move = (e: React.PointerEvent) => {
+    if (e.buttons === 0 && e.pointerType === 'mouse') return;
+    const r = ref.current!.getBoundingClientRect();
+    const l = Math.min(maxL, Math.max(5, Math.round(((e.clientX - r.left) / r.width) * maxL)));
+    const w = Math.min(maxW, Math.max(5, Math.round(((e.clientY - r.top) / r.height) * maxW)));
+    onSet(l, w);
+  };
+  const L = Math.min(len || 0, maxL), W = Math.min(wid || 0, maxW);
+  return (
+    <div>
+      <div ref={ref} onPointerDown={e => { (e.target as Element).setPointerCapture?.(e.pointerId); move(e); }} onPointerMove={move}
+        style={{ position: 'relative', width: '100%', aspectRatio: maxL + ' / ' + maxW, background: 'var(--bg)', border: '1.5px dashed var(--line)', borderRadius: 10, touchAction: 'none', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, insetInlineStart: 0, width: (L / maxL) * 100 + '%', height: (W / maxW) * 100 + '%', background: 'var(--accent)', opacity: 0.35, border: '2px solid var(--accent)' }} />
+        <span style={{ position: 'absolute', bottom: 4, insetInlineEnd: 8, fontSize: 12 }}>اسحب لحد المقاس · لوح كامل {maxL}×{maxW}</span>
+      </div>
+      <small>{L && W ? `${L} × ${W} سم` : 'اسحب صباعك على المستطيل'}</small>
+    </div>
+  );
+}
+
 export function AddForm() {
   const [cat, setCat] = useState<Cat>('sheet');
   const [f, setF] = useState(BLANK);
@@ -40,6 +87,7 @@ export function AddForm() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(0);
+  const [pieces, setPieces] = useState<Piece[]>([]), [lines, setLines] = useState(''), [showDraw, setShowDraw] = useState(false);
   const [cnt, setCnt] = useState(0), [recent, setRecent] = useState<string[]>([]), [editWho, setEditWho] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const cam = useRef<HTMLInputElement>(null);
@@ -67,9 +115,11 @@ export function AddForm() {
   }
 
   async function go() {
-    const len = num(f.len), wid = num(f.wid), thick = num(f.thick);
-    if (!len) return setMsg('اكتب الطول');
-    if (cat !== 'alu' && !wid) return setMsg('اكتب العرض');
+    const thick = num(f.thick);
+    const list: Piece[] = [...pieces];
+    if (num(f.len)) list.push({ len: f.len, wid: f.wid, qty });
+    if (!list.length) return setMsg('اكتب الطول');
+    if (cat !== 'alu' && list.some(p => !num(p.wid))) return setMsg('اكتب العرض');
     if (cat !== 'alu' && !thick) return setMsg('اختار السمك');
     if (cat === 'sheet' && !f.material) return setMsg('اختار نوع اللوح');
     if (mode === 'price' && !num(price)) return setMsg('اكتب السعر');
@@ -80,14 +130,19 @@ export function AddForm() {
     try {
       const imgs: string[] = [];
       for (const p of pics) imgs.push(await uploadRequestImage(p.blob));
-      const r = await scrapAdd({
-        category: cat, material: f.material, brand: /غير ذلك/.test(f.brand) ? '' : f.brand.trim(), code: f.code.trim(), color: f.color.trim(),
-        thick: thick || undefined, len, wid: cat === 'alu' ? undefined : wid || undefined, qty,
-        cond, edge, grain, price_mode: mode, price: mode === 'price' ? num(price) : undefined,
-        area: who.area.trim(), name: who.name.trim(), phone: who.phone.trim(), note: f.note.trim(), imgs,
-      });
-      if (!r.ok || !r.data) throw new Error(r.message);
-      remember(r.data.id, r.data.secret);
+      for (const [i, p] of list.entries()) {
+        setMsg(list.length > 1 ? `⏳ جاري النشر (${i + 1}/${list.length})…` : '⏳ جاري النشر…');
+        const r = await scrapAdd({
+          category: cat, material: f.material, brand: /غير ذلك/.test(f.brand) ? '' : f.brand.trim(), code: f.code.trim(), color: f.color.trim(),
+          thick: thick || undefined, len: num(p.len), wid: cat === 'alu' ? undefined : num(p.wid) || undefined, qty: p.qty,
+          cond, edge, grain, price_mode: mode, price: mode === 'price' ? num(price) : undefined,
+          area: who.area.trim(), name: who.name.trim(), phone: who.phone.trim(), note: f.note.trim(), imgs,
+        });
+        if (!r.ok || !r.data) throw new Error(r.message);
+        remember(r.data.id, r.data.secret);
+      }
+      setPieces([]); setLines('');
+      const len = num(list[list.length - 1].len), wid = num(list[list.length - 1].wid);
       saveMe({ name: who.name, phone: who.phone });
       try {
         localStorage.setItem('mk_scrap_area', who.area);
@@ -134,6 +189,10 @@ export function AddForm() {
           <label>نوع اللوح<select value={f.material} onChange={set('material')}><option value="">اختار</option>{SHEET_MATERIALS.map(m => <option key={m}>{m}</option>)}</select></label>
           <label>الشركة <small>(لو تعرفها)</small><input list="sc-brands2" value={f.brand} onChange={set('brand')} maxLength={40} /></label>
           <datalist id="sc-brands2">{SHEET_BRANDS.map(b => <option key={b} value={b} />)}</datalist>
+          <b>اللون (دوس على اللون الأقرب)</b>
+          <div className="chips2" style={{ gap: 8 }}>{COLOR_SWATCHES.map(([n, c]) => <button key={n} type="button" title={n} aria-label={n} onClick={() => setF(x => ({ ...x, color: x.color === n ? '' : n }))}
+            style={{ width: 40, height: 40, padding: 0, borderRadius: 10, background: c, border: f.color === n ? '3px solid var(--accent)' : '1.5px solid var(--line)' }} />)}</div>
+          {f.color && <small>اللون المختار: <b>{f.color}</b></small>}
           <label>كود اللون <small>(مكتوب على اللوح أو الفاتورة)</small><input list="sc-codes2" value={f.code} onChange={set('code')} maxLength={30} /></label>
           <datalist id="sc-codes2">{codesFor(f.brand).map(c => <option key={c} value={c} />)}</datalist>
         </>}
@@ -161,6 +220,10 @@ export function AddForm() {
           {cat !== 'alu' && <label>العرض (سم)<input inputMode="decimal" value={f.wid} onChange={set('wid')} /></label>}
         </div>
         {cat !== 'alu' && <>
+          <button type="button" className="sc-chip" onClick={() => setShowDraw(v => !v)}>{showDraw ? 'اقفل الرسم' : '✏️ ارسم المقاس بصباعك'}</button>
+          {showDraw && <DrawBox maxL={cat === 'sheet' ? 244 : 400} maxW={cat === 'sheet' ? 122 : 40} len={num(f.len)} wid={num(f.wid)} onSet={(l, w) => setF(x => ({ ...x, len: String(l), wid: String(w) }))} />}
+        </>}
+        {cat !== 'alu' && <>
           <b>العرض (سم)</b>
           <div className="chips2">{WID_CHIPS.map(t => <button key={t} type="button" className={'sc-chip' + (f.wid === String(t) ? ' on' : '')} onClick={() => setF(x => ({ ...x, wid: String(t) }))}>{t}</button>)}</div>
         </>}
@@ -170,6 +233,20 @@ export function AddForm() {
           <span className="sc-chip on" style={{ minWidth: 44, textAlign: 'center' }}>{qty}</span>
           <button type="button" className="sc-chip" onClick={() => setF(x => ({ ...x, qty: String(qty + 1) }))} aria-label="أكتر">+</button>
         </div>
+        <button type="button" className="sc-chip on" style={{ marginTop: 8 }} onClick={() => {
+          if (!num(f.len)) return setMsg('اكتب الطول الأول');
+          if (cat !== 'alu' && !num(f.wid)) return setMsg('اكتب العرض الأول');
+          setPieces(p => [...p, { len: f.len, wid: f.wid, qty }]); setF(x => ({ ...x, len: '', wid: '', qty: '1' })); setMsg('');
+        }}>➕ ضيف الحتة للقايمة وكمّل (سجّل أكتر من حتة مرة واحدة)</button>
+        {pieces.length > 0 && <div className="chips2" style={{ marginTop: 8 }}>{pieces.map((p, i) => <button key={i} type="button" className="sc-chip" onClick={() => setPieces(x => x.filter((_, k) => k !== i))} title="دوس تشيل">{p.len}{p.wid ? ' × ' + p.wid : ''}{p.qty > 1 ? ' ×' + p.qty : ''} ✕</button>)}</div>}
+        <label style={{ marginTop: 8 }}>أو اكتب الحتت كلها (سطر لكل حتة) <small>مثال: 70×30 ×2</small>
+          <textarea rows={3} value={lines} onChange={e => setLines(e.target.value)} placeholder={'70×30\n50×25 × 3\n120×40'} />
+        </label>
+        {lines.trim() && <button type="button" className="sc-chip" onClick={() => {
+          const r = parseLines(lines, cat);
+          if (!r.pieces.length) return setMsg('ماقدرتش أفهم المقاسات — اكتبها زي 70×30');
+          setPieces(p => [...p, ...r.pieces]); if (r.thick) setF(x => ({ ...x, thick: r.thick })); setLines(''); setMsg('');
+        }}>حوّلها لقايمة</button>}
         <details style={{ margin: '8px 0' }}>
           <summary>تفاصيل اختيارية (الحالة، السعر، ملاحظة)</summary>
           <label>الحالة<select value={cond} onChange={e => setCond(e.target.value)}><option value="new">جديدة</option><option value="used">مستعملة</option><option value="scratched">فيها خدش</option></select></label>
