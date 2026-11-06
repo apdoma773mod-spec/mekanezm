@@ -53,8 +53,17 @@ function applyForm(d: Rec, f: Form) {
   d.sections = [...ordered, ...rest];
 }
 
-type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'import' | 'more';
-const TAB_KEY = 'mk-site-tab';
+/** a group inside a screen: closed by default, tap the header to open/close */
+function Fold({ title, children }: { title: string; children: React.ReactNode }) {
+  const [on, setOn] = useState(false);
+  return (
+    <section className={'ad-fold' + (on ? ' on' : '')}>
+      <button type="button" className="ad-fold-h" onClick={() => setOn(!on)} aria-expanded={on}><b>{title}</b><span className="x">{on ? '✕' : '▾'}</span></button>
+      {on && <div className="ad-fold-b">{children}</div>}
+    </section>
+  );
+}
+type Tab = '' | 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'import' | 'more';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
 const DOC_CACHE = 'mk_site_doc_v1';
@@ -65,10 +74,9 @@ export function AdminApp() {
   const [doc, setDoc] = useState<SiteDoc | null>(null);
   const [f, setF] = useState<Form | null>(null);
   const [snap, setSnap] = useState('');
-  const [tab, setTabRaw] = useState<Tab>('products');
+  const [tab, setTabRaw] = useState<Tab>('');
   // آخر شاشة كنت فيها بتفضل مفتوحة
-  useEffect(() => { try { const t = localStorage.getItem(TAB_KEY) as Tab | null; if (t) setTabRaw(t); } catch { /* */ } }, []);
-  const setTab = (t: Tab) => { setTabRaw(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* */ } };
+  const setTab = (t: Tab) => setTabRaw(t);
   // ⚡ opens at once: the last copy of the site data is kept on the phone and shown immediately, the fresh copy loads behind it
   // (saving always re-reads the newest version on the server first, so an old copy on the phone can never overwrite anything)
   const dirtyRef = useRef(false);
@@ -147,16 +155,10 @@ export function AdminApp() {
     );
   }
 
-  const TABS: [Tab, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['import', 'استيراد'], ['more', 'أدوات']];
+  const TABS: [Exclude<Tab, ''>, string][] = [['products', 'المنتجات'], ['sections', 'الأقسام'], ['works', 'أعمالنا'], ['look', 'الألوان والشريط'], ['banner', 'البنرات'], ['text', 'النصوص'], ['reviews', 'الآراء'], ['pros', 'الفنيين'], ['ship', 'التوصيل والتواصل'], ['import', 'استيراد'], ['more', 'أدوات']];
   const count = (id: string) => (doc.data.products ?? []).filter((p: Rec) => p.sec === id).length;
-  return (
-    <div className="ad">
-      <header className="ad-h">
-        <h1>إدارة الموقع</h1>
-        <div className="ad-links"><a href={SITE_URL} target="_blank" rel="noopener">↗ افتح الموقع</a><Link href="/weborders">🛒 طلبات الموقع</Link><Link href="/catalog">📖 الكتالوج</Link></div>
-      </header>
-      <nav className="ad-tabs" aria-label="الأقسام">{TABS.map(([k, t]) => <button key={k} type="button" className={tab === k ? 'on' : ''} onClick={() => { setTab(k); setSaved(''); }}><Ico n={k} />{t}</button>)}</nav>
-
+  const body = (tab: Tab) => (
+    <>
       {tab === 'products' && <ProductsTab doc={doc} onDoc={onDoc} />}
       {tab === 'works' && <WorksTab doc={doc} onDoc={onDoc} />}
       {tab === 'pros' && <ProsTab doc={doc} onDoc={onDoc} />}
@@ -165,23 +167,20 @@ export function AdminApp() {
       {tab === 'ship' && <ShipTab key={doc.version} doc={doc} onDoc={onDoc} />}
 
       {tab === 'look' && <>
-        <section className="ad-s">
-          <h2>🎨 الألوان</h2>
+        <Fold title="🎨 الألوان">
           <ThemeTab theme={f.theme} set={t => up('theme', t)} />
-        </section>
-        <section className="ad-s">
-          <h2>📣 الشريط المتحرك</h2>
+        </Fold>
+        <Fold title="📣 الشريط المتحرك">
           <label>الكلام اللي بيمشي <small>(سيبه فاضي لو مش عايز شريط)</small>
             <textarea rows={2} maxLength={200} value={f.promo} onChange={e => up('promo', e.target.value)} placeholder="مثلاً: اطلب الآن على الواتساب • توصيل لكل المحافظات" />
           </label>
           <div className="ad-tk" style={{ background: HEX.test(f.theme.accent) ? f.theme.accent : THEME_DEFAULT.accent }}>{f.promo || 'معاينة الشريط'}</div>
           <small className="mut">الشريط بيمشي من الشمال لليمين، فأول الجملة هو اللي بيدخل الأول.</small>
-        </section>
+        </Fold>
       </>}
 
       {tab === 'banner' && <>
-        <section className="ad-s">
-          <h2>🖼️ بنرات الصفحة الرئيسية</h2>
+        <Fold title="🖼️ بنرات الصفحة الرئيسية">
           <p className="mut">الصور اللي بتتقلّب فوق في الرئيسية. لو مفيش صور، الموقع بيستخدم الصورة الرئيسية وصور المنتجات.</p>
           {f.slides.map((u, i) => (
             <div key={u + i} className="ad-row">
@@ -190,33 +189,29 @@ export function AdminApp() {
             </div>
           ))}
           <AddMany label={`+ إضافة بنرات جديدة (${f.slides.length} حالياً)`} onAdd={addSlides} />
-        </section>
-        <section className="ad-s">
-          <h2>🏷️ اللوجو والصورة الرئيسية</h2>
+        </Fold>
+        <Fold title="🏷️ اللوجو والصورة الرئيسية">
           <Img value={f.logo} onChange={u => up('logo', u)} label="لوجو الهيدر (صورة عريضة)" wide />
           <Img value={f.hero} onChange={u => up('hero', u)} label="الصورة الرئيسية (صفحة «مين إحنا»)" wide />
-        </section>
+        </Fold>
       </>}
 
       {tab === 'text' && <>
-        <section className="ad-s">
-          <h2>📝 اسم الموقع</h2>
+        <Fold title="📝 اسم الموقع">
           <label>الاسم<input value={f.name} maxLength={60} onChange={e => up('name', e.target.value)} /></label>
           <label>الجملة التعريفية<input value={f.tagline} maxLength={120} onChange={e => up('tagline', e.target.value)} /></label>
-        </section>
-        <section className="ad-s">
-          <h2>✅ نقط الثقة</h2>
+        </Fold>
+        <Fold title="✅ نقط الثقة">
           <p className="mut">جمل قصيرة بتظهر في الرئيسية (مثلاً: «توصيل لكل المحافظات»).</p>
           {f.trust.map((t, i) => <div key={i} className="ad-line"><input value={t} maxLength={60} onChange={e => up('trust', f.trust.map((x, k) => (k === i ? e.target.value : x)))} /><button type="button" className="lnk" onClick={() => up('trust', f.trust.filter((_, k) => k !== i))} aria-label="شيل">🗑️</button></div>)}
           {f.trust.length < 8 && <button type="button" className="sec" onClick={() => up('trust', [...f.trust, ''])}>+ نقطة جديدة</button>}
-        </section>
-        <section className="ad-s">
-          <h2>🔗 السوشيال ميديا</h2>
+        </Fold>
+        <Fold title="🔗 السوشيال ميديا">
           {([['fb', 'فيسبوك'], ['ig', 'إنستجرام'], ['tt', 'تيك توك'], ['yt', 'يوتيوب']] as const).map(([k, t]) => (
             <label key={k}>{t}<input dir="ltr" inputMode="url" placeholder="https://…" value={f.socials[k]} onChange={e => up('socials', { ...f.socials, [k]: e.target.value })} />
               {f.socials[k] && !/^https?:\/\//i.test(f.socials[k].trim()) && <small className="err">لازم اللينك يبدأ بـ https://</small>}</label>
           ))}
-        </section>
+        </Fold>
       </>}
 
       {tab === 'sections' && (
@@ -246,7 +241,24 @@ export function AdminApp() {
           <p><a href={SITE_URL + '/guide/left-or-right'} target="_blank" rel="noopener">↗ شوف شرح يمين وشمال على الموقع</a></p>
         </section>
       )}
-
+    </>
+  );
+  return (
+    <div className="ad">
+      <header className="ad-h">
+        <h1>إدارة الموقع</h1>
+        <div className="ad-links"><a href={SITE_URL} target="_blank" rel="noopener">↗ افتح الموقع</a><Link href="/weborders">🛒 طلبات الموقع</Link><Link href="/catalog">📖 الكتالوج</Link></div>
+      </header>
+      <div className="ad-tiles">
+        {TABS.map(([k, t]) => tab === k ? (
+          <section key={k} className="ad-open">
+            <button type="button" className="ad-open-h" onClick={() => { setTab(''); setSaved(''); }} aria-label="اقفل"><Ico n={k} size={26} /><b>{t}</b><span className="x">✕</span></button>
+            <div className="ad-open-b">{body(k)}</div>
+          </section>
+        ) : (
+          <button key={k} type="button" className="ad-tile" onClick={() => { setTab(k); setSaved(''); }}><Ico n={k} size={30} /><b>{t}</b></button>
+        ))}
+      </div>
       {GLOBAL.includes(tab) && (
         <div className="ad-bar">
           <span className={saved.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{saved || (dirty ? 'فيه تعديلات لسه متحفظتش' : 'كل حاجة محفوظة')}</span>
