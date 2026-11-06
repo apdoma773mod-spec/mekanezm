@@ -4,12 +4,19 @@ import { EG_MOBILE_RE, normalizePhone } from '../digits.js';
 const optionalText = (max: number) => z.string().trim().max(max);
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'اللون لازم يكون بصيغة #RRGGBB');
 
-/** Images are stored inline (as the old system did); capped so a settings row stays small. */
+/** Images: an uploaded file of the system (/api/v1/work/files/…, keeps the settings small — they load on every open)
+ *  or, from older saves, inline; capped so a settings row stays small. */
 const MAX_IMAGE_CHARS = 3_000_000;
 const imageDataUrl = z
   .string()
   .max(MAX_IMAGE_CHARS, 'الصورة كبيرة، صغّرها شوية')
-  .refine((v) => v === '' || /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(v), 'الصورة مش صالحة');
+  .refine(
+    (v) =>
+      v === '' ||
+      /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(v) ||
+      /^(https:\/\/[a-z0-9.-]+)?\/api\/v1\/work\/files\/[a-z0-9-]{8,64}\.(png|jpe?g|webp)$/.test(v),
+    'الصورة مش صالحة',
+  );
 
 export const storeSettings = z.object({
   name: z.string().trim().min(1, 'اكتب اسم المحل').max(80),
