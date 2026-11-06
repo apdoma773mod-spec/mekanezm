@@ -14,7 +14,7 @@ export const BACKUP_TABLES = [
   'VanClose', 'Contract', 'OutboundMessage', 'SmsIn', 'WaOrder', 'WaPhoto', 'Setting', 'Counter', 'AuditLog',
 ] as const;
 
-const KEEP_DAYS = 31;
+const KEEP_DAYS = Number(process.env.BACKUP_KEEP_DAYS) || 31; // the free hosted database (500 MB) keeps fewer: BACKUP_KEEP_DAYS=7
 
 export interface Snapshot {
   format: 'mekanizm-backup';
