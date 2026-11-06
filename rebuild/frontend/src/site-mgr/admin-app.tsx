@@ -57,6 +57,8 @@ type Tab = 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'rev
 const TAB_KEY = 'mk-site-tab';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
+const DOC_CACHE = 'mk_site_doc_v1';
+
 export function AdminApp() {
   const [stage, setStage] = useState<'load' | 'edit' | 'err'>('load');
   const [msg, setMsg] = useState(''), [busy, setBusy] = useState(false);
@@ -67,11 +69,29 @@ export function AdminApp() {
   // آخر شاشة كنت فيها بتفضل مفتوحة
   useEffect(() => { try { const t = localStorage.getItem(TAB_KEY) as Tab | null; if (t) setTabRaw(t); } catch { /* */ } }, []);
   const setTab = (t: Tab) => { setTabRaw(t); try { localStorage.setItem(TAB_KEY, t); } catch { /* */ } };
-  const reload = () => { setStage('load'); setMsg(''); loadDoc().then(d => { const form = fromDoc(d.data); setDoc(d); setF(form); setSnap(JSON.stringify(form)); setStage('edit'); }).catch(e => { setMsg((e as Error).message); setStage('err'); }); };
+  // ⚡ opens at once: the last copy of the site data is kept on the phone and shown immediately, the fresh copy loads behind it
+  // (saving always re-reads the newest version on the server first, so an old copy on the phone can never overwrite anything)
+  const dirtyRef = useRef(false);
+  const show = (d: SiteDoc) => { const form = fromDoc(d.data); setDoc(d); setF(form); setSnap(JSON.stringify(form)); setStage('edit'); };
+  const reload = () => {
+    setMsg('');
+    let cached: SiteDoc | null = null;
+    try { const raw = localStorage.getItem(DOC_CACHE); if (raw) cached = JSON.parse(raw) as SiteDoc; } catch { /* no copy */ }
+    if (cached?.data) show(cached); else setStage('load');
+    loadDoc()
+      .then(d => {
+        if (cached && cached.version === d.version) return;
+        if (cached && dirtyRef.current) { setDoc(d); return; } // keep what is being typed; saving uses the newest version anyway
+        show(d);
+      })
+      .catch(e => { if (!cached) { setMsg((e as Error).message); setStage('err'); } });
+  };
   useEffect(reload, []);
+  useEffect(() => { if (doc) try { localStorage.setItem(DOC_CACHE, JSON.stringify(doc)); } catch { /* full: skip */ } }, [doc]);
   const [saved, setSaved] = useState('');
 
   const dirty = useMemo(() => !!f && JSON.stringify(f) !== snap, [f, snap]);
+  dirtyRef.current = dirty;
   useEffect(() => {
     if (!dirty) return;
     const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
