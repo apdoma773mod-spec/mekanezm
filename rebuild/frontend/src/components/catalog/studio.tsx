@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CatalogAi } from '@/components/catalog/ai-panel';
 import { uploadSiteImage } from '@/components/modals/site-admin';
 import { useToast } from '@/components/ui/toast';
@@ -16,12 +16,37 @@ const box: React.CSSProperties = { border: '1px solid var(--border,#dfe7ea)', bo
 const lab: React.CSSProperties = { display: 'block', fontSize: 13, color: 'var(--muted,#62767c)', margin: '8px 0 4px' };
 const inp: React.CSSProperties = { width: '100%' };
 
-function Sec({ title, children, open }: { title: string; children: ReactNode; open?: boolean }) {
+/** Every group of settings is an icon: tap it and it opens (full width), tap again and it closes. One open at a time so the screen stays calm. */
+const OpenSec = createContext<{ open: string; set: (t: string) => void }>({ open: '', set: () => {} });
+function Sec({ title, children }: { title: string; children: ReactNode; open?: boolean }) {
+  const { open, set } = useContext(OpenSec);
+  const ref = useRef<HTMLElement>(null);
+  const isOpen = open === title;
+  useEffect(() => {
+    if (isOpen) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isOpen]);
+  const m = /^(\p{Extended_Pictographic}\uFE0F?)\s*(.*)$/u.exec(title);
+  const icon = m?.[1] ?? '⚙️';
+  const rest = m?.[2] ?? title;
+  const name = rest.replace(/\s*[(:—].*$/, '') || rest;
+  const extra = rest.slice(name.length).replace(/^\s*[(:—]\s*/, '').replace(/\)\s*$/, '');
+  if (!isOpen)
+    return (
+      <button type="button" className="cat-tile" onClick={() => set(title)}>
+        <span className="ic">{icon}</span>
+        <b>{name}</b>
+        {extra && <small>{extra}</small>}
+      </button>
+    );
   return (
-    <details open={open} style={box}>
-      <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 15 }}>{title}</summary>
-      <div style={{ marginTop: 8 }}>{children}</div>
-    </details>
+    <section className="cat-open" ref={ref}>
+      <button type="button" className="cat-open-h" onClick={() => set('')} aria-label="اقفل">
+        <span className="ic">{icon}</span>
+        <b>{rest}</b>
+        <span className="x">✕</span>
+      </button>
+      <div className="cat-open-b">{children}</div>
+    </section>
   );
 }
 
@@ -48,6 +73,7 @@ export function CatalogStudio() {
   const [mode, setMode] = useState<'shop' | 'gift'>('shop');
   const [gift, setGift] = useState({ name: '', title: '', from: 'عبده', message: GIFT_MESSAGE });
   const [view, setView] = useState('');
+  const [openSec, setOpenSec] = useState('');
   const [useQ, setUseQ] = useState('');
   const [busy, setBusy] = useState('');
   const [link, setLink] = useState('');
@@ -248,9 +274,25 @@ export function CatalogStudio() {
 
   return (
     <div id="catStudio">
+      <style>{`
+        #catStudio .cat-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin:10px 0}
+        #catStudio .cat-tile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;min-height:104px;padding:12px 6px;border:1px solid var(--border,#dfe7ea);border-radius:16px;background:var(--card,#fff);color:inherit;font:inherit;text-align:center;cursor:pointer;box-shadow:0 1px 3px #0000000d}
+        #catStudio .cat-tile:active{transform:scale(.97)}
+        #catStudio .cat-tile .ic{font-size:30px;line-height:1.1}
+        #catStudio .cat-tile b{font-size:13.5px;line-height:1.35}
+        #catStudio .cat-tile small{font-size:11px;color:var(--muted,#62767c);line-height:1.3}
+        #catStudio .cat-open{grid-column:1/-1;border:2px solid var(--blue,#087f8c);border-radius:16px;background:var(--card,#fff);overflow:hidden;scroll-margin-top:70px}
+        #catStudio .cat-open-h{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:0;background:var(--tint,#e6f2f3);color:inherit;font:inherit;text-align:start;cursor:pointer}
+        #catStudio .cat-open-h .ic{font-size:24px}
+        #catStudio .cat-open-h b{flex:1;font-size:15px}
+        #catStudio .cat-open-h .x{font-size:18px;opacity:.7}
+        #catStudio .cat-open-b{padding:12px}
+      `}</style>
       <p className="bz-note">اعمل كتالوج احترافي بصور كاملة وكتل ألوان وتبويبات للأقسام، وابعته بلينك للعميل أو هدية لشخص ببرقية. مفيش أسعار فيه.</p>
       <input ref={file} type="file" accept="image/*" hidden onChange={(e) => { void upload(e.target.files); e.target.value = ''; }} />
 
+      <OpenSec.Provider value={{ open: openSec, set: (t) => setOpenSec((o) => (o === t ? '' : t)) }}>
+      <div className="cat-tiles">
       <Sec title="🎁 النسخة: ليه الكتالوج ده؟" open>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className={mode === 'shop' ? 'primary' : 'secondary'} onClick={() => setMode('shop')}>🏪 نسخة ميكانيزم العادية</button>
@@ -634,6 +676,9 @@ export function CatalogStudio() {
           هيطلع <b>{picked.length}</b> منتج من {all.length} منشورين على الموقع بصور. المنتج الجديد لازم يتنشر على الموقع الأول عشان يظهر هنا.
         </p>
       </Sec>
+
+      </div>
+      </OpenSec.Provider>
 
       <div style={{ position: 'sticky', bottom: 0, background: 'var(--card,#fff)', borderTop: '1px solid #dfe7ea', padding: '10px 0', display: 'flex', gap: 8, flexWrap: 'wrap', zIndex: 5 }}>
         <button type="button" className="primary" id="catOpen" onClick={() => check() && setView(buildFlipbook(input(true), { close: true }))}>📖 افتح الكتالوج</button>
