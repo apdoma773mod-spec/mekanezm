@@ -17,7 +17,7 @@
   --onblue: #fff;
   --onaccent: #fff;
   --topgap: 0px;
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+  --font: Cairo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
 * {

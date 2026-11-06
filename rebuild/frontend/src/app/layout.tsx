@@ -32,8 +32,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
+        {/* ⚡ the last saved font and colours before anything is drawn (no flash of another font) */}
+        <script dangerouslySetInnerHTML={{ __html: "try{var c=localStorage.getItem('mk_theme_css');if(c)document.documentElement.style.cssText=c}catch(e){}" }} />
         {/* الخط الأساسي بيتحمّل مع الصفحة نفسها */}
         <link rel="preload" href="/fonts/cairo-arabic-400-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/cairo-arabic-700-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
