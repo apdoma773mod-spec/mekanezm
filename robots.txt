@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /app/
-Disallow: /studio/
-Sitemap: https://apdoma773mod-spec.github.io/mekanezm/sitemap.xml
