@@ -6,8 +6,9 @@ import { saveDoc, type Rec, type SiteDoc } from '@/lib/admin-api';
 import { HandDiagram } from '@/components/hand-guide';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from '@/lib/hand';
 import { Imgs, uid7 } from './ui';
+import { SpinEditor } from './spin-editor';
 
-type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
+type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; spin?: string[]; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
 const PAGE = 25;
 const BADGES = ['جديد', 'الأكثر طلباً', 'عرض خاص', 'كمية محدودة', 'وصل حديثاً', 'ضمان'];
@@ -106,7 +107,7 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
   const cur = id ? all.find(p => p.id === id) : undefined;
   const [f, setF] = useState(() => ({
     id: cur?.id ?? uid7(), code: cur?.code ?? '', name: cur?.name ?? '', desc: cur?.desc ?? '', sec: cur?.sec ?? '', imgs: [...(cur?.imgs ?? (cur?.img ? [cur.img] : []))],
-    top: !!cur?.top, video: cur?.video ?? '', hidden: !!cur?.hidden,
+    top: !!cur?.top, spin: [...(cur?.spin ?? [])], video: cur?.video ?? '', hidden: !!cur?.hidden,
     badge: cur?.badge ?? '', brand: cur?.brand ?? '', tags: (cur?.tags ?? []).join('، '), avail: (cur?.avail ?? '') as '' | 'in' | 'out' | 'order',
     seoTitle: cur?.seoTitle ?? '', seoDesc: cur?.seoDesc ?? '', from: cur?.from ?? '', until: cur?.until ?? '',
     dirMode: (cur?.dir?.off ? 'off' : cur?.dir ? 'on' : 'auto') as Dir,
@@ -143,6 +144,7 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         const i = arr.findIndex(y => y.id === f.id);
         const o: Rec = i > -1 ? arr[i] : { id: f.id };
         Object.assign(o, { code: f.code.trim(), name: f.name.trim(), desc: f.desc.split('\n').filter(l => !/^[^:：]{1,30}[:：]\s*$/.test(l.trim())).join('\n').trim(), sec: f.sec, imgs: f.imgs, img: f.imgs[0] ?? '', top: f.top });
+        if (f.spin.length) o.spin = f.spin; else delete o.spin;
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
         const opt = (k: string, v: string) => { if (v.trim()) o[k] = v.trim(); else delete o[k]; };
@@ -199,6 +201,7 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         <textarea rows={9} value={f.desc} onChange={e => set('desc', e.target.value)} placeholder={'سطر أو اتنين عن المنتج.\nالمقاس: 50 سم\nالخامة: ...'} />
         <div className="ad-chips">{SPEC_CHIPS.map(c => <button key={c} type="button" onClick={() => set('desc', (f.desc.trim() ? f.desc.replace(/\s+$/, '') + '\n' : '') + c + ': ')}>＋ {c}</button>)}</div>
       </section>
+      <SpinEditor value={f.spin} onChange={u => set('spin', u)} />
       <section className="ad-s"><h3>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></h3><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} /></section>
       <section className="ad-s">
         <h3>↔️ اتجاه الفتح (يمين / شمال)</h3>

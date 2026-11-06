@@ -886,3 +886,11 @@ a.tb-cart { display: grid; place-items: center; text-decoration: none; }
 .imtags > span { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 99px; background: #ffffffe8; color: #1f2937; box-shadow: 0 2px 8px #0002; backdrop-filter: blur(6px); }
 .imtags .nph { margin-inline-start: auto; }
 .cdesc { margin: -2px 0 0; font-size: 13px; color: var(--mut); line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 360° viewer (product page) */
+.spin { position: relative; aspect-ratio: 1; background: #fff; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; outline-offset: -2px; }
+.spin:active { cursor: grabbing; }
+.spin img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+.spin-hint, .spin-load { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: #0008; color: #fff; border-radius: 14px; font-size: 13px; padding: 4px 12px; pointer-events: none; white-space: nowrap; }
+.spin-tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 0; }
+.spin-tabs button { border: 1px solid #ccc; background: #fff; border-radius: 16px; padding: 4px 14px; font-size: 14px; }
+.spin-tabs button.on { background: #111; color: #fff; border-color: #111; }
