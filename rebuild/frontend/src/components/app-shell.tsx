@@ -112,6 +112,12 @@ function useApplyTheme(T: ThemeSettings | undefined) {
     r.setProperty('--onaccent', textOn(T.accent));
     r.setProperty('--font', fontStack(T.font));
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', T.primary);
+    // remembered so the next open paints with this font and these colours from the first moment (see the script in app/layout.tsx)
+    try {
+      localStorage.setItem('mk_theme_css', r.cssText);
+    } catch {
+      /* ignore */
+    }
   }, [T]);
 }
 
