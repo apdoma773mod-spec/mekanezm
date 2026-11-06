@@ -2,7 +2,7 @@
 // منقول من إدارة الموقع (rebuild/site/src/app/admin) عشان الإدارة كلها تبقى جوه السيستم وتحفظ في نفس المكان اللي الموقع بيقرا منه.
 // Owner admin for the public site: products, sections, works, reviews, delivery + contact, and the look
 // (colors, promo strip, banners, logo, texts, social links). Everything is saved to the same document the system uses.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadDoc, publishNow, saveDoc, SITE_URL, type Rec, type SiteDoc } from './api';
 import Link from 'next/link';
 import { PendingReviews } from '@/components/modals/site-admin';
@@ -85,7 +85,19 @@ export function AdminApp() {
     setSaved('✔ اتحفظ ونزل على الموقع'); publishNow();
   };
 
-  const addSlides = (us: string[]) => setF(x => (x ? { ...x, slides: [...x.slides, ...us] } : x));
+  // Each uploaded banner is saved to the site at once (one after the other): before, they only lived in this screen until «حفظ» was pressed, so a closed page or a retry lost them
+  const slideQ = useRef<Promise<void>>(Promise.resolve());
+  const addSlides = (us: string[]) => {
+    setF(x => (x ? { ...x, slides: [...x.slides, ...us] } : x));
+    slideQ.current = slideQ.current.then(async () => {
+      try {
+        const d = await saveDoc(x => { const cur = Array.isArray(x.slides) ? (x.slides as string[]) : []; x.slides = [...cur, ...us.filter(u => !cur.includes(u))]; });
+        setDoc(d);
+        setSnap(sn => { try { const o = JSON.parse(sn) as Form; o.slides = Array.isArray(d.data.slides) ? (d.data.slides as string[]) : []; return JSON.stringify(o); } catch { return sn; } });
+        setSaved('✔ البنر اتحفظ ونزل على الموقع'); publishNow();
+      } catch (err) { setSaved('✗ البنر اترفع بس ماتحفظش: ' + (err as Error).message + ' — دوس حفظ'); }
+    });
+  };
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF(x => (x ? { ...x, [k]: v } : x));
 
   async function save() {
