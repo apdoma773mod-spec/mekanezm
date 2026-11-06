@@ -6,6 +6,8 @@ import { Footer, Header, Socials } from '@/components/site-parts';
 import Link from 'next/link';
 import { getCatalog, getSettings } from '@/lib/catalog';
 import { GUIDES } from '@/lib/guides';
+import { getScraps } from '@/lib/scraps-server';
+import { ago, sizeText, titleOf } from '@/lib/scraps';
 import { SITE_URL } from '@/lib/config';
 import { catalogUrl, deliveryFee, FAQ, MAP_URL, productPath, sectionPath, slidesList, waUrl } from '@/lib/shop';
 
@@ -14,6 +16,7 @@ export const revalidate = 60;
 const ROW = 12;
 
 export default async function Home() {
+  const scraps = (await getScraps()).slice(0, 6);
   const [{ site: full, ok, fresh }, site] = await Promise.all([getCatalog(), getSettings()]);
   const P = full.products;
   const cat = catalogUrl(site);
@@ -89,6 +92,7 @@ export default async function Home() {
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
+        {scraps.length > 0 && <section className="mkp" aria-labelledby="sl-h"><h2 id="sl-h">♻️ أحدث الفضلات</h2><div className="glist">{scraps.map(s => <Link key={s.id} href="/scraps"><b>{titleOf(s)}</b><small>{sizeText(s)} · {ago(s.created_at)}</small></Link>)}</div></section>}
         <Link className="scrap-tile" href="/scraps" aria-label="فضلة"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="14" width="48" height="36" rx="4" fill="#d9b98a" stroke="#fff" strokeWidth="3"/><path d="M8 28h34M24 14v36" stroke="#fff" strokeWidth="2" strokeDasharray="4 4" fill="none"/><path d="M44 50l12-12" stroke="#fff" strokeWidth="3"/></svg><b>فضلة</b></Link>
         <Link className="trade-strip help-strip" href="/help"><span>🙋</span><b>محتاج حد ينفّذ الشغل؟</b><small>احكيلنا محتاج إيه ونرشّحلك نجار أو مهندس مستقل</small></Link>
         <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>

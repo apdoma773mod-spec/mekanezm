@@ -32,7 +32,7 @@ const Progress = ({ n }: { n: number }) => {
 type Piece = { len: string; wid: string; qty: number };
 const PLAIN_COLORS: [string, string][] = [['أبيض', '#f4f4f1'], ['بيج', '#d9c9a8'], ['رمادي فاتح', '#b5b5b2'], ['رمادي غامق', '#555759'], ['أسود', '#1d1d1d'], ['أحمر', '#a8322d'], ['أزرق', '#2f4f7f'], ['أخضر', '#4a6b4a']];
 const COLOR_SWATCHES: [string, string][] = [...WOOD_LIB.map(w => [w.name, w.tones[1]] as [string, string]), ...PLAIN_COLORS];
-const fix = (v: string) => String(v).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/،/g, '.');
+const fix = (v: string) => String(v).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/،/g, '.').replace(/(d)s*(?:في|ضرب|علي|على)s*(d)/g, '$1×$2');
 /** «١٨ جوزي ٧٠×٣٠ × ٢» or one piece per line → pieces (+ thickness if written). */
 function parseLines(text: string, cat: Cat): { pieces: Piece[]; thick: string } {
   const pieces: Piece[] = []; let thick = '';
@@ -73,6 +73,23 @@ function DrawBox({ maxL, maxW, len, wid, onSet }: { maxL: number; maxW: number; 
       <small>{L && W ? `${L} × ${W} سم` : 'اسحب صباعك على المستطيل'}</small>
     </div>
   );
+}
+
+type SR = { lang: string; continuous: boolean; interimResults: boolean; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; start: () => void; stop: () => void };
+function Voice({ onText }: { onText: (t: string) => void }) {
+  const [on, setOn] = useState(false), [ok, setOk] = useState(true), rec = useRef<SR | null>(null);
+  useEffect(() => { const w = window as unknown as Record<string, unknown>; setOk(!!(w.SpeechRecognition || w.webkitSpeechRecognition)); }, []);
+  if (!ok) return null;
+  const toggle = () => {
+    if (on) { rec.current?.stop(); return; }
+    const w = window as unknown as Record<string, new () => SR>;
+    const R = w.SpeechRecognition || w.webkitSpeechRecognition; const r = new R();
+    r.lang = 'ar-EG'; r.continuous = false; r.interimResults = false;
+    r.onresult = e => { const t = Array.from(e.results).map(x => x[0].transcript).join(' '); onText(t); };
+    r.onend = () => setOn(false); r.onerror = () => setOn(false);
+    rec.current = r; setOn(true); r.start();
+  };
+  return <button type="button" className={'sc-chip' + (on ? ' on' : '')} onClick={toggle}>{on ? '🎙 بسمعك… دوس عشان توقف' : '🎤 قول المقاسات بصوتك'}</button>;
 }
 
 export function AddForm() {
@@ -242,6 +259,7 @@ export function AddForm() {
         <label style={{ marginTop: 8 }}>أو اكتب الحتت كلها (سطر لكل حتة) <small>مثال: 70×30 ×2</small>
           <textarea rows={3} value={lines} onChange={e => setLines(e.target.value)} placeholder={'70×30\n50×25 × 3\n120×40'} />
         </label>
+        <Voice onText={t => { const r = parseLines(t, cat); if (!r.pieces.length) { setLines(x => (x ? x + " " : '') + t); return setMsg('سمعت: «' + t + '» — قولها زي: سبعين في تلاتين'); } setPieces(p => [...p, ...r.pieces]); if (r.thick) setF(x => ({ ...x, thick: r.thick })); setMsg('✔ اتضافت ' + r.pieces.length + ' حتة'); }} />
         {lines.trim() && <button type="button" className="sc-chip" onClick={() => {
           const r = parseLines(lines, cat);
           if (!r.pieces.length) return setMsg('ماقدرتش أفهم المقاسات — اكتبها زي 70×30');

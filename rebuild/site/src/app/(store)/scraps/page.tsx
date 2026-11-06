@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'سوق فضلة النجارين: دوّر على حتة لوح أو خشب أو ألمونيوم | ميكانيزم',
   description: 'محتاج وش درج 70×25 وعايز تتفادى لوح كامل؟ دوّر على فضلة عند نجارين تانيين، أو ضيف الفضلة اللي عندك. ببلاش وبدون تسجيل.',
   alternates: { canonical: '/scraps' },
+  manifest: '/scraps.webmanifest',
+  icons: { apple: '/scraps-180.png' },
+  appleWebApp: { capable: true, title: 'فضلة' },
 };
 
 export default async function Scraps() {

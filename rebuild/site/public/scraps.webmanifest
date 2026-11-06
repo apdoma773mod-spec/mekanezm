@@ -1,0 +1,16 @@
+{
+  "name": "فضلة",
+  "short_name": "فضلة",
+  "id": "/scraps/add",
+  "start_url": "/scraps/add",
+  "scope": "/scraps",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#2f5d3a",
+  "theme_color": "#2f5d3a",
+  "icons": [
+    { "src": "/scraps-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/scraps-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
