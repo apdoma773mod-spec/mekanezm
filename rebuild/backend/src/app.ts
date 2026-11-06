@@ -49,6 +49,7 @@ import webPublicRoutes from './modules/web/public.js';
 import aiRoutes from './modules/ai/routes.js';
 import portalRoutes from './modules/portal/routes.js';
 import { daybookImportRoutes } from './modules/daybook/import.js';
+import cronRoutes from './modules/cron/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -128,6 +129,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(webPublicRoutes, { prefix: '/web' });
       await api.register(aiRoutes, { prefix: '/ai' });
       await api.register(portalRoutes, { prefix: '/portal' });
+      await api.register(cronRoutes, { prefix: '/cron' });
     },
     { prefix: '/api/v1' },
   );

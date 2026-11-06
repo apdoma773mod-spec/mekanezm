@@ -8,7 +8,7 @@ const dstSchema = new URL(process.env.DATABASE_URL).searchParams.get('schema') ?
 const srcSchema = new URL(process.env.SRC_URL).searchParams.get('schema') ?? 'public';
 if (dstSchema === 'public') throw new Error('refusing to write into public');
 
-const tables = (await src.$queryRawUnsafe(`select table_name t from information_schema.tables where table_schema='${srcSchema}' and table_type='BASE TABLE' and table_name <> '_prisma_migrations' order by 1`)).map((r) => r.t);
+const tables = (await src.$queryRawUnsafe(`select table_name t from information_schema.tables where table_schema='${srcSchema}' and table_type='BASE TABLE' and table_name <> '_prisma_migrations' and table_name <> all(string_to_array('${process.env.SKIP_TABLES ?? ''}', ',')) order by 1`)).map((r) => r.t);
 const fks = await src.$queryRawUnsafe(`select c.conrelid::regclass::text a, c.confrelid::regclass::text b from pg_constraint c where c.contype='f' and c.connamespace='${srcSchema}'::regnamespace`);
 const dep = new Map(tables.map((t) => [t, new Set()]));
 for (const f of fks) {

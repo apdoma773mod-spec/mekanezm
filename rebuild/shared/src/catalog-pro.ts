@@ -4,6 +4,8 @@
  * مفيش أسعار (قاعدة المالك). ممكن يطلع PDF (A4 ورا بعض) أو كتاب بيتقلّب بإيدك مع خانة بحث.
  */
 
+import { STORY_PHOTOS } from './story-photos.js';
+
 export interface CatProduct {
   code: string;
   name: string;
@@ -61,6 +63,43 @@ export const TIPS = [
 ];
 
 export const DEFAULT_ARTICLES: Article[] = [
+  {
+    id: 'a-size',
+    on: true,
+    kind: 'دليل المقاسات',
+    title: 'مقاساتنا صريحة: اطلب بالمقاس الخارجي',
+    sec: '',
+    body: `الإكسسوار بييجي بمقاسه الفعلي زي ما هو مكتوب. مفيش «٧٥ ونص» ولا «٦٥ تقريبًا» ولا «زوّد سنتي ونضبط»: الرقم المكتوب هو الرقم اللي هتقيسه.
+وده معناه حاجة واحدة بسيطة تفيد أي صنايعي: اطلب بمقاس العلبة من بره. لو عايز مطبقية ٧٠ تبقى العلبة بالخشب من الخارج ٧٠، ولو ٨٠ تبقى ٨٠ من الخارج. وإحنا نجهّز لك القطعة ناقص سُمك الخشب.
+## الحسبة
+سُمك الجنب ١٨ مم، وفيه جنبين، يعني ٣٦ مم (٣٫٦ سم) بيتشالوا من المقاس الخارجي.
+- مقاس العلبة من بره ٦٠ ← القطعة ٥٦٫٤ سم
+- مقاس العلبة من بره ٧٠ ← القطعة ٦٦٫٤ سم
+- مقاس العلبة من بره ٨٠ ← القطعة ٧٦٫٤ سم
+- مقاس العلبة من بره ٩٠ ← القطعة ٨٦٫٤ سم
+- مقاس العلبة من بره ١٠٠ ← القطعة ٩٦٫٤ سم
+القاعدة دي على درج إكسسوار المجوهرات، ودرج الخزنة، وشماعة البناطيل، ودرج المطبقية، والمطبقية العادية والهيدروليك.
+> لو خشبك مش ١٨ مم، قول لنا السُمك وإحنا نحسب لك الرقم.
+> اختار الميكانيزم الأول، وبعدين قسّم الرسم. المقاس بيتحدد على حسبه مش العكس.`,
+  },
+  {
+    id: 'a-acc',
+    on: true,
+    kind: 'ليه الإكسسوار',
+    title: 'الإكسسوار هو اللي بيعمّر الدولاب',
+    sec: '',
+    body: `مسطح الخشب ما بيبوظش. ولا بتشوف ضرفة اتكسرت نصين ولا جنب دولاب اتفلق من نفسه. اللي بيتعب دايمًا هو القطعة اللي بتتحرك: المفصلة، المجرى، الميكانيزم.
+## من خبرة عبده
+- الصنايعي ما بيرجعش للعميل عشان الخشب. بيرجع عشان مفصلة أو مجرى أو ميكانيزم.
+- إيه فايدة تعب الدولاب كله لو العجل اللي بيمشي عليه الدرفة أو الجرار اخترناه «أي كلام» والدرفة وقعت؟
+- الفرق في تمن الإكسسوار بسيط جنب تعب الصنعة، لكنه اللي بيحدد الدولاب هيعيش قد إيه.
+## من اللي بيقوله الناس في الصنعة
+- المفصلات والمقابض من أكتر القطع اللي بتتغيّر في الدواليب، لأنها أكتر حاجة بتتحرك (مناقشة مهنيين في موقع WoodWeb، وموقع Canadian Tire).
+- فك الجرارات وتراخيها بيحصل لما المجرى يتركب بعدد براغي أقل من اللازم (WoodWeb).
+- الدرج العريض بيقل حمله الفعلي على نفس المجرى، فاختار مجرى على قد العرض والحمل (cabinetparts.com).
+- اختار المجرى الأول، لأنه هو اللي بيحدد عرض الدرج بالنسبة للفتحة، ولازم ترجع للمواصفات الفنية للموديل نفسه قبل القص (cabinetparts.com).
+> ابدأ بالميكانيزم، واشتريه بمقاسه الصريح، وبعدين ارسم.`,
+  },
   {
     id: 'a-order',
     on: true,
@@ -218,10 +257,18 @@ export interface CatCfg {
   gift?: { name: string; title: string; from: string; message: string };
 }
 
-export const STORY_TEXT = `بدأت الحكاية بفضول. فضول قديم لفهم السر وراء قطعة صغيرة اسمها الميكانيزم، وكيف لسوفت كلوز واحد أن يغيّر إحساس الدولاب كله ويوفّر الوقت والمجهود.
-تعلّمت الشغلانة بإيدي، وبدأت رحلتي بتروسيكل صغير أمرّ به على الورش: «السلام عليكم، أنا عبده، بوزّع إكسسوار ورش ولوازم نجارة. اتفرّج على اللي معايا، ولو احتجت حاجة خد رقمي وأجيبها لك». لفّيت الشوارع زيجزاج أدوّر على ورش النجارة والألمنيوم، ومع الوقت عرفني الصنايعية وكبر الشغل.
-بعدها فتحت محلًا صغيرًا في شارع المعرض، ثم وُلدت «ميكانيزم»: معرض محترم فيه ماكيت مطبخ وماكيت دريسنج، وجرارات ومفصلات تشوفها وتجربها بإيدك.
-اللي بينا مش بيع قطع… ده ثقة اتبنت بالسهر والتعب والمسؤولية، وبنكمّلها معاك.`;
+export const OLD_STORY_STARTS = ['بدأت الحكاية بفضول', 'الحكاية ما بدأتش بمحل'];
+/** «---» بيقسم الحكاية على صفحات، وكل صفحة ليها صورة من STORY_PHOTOS بالترتيب. */
+export const STORY_TEXT = `قبل اللافتة المنوّرة وقبل المعرض، كان فيه تروسيكل أزرق. عليه كراتين فوق بعض، وخشب مربوط بحبل برتقالي، وقطاعات ألمنيوم طالعة من وراه لحد ما تقرّب من الشارع.
+منه بدأت الحكاية، من ملاحظة شافها عبده بعينه: الصنايعي بيضيع يوم كامل علشان قطعة صغيرة. يلف السوق كله يدوّر على مفصلة أو مجرى أو ميكانيزم، ويرجع آخر النهار بإيد فاضية أو بقطعة مش هي، والشغل واقف والعميل مستني.
+وهنا اكتشف عبده الحل: بدل ما الصنايعي يلف، هو اللي يوصل له. اللفة اللي كان الصنايعي بيلفها طول اليوم يلفها عبده بدله، والصنايعي يفضل في ورشته بيشتغل.
+---
+فبقى التروسيكل هو المحل، والزحمة هي الطريق. يخرج الصبح ويدخل الورش واحدة واحدة، وجملته معروفة: «اللي ناقصك أجيبه لك، وجرّب بإيدك، ولو ما عجبكش ما تشتريش». وكان بيسمع أكتر ما بيتكلم؛ يسمع عن اليوم اللي ضاع في السوق، وعن الدولاب اللي استنى قطعة أسبوع.
+ولا كان الطريق مفروش. جت مواسم اتقفلت فيها الأبواب، وجت شحنة غير اللي اتطلب، وجت شهور السؤال فيها مكانش «هنكبر إزاي» لكن «هنكمّل إزاي». الشغل وقع أكتر من مرة. وفي كل مرة كان التروسيكل أول حاجة بتتحرك؛ شاله في عز الأزمة، وصبر معاه، ووقّفه على رجليه. وعبده كان بيقوم وهو فاهم حاجة جديدة، وبيرجّع لكل واحد وثق فيه حقه كاملًا قبل أي خطوة بعدها.
+---
+ولما اتفتح المعرض، فضل التروسيكل أيقونة الحكاية: أول شاهد، وآخر حاجة هننسى فضلها. وفي المعرض ماكيت مطبخ وماكيت دريسنج، علشان الصنايعي والعميل يجرّبوا الحركة بإيديهم قبل الشراء.
+ومن الطريق ده طلعت لنا قاعدة لسه ماشيين عليها: الخشب بيفضل مكانه، لكن الميكانيزم هو اللي بيتحرك ألف مرة في اليوم. فاختار الميكانيزم الأول، وخد المقاس صريح، وسيب الباقي علينا.`;
+export const STORY_CAPTIONS = ['التروسيكل.. أول معرض لميكانيزم', 'وكان دايمًا واقف جنبه', 'واللافتة اتنوّرت'];
 
 export const GIFT_MESSAGE = `تحية طيبة وبعد،
 يسعد ميكانيزم أن تُهدي إلى سيادتكم هذا الكتالوج، ثمرة سنوات من العمل والخبرة في عالم الحركة والإكسسوارات، آملين أن تجدوا فيه ما يُلهم أعمالكم ويُيسّر تنفيذها.
@@ -282,7 +329,7 @@ export const DEFAULT_CFG: CatCfg = {
   prodUse: {},
   ai: {},
   photos: {},
-  articlesV: 2,
+  articlesV: 3,
 };
 
 export const FONTS = ['Cairo', 'Tajawal', 'Almarai', 'Readex Pro', 'IBM Plex Sans Arabic', 'Noto Kufi Arabic', 'El Messiri', 'Changa'];
@@ -296,9 +343,15 @@ export function mergeCfg(c?: Partial<CatCfg> | null): CatCfg {
     cover: { ...d.cover, ...c?.cover },
     secImgs: { ...c?.secImgs },
     flags: { ...d.flags, ...c?.flags },
-    story: { ...d.story, ...c?.story },
-    articles: Array.isArray(c?.articles) ? [...c.articles, ...((c.articlesV ?? 1) < 2 ? d.articles.filter((a) => NEW_IN_V2.includes(a.id) && !c.articles!.some((x) => x.id === a.id)) : [])] : d.articles,
-    articlesV: 2,
+    story: c?.story?.text && !OLD_STORY_STARTS.some((o) => c.story!.text!.startsWith(o)) ? { ...d.story, ...c.story } : { ...d.story, ...c?.story, text: d.story.text },
+    articles: Array.isArray(c?.articles)
+      ? [
+          ...d.articles.filter((a) => (c.articlesV ?? 1) < 3 && NEW_IN_V3.includes(a.id) && !c.articles!.some((x) => x.id === a.id)),
+          ...c.articles,
+          ...((c.articlesV ?? 1) < 2 ? d.articles.filter((a) => NEW_IN_V2.includes(a.id) && !c.articles!.some((x) => x.id === a.id)) : []),
+        ]
+      : d.articles,
+    articlesV: 3,
     extras: { ...d.extras, ...c?.extras },
     showroomImgs: Array.isArray(c?.showroomImgs) ? c.showroomImgs : [],
     secTexts: { ...c?.secTexts },
@@ -321,6 +374,7 @@ export interface CatInput {
 }
 
 const NEW_IN_V2 = ['a-order', 'a-services'];
+const NEW_IN_V3 = ['a-size', 'a-acc'];
 
 /** ألوان الأقسام لما «لون لكل قسم» شغال (زي تبويبات الكتالوجات العالمية) */
 export const SECTION_COLORS = ['#f5a623', '#0aa84f', '#1597d5', '#e2711d', '#8e2de2', '#d6457f', '#14b8a6', '#c62828', '#7cb518', '#b8860b', '#3d8bfd', '#ef6f5e'];
@@ -433,7 +487,7 @@ svg.bp{position:absolute;inset:0;width:100%;height:100%}
 .sty h2{font-size:56px;margin:0;position:relative;color:var(--gl)}
 .sty .bar{margin:16px 0 28px;position:relative}
 .sty p{font-size:19px;line-height:2.1;margin:0 0 12px;position:relative;opacity:.96}
-.sty .sg{font-size:22px;color:var(--gl);font-weight:700;margin-top:18px;position:relative}
+.sty.ph{padding:56px 60px 40px;display:flex;flex-direction:column}.sty.ph h2{font-size:46px}.sty.ph p{font-size:17.5px;line-height:2}.sty .sf{margin:auto 0 0;padding-top:14px;position:relative;text-align:center}.sty .sf img{display:block;margin:0 auto;max-width:100%;max-height:calc(var(--H,1123px)*.42);border:6px solid #fff;border-radius:var(--r,18px);box-shadow:0 18px 40px #0008;transform:rotate(-1.2deg)}.sty .sf figcaption{margin-top:14px;color:var(--gl);font-weight:800;font-size:17px;letter-spacing:.02em}.sty .sg{font-size:22px;color:var(--gl);font-weight:700;margin-top:18px;position:relative}
 .note{padding:80px 60px;background:repeating-linear-gradient(#fff 0 39px,#e3ecee 39px 40px)}
 .note h2{font-size:30px;color:var(--td);margin:0 0 20px;background:#fff;display:inline-block;padding:0 10px}
 /* ===== تبويبات الأقسام ===== */
@@ -783,11 +837,16 @@ export function proPages(inp: CatInput): Built {
     });
   }
   if (F.story) {
-    add(() => `<section class="pg sty"><div class="q">”</div><h2>${esc(cfg.story.title)}</h2><div class="bar"></div>${cfg.story.text
-      .split('\n')
-      .filter((x) => x.trim())
-      .map((x) => `<p>${esc(x)}</p>`)
-      .join('')}<div class="sg">— ${esc(inp.shop)}</div></section>`);
+    const keys = ['thumb', 'parked', 'sign'];
+    const parts = cfg.story.text.split(/^s*---+s*$/m).map((x) => x.trim()).filter(Boolean);
+    const photos = parts.length === 3 && cfg.story.text === STORY_TEXT;
+    parts.forEach((part, k) => {
+      add(() => `<section class="pg sty${photos ? ' ph' : ''}"><div class="q">”</div>${k === 0 ? `<h2>${esc(cfg.story.title)}</h2><div class="bar"></div>` : '<div class="bar" style="margin-top:0"></div>'}${part
+        .split('\n')
+        .filter((x) => x.trim())
+        .map((x) => `<p>${esc(x)}</p>`)
+        .join('')}${photos ? `<figure class="sf"><img src="${STORY_PHOTOS[keys[k]!]}" alt=""><figcaption>${esc(STORY_CAPTIONS[k]!)}</figcaption></figure>` : ''}${k === parts.length - 1 ? `<div class="sg">— ${esc(inp.shop)}</div>` : ''}</section>`);
+    });
   }
 
   // معرضنا: صور المعرض (من الإدارة) في كولاج

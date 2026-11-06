@@ -175,6 +175,32 @@ export default function DashboardPage() {
       </button>
       {admin && <PriceLookupCard />}
 
+      {overview.data && (
+        <div className="stats" style={{ marginTop: 14 }}>
+          {(
+            [
+              ['box', 'عدد المنتجات', String(overview.data.productsCount)],
+              ...(overview.data.stockValue != null ? [['wallet', 'قيمة المخزون', money(overview.data.stockValue)]] : []),
+              ['up', 'إجمالي المبيعات', money(overview.data.salesTotal)],
+              ['down', 'إجمالي المشتريات', money(overview.data.purchasesTotal)],
+              [null, 'أصناف نفدت', String(overview.data.outCount)],
+              [null, 'أصناف تحت حد التنبيه', String(overview.data.lowCount)],
+              [null, 'مستحق للموردين', money(overview.data.suppliersOwed)],
+            ] as [string | null, string, string][]
+          ).map(([ic, l, v]) => (
+            <div className="stat" key={l}>
+              {ic && (
+                <div className="ic">
+                  <Icon name={ic as 'box'} />
+                </div>
+              )}
+              <small>{l}</small>
+              <strong>{v}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid2">
         <div className="card">
           <h3>آخر العمليات</h3>

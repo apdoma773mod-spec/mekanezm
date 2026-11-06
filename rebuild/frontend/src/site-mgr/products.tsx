@@ -2,7 +2,9 @@
 // منقول من إدارة الموقع (rebuild/site/src/app/admin) عشان الإدارة كلها تبقى جوه السيستم وتحفظ في نفس المكان اللي الموقع بيقرا منه.
 // Admin → products: search, add, edit (photos, section, description + specs, video, featured, hidden, left/right guidance), delete.
 // Products are matched with the system by CODE (stock and orders use it), so the code must be the system's own product code.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ProductDto } from '@mk/shared';
+import { useProductInfo, useProducts, type ProductInfo } from '@/lib/trade-queries';
 import { saveDoc, SITE_URL, type Rec, type SiteDoc } from './api';
 import { HandDiagram } from './hand-stub';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from './lib/hand';
@@ -22,8 +24,12 @@ export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) 
   const [q, setQ] = useState(''), [sec, setSec] = useState(''), [page, setPage] = useState(1);
   const [view, setView] = useState<View>('all'), [sort, setSort] = useState<Sort>('new');
   const [pick, setPick] = useState<Set<string>>(new Set()), [busy, setBusy] = useState(false), [note, setNote] = useState('');
-  const [edit, setEdit] = useState<string | 'new' | null>(null);
+  const [edit, setEdit] = useState<string | 'new' | { sys: ProductDto } | null>(null);
   const all: P[] = doc.data.products ?? [];
+  // 📦 the shop's own stock: search it here, so a product that is already set up in the system is picked, not typed again
+  const sysQ = useProducts({ q: q.trim(), pageSize: 15 }, q.trim().length >= 1);
+  const onSite = useMemo(() => new Set(all.map(p => String(p.code ?? ''))), [all]);
+  const sysOnly = (sysQ.data?.items ?? []).filter(x => !onSite.has(String(x.code)));
   const secs: { id: string; name: string }[] = doc.data.sections ?? [];
   const secName = (id: string) => secs.find(s => s.id === id)?.name ?? '—';
   const noImg = (p: P) => !(p.imgs?.length || p.img);
@@ -60,7 +66,7 @@ export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) 
     const a = document.createElement('a'); a.href = url; a.download = 'products.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  if (edit) return <ProductEditor doc={doc} id={edit === 'new' ? null : edit} onDoc={onDoc} onClose={() => setEdit(null)} />;
+  if (edit) return <ProductEditor doc={doc} id={edit === 'new' || typeof edit === 'object' ? null : edit} sys={typeof edit === 'object' ? edit.sys : undefined} onDoc={onDoc} onClose={() => setEdit(null)} />;
   return (
     <section className="ad-s">
       <div className="ad-top"><h2>📦 المنتجات ({all.length})</h2><div className="ad-acts"><button type="button" className="lnk" onClick={exportCsv} disabled={!list.length}>⬇️ Excel</button><button className="pri" onClick={() => setEdit('new')}>＋ منتج جديد</button></div></div>
@@ -82,7 +88,21 @@ export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) 
         </div>
       )}
       {note && <p className={note.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{note}</p>}
-      {!list.length && <p className="mut">{all.length ? 'مفيش منتج بالفلتر ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
+      {q.trim() && sysOnly.length > 0 && (
+        <section className="ad-s" aria-label="من المخزن">
+          <h3>📦 من المخزن — لسه مش على الموقع <small>دوس على المنتج تكمّله وتنشره، بياناته وصوره من السيستم بتيجي لوحدها</small></h3>
+          <div className="ad-list">{sysOnly.map(x => (
+            <div key={x.id}>
+              <button type="button" className="ad-li" onClick={() => setEdit({ sys: x })}>
+                <span className="th">📦</span>
+                <span className="tx"><b>{x.name}</b><small>كود {x.code} · {x.category || 'من غير قسم'} · متاح {x.qty}</small></span>
+                <span className="bd"><i title="انشره على الموقع">⬆️</i></span>
+              </button>
+            </div>
+          ))}</div>
+        </section>
+      )}
+      {!list.length && !sysOnly.length && <p className="mut">{all.length ? 'مفيش منتج بالفلتر ده.' : 'لسه مفيش منتجات — دوس «منتج جديد».'}</p>}
       {shown.length > 0 && <label className="ad-ck ad-all"><input type="checkbox" checked={allShownPicked} onChange={() => setPick(s => { const n = new Set(s); shown.forEach(p => (allShownPicked ? n.delete(p.id) : n.add(p.id))); return n; })} /> اختيار كل اللي في الصفحة</label>}
       <div className="ad-list">{shown.map(p => (
         <div key={p.id} className={'ad-row' + (pick.has(p.id) ? ' sel' : '')}>
@@ -101,12 +121,26 @@ export function ProductsTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) 
 
 type Dir = 'auto' | 'on' | 'off';
 
-function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string | null; onDoc: (d: SiteDoc) => void; onClose: () => void }) {
+/** What the system's product screen holds (brand, size, finish, specs, description, photos) as the site's description text: «المقاس: …» lines are specs. */
+function sysDesc(info: ProductInfo): string {
+  const lines = String(info.descr ?? '').split('\n').map(l => l.trim()).filter(Boolean);
+  const spec = (k: string, v: string) => { if (v.trim() && !lines.some(l => l.startsWith(k + ':'))) lines.push(`${k}: ${v.trim()}`); };
+  spec('المقاس', info.size ?? '');
+  spec('اللون', info.finish ?? '');
+  for (const l of String(info.specs ?? '').split('\n').map(x => x.trim()).filter(Boolean)) if (!lines.includes(l)) lines.push(l);
+  return lines.join('\n');
+}
+
+function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: string | null; sys?: ProductDto; onDoc: (d: SiteDoc) => void; onClose: () => void }) {
   const all: P[] = doc.data.products ?? [];
   const secs: { id: string; name: string }[] = doc.data.sections ?? [];
   const cur = id ? all.find(p => p.id === id) : undefined;
+  // the system product behind this one (found by code): its photos and data fill whatever the site product still lacks
+  const found = useProducts({ q: cur?.code ?? '', pageSize: 5 }, !!cur?.code && !sys);
+  const sysProd = sys ?? found.data?.items.find(x => String(x.code) === String(cur?.code));
+  const sysInfo = useProductInfo(sysProd?.id ?? null).data;
   const [f, setF] = useState(() => ({
-    id: cur?.id ?? uid7(), code: cur?.code ?? '', name: cur?.name ?? '', desc: cur?.desc ?? '', sec: cur?.sec ?? '', imgs: [...(cur?.imgs ?? (cur?.img ? [cur.img] : []))],
+    id: cur?.id ?? uid7(), code: cur?.code ?? sys?.code ?? '', name: cur?.name ?? sys?.name ?? '', desc: cur?.desc ?? '', sec: cur?.sec ?? secs.find(s => s.name === sys?.category)?.id ?? '', imgs: [...(cur?.imgs ?? (cur?.img ? [cur.img] : []))],
     top: !!cur?.top, video: cur?.video ?? '', hidden: !!cur?.hidden,
     badge: cur?.badge ?? '', brand: cur?.brand ?? '', tags: (cur?.tags ?? []).join('، '), avail: (cur?.avail ?? '') as '' | 'in' | 'out' | 'order',
     seoTitle: cur?.seoTitle ?? '', seoDesc: cur?.seoDesc ?? '', from: cur?.from ?? '', until: cur?.until ?? '',
@@ -117,6 +151,30 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
   }));
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF(x => ({ ...x, [k]: v }));
+  // fill from the system once, only what is empty here (never overwrites what was written on the site)
+  const filled = useRef('');
+  const [pulled, setPulled] = useState('');
+  useEffect(() => {
+    if (!sysInfo || !sysProd || filled.current === sysProd.id) return;
+    filled.current = sysProd.id;
+    const got: string[] = [];
+    setF(x => {
+      const n = { ...x };
+      if (!x.imgs.length && sysInfo.imgs?.length) { n.imgs = [...sysInfo.imgs]; got.push(`${sysInfo.imgs.length} صورة`); }
+      const d = sysDesc(sysInfo);
+      if (!x.desc.trim() && d) { n.desc = d; got.push('الوصف والمواصفات'); }
+      if (!x.brand.trim() && sysInfo.brand?.trim()) { n.brand = sysInfo.brand.trim(); got.push('الماركة'); }
+      return n;
+    });
+    setTimeout(() => setPulled(got.length ? '📦 اتسحب من شاشة المنتج في السيستم: ' + got.join('، ') : ''), 0);
+  }, [sysInfo, sysProd]);
+  /** ⟳ take the system's data again, replacing what is here. */
+  function repull() {
+    if (!sysInfo) return;
+    if (!window.confirm('تستبدل الصور والوصف الحاليين ببيانات السيستم؟')) return;
+    setF(x => ({ ...x, imgs: sysInfo.imgs?.length ? [...sysInfo.imgs] : x.imgs, desc: sysDesc(sysInfo) || x.desc, brand: sysInfo.brand?.trim() || x.brand }));
+    setPulled('📦 اتسحبت بيانات السيستم من جديد');
+  }
   const pair = f.pairCode.trim() ? all.find(x => x.id !== f.id && x.code === f.pairCode.trim()) : undefined;
   const autoHand = handFromName(f.name);
   // what the customer will see: the chosen type, or the one detected from the name
@@ -147,7 +205,8 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         if (f.video.trim()) o.video = f.video.trim(); else delete o.video;
         if (f.hidden) o.hidden = true; else delete o.hidden;
         const opt = (k: string, v: string) => { if (v.trim()) o[k] = v.trim(); else delete o[k]; };
-        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('from', f.from); opt('until', f.until); opt('avail', f.avail);
+        delete o.from; delete o.until; // the date window is gone from the screen: a product is always shown
+        opt('badge', f.badge); opt('brand', f.brand); opt('seoTitle', f.seoTitle); opt('seoDesc', f.seoDesc); opt('avail', f.avail);
         const tg = f.tags.split(/[,،\n]/).map(x => x.trim()).filter(Boolean);
         if (tg.length) o.tags = tg; else delete o.tags;
         if (f.dirMode === 'off') o.dir = { off: true };
@@ -183,10 +242,17 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
   return (
     <div>
       <div className="ad-top"><button type="button" className="lnk" onClick={onClose}>→ رجوع للمنتجات</button><h2>{cur ? '✏️ تعديل منتج' : '➕ منتج جديد'}</h2></div>
+      {sysProd && (
+        <p className="mut" aria-live="polite">
+          📦 مربوط بمنتج المخزن «{sysProd.name}» (كود {sysProd.code}).{' '}
+          {pulled || (sysInfo ? 'مفيش في شاشة المنتج صور أو بيانات زيادة تتسحب.' : '⏳ بسحب بياناته من السيستم…')}{' '}
+          {sysInfo && <button type="button" className="lnk" onClick={repull}>⟳ هات بيانات السيستم تاني</button>}
+        </p>
+      )}
       <section className="ad-s">
         <h3>📝 البيانات الأساسية</h3>
         <label>اسم المنتج على الموقع<input value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={e => set('name', e.target.value)} /></label>
-        <label>كود المنتج <small>(نفس كوده في السيستم — منه بيتحسب المخزون والطلبات)</small><input dir="ltr" value={f.code} disabled={!!cur} onChange={e => set('code', e.target.value)} /></label>
+        <label>كود المنتج <small>(نفس كوده في السيستم — منه بيتحسب المخزون والطلبات)</small><input dir="ltr" value={f.code} disabled={!!cur || !!sys} onChange={e => set('code', e.target.value)} /></label>
         <label>القسم
           <select value={f.sec} onChange={e => (e.target.value === '__new' ? newSection() : set('sec', e.target.value))}>
             <option value="">— اختار القسم —</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}<option value="__new">＋ قسم جديد…</option>
@@ -224,15 +290,8 @@ function ProductEditor({ doc, id, onDoc, onClose }: { doc: SiteDoc; id: string |
         <label>كلمات بحث إضافية <small>(بالفاصلة — العميل يلاقي المنتج بيها: مثلاً «بلوم، مجرى مخفي»)</small><input value={f.tags} onChange={e => set('tags', e.target.value)} /></label>
       </section>
       <section className="ad-s">
-        <h3>📦 التوفر والجدولة</h3>
+        <h3>📦 التوفر</h3>
         <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
-        <div className="ad-two"><label>يظهر من تاريخ<input type="date" dir="ltr" value={f.from} onChange={e => set('from', e.target.value)} /></label><label>يختفي بعد تاريخ<input type="date" dir="ltr" value={f.until} onChange={e => set('until', e.target.value)} /></label></div>
-        <small className="mut">سيب التواريخ فاضية لو عايزه يظهر دايماً.</small>
-      </section>
-      <section className="ad-s">
-        <h3>🔎 ظهور في جوجل</h3>
-        <label>عنوان الصفحة <small>(اختياري)</small><input value={f.seoTitle} maxLength={70} onChange={e => set('seoTitle', e.target.value)} /></label>
-        <label>وصف جوجل <small>({f.seoDesc.length}/155)</small><textarea rows={2} maxLength={155} value={f.seoDesc} onChange={e => set('seoDesc', e.target.value)} /></label>
       </section>
       <section className="ad-s">
         <h3>👁️ الظهور</h3>

@@ -1109,3 +1109,11 @@ model CameraChannel {
   snapshot   String    @default("")
   note       String    @default("")
 }
+
+/// Uploaded photos/PDFs when the backend runs on Vercel (no disk, no storage key): kept in the database. See lib/files.ts.
+model StoredFile {
+  name      String   @id
+  type      String   @default("")
+  data      Bytes
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
