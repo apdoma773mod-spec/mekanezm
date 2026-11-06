@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AttendanceDto, PointsConfig, StaffConfig, StaffDto, StaffInput, StaffMonth, StaffMoveDto } from '@mk/shared';
+import { FacesModal } from '@/components/camera/faces-modal';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -117,6 +118,8 @@ const emptyStaff = (): StaffInput => ({
   userId: null,
   note: '',
   active: true,
+  gapHours: 2,
+  place: 'shop',
 });
 
 function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: () => void }) {
@@ -124,6 +127,7 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
   const save = useSaveStaff();
   const [f, setF] = useState<StaffInput>(s ? { ...s, nid: s.nid, startDate: s.startDate } : emptyStaff());
   const set = (p: Partial<StaffInput>) => setF((x) => ({ ...x, ...p }));
+  const [faces, setFaces] = useState(false);
   const go = async () => {
     if (!f.name.trim()) return toast('اكتب الاسم', 'bad');
     if (f.userId && d.staff.some((x) => x.userId === f.userId && x.id !== s?.id)) return toast('الحساب ده مربوط بموظف تاني', 'bad');
@@ -206,6 +210,25 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
             ))}
           </select>
         </div>
+        <div className="field">
+          <label>مكانه (للكاميرات)</label>
+          <select id="stPlace" value={f.place} onChange={(e) => set({ place: e.target.value as StaffInput['place'] })}>
+            <option value="shop">المحل</option>
+            <option value="market">السوق</option>
+            <option value="both">الاتنين</option>
+          </select>
+        </div>
+        <div className="field">
+          <label>انصراف لو ما اتشافش بعد (ساعات)</label>
+          <input id="stGap" type="number" min="0.5" max="24" step="0.5" value={f.gapHours} onChange={(e) => set({ gapHours: num(e.target.value) || 2 })} />
+        </div>
+        {s && (
+          <div className="field full">
+            <button type="button" className="secondary" id="stFaces" onClick={() => setFaces(true)}>
+              📸 صور الوش (عشان الكاميرات تعرفه)
+            </button>
+          </div>
+        )}
         <div className="field full">
           <label>ملاحظات</label>
           <input value={f.note} onChange={(e) => set({ note: e.target.value })} />
@@ -226,6 +249,7 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
           إلغاء
         </button>
       </div>
+      {faces && s && <FacesModal s={s} onClose={() => setFaces(false)} />}
     </Modal>
   );
 }

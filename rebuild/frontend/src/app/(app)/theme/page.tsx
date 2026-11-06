@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { NavCard } from '@/components/nav-card';
 import { ProThemeCard, ProUiCard } from '@/components/pro';
 import { HtmlPreview } from '@/components/ui/html-preview';
 import { Modal } from '@/components/ui/modal';
@@ -43,6 +44,8 @@ const SAMPLE: InvoiceDto = {
   paid: 300,
   remaining: 150,
   payMethod: 'CASH',
+  online: false,
+  onlineFrom: '',
   items: [
     { id: '1', productId: null, code: null, name: 'مفصلة هيدروليك', unit: 'قطعة', qty: 10, price: 30, total: 300 },
     { id: '2', productId: null, code: null, name: 'مقبض ألومنيوم', unit: 'قطعة', qty: 5, price: 30, total: 150 },
@@ -121,6 +124,7 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
         }
       />
       <ProThemeCard />
+      <NavCard />
       <ProUiCard />
       <div className="grid2">
         <div className="card">

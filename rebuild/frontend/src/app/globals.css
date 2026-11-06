@@ -615,7 +615,7 @@ input[type='color'] {
   color: #fff;
   padding: 12px 18px;
   border-radius: 10px;
-  z-index: 100;
+  z-index: 2147483600;
   max-width: calc(100% - 32px);
   text-align: center;
 }
@@ -911,3 +911,33 @@ svg.i {
 .kt-row{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.kt-row>div{flex:1;min-width:110px}
 .kt-chip{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;background:#eef6f7;color:#087f8c;margin:2px}
 .kt-need{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px dashed var(--border,#e3e8ea)}
+
+/* 📷 الكاميرات + 📸 صور الوش */
+#camera .cm-box{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:12px;margin:10px 0;display:grid;gap:10px}
+#camera .cm-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#camera .cm-row select{max-width:100%}
+#camera .cm-note{margin:0;color:#7b8a90;font-size:13px}
+#camera .cm-ok{color:#0a7a45;font-weight:700}
+#camera .cm-bad,#camera .cm-tag.cm-bad{color:#b42318;font-weight:700}
+#camera .cm-h{margin:18px 0 8px}
+#camera .cm-chs{display:grid;gap:6px}
+#camera .cm-ch-set{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#camera .cm-cams{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+#camera .cm-cam{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:8px;display:grid;gap:4px}
+#camera .cm-cam img{width:100%;border-radius:10px;cursor:zoom-in}
+#camera .cm-noimg{background:#eef2f3;border-radius:10px;padding:40px 8px;text-align:center;color:#8a979c}
+#camera .cm-table td{vertical-align:top}
+#camera .cm-table tr.cm-warn{background:#fff4f2}
+#camera .cm-tag{display:inline-block;background:#eef2f3;border-radius:8px;padding:2px 8px;margin:2px;font-size:12px}
+#camera .cm-tag.cm-ok{background:#e6f6ee}
+#camera .cm-chips{display:flex;flex-wrap:wrap;gap:4px;max-width:260px}
+#camera .cm-chip{border:1px solid var(--border,#d4dcdf);background:#fff;border-radius:8px;padding:2px 7px;font-size:12px;cursor:pointer}
+#camera .cm-face{width:44px;height:44px;object-fit:cover;border-radius:50%;float:right;margin-left:6px}
+#camera .cm-x{padding:2px 8px;margin:2px}
+#camera .cm-market{font-size:12px}
+#camera .cm-unk{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+#camera .cm-unk-card{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:8px;display:grid;gap:6px}
+#camera .cm-unk-card img{width:100%;border-radius:10px}
+.fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.fc-item{display:grid;gap:4px;text-align:center}
+.fc-item img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}

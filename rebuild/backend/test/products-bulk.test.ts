@@ -56,6 +56,30 @@ describe('bulk price', () => {
   });
 });
 
+describe('search spelling', () => {
+  it('finds a product whatever the ة/ه, ى/ي and أ/ا spelling', async () => {
+    await product('مفصلة أوروبي', 10, 5, 1);
+    const find = async (q: string) => (await call(admin, 'GET', `/products?q=${encodeURIComponent(q)}`)).json().items.length;
+    expect(await find('مفصله')).toBe(1);
+    expect(await find('اوروبي')).toBe(1);
+    expect(await find('اوروبى')).toBe(1);
+  });
+});
+
+describe('re-categorise', () => {
+  it('moves the sent products to their new category, owner only', async () => {
+    const a = await product('مفصلة عدل', 10, 5, 1);
+    const b = await product('مجرى سفلي', 10, 5, 1);
+    expect((await call(staff, 'POST', '/products/recat', { items: [{ id: a.id, category: 'مفصلات' }] })).statusCode).toBe(403);
+    const res = await call(admin, 'POST', '/products/recat', { items: [{ id: a.id, category: 'مفصلات' }, { id: b.id, category: 'مجرى الادراج' }] });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().updated).toBe(2);
+    expect((await fetchP(a.id)).category).toBe('مفصلات');
+    expect((await fetchP(b.id)).category).toBe('مجرى الادراج');
+    expect((await call(admin, 'POST', '/products/recat', { items: [{ id: a.id, category: 'مفصلات' }] })).json().updated).toBe(0);
+  });
+});
+
 describe('split a roll', () => {
   it('moves stock from the big unit to the small one and spreads the cost', async () => {
     const roll = await product('لفة سلك', 1000, 500, 4, 'لفة');

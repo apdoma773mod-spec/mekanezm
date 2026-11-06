@@ -12,6 +12,8 @@ import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 
+const recentPays = new Map<string, number>();
+
 /** «تحصيل دفعة» from a customer / «سداد للمورد». */
 export function PaymentModal({ contactId }: { contactId: string }) {
   const { open } = useModal();
@@ -48,8 +50,15 @@ export function PaymentModal({ contactId }: { contactId: string }) {
     const v = validate(paymentInput, { contactId, amount: amt, method, note });
     if (!v.ok) return setErrors(v.errors);
     setErrors({});
+    // old mkPayDup: the same amount for the same person within two minutes asks first
+    const dupKey = `${contactId}|${Math.round(Number(v.data.amount) * 100) / 100}`;
+    if (Date.now() - (recentPays.get(dupKey) ?? 0) < 120000) {
+      const who = isC ? 'العميل' : 'المورد';
+      if (!window.confirm(`نفس الدفعة (${money(Number(v.data.amount))}) اتسجلت لنفس ${who} من أقل من دقيقتين. تسجلها تاني؟`)) return;
+    }
     try {
       await create.mutateAsync(v.data);
+      recentPays.set(dupKey, Date.now());
       toast(isC ? 'تم تسجيل التحصيل' : 'تم تسجيل السداد');
       back();
     } catch (err) {

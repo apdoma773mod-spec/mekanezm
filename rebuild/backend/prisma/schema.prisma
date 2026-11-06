@@ -328,6 +328,10 @@ model Invoice {
   paidSplit   Json?
   /// "" for invoices typed in directly, "DAYBOOK" when made by settling the daybook.
   source      String         @default("")
+  /// Sale to an online customer (Facebook / WhatsApp / site) — «🌐 عميل أونلاين» in the sale window.
+  online      Boolean        @default(false)
+  /// Where the online sale came from: SITE | WA | FB | IG | OTHER ("" = not said).
+  onlineFrom  String         @default("")
   /// Inter-company deal: the other company, and the id shared by the sale and the purchase.
   ic          Company?
   icRef       String?
@@ -610,11 +614,18 @@ model Staff {
   userId     String?      @unique
   note       String       @default("")
   active     Boolean      @default(true)
+  /// camera attendance: hours without a sighting before the last one counts as «انصراف»
+  gapHours   Float        @default(2)
+  /// shop | market | both — market/both never raise late/absent alerts
+  place      String       @default("shop")
   createdAt  DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime     @updatedAt @db.Timestamptz(3)
   attendance Attendance[]
   moves      StaffMove[]
   points     StaffPoint[]
+  facePhotos FacePhoto[]
+  sightings  Sighting[]
+  marketDays MarketDay[]
 }
 
 model Attendance {
@@ -628,6 +639,8 @@ model Attendance {
   method    String    @default("qr")
   note      String    @default("")
   byName    String    @default("")
+  /// the face crop the camera wrote this record from (empty for QR/manual)
+  snapshot  String    @default("")
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   staff     Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
@@ -901,6 +914,8 @@ model WebOrder {
   customerName String
   phone        String    @default("")
   items        Json
+  /// How the customer wants it: { method: pickup|delivery|ship, gov, area, address } (sent by the site).
+  ship         Json?
   /// new | done | cancelled
   status       String    @default("new")
   /// What the customer was told about pickup («بكره إن شاء الله»…).
@@ -909,6 +924,41 @@ model WebOrder {
   repliedAt    DateTime? @db.Timestamptz(3)
   handledAt    DateTime? @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+/// «📷 طلبات بالصور»: a customer sent a photo of a product he could not find on the site.
+model WebRequest {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String    @default("")
+  imgs      Json      @default("[]")
+  note      String    @default("")
+  /// new | replied | closed
+  status    String    @default("new")
+  reply     String    @default("")
+  repliedAt DateTime? @db.Timestamptz(3)
+  repliedBy String    @default("")
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+/// «🛠️ طلبات تجهيز من الموقع»: sizes for stainless, bamboo drawers or cabinet doors chosen on the site.
+model WebCustom {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @default("")
+  /// steel | bamboo | delf
+  kind      String
+  summary   String   @default("")
+  note      String   @default("")
+  img       String   @default("")
+  spec      Json     @default("{}")
+  /// new | opened | closed | cancelled
+  status    String   @default("new")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([status, createdAt])
 }
@@ -1006,4 +1056,64 @@ model Backup {
   day    String   @id
   data   Json
   madeAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+/// 📸 A worker's enrolled face photo; the camera bridge turns `photo` into `embedding`.
+model FacePhoto {
+  id        String   @id @default(cuid())
+  staffId   String
+  /// data:image/jpeg;base64,…
+  photo     String
+  embedding Float[]
+  /// pending | ready | noface
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId])
+}
+
+/// «شوفته الساعة كذا»: one recognised (or unknown) face seen by a camera channel.
+model Sighting {
+  id        String   @id @default(cuid())
+  staffId   String?
+  channel   Int
+  score     Float    @default(0)
+  at        DateTime @db.Timestamptz(3)
+  snapshot  String   @default("")
+  /// only kept for unknown faces, so the owner can name them later
+  embedding Float[]
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  staff     Staff?   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, at])
+  @@index([at])
+}
+
+/// «🛒 النهارده في السوق»: that worker is not expected at the shop that day.
+model MarketDay {
+  id      String   @id @default(cuid())
+  staffId String
+  day     DateTime @db.Date
+  staff   Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, day])
+}
+
+/// Last snapshot and sighting per DVR channel, written by the camera bridge.
+model CameraChannel {
+  channel    Int       @id
+  lastSnapAt DateTime? @db.Timestamptz(3)
+  lastSeenAt DateTime? @db.Timestamptz(3)
+  snapshot   String    @default("")
+  note       String    @default("")
+}
+
+/// Uploaded photos/PDFs when the backend runs on Vercel (no disk, no storage key): kept in the database. See lib/files.ts.
+model StoredFile {
+  name      String   @id
+  type      String   @default("")
+  data      Bytes
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }

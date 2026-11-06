@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import '@fontsource/cairo/400.css';
-import '@fontsource/cairo/700.css';
-import '@fontsource/cairo/800.css';
+import './cairo.css';
 import '@fontsource/tajawal/400.css';
 import '@fontsource/tajawal/700.css';
 import '@fontsource/almarai/400.css';
@@ -21,7 +19,8 @@ export const metadata: Metadata = {
   title: 'MEKANIZM | نظام المخزون',
   description: 'سيستم إدارة محل ميكانيزم',
   robots: { index: false, follow: false },
-  appleWebApp: { title: 'ميكانيزم', statusBarStyle: 'default' },
+  appleWebApp: { title: 'ميكانيزم', statusBarStyle: 'default', capable: true },
+  icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
@@ -34,6 +33,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ar" dir="rtl">
+      <head>
+        {/* الخط الأساسي بيتحمّل مع الصفحة نفسها */}
+        <link rel="preload" href="/fonts/cairo-arabic-400-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/cairo-arabic-700-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/cairo-latin-400-normal.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

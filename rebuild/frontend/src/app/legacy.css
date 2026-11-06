@@ -910,6 +910,22 @@ body.mk-fast #mkLogo svg *{animation:none!important}
  body.mk-tcards main table.mkTc td:first-child{font-weight:800;font-size:16px}
  body.mk-tcards main table.mkTc td:empty{display:none}
 }
+/* طلب صاحب المحل: الكارت يبان كله على عرض الموبايل من غير يمين وشمال، وكل مربع مفصول بلون عن اللي حواليه */
+@media(max-width:700px){
+ body.mk-tcards main table.mkTc{min-width:0!important}
+ body.mk-tcards main .table-wrap:has(table.mkTc){overflow-x:visible}
+ body.mk-tcards main table.mkTc td{flex-wrap:wrap;overflow-wrap:anywhere;word-break:break-word;min-width:0}
+ body.mk-tcards main table.mkTc td>*{min-width:0;max-width:100%}
+ body.mk-tcards main table.mkTc tr{background:var(--tint2,#f1f8f9);border:2.5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.07);color:var(--text,#18343a)}
+}
+body main .card .card,body .modal .card{background:var(--tint2,#f1f8f9);border:2.5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.06);color:var(--text,#18343a)}
+/* 👆 على الموبايل: الزراير والخانات أكبر عشان الصباع مايدوسش غلط، والكتابة مايصغرش عشان الآيفون مايعملش زووم */
+@media(max-width:700px){
+ main button,main .primary,main .secondary,.modal button,.modal .primary,.modal .secondary{min-height:44px}
+ main input,main select,main textarea,.modal input,.modal select,.modal textarea{min-height:44px;font-size:16px}
+ main input[type=checkbox],main input[type=radio],.modal input[type=checkbox],.modal input[type=radio]{min-height:0}
+}
+body main .card .card .card,body .modal .card .card{background:var(--card,#fff);border:1.5px solid var(--tintb,#b9dadd)}
 
 
 /* ---- index.html 10904-10923 ---- */
@@ -935,7 +951,7 @@ body.mk-fast #mkLogo svg *{animation:none!important}
 
 
 /* ---- index.html 2880: 🔔 شريط التنبيهات الدايم (كان بيتحط بالـ JS) ---- */
-#mkNb{position:fixed;top:0;left:0;right:0;z-index:99990;display:none;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff4d6;border-bottom:2px solid #f0b46a;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;direction:rtl;box-shadow:0 2px 10px #0002}#mkNb button{flex:none;border:0;border-radius:99px;padding:8px 13px;font-size:14px;font-weight:700;background:#fff;color:#7a4a00;border:1px solid #f0b46a;white-space:nowrap}#mkNb button b{background:#d62d20;color:#fff;border-radius:99px;padding:1px 8px;margin-inline-start:4px}body.hasNb{padding-top:var(--nbH,48px)!important}body.hasNb #wkApp{top:var(--nbH,48px)!important}
+#mkNb{position:fixed;top:0;left:0;right:0;z-index:45;display:none;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff4d6;border-bottom:2px solid #f0b46a;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;direction:rtl;box-shadow:0 2px 10px #0002}#mkNb button{flex:none;border:0;border-radius:99px;padding:8px 13px;font-size:14px;font-weight:700;background:#fff;color:#7a4a00;border:1px solid #f0b46a;white-space:nowrap}#mkNb button b{background:#d62d20;color:#fff;border-radius:99px;padding:1px 8px;margin-inline-start:4px}body.hasNb{padding-top:var(--nbH,48px)!important}body.hasNb #wkApp{top:var(--nbH,48px)!important}
 
 /* ---- index.html 1728-1733: زرار المستخدم فوق «👤 الاسم — خروج» ---- */
 #whoBtn{width:auto!important;padding:0 12px;font-size:13px!important;font-weight:700;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}

@@ -16,6 +16,7 @@ import {
   type StaffPointDto,
 } from '@mk/shared';
 import { isAdmin, type Actor } from '../../lib/actor.js';
+import { raiseAlert } from '../../lib/alerts.js';
 import { writeAudit } from '../../lib/audit.js';
 import { dateToDay, dayToDate, todayYmd } from '../../lib/dates.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
@@ -28,16 +29,17 @@ const PTS_KEY = 'staff_points';
 const PUNCH_TTL_MS = 90_000;
 
 /** Hours and minutes in Cairo for a moment. */
-const cairoHm = (d: Date) => {
+export const cairoHm = (d: Date) => {
   const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d).split(':').map(Number);
   return h! * 60 + m!;
 };
-const toMin = (hhmm: string) => {
+export const hmCairo = (d: Date) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+export const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 };
 /** A Cairo wall-clock time on a day as a UTC instant (Egypt is UTC+2 or +3 in summer). */
-function cairoInstant(day: string, hhmm: string): Date {
+export function cairoInstant(day: string, hhmm: string): Date {
   const guess = new Date(`${day}T${hhmm}:00Z`);
   const offset = cairoHm(guess) - toMin(hhmm);
   const fix = ((offset % 1440) + 1440) % 1440;
@@ -65,6 +67,8 @@ const staffDto = (s: Staff): StaffDto => ({
   userId: s.userId,
   note: s.note,
   active: s.active,
+  gapHours: s.gapHours,
+  place: (s.place === "market" || s.place === "both" ? s.place : "shop") as StaffDto["place"],
 });
 const attDto = (a: Attendance): AttendanceDto => ({
   id: a.id,
@@ -73,7 +77,8 @@ const attDto = (a: Attendance): AttendanceDto => ({
   inAt: a.inAt?.toISOString() ?? null,
   outAt: a.outAt?.toISOString() ?? null,
   lateMin: a.lateMin,
-  method: a.method === 'manual' ? 'manual' : 'qr',
+  method: a.method === 'manual' ? 'manual' : a.method === 'camera' ? 'camera' : 'qr',
+  snapshot: a.snapshot || undefined,
   note: a.note,
 });
 const moveDto = (m: StaffMove): StaffMoveDto => ({
@@ -230,11 +235,15 @@ export class StaffService {
         const late = Math.max(0, cairoHm(now) - toMin(s.shiftStart));
         await tx.attendance.create({ data: { staffId: s.id, day, inAt: now, lateMin: late > 600 ? 0 : late, method: 'qr', byName: s.name } });
         await writeAudit(tx, { userId: actor.id, action: 'ATTENDANCE_SAVE', entity: 'Staff', entityId: s.id, after: { in: now.toISOString() }, ip: actor.ip });
-        return { kind: 'in' as const, name: s.name, at: now.toISOString(), late: late > 600 ? 0 : late };
+        const lm = late > 600 ? 0 : late;
+        // 🔔 «حضور وانصراف الموظفين والتأخير»: the owner gets it on WhatsApp; late counts after 10 minutes, as the old screen says
+        await raiseAlert(tx, 'staff', `👷 ${s.name} حضر الساعة ${hmCairo(now)}${lm > 10 ? ` — متأخر ${lm} دقيقة` : ''}`, actor);
+        return { kind: 'in' as const, name: s.name, at: now.toISOString(), late: lm };
       }
       if (a.outAt) throw badRequest('اتسجل حضورك وانصرافك النهارده خلاص');
       await tx.attendance.update({ where: { id: a.id }, data: { outAt: now } });
       await writeAudit(tx, { userId: actor.id, action: 'ATTENDANCE_SAVE', entity: 'Staff', entityId: s.id, after: { out: now.toISOString() }, ip: actor.ip });
+      await raiseAlert(tx, 'staff', `👷 ${s.name} انصرف الساعة ${hmCairo(now)}`, actor);
       return { kind: 'out' as const, name: s.name, at: now.toISOString(), late: a.lateMin };
     });
   }

@@ -9,7 +9,8 @@ import { errorMessage } from '@/lib/api';
 import { darken, fontStack, mix, rgba, textOn } from '@/lib/format';
 import { useLogout, useMe, useSettings } from '@/lib/queries';
 import { useInboxCounts } from '@/lib/inbox-queries';
-import { useWebOrderCount } from '@/lib/web-queries';
+import { useWebCounts } from '@/lib/web-queries';
+import { PowerExtras } from './power-extras';
 import { BgFx, NotifyBar, MkMini, pageIdOf, proOn, ProIcon, ProLogo, Ticker, useProBody } from './pro';
 import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
@@ -47,7 +48,9 @@ const MAIN: NavItem[] = [
   { href: '/work?k=forf', label: 'عود الفرفورجيه', icon: '🔥', adminOnly: true, pro: 'mkSideFf' },
   { href: '/sales', label: 'المبيعات', icon: 'up', mobile: true },
   { href: '/weborders', label: 'طلبات الموقع', icon: 'file', adminOnly: true, badge: 'web' },
-  { href: '/site-content', label: 'محتوى الموقع', icon: '🌐', adminOnly: true },
+  { href: '/site', label: 'إدارة الموقع', icon: '🌐', adminOnly: true },
+  { href: '/catalog', label: 'الكتالوج', icon: '📖', adminOnly: true },
+  { href: '/sources', label: 'مصادر من بره', icon: '📇', adminOnly: true },
   { href: '/quotes', label: 'عروض الأسعار', icon: '📝' },
   { href: '/waorders', label: 'طلبات الواتساب', icon: '💬', adminOnly: true, badge: 'waOrders' },
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
@@ -58,6 +61,7 @@ const MAIN: NavItem[] = [
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
   { href: '/reports', label: 'التقارير', icon: 'chart', adminOnly: true, mobile: true },
   { href: '/staff', label: 'العمالة والمرتبات', staffLabel: 'حضوري', icon: '👷' },
+  { href: '/camera', label: 'الكاميرات', icon: '📷', adminOnly: true },
   { href: '/kits', label: 'الأطقم والتركيبات', icon: '🧩', adminOnly: true },
   { href: '/terms', label: 'أسعار وحدود العملاء', icon: '🏷️', adminOnly: true, pro: 'custTerms' },
   { href: '/samples', label: 'العينات', icon: '🧪' },
@@ -73,6 +77,7 @@ const COMPANIES: NavItem[] = [
   { href: '/work?k=off', label: 'الفضل', icon: '🧰', adminOnly: true },
   { href: '/keywords', label: 'كلمات الواتساب المفتاحية', icon: '🔑', adminOnly: true, pro: 'mkSideKw' },
   { href: '/biz', label: 'تحليلات ذكية', icon: '📈', adminOnly: true },
+  { href: '/private', label: 'خاص عبده', icon: '🔒', adminOnly: true },
 ];
 const SYSTEM: NavItem[] = [{ href: '/account', label: 'حسابي', icon: '👤', staffOnly: true, mobile: true }];
 /** «الإعدادات والخروج»: «ميكانيزم برو» moved theme, settings and logout to the end of the sidebar. */
@@ -139,7 +144,8 @@ function Shell({ children }: { children: ReactNode }) {
   const { open } = useModal();
   const router = useRouter();
   const counts = useInboxCounts(!!me.data && me.data.role === 'ADMIN');
-  const webCount = useWebOrderCount(!!me.data && me.data.role === 'ADMIN');
+  const webCounts = useWebCounts(!!me.data && me.data.role === 'ADMIN');
+  const webCount = { data: webCounts.data ? webCounts.data.orders + webCounts.data.requests + webCounts.data.custom : 0 };
   const logout = useLogout();
   const T = settings.data?.theme;
   useApplyTheme(T);
@@ -183,6 +189,7 @@ function Shell({ children }: { children: ReactNode }) {
       <Link
         key={i.href}
         href={i.href}
+        prefetch={i.href === '/site-content' ? false : undefined}
         data-page={k}
         className={isActive(pathname, i.href) ? 'active' : ''}
         onClick={(e) => {
@@ -213,8 +220,9 @@ function Shell({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <ProBody />
       </Suspense>
-      {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} />}
+      {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} web={webCounts.data} />}
       <PunchCatcher />
+      <PowerExtras />
       <header className="top">
         <div className="brand">
           {!pro && navBtn}
@@ -238,6 +246,9 @@ function Shell({ children }: { children: ReactNode }) {
           </button>
           <button type="button" className="icon-btn" onClick={() => open({ kind: 'quick' })} title="إضافة" aria-label="إضافة">
             <Icon name="plus" />
+          </button>
+          <button type="button" className="icon-btn" onClick={() => open({ kind: 'voice' })} title="أمر صوتي" aria-label="أمر صوتي">
+            🎤
           </button>
           {admin ? (
             <>

@@ -16,6 +16,41 @@ interface CheckResult {
   tables: Record<string, number>;
 }
 
+function OutsideCopy() {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['backup-copy'], queryFn: () => api.get<{ copy: { dir: string; lastAt?: string; lastFile?: string; lastError?: string } }>('/backup/copy').then((r) => r.copy) });
+  const [dir, setDir] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: (d: string) => api.put('/backup/copy', { dir: d }),
+    onSuccess: () => {
+      toast('✔ اتحفظ، واتعملت نسخة في الفولدر');
+      setDir(null);
+      void qc.invalidateQueries({ queryKey: ['backup-copy'] });
+    },
+    onError: (e) => toast(errorMessage(e), 'bad'),
+  });
+  const c = q.data;
+  const val = dir ?? c?.dir ?? '';
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', marginTop: 12, paddingTop: 10 }} id="backupCopy">
+      <b>🛟 نسخة تانية بره الكمبيوتر</b>
+      <div style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.8 }}>
+        النسخ فوق متخزّنة جوه قاعدة البيانات نفسها، فلو الكمبيوتر باظ تضيع معاه. اكتب هنا مكان تاني (فلاشة، هارد تاني، أو فولدر جوجل درايف) والسيستم يحط فيه ملف كل يوم.
+      </div>
+      <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
+        <input dir="ltr" style={{ flex: 1, minWidth: 0 }} placeholder="مثلاً: E:\نسخ-ميكانيزم" value={val} onChange={(e) => setDir(e.target.value)} />
+        <button type="button" className="primary" disabled={save.isPending || dir === null} onClick={() => save.mutate(val)}>
+          {save.isPending ? '⏳' : 'حفظ'}
+        </button>
+      </div>
+      {c?.dir && !c.lastError && c.lastAt && <small style={{ color: 'var(--green)' }}>✔ آخر نسخة بره: {c.lastFile} ({new Date(c.lastAt).toLocaleString('ar-EG')})</small>}
+      {c?.lastError && <small style={{ color: 'var(--danger)' }}>⚠️ آخر نسخة بره ماتمّتش: {c.lastError} — اتأكد إن الفلاشة/الهارد متوصّل.</small>}
+      {!c?.dir && <small style={{ color: '#8a4b00' }}>⚠️ لسه مفيش نسخة بره الكمبيوتر.</small>}
+    </div>
+  );
+}
+
 export function BackupCard() {
   const toast = useToast();
   const qc = useQueryClient();
@@ -70,6 +105,7 @@ export function BackupCard() {
       <button type="button" className="primary" style={{ width: '100%', padding: 15, margin: '10px 0' }} disabled={now.isPending} onClick={() => now.mutate()}>
         {now.isPending ? 'جاري...' : 'نسخة احتياطية دلوقتي'}
       </button>
+      <OutsideCopy />
       {list.isError && <div style={{ color: 'var(--danger)' }}>{errorMessage(list.error)}</div>}
       {list.data?.slice(0, 10).map((x) => (
         <div key={x.day} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px dashed var(--border)' }}>

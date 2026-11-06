@@ -19,6 +19,7 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { RatingStars } from '../rating-stars';
 import { useSampleCount } from '@/lib/phase4-queries';
 import { useInvNotes } from '@/lib/trade-queries';
 
@@ -91,6 +92,11 @@ export function ContactFile({ id }: { id: string }) {
         </div>
       )}
       <div className="card" style={{ background: 'var(--tint2)', border: 0, lineHeight: 2 }}>
+        {isC && (
+          <div>
+            التقييم: <RatingStars contactId={c.id} />
+          </div>
+        )}
         <div>
           التليفون: <b dir="ltr">{c.phone || '—'}</b>
         </div>
