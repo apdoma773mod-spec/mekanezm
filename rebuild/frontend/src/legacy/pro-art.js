@@ -28,6 +28,7 @@
   waorders:['#0D9488','<path d="M5.5 17.5A8.5 8.5 0 1 1 8.6 20L4 21z"/><path d="M9 10h6M9 13.5h4"/>'],
   staff:['#57534E','<path d="M4 17h16M6 17a6 6 0 0 1 12 0"/><path d="M12 7v4.5M9 9.6v2.2M15 9.6v2.2"/>'],
   biz:['#BE185D','<path d="m3 17 6-6 4 4 8-8"/><path d="M14.5 7H21v6.5"/>'],
+  camera:['#0EA5E9','<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'],
   kits:['#047857','<path d="M12 3 21 8l-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>'],
   mkSideWk:['#B45309','<circle cx="9" cy="15" r="4.5"/><circle cx="9" cy="15" r="1.4"/><path d="M9 9v1.5M9 19.5V21M3 15h1.5M13.5 15H15M14 4h6v9h-6z"/>'],
   mkSideKw:['#F59E0B','<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14.5 8.5l2 2"/>'],

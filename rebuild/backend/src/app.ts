@@ -20,6 +20,10 @@ import cashRoutes from './modules/cash/routes.js';
 import daybookRoutes from './modules/daybook/routes.js';
 import closingRoutes from './modules/closing/routes.js';
 import countsRoutes from './modules/counts/routes.js';
+import ratingRoutes from './modules/contacts/rating.js';
+import costRiseRoutes from './modules/products/cost-rises.js';
+import autoRoutes from './modules/alerts/auto.js';
+import dailyCountRoutes from './modules/counts/daily.js';
 import reportsRoutes from './modules/reports/routes.js';
 import insightsRoutes from './modules/insights/routes.js';
 import quotesRoutes from './modules/quotes/routes.js';
@@ -33,6 +37,7 @@ import hydrolekRoutes from './modules/hydrolek/routes.js';
 import workRoutes from './modules/work/routes.js';
 import { smsRoutes } from './modules/inbox/sms.js';
 import { bridgeRoutes } from './modules/inbox/bridge.js';
+import cameraRoutes, { cameraBridgeRoutes } from './modules/camera/routes.js';
 import { inboxAdminRoutes } from './modules/inbox/admin.js';
 import backupRoutes from './modules/backup/routes.js';
 import termsRoutes from './modules/terms/routes.js';
@@ -40,8 +45,13 @@ import marketRoutes from './modules/market/routes.js';
 import analyticsRoutes from './modules/analytics/routes.js';
 import alertsRoutes from './modules/alerts/routes.js';
 import webRoutes from './modules/web/routes.js';
+import webPublicRoutes from './modules/web/public.js';
+import scrapRoutes from './modules/scraps/routes.js';
+import { useSavedAiKey } from './modules/web/catalog-ai.js';
+import aiRoutes from './modules/ai/routes.js';
 import portalRoutes from './modules/portal/routes.js';
 import { daybookImportRoutes } from './modules/daybook/import.js';
+import cronRoutes from './modules/cron/routes.js';
 
 export interface BuildOptions {
   config: Config;
@@ -65,6 +75,13 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
   await app.register(rateLimit, { global: false });
   await app.register(prismaPlugin, { prisma });
   await app.register(authPlugin);
+  // ⏱️ any request slower than 1 s is written to the log with its time, so slow screens can be found later
+  // one Gemini key pasted in the system (catalog page) runs every AI feature
+  app.addHook('onRequest', async () => { await useSavedAiKey(app.prisma); });
+  app.addHook('onResponse', async (request, reply) => {
+    const ms = reply.elapsedTime;
+    if (ms > 1000) request.log.warn({ slow: true, ms: Math.round(ms), url: request.url, method: request.method }, 'slow request');
+  });
 
   await app.register(
     async (api) => {
@@ -87,6 +104,10 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(daybookImportRoutes, { prefix: '/daybook-import' });
       await api.register(closingRoutes, { prefix: '/closings' });
       await api.register(countsRoutes, { prefix: '/counts' });
+      await api.register(ratingRoutes, { prefix: '/contact-rating' });
+      await api.register(costRiseRoutes, { prefix: '/cost-rises' });
+      await api.register(autoRoutes, { prefix: '/autosend' });
+      await api.register(dailyCountRoutes, { prefix: '/daily-count' });
       await api.register(reportsRoutes, { prefix: '/reports' });
       await api.register(insightsRoutes, { prefix: '/insights' });
       await api.register(quotesRoutes, { prefix: '/quotes' });
@@ -100,6 +121,8 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(workRoutes, { prefix: '/work' });
       await api.register(smsRoutes, { prefix: '/sms' });
       await api.register(bridgeRoutes, { prefix: '/bridge' });
+      await api.register(cameraBridgeRoutes, { prefix: '/bridge/camera' });
+      await api.register(cameraRoutes, { prefix: '/camera' });
       await api.register(inboxAdminRoutes, { prefix: '/inbox' });
       await api.register(backupRoutes, { prefix: '/backup' });
       await api.register(termsRoutes, { prefix: '/terms' });
@@ -107,7 +130,11 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(analyticsRoutes, { prefix: '/analytics' });
       await api.register(alertsRoutes, { prefix: '/alerts' });
       await api.register(webRoutes, { prefix: '/web' });
+      await api.register(webPublicRoutes, { prefix: '/web' });
+      await api.register(scrapRoutes, { prefix: '/web/scraps' });
+      await api.register(aiRoutes, { prefix: '/ai' });
       await api.register(portalRoutes, { prefix: '/portal' });
+      await api.register(cronRoutes, { prefix: '/cron' });
     },
     { prefix: '/api/v1' },
   );

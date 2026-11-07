@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { VersionCard } from '@/components/nav-card';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { storeSettings, type StoreSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { BackupCard } from '@/components/backup/backup-card';
+import { AutoMessagesCard } from '@/components/auto-messages-card';
+import { InstallCard } from '@/components/install-card';
 import { useModal } from '@/components/modals/modal-host';
 import { Input } from '@/components/ui/field';
 import { ErrorBox, FormError, Loading } from '@/components/ui/states';
@@ -104,6 +107,7 @@ function SettingsScreen() {
         }
       />
       <div className="grid2">
+        <VersionCard />
         <CompanyForm initial={settings.data.store} />
         <div className="card">
           <h3>المستخدمين والأمان</h3>
@@ -117,6 +121,9 @@ function SettingsScreen() {
             <Link className="secondary" href="/account">
               🔑 حسابي وتغيير كلمة السر
             </Link>
+            <button type="button" className="secondary" onClick={() => open({ kind: 'recat' })}>
+              إعادة تصنيف الأصناف
+            </button>
             <button
               type="button"
               className="secondary danger"
@@ -150,6 +157,8 @@ export default function SettingsPage() {
   return (
     <AdminOnly>
       <SettingsScreen />
+      <InstallCard />
+      <AutoMessagesCard />
       <BackupCard />
     </AdminOnly>
   );

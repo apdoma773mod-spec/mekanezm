@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { REPORTS, type ReportCell, type ReportColType, type ReportId, type ReportResult, type ReportRow, type ReportTone } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { ContactReportCard, ReportsStatsRow, StockStatusCard } from '@/components/reports-extras';
+import { OnlineReportCard } from '@/components/online-report';
+import { AccountantExportCard, ReturnsAnalysisCard } from '@/components/pro-reports';
 import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -411,7 +413,10 @@ function ReportsScreen() {
           🖨️ طباعة التقرير
         </button>
       </div>
-      <div className="card" style={{ marginBottom: 14 }}>
+      <OnlineReportCard />
+      <ReturnsAnalysisCard />
+      <AccountantExportCard />
+      <div className="card" style={{ marginBottom: 14, marginTop: 14 }}>
         <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
         {chips}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, margin: '6px 0 12px' }}>

@@ -1,32 +1,58 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { actorOf } from '../../lib/actor.js';
+import { actorOf, isAdmin } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
-import { badRequest, notFound } from '../../lib/errors.js';
+import { badRequest, forbidden, notFound } from '../../lib/errors.js';
+import { getFile, putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
 
 /**
  * «🛠️ أنظمة الشغل» keeps its documents as JSON, as the old system did in mk_settings (wk_*):
  * orders with their stages, config, display goods, show-room expenses, offcuts and forged-rod work.
  */
-const KEYS = ['count_sessions', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
+const KEYS = ['count_sessions', 'voice_cmds', 'invoice_aliases', 'points', 'follow', 'reservations', 'combos', 'usd', 'plists', 'credit', 'wk_orders', 'wk_cfg', 'wk_display', 'wk_showexp', 'wk_offcuts', 'wk_forf', 'wk_leaf'] as const;
 const keyParam = z.object({ key: z.enum(KEYS) });
 
-const UPLOADS = path.resolve(process.cwd(), 'uploads');
 const fileName = z.string().regex(/^[a-z0-9-]{8,64}\.(jpg|jpeg|png|webp|pdf|mp4)$/);
 const MIME: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf', mp4: 'video/mp4' };
 
 export default async function workRoutes(app: FastifyInstance) {
   const db = app.prisma;
 
-  app.get('/kv/:key', { preHandler: app.requireAdmin }, async (request) => {
+  app.get('/kv/:key', { preHandler: app.authenticate }, async (request) => {
     const { key } = parse(keyParam, request.params);
+    // the voice command words are read by everyone's 🎤 window; every other document is the owner's
+    if (key !== 'voice_cmds' && key !== 'invoice_aliases' && !isAdmin(actorOf(request))) throw forbidden('الشاشة دي للمدير بس');
     const s = await db.setting.findUnique({ where: { key } });
     return { value: s?.value ?? null };
+  });
+
+  /** «📌 محجوز — المتاح فعلاً» in the product window: how much of one product is held for customers (everyone sees it, like the old one). */
+  app.get('/reserved/:pid', { preHandler: app.authenticate }, async (request) => {
+    const { pid } = parse(z.object({ pid: z.string().min(1).max(64) }), request.params);
+    const list = ((await db.setting.findUnique({ where: { key: 'reservations' } }))?.value ?? []) as { pid?: string; qty?: number; cust?: string }[];
+    const mine = Array.isArray(list) ? list.filter((r) => r.pid === pid) : [];
+    return { qty: mine.reduce((t, r) => t + (Number(r.qty) || 0), 0), custs: mine.map((r) => String(r.cust ?? '')) };
+  });
+
+  /**
+   * The names a supplier uses for our products ({supplier: {invoice text: product id}}, old mk_settings invoice_aliases).
+   * Merged on the server so two people saving at once do not wipe each other; anyone who can buy may add names.
+   */
+  app.post('/aliases', { preHandler: app.authenticate }, async (request) => {
+    const { sup, map } = parse(z.object({ sup: z.string().max(200), map: z.record(z.string().max(300), z.string().max(64)) }), request.body);
+    const actor = actorOf(request);
+    const key = 'invoice_aliases';
+    const cur = ((await db.setting.findUnique({ where: { key } }))?.value ?? {}) as Record<string, Record<string, string>>;
+    const next = { ...cur, [sup || '*']: { ...(cur[sup || '*'] ?? {}), ...map } };
+    await db.setting.upsert({
+      where: { key },
+      create: { key, value: next as Prisma.InputJsonValue, updatedById: actor.id },
+      update: { value: next as Prisma.InputJsonValue, updatedById: actor.id },
+    });
+    return { ok: true };
   });
 
   app.put('/kv/:key', { preHandler: app.requireAdmin, bodyLimit: 20 * 1024 * 1024 }, async (request) => {
@@ -51,20 +77,22 @@ export default async function workRoutes(app: FastifyInstance) {
     const b64 = data.includes(',') ? data.slice(data.indexOf(',') + 1) : data;
     const buf = Buffer.from(b64, 'base64');
     if (!buf.length || buf.length > 10 * 1024 * 1024) throw badRequest('الملف كبير أو فاضي');
-    await mkdir(UPLOADS, { recursive: true });
     const name = `${randomBytes(12).toString('hex')}.${ext}`;
-    await writeFile(path.join(UPLOADS, name), buf);
+    await putFile(name, buf, MIME[ext] ?? 'application/octet-stream');
     return { name, url: `/api/v1/work/files/${name}` };
   });
 
   // Public on purpose: the link goes to a craftsman on WhatsApp. Names are random and unguessable.
   app.get('/files/:name', async (request, reply) => {
     const { name } = parse(z.object({ name: fileName }), request.params);
-    try {
-      const buf = await readFile(path.join(UPLOADS, name));
-      return reply.header('content-type', MIME[name.split('.').pop()!] ?? 'application/octet-stream').header('cache-control', 'public, max-age=31536000, immutable').send(buf);
-    } catch {
-      throw notFound('الملف مش موجود');
-    }
+    const buf = await getFile(name);
+    if (!buf) throw notFound('الملف مش موجود');
+    // cross-origin ON PURPOSE: the catalog opens in a sandboxed frame (opaque origin) and the published copy is a separate page;
+    // with helmet's default `same-origin` the browser silently refuses every uploaded picture there (web photos, AI photos)
+    return reply
+      .header('content-type', MIME[name.split('.').pop()!] ?? 'application/octet-stream')
+      .header('cache-control', 'public, max-age=31536000, immutable')
+      .header('cross-origin-resource-policy', 'cross-origin')
+      .send(buf);
   });
 }

@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/api';
 import type { InvoiceDto, SettingsMap } from '@mk/shared';
 import { formatDateTime, money, qtyText } from '@/lib/format';
 import { htmlToPdf, shareOrSave } from '@/lib/pdf';
-import { dimOf, invoiceA4Html, prepSheetHtml, printHtml } from '@/lib/print';
+import { dimOf, invoiceA4Html, invoiceLabelHtml, prepSheetHtml, printHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
 import { useShipments } from '@/lib/phase4-queries';
@@ -65,10 +65,28 @@ export function InvoiceView({ id }: { id: string }) {
       }),
     );
 
+  // old cancelInv() wording
+  const nm = (r.person || '').trim();
+  const voidMsg =
+    `إلغاء الفاتورة ${r.no} نهائياً؟\n` +
+    (isSale ? 'الأصناف هترجع للمخزون.' : 'الأصناف هتتخصم من المخزون.') +
+    (r.paid > 0
+      ? nm
+        ? isSale
+          ? `\nالمدفوع (${money(r.paid)}) هيتسجل رصيد لـ ${nm} يتخصم من فاتورة جاية.`
+          : `\nالمدفوع للمورد (${money(r.paid)}) هيتسجل رصيد ليك عند ${nm}.`
+        : isSale
+          ? `\nالمدفوع (${money(r.paid)}) هيتخصم من الخزنة على إنه اترجع للعميل (مفيش اسم عميل على الفاتورة).`
+          : `\nالمدفوع (${money(r.paid)}) هيرجع للخزنة.`
+      : '') +
+    (r.remaining > 0
+      ? isSale
+        ? `\nوالمتبقي (${money(r.remaining)}) هيتشال من حساب العميل.`
+        : `\nوالمتبقي للمورد (${money(r.remaining)}) هيتشال من حسابه.`
+      : '');
   const doVoid = async () => {
-    if (!reason.trim()) return toast('اكتب سبب الإلغاء', 'bad');
     try {
-      await voidInv.mutateAsync({ id: r.id, reason: reason.trim() });
+      await voidInv.mutateAsync({ id: r.id, reason: reason.trim() || 'إلغاء من شاشة الفاتورة' });
       toast('تم إلغاء الفاتورة');
       setVoiding(false);
     } catch (err) {
@@ -77,7 +95,7 @@ export function InvoiceView({ id }: { id: string }) {
   };
 
   return (
-    <Modal title={`${isSale ? 'فاتورة' : 'فاتورة شراء'} ${r.no}`} onClose={close}>
+    <Modal title={`${isSale ? 'فاتورة' : 'فاتورة شراء'} ${r.no}${r.online ? ' — 🌐 أونلاين' : ''}`} onClose={close}>
       {voided && (
         <div className="form-error" style={{ marginBottom: 12 }}>
           الفاتورة دي ملغية — {r.voidReason} ({formatDateTime(r.voidedAt)})
@@ -163,14 +181,12 @@ export function InvoiceView({ id }: { id: string }) {
         <div className="form" style={{ marginTop: 10 }}>
           <div className="field full">
             <label htmlFor="voidReason">سبب الإلغاء</label>
-            <input id="voidReason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="مثال: الفاتورة اتسجلت غلط" />
+            <input id="voidReason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="اختياري — مثال: الفاتورة اتسجلت غلط" />
           </div>
           <div className="field full">
-            <span className="hint">
-              البضاعة هترجع المخزن{r.contactId && r.paid > 0 ? '، واللي اتدفع هيتسجل رصيد للعميل' : ''}.
-            </span>
+            <span className="hint" style={{ whiteSpace: 'pre-line' }}>{voidMsg}</span>
             <button type="button" className="primary" style={{ background: 'var(--danger)' }} disabled={voidInv.isPending} onClick={doVoid}>
-              {voidInv.isPending ? '⏳' : 'تأكيد الإلغاء'}
+              {voidInv.isPending ? '⏳' : 'إلغاء الفاتورة'}
             </button>
           </div>
         </div>
@@ -215,6 +231,23 @@ export function InvoiceView({ id }: { id: string }) {
           </button>
         )}
       </div>
+      {isSale && (
+        <button
+          type="button"
+          id="mkInvLbl"
+          className="secondary"
+          style={{ width: '100%', padding: 12, marginTop: 8 }}
+          disabled={!settings.data}
+          onClick={() => {
+            const a = window.prompt('كام ليبل؟ (لو الأوردر في كذا كرتونة اكتب عددهم)', '1');
+            if (a === null || !settings.data) return;
+            const n = Math.max(1, Math.min(50, parseInt(a.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632)), 10) || 1));
+            printHtml(invoiceLabelHtml(r, settings.data, n));
+          }}
+        >
+          🏷️ طباعة ليبل
+        </button>
+      )}
       {isSale && <NotesButton no={r.no} id={r.id} />}
       <div id="prepB">
         <button type="button" className="secondary" style={{ width: '100%', padding: 12, marginTop: 8 }} onClick={prep}>

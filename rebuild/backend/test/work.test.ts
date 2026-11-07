@@ -29,6 +29,13 @@ describe('work systems storage', () => {
     expect((await call(admin, 'GET', '/work/kv/other')).statusCode).toBe(400);
   });
 
+  it('lets everyone read the voice command words but only the owner save them', async () => {
+    const v = { sale: ['بيع'], purchase: ['شراء'], stmt: ['كشف'], payin: ['تحصيل'], payout: ['سداد'] };
+    expect((await call(staff, 'PUT', '/work/kv/voice_cmds', { value: v })).statusCode).toBe(403);
+    expect((await call(admin, 'PUT', '/work/kv/voice_cmds', { value: v })).statusCode).toBe(200);
+    expect((await call(staff, 'GET', '/work/kv/voice_cmds')).json().value).toEqual(v);
+  });
+
   it('stores a drawing and serves it by its link without login', async () => {
     const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').toString('base64');
     const r = (await call(staff, 'POST', '/work/files', { data: `data:image/png;base64,${png}`, ext: 'png' })).json();

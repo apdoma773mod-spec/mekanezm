@@ -30,8 +30,11 @@ export interface WaPhotoRow {
   phone: string;
   name: string;
   caption: string;
+  /** الصورة كاملة (بتتحمّل لوحدها) */
   img: string;
-  status: 'new' | 'sent' | 'missing' | 'ignored' | 'paid' | 'transfer';
+  /** نسخة صغيرة سريعة للقايمة */
+  thumb?: string;
+  status: 'new' | 'sent' | 'missing' | 'ignored' | 'paid' | 'transfer' | 'source';
   handledBy: string;
   createdAt: string;
 }
@@ -99,8 +102,17 @@ export const useWaPhotoStatus = () => {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: WaPhotoRow['status'] }) =>
       api.post<{ ok: true }>(`/inbox/wa-photos/${id}/status`, { status }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['inbox'] });
+    // الصورة بتختفي من القايمة على طول، من غير ما نستنى السيرفر ولا نحمّل القايمة كلها تاني
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: ['inbox', 'wa-photos'] });
+      const prev = qc.getQueriesData<WaPhotoRow[]>({ queryKey: ['inbox', 'wa-photos'] });
+      qc.setQueriesData<WaPhotoRow[]>({ queryKey: ['inbox', 'wa-photos'] }, (old) => old?.filter((x) => x.id !== id));
+      qc.setQueryData<{ sms: number; waOrders: number; waPhotos: number }>(inboxKeys.counts, (c) => (c ? { ...c, waPhotos: Math.max(0, c.waPhotos - 1) } : c));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => ctx?.prev.forEach(([k, v]) => qc.setQueryData(k, v)),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: inboxKeys.counts });
     },
   });
 };

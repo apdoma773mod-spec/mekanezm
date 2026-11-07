@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PageHeader } from '@/components/app-shell';
 import { MarketBanner } from '@/components/modals/market-prices';
+import { DailyCountCard } from '@/components/modals/daily-count';
+import { CostRisesCard } from '@/components/modals/cost-rises';
 import { PriceLookupCard } from '@/components/price-lookup';
 import { useCompany } from '@/components/company';
 import { useInboxCounts } from '@/lib/inbox-queries';
@@ -16,8 +18,8 @@ import { useModal } from '@/components/modals/modal-host';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useIsAdmin } from '@/components/use-role';
 import { errorMessage } from '@/lib/api';
-import { balanceText, money } from '@/lib/format';
-import { useAllContacts, useInvoices, useOverview, useToday } from '@/lib/trade-queries';
+import { money } from '@/lib/format';
+import { useInvoices, useOverview, useToday } from '@/lib/trade-queries';
 
 function RecentOps() {
   const { open } = useModal();
@@ -67,8 +69,6 @@ export default function DashboardPage() {
   const t = today.data;
   const { co } = useCompany();
   const counts = useInboxCounts(admin);
-  // partners are supplier accounts marked «[شريك]» in the note (the old mkPtnTile)
-  const partners = (useAllContacts('SUPPLIER', admin).data ?? []).filter((c) => c.note.includes('[شريك]')).slice(0, 2);
   const [pro, setPro] = useState(false);
   useEffect(() => setPro(proOn()), []);
   /** «برو» swaps the action icons for its 3D drawings, as the old paint() did. */
@@ -97,20 +97,10 @@ export default function DashboardPage() {
         }
       />
       <MarketBanner />
+      <CostRisesCard />
+      <DailyCountCard />
       {/* 📅 ملخص النهاردة في أول لوحة التحكم (old mkToday), then the «برو» launcher tiles */}
       <div id="mkToday">
-        {admin &&
-          partners.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className="mkPtnTile"
-              onClick={() => open({ kind: 'contactFile', id: p.id })}
-              style={{ margin: '8px 0', width: '100%', padding: 12, borderRadius: 14, border: '2px solid #087f8c', background: 'var(--card,#fff)', font: 'inherit', fontWeight: 800, color: '#087f8c', textAlign: 'right' }}
-            >
-              🤝 حساب {p.name} — {balanceText(p)}
-            </button>
-          ))}
         {admin && !!counts.data?.sms && (
           <button id="mkSmsTile" type="button" className="secondary" style={{ width: '100%', marginBottom: 10, padding: 12, fontWeight: 800 }} onClick={() => router.push('/vodafone')}>
             📲 فيه {counts.data.sms} مبلغ فودافون كاش مستني تسجيله
@@ -184,6 +174,32 @@ export default function DashboardPage() {
         🔒 تقفيل اليومية
       </button>
       {admin && <PriceLookupCard />}
+
+      {overview.data && (
+        <div className="stats" style={{ marginTop: 14 }}>
+          {(
+            [
+              ['box', 'عدد المنتجات', String(overview.data.productsCount)],
+              ...(overview.data.stockValue != null ? [['wallet', 'قيمة المخزون', money(overview.data.stockValue)]] : []),
+              ['up', 'إجمالي المبيعات', money(overview.data.salesTotal)],
+              ['down', 'إجمالي المشتريات', money(overview.data.purchasesTotal)],
+              [null, 'أصناف نفدت', String(overview.data.outCount)],
+              [null, 'أصناف تحت حد التنبيه', String(overview.data.lowCount)],
+              [null, 'مستحق للموردين', money(overview.data.suppliersOwed)],
+            ] as [string | null, string, string][]
+          ).map(([ic, l, v]) => (
+            <div className="stat" key={l}>
+              {ic && (
+                <div className="ic">
+                  <Icon name={ic as 'box'} />
+                </div>
+              )}
+              <small>{l}</small>
+              <strong>{v}</strong>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid2">
         <div className="card">

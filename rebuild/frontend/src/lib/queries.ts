@@ -26,10 +26,30 @@ export const keys = {
 
 type UserRes = { user: PublicUser };
 
+/** ⚡ the last answer is kept on the phone and shown at once while the fresh one loads (the screen opens without waiting for the server) */
+const remembered = <T,>(key: string): T | undefined => {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+const remember = <T,>(key: string, v: T): T => {
+  try {
+    localStorage.setItem(key, JSON.stringify(v));
+  } catch {
+    /* full or private mode */
+  }
+  return v;
+};
+
 export function useMe() {
-  return useQuery({
+  return useQuery<PublicUser>({
     queryKey: keys.me,
-    queryFn: ({ signal }) => api.get<UserRes>('/auth/me', undefined, signal).then((r) => r.user),
+    queryFn: ({ signal }) => api.get<UserRes>('/auth/me', undefined, signal).then((r) => remember('mk_me', r.user)),
+    placeholderData: () => remembered<PublicUser>('mk_me'),
     staleTime: 60_000,
     retry: false,
   });
@@ -68,7 +88,14 @@ export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post<{ ok: true }>('/auth/logout'),
-    onSettled: () => qc.clear(),
+    onSettled: () => {
+      try {
+        localStorage.removeItem('mk_me');
+      } catch {
+        /* ignore */
+      }
+      qc.clear();
+    },
   });
 }
 
@@ -82,10 +109,11 @@ export function useChangePassword() {
 }
 
 export function useSettings() {
-  return useQuery({
+  return useQuery<SettingsMap>({
     queryKey: keys.settings,
     queryFn: ({ signal }) =>
-      api.get<{ settings: SettingsMap }>('/settings', undefined, signal).then((r) => r.settings),
+      api.get<{ settings: SettingsMap }>('/settings', undefined, signal).then((r) => remember('mk_settings', r.settings)),
+    placeholderData: () => remembered<SettingsMap>('mk_settings'),
     staleTime: 5 * 60_000,
   });
 }

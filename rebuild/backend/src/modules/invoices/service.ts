@@ -38,6 +38,8 @@ function header(i: Invoice & { createdBy: InvoiceWithRels['createdBy']; updatedB
     no: i.no,
     status: i.status,
     company: i.company,
+    online: i.online,
+    onlineFrom: i.onlineFrom,
     date: dateToDay(i.date),
     contactId: i.contactId,
     person: i.person,
@@ -163,6 +165,8 @@ async function prepareLines(
  * Writes the lines and moves stock. A sale snapshots the product cost; a purchase records its price as cost.
  * `skipStock` is for the daybook, whose lines already took their goods out of stock.
  */
+import { noteCostRise } from '../products/cost-rises.js';
+
 async function writeLines(
   tx: Prisma.TransactionClient,
   invoice: Invoice,
@@ -198,6 +202,7 @@ async function writeLines(
     }
     if (!sale && !l.price.isZero() && (!l.product.cost.equals(l.price) || l.product.costEst)) {
       // Latest purchase price becomes the product cost, as in the old system.
+      await noteCostRise(tx, l.product, l.price, invoice.no);
       await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price, costEst: false } });
     }
   }
@@ -310,6 +315,8 @@ export async function createInvoiceInTx(
       payMethod: input.payMethod,
       ...(opts.paidSplit ? { paidSplit: opts.paidSplit } : {}),
       source: opts.source ?? '',
+      online: input.kind === 'SALE' && !!input.online,
+      onlineFrom: input.kind === 'SALE' && input.online ? (input.onlineFrom ?? '') : '',
       ...(opts.ic ? { ic: opts.ic, icRef: opts.icRef ?? null } : {}),
       createdById: actor.id,
     },
@@ -434,6 +441,7 @@ export class InvoicesService {
         where: { id },
         data: {
           company: input.company,
+          ...(input.online !== undefined && before.kind === 'SALE' ? { online: input.online, onlineFrom: input.online ? (input.onlineFrom ?? before.onlineFrom) : '' } : {}),
           contactId: contact?.id ?? null,
           person: contact?.name ?? input.person,
           phone: input.phone || contact?.phone || '',

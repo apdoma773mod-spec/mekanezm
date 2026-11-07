@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { NavCard } from '@/components/nav-card';
 import { ProThemeCard, ProUiCard } from '@/components/pro';
 import { HtmlPreview } from '@/components/ui/html-preview';
 import { Modal } from '@/components/ui/modal';
@@ -11,7 +12,8 @@ import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { fontStack, todayYmd } from '@/lib/format';
-import { fileToDataUrl } from '@/lib/image';
+import { uploadImage } from '@/site-mgr/api';
+import { shrinkImage } from '@/site-mgr/lib/images';
 import { invoiceA4Html, printHtml } from '@/lib/print';
 import { keys, useSaveSetting, useSettings } from '@/lib/queries';
 
@@ -43,6 +45,8 @@ const SAMPLE: InvoiceDto = {
   paid: 300,
   remaining: 150,
   payMethod: 'CASH',
+  online: false,
+  onlineFrom: '',
   items: [
     { id: '1', productId: null, code: null, name: 'مفصلة هيدروليك', unit: 'قطعة', qty: 10, price: 30, total: 300 },
     { id: '2', productId: null, code: null, name: 'مقبض ألومنيوم', unit: 'قطعة', qty: 5, price: 30, total: 150 },
@@ -97,7 +101,8 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
     e.target.value = '';
     if (!file) return;
     try {
-      set(k, await fileToDataUrl(file, maxSide));
+      // saved as a file, not inside the settings: a 1 MB logo inside the settings was downloaded on every open of the system
+      set(k, await uploadImage(await shrinkImage(file, maxSide, 0.88)));
     } catch (err) {
       toast(err instanceof Error ? err.message : 'مقدرتش أقرا الصورة', 'bad');
     }
@@ -121,6 +126,7 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
         }
       />
       <ProThemeCard />
+      <NavCard />
       <ProUiCard />
       <div className="grid2">
         <div className="card">

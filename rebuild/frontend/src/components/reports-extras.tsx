@@ -52,7 +52,8 @@ export function ContactReportCard() {
   const [name, setName] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const contacts = useAllContacts(type).data ?? [];
+  const [wantNames, setWantNames] = useState(false); // the names list loads when the field is first used
+  const contacts = useAllContacts(type, wantNames).data ?? [];
   const top = useQuery({
     queryKey: ['reports', 'top-customers'],
     queryFn: ({ signal }) => api.get<{ customers: TopCustomer[] }>('/reports/top-customers', undefined, signal).then((r) => r.customers),
@@ -80,7 +81,7 @@ export function ContactReportCard() {
         </div>
         <div className="field">
           <label>الاسم</label>
-          <input list="crNames" placeholder="اكتب الاسم واختاره" value={name} onChange={(e) => setName(e.target.value)} />
+          <input list="crNames" placeholder="اكتب الاسم واختاره" value={name} onFocus={() => setWantNames(true)} onChange={(e) => setName(e.target.value)} />
           <datalist id="crNames">
             {contacts.map((c) => (
               <option key={c.id} value={c.name} />
@@ -140,7 +141,10 @@ export function ContactReportCard() {
 
 /** «حالة المخزون»: الأصناف اللي وصلت لحد التنبيه أو أقل. */
 export function StockStatusCard() {
-  const products = useAllProducts({}).data;
+  // only the short items come from the server (low + out = qty <= its alert level), not the whole stock
+  const lowQ = useAllProducts({ stock: 'low' }).data;
+  const outQ = useAllProducts({ stock: 'out' }).data;
+  const products = lowQ && outQ ? [...outQ, ...lowQ] : undefined;
   const low = (products ?? []).filter((p) => p.qty <= p.minQty);
   return (
     <div className="card" style={{ marginTop: 14 }}>

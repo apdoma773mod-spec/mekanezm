@@ -15,6 +15,8 @@ export const productSchema = z.object({
   top: z.boolean().optional(),
   out: z.boolean().optional(),
   video: str.default(''),
+  /** 360° turntable frames in order (one full turn). Fewer than 8 → ignored. */
+  spin: z.array(z.string()).default([]),
   /** Hidden from the site (set from /admin; the product stays in the data). */
   hidden: z.boolean().optional(),
   /** Left/right guidance (see lib/hand.ts). `off` turns the automatic detection off for this product. */

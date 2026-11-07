@@ -1,10 +1,16 @@
 'use client';
 
 import { CustomerBar } from '@/components/modals/customer-bar';
+import { PhotoSearch } from "./photo-search";
 import { termsFor, useTerms } from '@/lib/terms';
+import { useCreditLimits } from '@/lib/kv';
+import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
-import { errorMessage } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { ONLINE_FROM, ONLINE_FROM_LABELS } from '@mk/shared';
+type OnlineFrom = (typeof ONLINE_FROM)[number];
+import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type InvoiceListResult, type ProductDto, type QuoteDto } from '@mk/shared';
+import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
 import { useCreateShipment, useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
@@ -25,6 +31,8 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { SCAN_EVENT, scanTargets } from '../scan/scan-bus';
+import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
 
 interface Line {
   key: string;
@@ -34,6 +42,8 @@ interface Line {
   available: number | null;
   qty: string;
   price: string;
+  /** Came from this invoice photo (a finer re-read replaces these lines). */
+  fromScan?: string;
   /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
   un?: number;
   unLabel?: string;
@@ -69,6 +79,11 @@ export interface SalePreset {
   paid?: number;
   lines: { productId?: string; name: string; qty: number; price: number }[];
   onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
+  /** «🌐 عميل أونلاين» already chosen (orders that came from the site). */
+  online?: boolean;
+  onlineFrom?: OnlineFrom;
+  /** «👀 راجعها»: a purchase from a read invoice photo of the queue. */
+  scanId?: string;
 }
 
 export function TransactionModal(props: Props) {
@@ -134,16 +149,36 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paid, setPaid] = useState(invoice ? String(invoice.paid) : preset?.paid !== undefined ? String(preset.paid) : '');
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
+  const [online, setOnline] = useState(invoice?.online ?? preset?.online ?? false);
+  const [onlineFrom, setOnlineFrom] = useState<OnlineFrom>((invoice?.onlineFrom as OnlineFrom) || preset?.onlineFrom || '');
   const [sno, setSno] = useState('');
   const [del, setDel] = useState<'' | 'DELIVERY' | 'SHIP'>('');
   const [gov, setGov] = useState('');
   const [area, setArea] = useState('');
   const [autoPaid, setAutoPaid] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [photoFind, setPhotoFind] = useState(false);
   const shipment = useCreateShipment();
-  const infos = useAllProductInfo().data ?? {};
+  // the packs (كرتونة/دستة) list is only needed once a stock item is in the invoice
+  const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
+  const scanRef = useRef<string | null>(null);
+  const qc = useQueryClient();
+
+  const addRef = useRef<(p: ProductDto) => void>(() => {});
+  useEffect(() => {
+    scanTargets.tx++;
+    const h = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (code) void lookupProduct(code).then((p) => addRef.current(p)).catch(() => {});
+    };
+    window.addEventListener(SCAN_EVENT, h);
+    return () => {
+      scanTargets.tx--;
+      window.removeEventListener(SCAN_EVENT, h);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 120);
@@ -157,6 +192,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const termsQ = useTerms(isSale);
   const cterm = isSale ? termsFor(termsQ.data, person) : null;
   const contactNow = contacts.data?.items.find((c) => c.name === person.trim());
+  // 🚦 حد الآجل من «تحليلات ذكية»: حد لكل عميل أو حد افتراضي — بيتحط في نفس الشريط والتحذير (لو مفيش حد في «أسعار وحدود العملاء»)
+  const isAdmin = useIsAdmin();
+  const credit = useCreditLimits(isSale && isAdmin);
+  const creditLimit = isSale && person.trim() ? +(credit.data?.lim[person.trim()] ?? credit.data?.def ?? 0) || 0 : 0;
+  const limit = cterm?.t.limit || creditLimit || 0;
   const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * toNum(l.price), 0)), [lines]);
   const total = r2(subtotal + toNum(shipping));
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
@@ -190,6 +230,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     setSearch('');
     searchRef.current?.focus();
   };
+
+  addRef.current = addProduct;
 
   /** A barcode scanner types the code and presses Enter: add the exact match straight away. */
   const onSearchKey = async (e: KeyboardEvent<HTMLInputElement>) => {
@@ -267,11 +309,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     if (total - paidValue > 0.001 && !person.trim()) {
       return toast(isSale ? 'اكتب اسم العميل عشان نسجل الباقي عليه' : 'اكتب اسم المورد عشان نسجل الباقي ليه', 'bad');
     }
-    if (isSale && !invoice && cterm?.t.limit && remaining > 0) {
+    if (isSale && !invoice && limit && remaining > 0) {
       const bal = contactNow?.balance ?? 0;
-      if (bal + remaining > cterm.t.limit && !window.confirm(`⚠️ ${person.trim()}
+      if (bal + remaining > limit && !window.confirm(`⚠️ ${person.trim()}
 عليه دلوقتي ${money(bal)} + الباقي في الفاتورة دي ${money(remaining)} = ${money(bal + remaining)}
-وحد دينه ${money(cterm.t.limit)}.
+وحد دينه ${money(limit)}.
 
 تكمّل الفاتورة برضو؟`)) return;
     }
@@ -283,6 +325,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       const dup = await checkDuplicatePurchase({ person: person.trim(), total, sno: sno.trim() || undefined }).catch(() => null);
       if (dup && !window.confirm(`⚠️ فيه فاتورة شراء بنفس المورد ${sno.trim() ? 'ونفس رقم الفاتورة ' : 'ونفس الإجمالي النهارده '}(${dup.no} — ${money(total)}). تحفظ تاني برضه؟`)) return;
     }
+    if (isSale && !invoice && !asQuote && total > 0) {
+      // 🧾 same customer + same total in the last 3 minutes = probably saved twice (double tap)
+      const recent = await api
+        .get<InvoiceListResult>('/invoices', { kind: 'SALE', ...(person.trim() ? { person: person.trim() } : {}), pageSize: 5 })
+        .catch(() => null);
+      const twin = recent?.items.find((r) => r.status !== 'VOID' && Math.abs(r.total - total) < 0.01 && Date.now() - new Date(r.createdAt).getTime() < 3 * 60_000);
+      if (twin && !window.confirm(`⚠️ لسه متسجلة فاتورة ${twin.no} بنفس ${person.trim() ? 'العميل و' : ''}الإجمالي (${money(total)}) من دقايق. تسجّلها تاني برضه؟`)) return;
+    }
     const noteOut = !isSale && !invoice && sno.trim() && !/فاتورة المورد:/.test(note) ? `فاتورة المورد: ${sno.trim()}${note ? ` — ${note}` : ''}` : note;
     const body = {
       person: person.trim(),
@@ -291,6 +341,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
+      ...(isSale ? { online, onlineFrom: online ? onlineFrom : '' } : {}),
       items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
     };
     try {
@@ -323,6 +374,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         }
       }
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
+      // the photo became this invoice: «🧾 اتعملت فاتورة SH-…» in the queue, its pictures are dropped
+      if (!invoice && scanRef.current) {
+        await api.post(`/ai/scans/${scanRef.current}/used`, { pno: saved.no }).catch(() => undefined);
+        scanRef.current = null;
+        void qc.invalidateQueries({ queryKey: ['ai-scans'] });
+        toast(`✔ اتعملت فاتورة ${saved.no}`);
+      }
       if (!invoice && preset?.onSaved) {
         try {
           await preset.onSaved({ id: saved.id, no: saved.no });
@@ -357,6 +415,27 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     <Modal title={title} onClose={close}>
       <form onSubmit={submit} noValidate>
         <div className="form">
+          {!isSale && !invoice && !asQuote && (
+            <InvoicePhotoButtons
+              supplier={person}
+              autoScan={preset?.scanId}
+              onRead={async (r, scanId) => {
+                if (scanId) scanRef.current = scanId;
+                const all = await api.get<{ items: ProductDto[] }>('/products/all').then((x) => x.items).catch(() => [] as ProductDto[]);
+                const read: Line[] = r.items
+                  .filter((it) => String(it.text ?? '').trim())
+                  .map((it) => {
+                    const p = it.pid ? all.find((x) => x.id === it.pid) : it.newName ? undefined : matchProduct(String(it.text), it.code, all);
+                    const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
+                    const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
+                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.newName || it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
+                  });
+                setLines((ls) => [...ls.filter((l) => l.name.trim() && !(scanId && l.fromScan === scanId)), ...read]);
+                if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
+                if (r.invoice_no && !sno.trim()) setSno(String(r.invoice_no));
+              }}
+            />
+          )}
           <div className="field full">
             <label htmlFor="txSearch">ابحث عن الصنف واختاره</label>
             <div className="txsrow">
@@ -373,6 +452,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             />
             <button type="button" className="secondary" id="txScan" title="امسح باركود (كل مسحة = قطعة)" aria-label="امسح باركود" onClick={() => setScanning(true)}>
               📷
+            </button>
+            <button type="button" className="primary" id="vsTxBtn" title="صوّر القطعة يطلعلك الصنف" aria-label="صوّر القطعة" onClick={() => setPhotoFind(true)}>
+              📸
             </button>
             </div>
             {showBox && (
@@ -503,6 +585,30 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             </div>
           )}
 
+          {isSale && !asQuote && (
+            <div className="field full" id="txOnline">
+              <label>نوع العميل</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className={online ? 'secondary' : 'primary'} style={{ flex: 1 }} onClick={() => setOnline(false)}>
+                  🏪 عميل عادي
+                </button>
+                <button type="button" className={online ? 'primary' : 'secondary'} style={{ flex: 1 }} onClick={() => setOnline(true)}>
+                  🌐 عميل أونلاين
+                </button>
+              </div>
+              {online && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }} id="txOnlineFrom">
+                  <small style={{ width: '100%', color: 'var(--muted)' }}>جه منين؟</small>
+                  {ONLINE_FROM.filter((k) => k).map((k) => (
+                    <button key={k} type="button" className={onlineFrom === k ? 'primary' : 'secondary'} style={{ padding: '6px 12px', borderRadius: 99 }} onClick={() => setOnlineFrom(k)}>
+                      {ONLINE_FROM_LABELS[k]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <Input
             label={isSale ? 'العميل' : 'المورد'}
             placeholder="الاسم"
@@ -511,8 +617,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => pickPerson(e.target.value)}
             error={errors.person}
           />
-          {cterm || (isSale && contactNow && contactNow.balance) ? (
-            <CustomerBar name={person.trim()} term={cterm?.t} balance={contactNow?.balance ?? 0} />
+          {cterm || limit || (isSale && contactNow) ? (
+            <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
           ) : null}
           <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
           <Input
@@ -602,6 +708,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           </button>
         </div>
       </form>
+      {photoFind && (
+        <PhotoSearch
+          ctx="tx"
+          onClose={() => setPhotoFind(false)}
+          onPick={(pr) => {
+            addProduct(pr);
+            setPhotoFind(false);
+          }}
+        />
+      )}
       {scanning && (
         <CameraScanner
           multi

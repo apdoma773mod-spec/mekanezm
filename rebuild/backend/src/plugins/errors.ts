@@ -1,4 +1,5 @@
 import fp from 'fastify-plugin';
+import { proxyUi, uiOrigin } from '../lib/ui-proxy.js';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 import type { ApiError } from '@mk/shared';
@@ -64,8 +65,9 @@ export default fp(
       return reply.status(appErr.statusCode).send(body(appErr));
     });
 
-    app.setNotFoundHandler((_request, reply) =>
-      reply.status(404).send(body(new AppError(404, 'NOT_FOUND', 'المسار ده مش موجود'))),
+    app.setNotFoundHandler((request, reply) =>
+      // صفحات السيستم نفسها (مش /api) بتيجي من نسخة الشاشة اللي على جهاز المحل
+      uiOrigin() && !request.url.startsWith('/api/') ? proxyUi(request, reply) : reply.status(404).send(body(new AppError(404, 'NOT_FOUND', 'المسار ده مش موجود'))),
     );
   },
   { name: 'errors' },

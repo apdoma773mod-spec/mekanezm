@@ -212,6 +212,8 @@ export const staffInput = z.object({
   userId: z.string().max(64).nullable().default(null),
   note: text(300),
   active: z.boolean().default(true),
+  gapHours: z.coerce.number().min(0.5).max(24).default(2),
+  place: z.enum(['shop', 'market', 'both']).default('shop'),
 });
 export type StaffInput = z.infer<typeof staffInput>;
 
@@ -231,6 +233,8 @@ export interface StaffDto {
   userId: string | null;
   note: string;
   active: boolean;
+  gapHours: number;
+  place: 'shop' | 'market' | 'both';
 }
 
 export interface AttendanceDto {
@@ -240,8 +244,10 @@ export interface AttendanceDto {
   inAt: string | null;
   outAt: string | null;
   lateMin: number;
-  method: 'qr' | 'manual';
+  method: 'qr' | 'manual' | 'camera';
   note: string;
+  /** the face crop for camera records */
+  snapshot?: string;
 }
 
 export const STAFF_MOVE_KINDS = ['advance', 'bonus', 'deduct', 'pay'] as const;

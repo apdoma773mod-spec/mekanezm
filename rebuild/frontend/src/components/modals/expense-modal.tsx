@@ -13,7 +13,7 @@ import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 import { useCompany } from '../company';
 
-export function ExpenseModal({ id }: { id?: string }) {
+export function ExpenseModal({ id, preset }: { id?: string; preset?: { note?: string; amount?: number } }) {
   const { close } = useModal();
   // Expenses are opened from the cash screen's list, which is already cached.
   const list = useExpenses({ pageSize: 200 });
@@ -24,11 +24,11 @@ export function ExpenseModal({ id }: { id?: string }) {
       </Modal>
     );
   }
-  return <ExpenseForm expense={id ? list.data?.items.find((e) => e.id === id) : undefined} />;
+  return <ExpenseForm expense={id ? list.data?.items.find((e) => e.id === id) : undefined} preset={preset} />;
 }
 
 /** «تسجيل مصروف» — البيان، الفئة، المبلغ, like the old window. */
-function ExpenseForm({ expense: x }: { expense?: ExpenseDto }) {
+function ExpenseForm({ expense: x, preset }: { expense?: ExpenseDto; preset?: { note?: string; amount?: number } }) {
   const { close } = useModal();
   const toast = useToast();
   const cats = useExpenseCategories();
@@ -39,9 +39,9 @@ function ExpenseForm({ expense: x }: { expense?: ExpenseDto }) {
   const [confirm, setConfirm] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
-    note: x?.note ?? '',
+    note: x?.note ?? preset?.note ?? '',
     category: x?.category ?? 'عام',
-    amount: x ? String(x.amount) : '',
+    amount: x ? String(x.amount) : preset?.amount ? String(preset.amount) : '',
     method: (x?.method ?? 'CASH') as PayMethod,
     date: x?.date ?? todayYmd(),
   });

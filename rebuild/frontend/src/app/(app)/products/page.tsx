@@ -10,6 +10,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { TableState } from '@/components/ui/states';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
+import { PhotoSearch } from "@/components/modals/photo-search";
 import { CameraScanner } from '@/components/scan/camera-scanner';
 import { useToast } from '@/components/ui/toast';
 import { useIsAdmin } from '@/components/use-role';
@@ -22,6 +23,7 @@ function ProductsScreen() {
   const toast = useToast();
   const isAdmin = useIsAdmin();
   const [scanning, setScanning] = useState(false);
+  const [photo, setPhoto] = useState(false);
   const params = useSearchParams();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
@@ -74,6 +76,16 @@ function ProductsScreen() {
             <button type="button" className="secondary" onClick={() => open({ kind: 'importFile' })}>
               <Icon name="file" /> استيراد من ملف
             </button>
+            {isAdmin && (
+              <button type="button" className="secondary" id="dimBulkBtn" onClick={() => open({ kind: 'dimBulk' })}>
+                📐 صور المقاسات لكل المنتجات
+              </button>
+            )}
+            {isAdmin && (
+              <button type="button" className="primary" id="spNewBtn" onClick={() => open({ kind: 'siteProduct' })}>
+                ➕ منتج جديد على الموقع
+              </button>
+            )}
             <button type="button" className="primary" onClick={() => open({ kind: 'product' })}>
               <Icon name="plus" /> منتج جديد
             </button>
@@ -85,6 +97,9 @@ function ProductsScreen() {
       />
       <div className="toolbar" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
         <input className="search" style={{ flex: 1, minWidth: 0 }} placeholder="ابحث باسم المنتج أو الكود..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="primary vsbtn" id="vsProdBtn" title="صوّر القطعة يطلعلك الصنف" onClick={() => setPhoto(true)}>
+          📷
+        </button>
         <button type="button" className="secondary vsbtn" title="مطلوب ومش عندنا" onClick={() => open({ kind: 'wanted' })}>
           🔎
         </button>
@@ -105,6 +120,16 @@ function ProductsScreen() {
           <option value="out">نفد</option>
         </select>
       </div>
+      {photo && (
+        <PhotoSearch
+          ctx="prod"
+          onClose={() => setPhoto(false)}
+          onPick={(pr) => {
+            setPhoto(false);
+            open({ kind: "product", id: pr.id });
+          }}
+        />
+      )}
       {scanning && (
         <CameraScanner
           title="امسح باركود الصنف"
