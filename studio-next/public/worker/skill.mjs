@@ -5,8 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const SB_URL = process.env.SB_URL || 'https://tkzfjeizvanfptnqvrmr.supabase.co';
-const SB_KEY = process.env.SB_KEY || 'sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const SB_URL = process.env.SB_URL || 'https://rzvncstjattlklpdtkfn.supabase.co';
+const SB_KEY = process.env.SB_KEY || 'sb_publishable_Molr1fCzsC-VbSgTFDXc5w_F1p0-Fcr';
 const SECRET = ((process.env.VR_SECRET || '').match(/[0-9a-f]{48}/i) || [''])[0].toLowerCase();
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 

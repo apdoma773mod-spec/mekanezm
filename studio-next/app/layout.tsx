@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
-export const metadata: Metadata = { title: 'ميكانيزم ستوديو', manifest: '/manifest.webmanifest', icons: { icon: '/icon-192.png', apple: '/icon-192.png' } };
+export const metadata: Metadata = { title: 'استوديو ميكانيزم', manifest: '/manifest.webmanifest', icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' } };
 export const viewport: Viewport = { themeColor: '#0B0B0C', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function Root({ children }: { children: React.ReactNode }) {

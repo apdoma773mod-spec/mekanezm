@@ -12,8 +12,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STUDIO = path.resolve(HERE, '..');
-const SB_URL = process.env.SB_URL || 'https://tkzfjeizvanfptnqvrmr.supabase.co';
-const SB_KEY = process.env.SB_KEY || 'sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const SB_URL = process.env.SB_URL || 'https://rzvncstjattlklpdtkfn.supabase.co';
+const SB_KEY = process.env.SB_KEY || 'sb_publishable_Molr1fCzsC-VbSgTFDXc5w_F1p0-Fcr';
 const SECRET = ((process.env.VR_SECRET || '').match(/[0-9a-f]{48}/i) || [''])[0].toLowerCase(); // بيتجاهل أي مسافات أو سطر زيادة اتلصق مع السر
 const FPS = 30;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
@@ -58,9 +58,9 @@ function wav64(f32) {
 const en = t => String(t == null ? '' : t).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 /* أماكن الكلام الحقيقية من الصوت (نفس دالة vad في smart.js) */
 function vad(f32) { const F = 320, n = Math.floor(f32.length / F); if (n < 10) return []; const E = new Float32Array(n); for (let i = 0; i < n; i++) { let a = 0; for (let j = i * F; j < (i + 1) * F; j++) a += f32[j] * f32[j]; E[i] = 10 * Math.log10(a / F + 1e-10); }
-  const so = Array.from(E).sort((a, b) => a - b), fl = so[Math.floor(n * .1)], pk = so[Math.floor(n * .98)], thr = Math.max(fl + (pk - fl) * .3, pk - 32);
-  const I = []; let st = -1; for (let i = 0; i <= n; i++) { const on = i < n && E[i] > thr; if (on && st < 0) st = i; if (!on && st >= 0) { I.push([st * .02, i * .02]); st = -1; } }
-  const M = []; I.forEach(x => { const l = M[M.length - 1]; if (l && x[0] - l[1] < .18) l[1] = x[1]; else M.push([x[0], x[1]]); }); return M.filter(x => x[1] - x[0] >= .12).map(x => [+x[0].toFixed(2), +x[1].toFixed(2)]); }
+  const so = Array.from(E).sort((a, b) => a - b), fl = so[Math.floor(n * .05)], pk = so[Math.floor(n * .98)], thr = Math.max(fl + 7, Math.min(fl + (pk - fl) * .2, pk - 22)), lo = thr - 3;
+  const I = []; let st = -1; for (let i = 0; i <= n; i++) { const on = i < n && (st >= 0 ? E[i] > lo : E[i] > thr); if (on && st < 0) st = i; if (!on && st >= 0) { I.push([st * .02, i * .02]); st = -1; } }
+  const M = []; I.forEach(x => { const l = M[M.length - 1]; if (l && x[0] - l[1] < .3) l[1] = x[1]; else M.push([x[0], x[1]]); }); return M.filter(x => x[1] - x[0] >= .06).map(x => [+Math.max(0, x[0] - .05).toFixed(2), +(x[1] + .1).toFixed(2)]); }
 async function callAI(b64, offset, first, products, gloss) {
   for (let k = 0; ; k++) {
     try {

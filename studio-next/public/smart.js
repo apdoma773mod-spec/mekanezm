@@ -5,7 +5,7 @@
    الدخول بحساب ميكانيزم (مرة واحدة) عشان المفتاح يفضل على السيرفر ومحدش غيرك يستخدمه. ===== */
 (function(){
 'use strict';
-const MK_URL='https://tkzfjeizvanfptnqvrmr.supabase.co',MK_KEY='sb_publishable_8QP_KfvoYOyF_bZC4-fw1w_qCkfEpvZ';
+const MK_URL='https://rzvncstjattlklpdtkfn.supabase.co',MK_KEY='sb_publishable_Molr1fCzsC-VbSgTFDXc5w_F1p0-Fcr';
 const $s=id=>document.getElementById(id);
 const say=m=>{try{toast(m)}catch(e){alert(m)}};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -28,7 +28,7 @@ async function token(){const c=sbk();if(!c)throw new Error('مكتبة الدخ�
  if(ses&&(!ses.expires_at||ses.expires_at*1000-Date.now()<120000)){try{const r=await TO(c.auth.refreshSession(),20000);ses=r&&r.data&&r.data.session||null}catch(e){ses=null}}
  if(ses)return ses.access_token;
  /* لو ميكانيزم مفتوح على نفس الموبايل (Safari) نستخدم نفس الدخول */
- try{const o=JSON.parse(localStorage.getItem('sb-tkzfjeizvanfptnqvrmr-auth-token')||'null');if(o&&o.refresh_token){const r=await c.auth.setSession({access_token:o.access_token,refresh_token:o.refresh_token});if(r.data&&r.data.session)return r.data.session.access_token}}catch(e){}
+ try{const o=JSON.parse(localStorage.getItem('sb-rzvncstjattlklpdtkfn-auth-token')||'null');if(o&&o.refresh_token){const r=await c.auth.setSession({access_token:o.access_token,refresh_token:o.refresh_token});if(r.data&&r.data.session)return r.data.session.access_token}}catch(e){}
  return null}
 function loginBox(){return `<div class="p" id="sm_login"><h2>🔐 دخول بحساب ميكانيزم (مرة واحدة)</h2><p class="mu">نفس الإيميل والباسورد اللي بتدخل بيهم سيستم ميكانيزم — عشان الذكاء يشتغل باسمك وماحدش غيرك يستخدمه.</p>
  <div class="r2"><label>الإيميل<input id="sm_em" type="email" autocomplete="username" dir="ltr"></label><label>الباسورد<input id="sm_pw" type="password" autocomplete="current-password" dir="ltr"></label></div>
@@ -92,7 +92,7 @@ async function pcmFromFile(file,prog){
  return await new Promise((ok,no)=>{const v=document.createElement('video');v.src=URL.createObjectURL(file);v.playsInline=true;v.muted=false;
   const ac=new AC(),src=ac.createMediaElementSource(v),sp=ac.createScriptProcessor(4096,1,1),parts=[],g=ac.createGain();g.gain.value=0;
   src.connect(sp);sp.connect(g);g.connect(ac.destination);const rate=ac.sampleRate;
-  sp.onaudioprocess=e=>{parts.push(new Float32Array(e.inputBuffer.getChannelData(0)));prog('🎧 بسمع الفيديو… '+fmt(v.currentTime)+' من '+fmt(v.duration)+' — سيب الشاشة مفتوحة لحد ما يخلص')};
+  sp.onaudioprocess=e=>{parts.push(new Float32Array(e.inputBuffer.getChannelData(0)));prog('🎧 بسمع الفيديو… '+fmt(v.currentTime)+' من '+fmt(v.duration)+'')};
   const wake=()=>{if(v.ended||!v.paused||document.visibilityState!=='visible')return;ac.resume().then(()=>v.play()).catch(()=>{})};document.addEventListener('visibilitychange',wake);v.onpause=()=>{if(!v.ended)setTimeout(wake,400)};const wd=setInterval(wake,2500);
   v.onended=()=>{document.removeEventListener('visibilitychange',wake);clearInterval(wd);sp.disconnect();ac.close&&ac.close();let n=parts.reduce((a,p)=>a+p.length,0),all=new Float32Array(n),o=0;parts.forEach(p=>{all.set(p,o);o+=p.length});
    const k=rate/16000,out=new Float32Array(Math.floor(n/k));for(let i=0;i<out.length;i++)out[i]=all[Math.floor(i*k)];URL.revokeObjectURL(v.src);ok(out)};
@@ -106,9 +106,9 @@ function wav64(f32){const n=f32.length,b=new ArrayBuffer(44+n*2),d=new DataView(
 function splitPoints(f32,len){const R=16000,out=[0];let at=0;while(at+len*R<f32.length){let tgt=at+len*R,best=tgt,bv=1e9;for(let i=tgt-4*R;i<tgt+2*R&&i<f32.length;i+=800){let e=0;for(let j=i;j<i+800&&j<f32.length;j++)e+=Math.abs(f32[j]);if(e<bv){bv=e;best=i}}at=best;out.push(at)}out.push(f32.length);return out}
 /* أماكن الكلام الحقيقية من الصوت نفسه (كل ٢٠ مللي): الذكاء بيقدّر التوقيت بالتقريب، فالقص والترجمة بيمشوا على الصوت */
 function vad(f32){const F=320,n=Math.floor(f32.length/F);if(n<10)return [];const E=new Float32Array(n);for(let i=0;i<n;i++){let a=0;for(let j=i*F;j<(i+1)*F;j++)a+=f32[j]*f32[j];E[i]=10*Math.log10(a/F+1e-10)}
- const so=Array.from(E).sort((a,b)=>a-b),fl=so[Math.floor(n*.1)],pk=so[Math.floor(n*.98)],thr=Math.max(fl+(pk-fl)*.3,pk-32);
- const I=[];let st=-1;for(let i=0;i<=n;i++){const on=i<n&&E[i]>thr;if(on&&st<0)st=i;if(!on&&st>=0){I.push([st*.02,i*.02]);st=-1}}
- const M=[];I.forEach(x=>{const l=M[M.length-1];if(l&&x[0]-l[1]<.18)l[1]=x[1];else M.push([x[0],x[1]])});return M.filter(x=>x[1]-x[0]>=.12).map(x=>[+x[0].toFixed(2),+x[1].toFixed(2)])}
+ const so=Array.from(E).sort((a,b)=>a-b),fl=so[Math.floor(n*.05)],pk=so[Math.floor(n*.98)],thr=Math.max(fl+7,Math.min(fl+(pk-fl)*.2,pk-22)),lo=thr-3;   // حساسية أعلى + هستيريسس: الكلام الواطي وآخر الكلمات مايتحسبوش سكوت
+ const I=[];let st=-1;for(let i=0;i<=n;i++){const on=i<n&&(st>=0?E[i]>lo:E[i]>thr);if(on&&st<0)st=i;if(!on&&st>=0){I.push([st*.02,i*.02]);st=-1}}
+ const M=[];I.forEach(x=>{const l=M[M.length-1];if(l&&x[0]-l[1]<.3)l[1]=x[1];else M.push([x[0],x[1]])});return M.filter(x=>x[1]-x[0]>=.06).map(x=>[+Math.max(0,x[0]-.05).toFixed(2),+(x[1]+.1).toFixed(2)])}
 async function callAI(b64,offset,first,tok){
  const r=await fetch(MK_URL+'/functions/v1/video-ai',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok,apikey:MK_KEY},body:JSON.stringify({audio:b64,mime:'audio/wav',offset,first,products:prods().map(p=>p.nm).filter(Boolean),gloss:gloss()})});
  const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));return j}
@@ -122,7 +122,7 @@ async function analyze(prog){
  const f32=await pcmFromFile(F,prog),pts=splitPoints(f32,40),jobs=[];
  for(let i=0;i<pts.length-1;i++)jobs.push({i,a:pts[i],b:pts[i+1]});
  const res=new Array(jobs.length);let done=0;
- const run=async j=>{for(let k=0;;k++){try{res[j.i]=await callAI(wav64(f32.subarray(j.a,j.b)),j.a/16000,j.i===0,tok);break}catch(e){if(k>=2||/LOGIN|دخول/.test(e.message))throw e;await new Promise(r=>setTimeout(r,2500*(k+1)))}}done++;prog('🧠 بفهم الكلام… '+done+' من '+jobs.length)};
+ const run=async j=>{for(let k=0;;k++){try{res[j.i]=await callAI(wav64(f32.subarray(j.a,j.b)),j.a/16000,j.i===0,tok);break}catch(e){if(k>=2||/LOGIN|دخول|مفتاح Gemini|API key/.test(e.message))throw e;await new Promise(r=>setTimeout(r,2500*(k+1)))}}done++;prog('🧠 بفهم الكلام… '+done+' من '+jobs.length)};
  prog('🧠 بفهم الكلام… 0 من '+jobs.length);
  for(let i=0;i<jobs.length;i+=3)await Promise.all(jobs.slice(i,i+3).map(run));
  return Object.assign(mergeAI(res,jobs.map(j=>j.a/16000)),{dur:f32.length/16000,vad:vad(f32),ch:jobs.map(j=>[j.a/16000,j.b/16000])})}
@@ -152,7 +152,33 @@ function headAt(t){const P=D&&D.people;
  return {x0:a.x0+(b.x0-a.x0)*k,x1:a.x1+(b.x1-a.x1)*k,y0:a.y0+(b.y0-a.y0)*k,y1:a.y1+(b.y1-a.y1)*k}}
 
 /* ---------- ٢) تجهيز الترجمة والقص ---------- */
-const GAPR={1:[.9,.2],2:[.5,.12],3:[.3,.07]};   // مستوى القص: [أقل سكتة تتشال، المسافة اللي تفضل قبل وبعد الكلام]
+const GAPR={1:[1,.25],2:[.6,.18],3:[.4,.12]};   // مستوى القص: [أقل سكتة تتشال، المسافة اللي تفضل قبل وبعد الكلام] — أهدى من الأول عشان الكلام مايتقطعش
+/* ---------- قص أذكى: إعادات حقيقية بس + حماية الكلام ---------- */
+const TK=t=>norm(t).split(/\s+/).filter(w=>w.length>1);
+const META=/(استن[يى]\s*(نعيد|اعيد|ثانيه)|نعيد|هعيد|اعيد تاني|كده تمام|غلطت|ايه ده)/;
+const FILL=new Set(['ايه','يعني','اه','ام','امم','اممم','ااا','اها','ايوه','كده','طيب','بقي','هو']);
+/* تكرار: الجملة الأقدم تتشال لو اللي بعدها (خلال دقيقتين، حتى لو في آخر الفيديو) بتقول نفس الكلام تقريبًا — وتفضل آخر مرة بس.
+   تهتهة/بداية غلط: جملة قصيرة هي أول كلام جملة جاية. جملة فيها معلومة مش في اللي بعدها مابتتشالش. */
+function markRepeats(){const S=D.seg||[],T=S.map(g=>TK(g.t));
+ for(let i=0;i<S.length;i++){const A=T[i];if(S[i].man||A.length<2)continue;const a=new Set(A);
+  for(let j=i+1;j<S.length&&S[j].s-S[i].e<120;j++){const B=T[j];if(!B.length)continue;let hit=0;a.forEach(w=>{if(B.includes(w))hit++});const cov=hit/a.size;
+   const full=A.length>=4&&cov>=.75&&B.length>=A.length*.7;
+   const pre=A.length<=6&&B.length>A.length&&S[j].s-S[i].e<25&&A.slice(0,Math.min(3,A.length)).every((w,k)=>B[k]===w);
+   const near=S[j].s-S[i].e<12&&A.length>=3&&cov>=.9&&B.length>=A.length;
+   if(full||pre||near){S[i].dup=true;S[i].cut=true;break}}}}
+/* علامات «تتشال» اللي جاية من الذكاء: بنصدّقها بس لو إعادة فعلًا (تشبه جملة جاية) أو تهتهة من غير معنى أو كلام للمصوّر. غير كده الكلام يفضل */
+function sanitizeCuts(){if(!D||D.cs===2)return;const S=D.seg||[];S.forEach(g=>{g.ai=!!g.cut;if(!g.man)g.cut=false});markRepeats();
+ const T=S.map(g=>TK(g.t));
+ S.forEach((g,i)=>{if(g.man||g.dup||!g.ai)return;const A=T[i],n=norm(g.t);
+  if(META.test(n)||(A.length&&A.length<=4&&A.every(w=>FILL.has(w)))){g.cut=true;return}
+  const a=new Set(A);for(let j=i+1;j<S.length&&S[j].s-g.e<60;j++){let hit=0;a.forEach(w=>{if(T[j].includes(w))hit++});if(a.size>=3&&hit/a.size>=.5){g.cut=true;break}}});
+ D.cs=2}
+/* أماكن الكلام الحقيقية (مدموجة): أي سكوت أقصر من ٣٥٠ مللي جوه الجملة مايتقطعش، وأي جملة مفيش عليها صوت مكتشف تتحسب كلام برضه */
+function islands(){const A=(D.vad||[]).map(x=>[x[0],x[1]]);(D.seg||[]).forEach(g=>{if(!A.some(x=>x[0]<g.e&&x[1]>g.s))A.push([g.s,g.e])});A.sort((a,b)=>a[0]-b[0]);
+ const M=[];A.forEach(x=>{const l=M[M.length-1];if(l&&x[0]-l[1]<.35)l[1]=Math.max(l[1],x[1]);else M.push([x[0],x[1]])});return M}
+/* مدى الجملة اللي هتتشال: على حدود الصوت الحقيقي جواها، ومايتعداش ±٠٫١٢ ثانية من تقدير الذكاء (عشان مانلمسش كلمة الجملة اللي جنبها) */
+function takeRange(g){const m=(D.vad||[]).filter(x=>{const c=(x[0]+x[1])/2;return c>=g.s-.05&&c<=g.e+.05});
+ if(!m.length)return [Math.max(0,g.s-.04),g.e+.04];return [Math.max(0,Math.max(g.s-.12,Math.min(g.s,m[0][0]))-.02),Math.min(g.e+.12,Math.max(g.e,m[m.length-1][1]))+.02]}
 /* توزيع الكلام على أماكن الصوت الحقيقية جوه كل جزء (على حسب طول الكلمات) + تحريك الكروت معاه */
 function retime(){if(!D||!D.vad||!D.vad.length||D.rt||!(D.seg||[]).length)return;const chs=(D.ch&&D.ch.length)?D.ch:[[0,D.dur||1e9]],pairs=[];
  chs.forEach(([a,b])=>{const G=D.seg.filter(g=>g.s>=a-.01&&g.s<b),SP=D.vad.map(x=>[Math.max(a,x[0]),Math.min(b,x[1])]).filter(x=>x[1]-x[0]>.05);if(!G.length||!SP.length)return;
@@ -161,7 +187,7 @@ function retime(){if(!D||!D.vad||!D.vad.length||D.rt||!(D.seg||[]).length)return
   let c=0;G.forEach((g,i)=>{const ns=at(c/tot);c+=W[i];const ne=at(c/tot);pairs.push([g.s,ns]);g.s=+ns.toFixed(2);g.e=+Math.max(ns+.3,ne).toFixed(2)})});
  pairs.sort((x,y)=>x[0]-y[0]);const map=t=>{if(!pairs.length)return t;if(t<=pairs[0][0])return Math.max(0,pairs[0][1]-(pairs[0][0]-t));for(let i=1;i<pairs.length;i++)if(t<=pairs[i][0]){const [a0,a1]=pairs[i-1],[b0,b1]=pairs[i];return a1+(b1-a1)*((t-a0)/Math.max(.01,b0-a0))}const l=pairs[pairs.length-1];return l[1]+(t-l[0])};
  (D.ev||[]).forEach(x=>{const d=Math.max(0,(x.e||0)-x.s),ns=map(x.s);x.s=+ns.toFixed(2);x.e=d?+(ns+d).toFixed(2):0});D.rt=1}
-function build(){retime();const cf=CF(),cut=+O('cut')||0,takes=O('takes');CAP=[];
+function build(){retime();sanitizeCuts();const cf=CF(),cut=+O('cut')||0,takes=O('takes');CAP=[];
  const SEG=(D.seg||[]).filter(g=>!(takes&&g.cut));
  SEG.forEach(g=>{const w=g.t.split(/\s+/).filter(Boolean),n=Math.max(1,Math.ceil(w.length/cf.words)),per=Math.ceil(w.length/n),dur=Math.max(.4,g.e-g.s);
   for(let i=0;i<n;i++){const ws=w.slice(i*per,(i+1)*per);if(!ws.length)continue;const a=g.s+dur*(i*per)/w.length,b=g.s+dur*Math.min(w.length,(i+1)*per)/w.length;CAP.push({s:a,e:b,w:ws,kw:g.kw||[]})}});
@@ -179,13 +205,13 @@ function build(){retime();const cf=CF(),cut=+O('cut')||0,takes=O('takes');CAP=[]
   e.e=Math.max(e.e,e.s+(e.action==='force'?4.6:/break|compare|install/.test(e.action)?4.2:3.6))});
  /* القص: السكتات حسب المستوى + الجمل اللي الذكاء علّم عليها إنها إعادة أو تهتهة */
  let G=[];const end=(V&&V.duration)||D.dur||0;
- if(cut&&D.vad&&D.vad.length){/* السكتات من الصوت نفسه */const [mn,pad]=GAPR[cut],sp=D.vad;let prev=0;
+ if(cut&&D.vad&&D.vad.length){/* السكتات من الصوت نفسه */const [mn,pad]=GAPR[cut],sp=islands();let prev=0;
   sp.forEach(x=>{if(x[0]-prev>mn+(prev?2*pad:pad))G.push([prev?prev+pad:0,x[0]-pad]);prev=Math.max(prev,x[1])});if(end-prev>mn+.4)G.push([prev+pad+.15,end])}
  else if(cut&&SEG.length){const [mn,pad]=GAPR[cut];let prev=0;
   if(SEG[0].s>mn+pad)G.push([0,SEG[0].s-pad]);
   SEG.forEach((g,i)=>{if(i&&g.s-prev>mn)G.push([prev+pad,g.s-pad]);prev=Math.max(prev,g.e)});
   if(end-prev>mn+.4)G.push([prev+pad+.15,end])}
- if(takes)(D.seg||[]).forEach(g=>{if(g.cut)G.push([Math.max(0,g.s-.04),g.e+.04])});
+ if(takes)(D.seg||[]).forEach(g=>{if(g.cut)G.push(takeRange(g))});
  G.sort((a,b)=>a[0]-b[0]);GAPS=[];G.forEach(g=>{if(g[1]-g[0]<.05)return;const l=GAPS[GAPS.length-1];if(l&&g[0]<=l[1]+.05)l[1]=Math.max(l[1],g[1]);else GAPS.push([g[0],g[1]])});
  CUTT=GAPS.map(g=>g[1]);
  /* الرسومات المتحركة: من الذكاء، ولو مارجعش حاجة بنطلعها من الكلام */
@@ -602,11 +628,11 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
- <p class="mu" style="margin:4px 0 10px">التحليل والمونتاج بيشتغلوا على موبايلك: <b>سيب الشاشة مفتوحة</b> لحد ما يخلص (دقيقة أو اتنين). الفيديو المتصدّر بيتحفظ في «📚 فيديوهاتي» فوق. 💡 صوّر بـ 1080p بدل 4K: أسرع بكتير.</p>
+ 
  <button class="b" id="sm_go" style="width:100%;min-height:62px;font-size:19px">✨ اعمل المونتاج الذكي</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
   <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="b" id="sm_pl" style="flex:none;min-width:64px">▶️</button><input type="range" id="sm_seek" min="0" max="1000" value="0" style="flex:1"><span id="sm_tm" class="mu" style="flex:none"></span></div>
-  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><button class="b o" id="sm_post" style="width:100%;margin-top:6px">📝 انسخ نص البوست (عنوان + وصف + هاشتاجات)</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_scb" style="flex:1">📊 قوة الفيديو</button><button class="b o" id="sm_chb" style="flex:1">⏱️ انسخ الفصول</button><button class="b o" id="sm_pv" style="flex:1">▶️ معاينة ١٠ث</button></div><div id="sm_sc" class="mu" style="white-space:pre-line;margin-top:6px"></div><p class="mu">التصدير بياخد نفس مدة الفيديو بعد القص تقريبًا — سيب الشاشة مفتوحة لحد ما يخلص.</p></div>
+  <button class="b" id="sm_ex" style="width:100%;min-height:56px;font-size:18px;margin-top:8px">💾 صدّر الفيديو</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_srt" style="flex:1">⬇️ ترجمة SRT</button><button class="b o" id="sm_cov" style="flex:1">🖼️ صورة غلاف</button></div><button class="b o" id="sm_post" style="width:100%;margin-top:6px">📝 انسخ نص البوست (عنوان + وصف + هاشتاجات)</button><div style="display:flex;gap:6px;margin-top:6px"><button class="b o" id="sm_scb" style="flex:1">📊 قوة الفيديو</button><button class="b o" id="sm_chb" style="flex:1">⏱️ انسخ الفصول</button><button class="b o" id="sm_pv" style="flex:1">▶️ معاينة ١٠ث</button></div><div id="sm_sc" class="mu" style="white-space:pre-line;margin-top:6px"></div></div>
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>🧾 اللي اتطبّق على الفيديو ده</h2><div id="sm_ap" style="line-height:1.9"></div><button type="button" class="b o" id="sm_rp" style="width:100%;margin-top:8px">📋 انسخ تقرير الفيديو وابعته لـ Claude</button></div>
  <div class="p"><h2>🎞️ أماكن فيديوهات الإدراج</h2><div id="sm_bl"></div></div>
@@ -637,7 +663,8 @@ async function phonePeople(pg){if(!S.smart||!V||V.videoWidth>V.videoHeight)retur
  const seek=t=>new Promise(r=>{const done=()=>{V.removeEventListener('seeked',done);r(V)};V.addEventListener('seeked',done);V.currentTime=t;setTimeout(done,1500)});
  try{pg.textContent='👀 بدور على مكانك في الفيديو…';D.people=await detectPeople(times,seek,p=>{pg.textContent='👀 بدور على مكانك في الفيديو… '+p+'%'});V.currentTime=0}
  catch(e){console.warn('pose',e);pg.textContent='⚠️ ماقدرتش أحدد مكانك — هستخدم تقدير'}}
-async function go(){if(busy)return;if(!F)return say('اختار الفيديو الأول');const b=$s('sm_go'),pg=$s('sm_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';let wl=null;const getWl=()=>{try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}};getWl();const wlv=()=>{if(document.visibilityState==='visible'&&busy)getWl()};document.addEventListener('visibilitychange',wlv);
+let WLK=null;async function keepAwake(){try{if(navigator.wakeLock&&!WLK){WLK=await navigator.wakeLock.request('screen');WLK.addEventListener('release',()=>{WLK=null})}}catch(e){}}function relAwake(){try{if(WLK)WLK.release()}catch(e){}WLK=null}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&busy)keepAwake()});
+async function go(){if(busy)return;keepAwake();if(!F)return say('اختار الفيديو الأول');const b=$s('sm_go'),pg=$s('sm_pg');busy=true;b.disabled=true;b.textContent='⏳ شغال…';let wl=null;const getWl=()=>{try{navigator.wakeLock&&navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}};getWl();const wlv=()=>{if(document.visibilityState==='visible'&&busy)getWl()};document.addEventListener('visibilitychange',wlv);
  const key='mkz-ai2:'+F.name+':'+F.size;
  try{let cached=null;try{cached=JSON.parse(localStorage.getItem(key)||'null')}catch(e){}
   D=cached||await analyze(m=>pg.textContent=m);styInit();
@@ -693,7 +720,7 @@ function renderLists(){
  (D.seg||[]).forEach(g=>{if(g._o==null)g._o=g.t});
  $s('sm_cap').innerHTML=D.seg.map((g,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;${g.cut&&O('takes')?'opacity:.5':''}"><button type="button" class="b o" data-sk="${g.s}" style="flex:none;min-width:58px;padding:6px">${fmt(g.s)}</button><label title="شيل الجملة دي" style="flex:none;display:flex;align-items:center;gap:2px">✂️<input type="checkbox" data-sc="${i}" ${g.cut?'checked':''} style="width:20px;height:20px"></label><input data-sg="${i}" value="${esc(g.t)}" style="flex:1"></div>`).join('')||'<p class="mu">مفيش كلام</p>';
  $s('sm_cap').onclick=e=>{const b=e.target.closest('[data-sk]');if(b){V.currentTime=+b.dataset.sk;draw(V.currentTime)}};
- $s('sm_cap').onchange=e=>{if(e.target.dataset.sg!=null){const g=D.seg[+e.target.dataset.sg];if(g&&g._o!=null){const old=new Set(String(g._o).split(/s+/));addGloss(e.target.value.split(/s+/).filter(w=>!old.has(w)))}return}const i=e.target.dataset.sc;if(i==null)return;D.seg[+i].cut=e.target.checked;if(e.target.checked&&!O('takes')){S.o.takes=true;saveS();paintOpts()}build();renderLists();draw(V.currentTime);updBar()};
+ $s('sm_cap').onchange=e=>{if(e.target.dataset.sg!=null){const g=D.seg[+e.target.dataset.sg];if(g&&g._o!=null){const old=new Set(String(g._o).split(/s+/));addGloss(e.target.value.split(/s+/).filter(w=>!old.has(w)))}return}const i=e.target.dataset.sc;if(i==null)return;D.seg[+i].cut=e.target.checked;D.seg[+i].man=true;if(e.target.checked&&!O('takes')){S.o.takes=true;saveS();paintOpts()}build();renderLists();draw(V.currentTime);updBar()};
  $s('sm_cap').oninput=e=>{const i=e.target.dataset.sg;if(i==null)return;D.seg[+i].t=e.target.value;build();draw(V.currentTime)};
  const IC={measure:'📏',product:'📦',price:'💰',point:'✔',step:'🔢',warn:'⚠️',topic:'📌',anim:'🎞️'};
  $s('sm_ev').innerHTML=(D.ev.length?D.ev.map((x,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><input type="checkbox" data-eo="${i}" ${x.on?'checked':''} style="width:22px;height:22px;flex:none"><button type="button" class="b o" data-sk="${x.s}" style="flex:none;min-width:58px;padding:6px">${fmt(x.s)}</button><span style="flex:none">${IC[x.type]||'•'}</span><input data-el="${i}" value="${esc(x.type==='measure'||x.type==='price'?((x.value||'')+' '+(x.unit||'')).trim():x.label)}" style="flex:1"></div>${x.type==='anim'?`<div style="display:flex;gap:6px;margin:-2px 0 8px 0">${sel('',SCENES,x.scene).replace('<select id=""',`<select data-as="${i}" style="flex:1"`)}${sel('',ACTIONS,x.action).replace('<select id=""',`<select data-aa="${i}" style="flex:1"`)}</div>`:''}`).join(''):'<p class="mu">مالقيتش مقاسات أو أصناف في الكلام.</p>')
@@ -724,13 +751,13 @@ async function cloudSubmit(){if(busy)return;if(!F)return say('اختار الف�
   if(resume){try{const L=await withTO(c.storage.from('video-jobs').list(`${uid}/${id}`,{limit:1000}),20000,'السيرفر مابيردش');(L.data||[]).forEach(o=>{have[o.name]=o.metadata&&+o.metadata.size})}catch(e){}if(Object.keys(have).length)say('⬆️ هكمّل الرفع من مكان ما وقف')}
   for(let i=0;i<n;i++){const nm=`p${String(i+1).padStart(3,'0')}`,path=`${uid}/${id}/${nm}`,blob=F.slice(i*PART,Math.min(F.size,(i+1)*PART));
    if(have[nm]===blob.size){paths.push(path);continue}
-   for(let k=0;;k++){pg.textContent=`⬆️ برفع الفيديو… ${i+1} من ${n} (${Math.round((i*PART)/F.size*100)}%) — سيب الشاشة مفتوحة لحد ما يخلص الرفع`;
+   for(let k=0;;k++){pg.textContent=`⬆️ برفع الفيديو… ${i+1} من ${n} (${Math.round((i*PART)/F.size*100)}%)`;
     const r=await c.storage.from('video-jobs').upload(path,blob,{upsert:true,contentType:'application/octet-stream'});if(!r.error)break;if(k>=3)throw new Error('الرفع وقف: '+(r.error.message||r.error));await new Promise(r=>setTimeout(r,2500*(k+1)))}
    paths.push(path)}
   step='تأكيد الطلب';const up=await c.from('mk_video_jobs').update({parts:paths,status:'queued',note:'مستني دوره'}).eq('id',id);if(up.error)throw up.error;
   pg.textContent='✅ الفيديو اتحط في الطابور — تقدر تقفل الموبايل. هتلاقيه جاهز تحت في «فيديوهاتي».';say('✅ اترفع — السيرفر هيكمل لوحده');loadJobs();$s('sm_jobsbox').scrollIntoView({behavior:'smooth'})}
  catch(e){const m='❌ وقف في خطوة «'+step+'»: '+(e&&e.message||e);pg.textContent=m;say(m);try{localStorage.setItem('mkz-last-err',new Date().toISOString()+' '+m)}catch(x){}}
- finally{busy=false;b.disabled=false;b.textContent='☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)';try{wl&&wl.release()}catch(e){}}}
+ finally{busy=false;relAwake();b.disabled=false;b.textContent='☁️ اعمله في الخلفية (تقفل الموبايل وهو شغال)';try{wl&&wl.release()}catch(e){}}}
 const withTO=(p,ms,msg)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error(msg)),ms))]);
 const JST={uploading:'⬆️ بيترفع',queued:'⏳ مستني دوره',working:'⚙️ شغال',done:'✅ جاهز',failed:'❌ فشل'};
 async function loadJobs(){const el=$s('sm_jobs');if(!el)return;const c=sbk();if(!c)return;
@@ -827,16 +854,18 @@ function computeBroll(){BRL=[];if(!BRC.length||!D)return;const dur=D.dur||(V&&V.
  L.sort((a,b)=>a.s-b.s);BRL=L}
 /* مكان اللوحة: تحت راسك (بعيد عن الوش) وفوق الكلام */
 function brGeom(t){const [W,H]=[CV.width,CV.height],u=W/1080,hr=headRect(t),top=Math.max(H*.47,hr?hr[1]+10*u:0);
- const cf=CF(),lh=Math.round(cf.sz*u*S.size)*1.34,bot=O('cap')==='none'?H*.93:capBottom()-2*lh-24*u;if(top>H*.62||bot-top<H*.15)return null;
+ const cf=CF(),lh=Math.round(cf.sz*u*S.size)*1.34,bot=O('cap')==='none'?H*.93:capBottom()-2*lh-24*u;if(top>H*.62||bot-top<H*.15){if(!S.brp)return null;return brCustom({x:W*.04,y:H*.6,w:W*.92,h:H*.28},W,H)}
  /* المساحة المتاحة بين الوش والكلام: نحط الفيديو في الجزء الأوطى منها (مش لازق في الوش) */
- const hd=Math.min(bot-top,H*.34),px=W*.04;return {x:px,y:top+(bot-top-hd)*.8,w:W-2*px,h:hd}}
-function brActive(t){const b=BRL.find(x=>t>=x.s&&t<x.e);return b&&brGeom(t)?b:null}
+ const hd=Math.min(bot-top,H*.34),px=W*.04,g0={x:px,y:top+(bot-top-hd)*.8,w:W-2*px,h:hd};return brCustom(g0,W,H)}
+/* مكان فيديو الإدراج بإيدك: S.brp = {cx,cy,w} نسب من الشاشة (مركز الفيديو وعرضه) — لو متحدد بيتستخدم بدل المكان التلقائي */
+function brCustom(g0,W,H){const p=S.brp;if(!p)return g0;const w=Math.max(W*.18,Math.min(W*.98,W*(p.w||.92))),h=Math.min(H*.6,g0.h*(w/g0.w)),x=Math.max(0,Math.min(W-w,p.cx*W-w/2)),y=Math.max(0,Math.min(H-h,p.cy*H-h/2));return {x,y,w,h}}
+function brActive(t){const b=BRL.find(x=>t>=x.s&&t<x.e);return b&&(S.brp||brGeom(t))?b:null}
 function brSync(b,t){const v=b.c.v;if(!v||v.readyState<2)return;const rel=Math.min(Math.max(0,t-b.s),Math.max(0,(b.c.dur||1)-.05)),pl=V&&!V.paused;
  if(pl){if(Math.abs(v.currentTime-rel)>.4)v.currentTime=rel;if(v.paused)v.play().catch(()=>{})}else{if(!v.paused)v.pause();if(Math.abs(v.currentTime-rel)>.04)v.currentTime=rel}}
 function drawBroll(b,t,W,H){const g=brGeom(t),u=W/1080,acc=COL(),v=b.c.v;if(!g)return;brSync(b,t);
  const pin=ease((t-b.s)/.4),pout=1-ease((t-b.e+.3)/.3),p=Math.min(pin,pout);if(p<=0)return;
  const sl=(1-pin)*(H-g.y)*.3+(1-pout)*(H-g.y)*.2,sc=.96+.04*p;
- CX.save();CX.globalAlpha=p;CX.translate(W/2,g.y+g.h/2+sl);CX.scale(sc,sc);const x=-g.w/2,y=-g.h/2,r=34*u;
+ CX.save();CX.globalAlpha=p;CX.translate(g.x+g.w/2,g.y+g.h/2+sl);CX.scale(sc,sc);const x=-g.w/2,y=-g.h/2,r=34*u;
  CX.save();CX.shadowColor='rgba(0,0,0,.55)';CX.shadowBlur=40*u;CX.shadowOffsetY=10*u;rr(x,y,g.w,g.h,r);CX.fillStyle='#000';CX.fill();CX.restore();
  CX.save();rr(x,y,g.w,g.h,r);CX.clip();
  if(v&&v.videoWidth&&v.readyState>=2){const k=Math.max(g.w/v.videoWidth,g.h/v.videoHeight),dw=v.videoWidth*k,dh=v.videoHeight*k;CX.drawImage(v,x+(g.w-dw)/2,y+(g.h-dh)/2,dw,dh)}
@@ -1187,6 +1216,151 @@ function styWire(){const rd=()=>{if(V&&CV)draw(V.currentTime)},cust=(k,v)=>{S.cu
  $s('sm_rer').onclick=styReroll;styPaint()}
 /* الستوديو بيرسم القايمة بعد ما المخزن يجهز (window.__ready) — نركّب بعده عشان مايتمسحش */
 (window.__ready&&window.__ready.then?window.__ready:Promise.resolve()).then(()=>setTimeout(mount,0),()=>setTimeout(mount,0));
+/* ---------- 📍 تحريك فيديو الإدراج: سحب بالصباع على المعاينة + حجم + رجوع للمكان التلقائي ---------- */
+let BRMOVE=false;
+function brPosUI(){const host=$s('sm_bi');if(!host||$s('sm_brp'))return;const d=document.createElement('div');d.id='sm_brp';d.style.cssText='margin-top:10px;padding-top:10px;border-top:1px solid var(--ln)';
+ d.innerHTML='<div style="font-weight:800;margin-bottom:6px">📍 مكان الفيديو على الشاشة</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="b o" id="sm_brm" style="flex:1;min-width:140px">✋ حرّكه بصباعك</button><button type="button" class="b o" id="sm_brr" style="flex:1;min-width:140px">↩️ المكان التلقائي</button></div><label style="display:flex;align-items:center;gap:8px;margin-top:8px">الحجم <input type="range" id="sm_brw" min="25" max="100" value="92" style="flex:1"><span id="sm_brwv" class="mu">92%</span></label><p class="mu" id="sm_brh" style="margin:6px 0 0">دوس «حرّكه» وبعدين اسحب الفيديو على المعاينة (فوق) للمكان اللي عايزه. الحجم بالسلايدر.</p>';
+ host.parentElement.appendChild(d);
+ const w=$s('sm_brw'),upd=()=>{const p=S.brp;w.value=Math.round(((p&&p.w)||.92)*100);$s('sm_brwv').textContent=w.value+'%';$s('sm_brm').classList.toggle('o',!BRMOVE);$s('sm_brm').textContent=BRMOVE?'✅ تمام — ثبّت المكان':'✋ حرّكه بصباعك';$s('sm_brr').style.opacity=S.brp?1:.5};
+ const redraw=()=>{if(V&&CV){LAY.clear();draw(V.currentTime)}};
+ $s('sm_brm').onclick=()=>{BRMOVE=!BRMOVE;if(BRMOVE&&!S.brp){S.brp={cx:.5,cy:.74,w:.92};saveS()}if(CV)CV.style.touchAction=BRMOVE?'none':'';upd();redraw();if(BRMOVE&&CV)CV.scrollIntoView({behavior:'smooth',block:'center'})};
+ $s('sm_brr').onclick=()=>{delete S.brp;BRMOVE=false;if(CV)CV.style.touchAction='';saveS();upd();redraw()};
+ w.oninput=()=>{S.brp=Object.assign({cx:.5,cy:.74,w:.92},S.brp||{},{w:+w.value/100});saveS();$s('sm_brwv').textContent=w.value+'%';redraw()};upd()}
+function brDragWire(){const c=$s('sm_cv');if(!c||c._brd)return;c._brd=1;let on=false;
+ const at=e=>{const r=c.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))}};
+ const mv=e=>{if(!BRMOVE||!on)return;const p=at(e);S.brp=Object.assign({w:.92},S.brp||{},{cx:+p.x.toFixed(3),cy:+p.y.toFixed(3)});if(V){LAY.clear();draw(V.currentTime)}e.preventDefault()};
+ c.addEventListener('pointerdown',e=>{if(!BRMOVE)return;on=true;try{c.setPointerCapture(e.pointerId)}catch(x){}mv(e)});c.addEventListener('pointermove',mv);
+ c.addEventListener('pointerup',()=>{if(on){on=false;saveS()}});c.addEventListener('pointercancel',()=>{on=false});}
+/* وقت التحريك: لو مفيش إدراج ظاهر في اللحظة دي نرسم مستطيل إرشادي مكانه */
+const _draw2=draw;draw=function(t){const r=_draw2.apply(this,arguments);try{if(BRMOVE&&CV&&CX&&!brActive(t)){const W=CV.width,H=CV.height,g=brCustom({x:W*.04,y:H*.6,w:W*.92,h:H*.28},W,H);CX.save();CX.setLineDash([18,12]);CX.lineWidth=5*(W/1080);CX.strokeStyle='#F6DC8A';CX.fillStyle='rgba(246,220,138,.18)';CX.fillRect(g.x,g.y,g.w,g.h);CX.strokeRect(g.x,g.y,g.w,g.h);CX.setLineDash([]);CX.fillStyle='#F6DC8A';CX.font='800 '+Math.round(34*(W/1080))+'px sans-serif';CX.textAlign='center';CX.fillText('🎞️ فيديو الإدراج',g.x+g.w/2,g.y+g.h/2);CX.restore()}}catch(e){}return r};
+/* ---------- 🪝 مكتبة الهوكات: ٥٠+ بداية قوية للفيديو. كل هوك: ليه بيشتغل، إزاي تصوره بالتوقيت، إيه اللي يتركّب في المونتاج، جملة نموذجية، وتأثير بيتطبّق لوحده ---------- */
+const HK_CATS=['الكل','صدمة وفضول','سؤال وتحدي','أخطاء وتحذير','قبل وبعد','أرقام وأسعار','حركة وبصريات','قصة وإثبات','عرض وعروض'];
+const HK=[
+['صدمة وفضول','الحقيقة اللي محدش بيقولها','الناس بتقف عند أي حاجة «مخبّياها عنهم»','٠–١ث: قرّب من الكاميرا وبصّة جادة|١–٣ث: قول الجملة ببطء|٣–٥ث: ارجع للمنتج','كلمة «محدش» تتلوّن بالأحمر + صوت نبضة','في حاجة عن {منتج} محدش بيقولهالك…','slam'],
+['صدمة وفضول','ماتشتريش قبل ما تشوف ده','تحذير قبل الشراء بيوقّف الإصبع عن السكرول','٠–٢ث: إيدك قدام الكاميرا كأنك بتوقّفه|٢–٤ث: الجملة|بعدها المنتج','علامة ⚠️ نابضة + حدود حمرا بتنبض','استنى! قبل ما تشتري {منتج} شوف ده.','redalert'],
+['صدمة وفضول','٣ ثواني وهتفهم الغلط','وعد بوقت قصير بيخلّي الناس تكمّل','٠–١ث: ارفع ٣ صوابع|١–٤ث: عدّ ٣-٢-١ بصوتك|٤ث: الكشف','عدّاد ٣-٢-١ كبير في النص + شريط وقت بينزل','٣ ثواني بس وهتعرف ليه {منتج} بيبوظ.','count'],
+['صدمة وفضول','ده اللي حصل لما جرّبت','نتيجة مجهولة = فضول','٠–٢ث: لقطة النتيجة من غير شرح (الأخيرة)|٢–٣ث: قول الجملة|بعد كده ارجع من الأول','الفيديو يبدأ باللقطة الأخيرة مقطوعة ٢ث بعدين «من الأول»','جرّبت {منتج} لمدة شهر… والنتيجة صدمتني.','glitch'],
+['صدمة وفضول','إنت بتعملها غلط من سنين','اتهام لطيف بيخلّي الناس تدافع وتتفرج','٠–١ث: بصّة للكاميرا وإشارة بإصبعك|١–٣ث: الجملة|٣ث: اعرض الغلط','إصبع/سهم بيشاور + كلمة «غلط» تنط','إنت بتركّب {منتج} غلط… وده السبب.','slam'],
+['صدمة وفضول','لو شفت ده في بيتك اجري','مبالغة خفيفة + خوف بسيط','٠–٢ث: لقطة قريبة للعيب|٢–٣ث: الجملة بصوت واطي','زوم سريع على العيب + صوت تحذير','لو لقيت ده في {منتج} اجري بسرعة.','redalert'],
+['صدمة وفضول','المفاجأة في الآخر','بيخلّي الناس تتفرج للنهاية','٠–٢ث: اعرض المنتج وقول «استنى للآخر»|بعد كده شرح عادي','شريط تقدّم بيملا لحد المفاجأة','استنى لآخر الفيديو… في حاجة هتفاجئك.','type'],
+['صدمة وفضول','سر الصنايعية','«سر المهنة» بيجذب الفضول','٠–٢ث: لف حوالين الشغل وقول الجملة بهمس|٢–٤ث: اكشف الخدعة','ختم «سر» أحمر ينزل بصوت ختم','السر اللي الصنايعي مابيقولوش للزبون…','slam'],
+['صدمة وفضول','ماكنتش مصدّق إن ده ممكن','دهشة شخصية بتنتقل للمتفرج','٠–١ث: عينك واسعة|١–٣ث: الجملة|٣ث: العرض','تأثير فلاش أبيض عند الكشف','مكنتش مصدق إن {منتج} يعمل كده!','flash'],
+['صدمة وفضول','أنا غلطت ودفعت التمن','الاعتراف بغلط بيخلّي الناس تسمع','٠–٢ث: وش متضايق + الجملة|٢–٥ث: احكي الغلطة','عنوان «غلطة بـ ... جنيه» بالأحمر','غلطتي في {منتج} كلّفتني فلوس كتير.','glitch'],
+['سؤال وتحدي','تعرف الفرق بين ده وده؟','سؤال بيحط المتفرج في اختبار','٠–٢ث: منتجين قدام الكاميرا|٢–٣ث: السؤال|٣ث: الإجابة بعد ثانيتين صمت','علامتي ؟ ؟ فوق كل منتج + عدّاد تفكير','تعرف الفرق بين {منتج} والتاني؟','type'],
+['سؤال وتحدي','خمّن الصح من الاتنين','لعبة تفاعل بتزوّد التعليقات','٠–٢ث: اعرض الاتنين|٢–٤ث: «اكتب ١ ولا ٢»|٤ث: الإجابة آخر الفيديو','رقمين كبار ١ و٢ على الجنبين','اكتب في الكومنت: أنهي أحسن؟','slam'],
+['سؤال وتحدي','تحدّي: لو عرفت الغلط هديك خصم','تحدي + مكافأة = مشاركة','٠–٣ث: اعرض الصورة وفيها غلطة|٣–٥ث: «اكتب الغلطة في الكومنت»','دائرة حمرا بتتحرك على الغلطة في الآخر','لو لقيت الغلط في الفيديو ده، ليك خصم.','flash'],
+['سؤال وتحدي','هل ده يستاهل؟','سؤال بسيط الكل عنده رأي','٠–١ث: اعرض السعر|١–٣ث: السؤال|بعد كده التفاصيل','علامة سعر كبيرة + ❓','{منتج} بسعر كده… يستاهل ولا لأ؟','slam'],
+['سؤال وتحدي','إنت من أنهي نوع؟','يخلّي كل متفرج يصنّف نفسه','٠–٢ث: اعرض ٣ أنواع بسرعة|٢–٣ث: السؤال','٣ أيقونات بتظهر ورا بعض','إنت من أنهي نوع في المطبخ؟','type'],
+['سؤال وتحدي','٩٩٪ ماعندهمش الإجابة','رقم إحصائي بيثير التحدي','٠–٢ث: السؤال + بصّة واثقة|٢–٤ث: اللغز','نسبة ٩٩٪ كبيرة بتتعد من صفر','٩٩٪ مايعرفوش ليه {منتج} بيقفل بالراحة.','count'],
+['سؤال وتحدي','جاوب قبل ما أقولك','بيخلّي المتفرج يفكّر بصوت','٠–٢ث: السؤال|٢–٤ث: سكوت|٤ث: الإجابة','شريط وقت بينزل في الصمت','إيه الحاجة اللي بتبوّظ {منتج}؟ فكّر…','count'],
+['أخطاء وتحذير','٣ أخطاء بتبوّظ المطبخ','قائمة بعدد معروف = وعد واضح','٠–٢ث: الجملة + ٣ صوابع|بعد كده كل غلطة بتوقيتها','أرقام ١ ٢ ٣ تظهر مع كل غلطة','٣ أخطاء في اختيار {منتج} بتكلّفك كتير.','redalert'],
+['أخطاء وتحذير','الغلطة اللي كل الناس بتعملها','«كل الناس» = المتفرج واحد منهم','٠–٢ث: لقطة الغلطة بتتعمل|٢–٣ث: الجملة','علامة ✗ حمرا كبيرة على الغلط','الغلطة دي بيعملها كل واحد بيركّب {منتج}.','redalert'],
+['أخطاء وتحذير','ده السبب إن المنتج بيتكسر','سبب مشكلة معروفة','٠–٢ث: اعرض الكسر|٢–٤ث: السبب','رسمة متحركة للكسر (بتتولّد تلقائي)','ده السبب الحقيقي إن {منتج} بيتكسر.','glitch'],
+['أخطاء وتحذير','وقّف قبل ما تركّب','أمر مباشر = توقّف','٠–١ث: إيدك قدام الكاميرا|١–٣ث: الجملة','إطار أحمر بينبض + صوت صفارة','وقّف! ماتركّبش {منتج} قبل ما تشوف ده.','redalert'],
+['أخطاء وتحذير','رخيص النهاردة غالي بكرة','مفارقة معروفة','٠–٢ث: منتج رخيص مكسور جنب سليم|٢–٣ث: الجملة','تقسيم الشاشة نصين: رخيص / سليم','اللي بتوفّره النهاردة هتدفعه بكرة.','slam'],
+['أخطاء وتحذير','نصيحة الصنايعي دي غلط','تحدّي سلطة بيشد الانتباه','٠–٢ث: الجملة بحزم|٢–٤ث: التصحيح','صوت «بيب» تحذير','في نصيحة بتتقال عن {منتج} وهي غلط.','glitch'],
+['أخطاء وتحذير','شوف إيه اللي هيحصل بعد سنة','مستقبل مخيف','٠–٢ث: لقطة منتج جديد|٢–٣ث: «وبعد سنة…»|٣–٥ث: لقطة التلف','انتقال «بعد سنة» بشريط وقت يلف','بعد سنة من الاستخدام… شوف النتيجة.','type'],
+['قبل وبعد','من ده… لده','تحوّل واضح','٠–٢ث: لقطة قبل (فوضى)|٢–٣ث: قطع سريع|٣–٥ث: لقطة بعد','تقسيم الشاشة قبل/بعد بخط بيتحرك','من فوضى لمطبخ مرتب بـ {منتج}.','open'],
+['قبل وبعد','٣٠ ثانية للتحويل','سرعة التحوّل','٠–١ث: تايمر ٣٠ث|١–٥ث: تسريع (تايم لابس) للشغل','عدّاد تنازلي في ركن الشاشة','٣٠ ثانية بس وتشوف الفرق.','count'],
+['قبل وبعد','قبل ما أركّب… وبعد','الفرق البصري','٠–٢ث: لقطة قبل + كلمة «قبل»|٢–٥ث: بعد + كلمة «بعد»','تسمية قبل/بعد بخط كبير','قبل {منتج} وبعده… الفرق واضح.','open'],
+['قبل وبعد','الدرج ده كان بيتعب','تحويل مشكلة لحل','٠–٢ث: اعرض المشكلة|٢–٣ث: «لحد ما…»|٣ث: الحل','انتقال سحب لحل','الدرج ده كان مشكلة… لحد ما جبت {منتج}.','open'],
+['قبل وبعد','نفس المكان ٢٤ ساعة','قبل/بعد في يوم','٠–٢ث: لقطة ثابتة للمكان|٢–٤ث: تايم لابس للتركيب|٤ث: النتيجة','شريط ساعة بيمشي','يوم واحد وغيّرت المطبخ كله.','count'],
+['أرقام وأسعار','بـ {سعر} جنيه بس','السعر الصادم بيشد','٠–١ث: اعرض الرقم مكتوب|١–٣ث: قول الجملة','رقم السعر ضخم بيتعد لحد السعر','{منتج} بـ {سعر} جنيه بس؟!','count'],
+['أرقام وأسعار','وفّر ٥٠٪ لو عملت كده','وعد بتوفير','٠–٢ث: الجملة + أرقام بتنزل|٢ث: الطريقة','نسبة ٥٠٪ بتنزل من ١٠٠','هتوفّر نص الفلوس لو عملت كده.','count'],
+['أرقام وأسعار','مقارنة: رخيص ٢٠٠ / غالي ٢٠٠٠','فرق سعر كبير بيحرّك الفضول','٠–٢ث: اعرض المنتجين مع سعرهم|٢–٤ث: «الفرق ده فين؟»','تقسيم شاشة بسعرين','٢٠٠ ولا ٢٠٠٠؟ الفرق مش السعر بس.','slam'],
+['أرقام وأسعار','٣ حاجات هتعرفها في ١٠ ثواني','وعد صغير وواضح','٠–٢ث: الجملة|٢–١٠ث: الثلاثة بسرعة','قايمة ١-٢-٣ بتظهر وراء بعض','٣ حاجات عن {منتج} في ١٠ ثواني.','type'],
+['أرقام وأسعار','جرّبت ١٠ أنواع واخترت واحد','جهد كبير = ثقة','٠–٢ث: ١٠ منتجات في صف|٢–٤ث: واحد بس بيتّاخد','شبكة ١٠ صور وواحدة بتضوي','جرّبت ١٠ أنواع {منتج}… وده الفايز.','flash'],
+['أرقام وأسعار','سعر الجملة بقى متاح','عرض للتجار','٠–٢ث: اعرض كمية كبيرة|٢–٣ث: الجملة','شارة «جملة» ذهبية بتلمع','اللي بيشتري كمية هيوصل لسعر تاني خالص.','flash'],
+['أرقام وأسعار','٥ ثواني وهتحسب التكلفة','حساب سريع','٠–٣ث: اكتب أرقام على ورقة|٣–٥ث: النتيجة','أرقام بتتجمع وتطلع نتيجة','احسبها معايا في ٥ ثواني.','count'],
+['حركة وبصريات','شدّ بإيدك والشاشة تتفتح','حركة جسم بتتحول لانتقال = هوك سينمائي','٠–١ث: ارفع إيدك الشمال قدام الكاميرا كأنك بتمسك حاجة|١–٢ث: اسحبها لجنب|٢ث: بداية الفيديو الحقيقي','لوحتين سودا بتتفتح من النص مع حركة إيدك (تأثير الفتح)','(من غير كلام) اسحب إيدك والشاشة تتفتح عن المنتج','open'],
+['حركة وبصريات','نطّة والمنتج يظهر','حركة مفاجئة = انتباه','٠–١ث: اقفز أو انحني للكاميرا|١–٢ث: قطّع على المنتج','هزة كاميرا + فلاش عند القطع','(نط) وفجأة {منتج} قدامك.','flash'],
+['حركة وبصريات','وقعت من حاجة','مشهد درامي بيضحّك ويشد','٠–١ث: اتكلم وانت ماشي بعدين اتعثّر|١–٢ث: قطّع|٢ث: وقوع على المنتج','هزة قوية + صوت وقوع + تجميد لقطة ٠٫٣ث','أووه! … شوف إيه اللي وقّعني.','glitch'],
+['حركة وبصريات','المنتج بيلف ٣٦٠ في ٣ ثواني','شكل المنتج الكامل بسرعة','٠–٣ث: لف المنتج أو الكاميرا حواليه','لقطة بطيئة + ظل ناعم','{منتج} من كل الزوايا.','open'],
+['حركة وبصريات','تقطيع إيقاعي على الموسيقى','إيقاع سريع بيشد العين','٠–٣ث: ٦ لقطات قصيرة للمنتج (نص ثانية)','قطع على الإيقاع + زوم نبضة','{منتج}… بشكل ماشفتهوش قبل كده.','flash'],
+['حركة وبصريات','لقطة من جوّه الدرج','زاوية مش معتادة','٠–٢ث: حط الكاميرا جوه الدرج وهو بيتفتح','زوم أوتوماتيك لما الدرج يفتح','شوف الدرج ده من جوّه.','open'],
+['حركة وبصريات','قرّب جداً وابعد فجأة','ماكرو مفاجئ','٠–٢ث: قرّب على تفصيلة|٢ث: ابعد فجأة','زوم دخول/خروج سريع','التفصيلة الصغيرة اللي بتفرق في {منتج}.','glitch'],
+['حركة وبصريات','لقطة بطيئة لحظة القفل','سلو موشن مريح','٠–٣ث: صوّر قفل الدرج ٦٠ إطار وبطّئه','تباطؤ ٣٠٪ + صوت هادي','اسمع القفل ده… من غير ولا صوت.','open'],
+['حركة وبصريات','يد تدخل الإطار بالمنتج','يد بتقدّم المنتج = حقيقي','٠–١ث: لقطة فاضية|١–٢ث: إيد بتدخل بالمنتج','قصّ مرن + ظل','اتفضّل… ده {منتج}.','slam'],
+['قصة وإثبات','زبون اتصل بيا الصبح','قصة حقيقية بتشد','٠–٣ث: «زبون اتصل بيا…» وانت بتمسك الموبايل|٣–٦ث: المشكلة','أيقونة موبايل بتهتز + عنوان القصة','زبون اتصل بيا النهاردة بسبب {منتج}…','type'],
+['قصة وإثبات','٢٠ سنة شغل وده اللي اتعلمته','خبرة = مصداقية','٠–٢ث: جملة ثابتة في ورشتك|٢–٥ث: الدرس','رقم ٢٠ سنة كبير','٢٠ سنة في الشغل ده وده أهم درس.','slam'],
+['قصة وإثبات','شوف رد فعل الزبون','دليل اجتماعي','٠–٣ث: لقطة الزبون وهو بيشوف الشغل','لقطة رد الفعل مكبّرة','شوف الزبون قال إيه لما شاف {منتج}.','flash'],
+['قصة وإثبات','ده شغلنا مش صور من النت','صدق وإثبات','٠–٢ث: لقطة الورشة + الجملة','شارة «تصوير حقيقي»','ده شغلنا بإيدينا مش صورة من النت.','glitch'],
+['قصة وإثبات','سألوني ليه ماعملتش كده قبل','سؤال شائع = فضول','٠–٣ث: الجملة|٣ث: الإجابة','علامة سؤال تتحول لإجابة','كل الناس بتسألني: ليه {منتج}؟','type'],
+['قصة وإثبات','اللي عمل ده مابقاش فيه تاني','ندرة','٠–٢ث: اعرض منتج نادر|٢–٤ث: «آخر قطعة»','عدّاد قطع بتنقص','آخر كام قطعة من {منتج} وخلاص.','count'],
+['عرض وعروض','عرض لمدة ٢٤ ساعة','ندرة زمنية','٠–٢ث: الجملة + ساعة|٢ث: العرض','تايمر ٢٤ ساعة بيعد','عرض {منتج} لمدة ٢٤ ساعة بس.','count'],
+['عرض وعروض','أول ١٠ بس هياخدوا الهدية','ندرة عدد','٠–٢ث: الجملة + ١٠ صوابع','عدّاد ١٠ بينقص','أول ١٠ طلبات عليهم هدية.','count'],
+['عرض وعروض','اطلبها قبل ما تخلص','FOMO','٠–٢ث: اعرض الكمية الباقية|٢ث: الجملة','شريط كمية بيفضى','الكمية قربت تخلص… اطلب دلوقتي.','redalert'],
+['عرض وعروض','اللي هيكلمني دلوقتي له سعر خاص','دعوة واضحة','٠–٣ث: اعرض الرقم|٣–٥ث: الجملة','زرار واتساب أخضر بينبض','كلّمني دلوقتي واطلب {منتج} بسعر خاص.','flash'],
+['عرض وعروض','ضمان سنتين مكتوب','ضمان بيريّح','٠–٢ث: اعرض الورقة|٢ث: الجملة','ختم «ضمان» ينزل','{منتج} بضمان سنتين مكتوب.','slam']];
+const HKFX={slam:'ضربة نص كبير',flash:'فلاش أبيض + نص',glitch:'تشويش رقمي',open:'شاشة بتتفتح',redalert:'تحذير أحمر',count:'عدّاد',type:'كتابة على لوح'};
+/* واجهة الهوكات + تأثير بداية الفيديو */
+let HKSEL=null,HKCAT='الكل';
+function hkUI(){const go=$s('sm_go');if(!go||$s('sm_hk'))return;const d=document.createElement('div');d.className='p';d.id='sm_hk';
+ d.innerHTML=`<h2>🪝 الهوكات (${HK.length})</h2><p class="mu" style="margin:0 0 8px">اختار هوك: هيقولك تصوّر إزاي بالتوقيت وإيه اللي يتركّب، وتقدر تطبّق التأثير على بداية الفيديو بضغطة.</p><div id="hk_c" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div><input id="hk_p" placeholder="اسم المنتج (يتحط مكان {منتج})" style="width:100%;margin-bottom:6px"><div id="hk_l" style="max-height:340px;overflow:auto"></div><div id="hk_d"></div>`;
+ go.before(d);
+ const prod=()=>($s('hk_p').value.trim()||'المنتج'),fill=t=>t.replace(/\{منتج\}/g,prod()).replace(/\{سعر\}/g,'...');
+ const paintList=()=>{$s('hk_c').innerHTML=HK_CATS.map(c=>`<button type="button" class="b ${c===HKCAT?'':'o'}" data-c="${c}" style="padding:4px 10px;min-height:34px;font-size:13px">${c}</button>`).join('');
+  $s('hk_l').innerHTML=HK.map((h,i)=>({h,i})).filter(x=>HKCAT==='الكل'||x.h[0]===HKCAT).map(({h,i})=>`<button type="button" data-i="${i}" class="b o" style="display:flex;width:100%;justify-content:space-between;text-align:right;margin:0 0 5px;${HKSEL===i?'background:rgba(212,165,55,.18)':''}"><span>${h[1]}</span><span class="mu" style="font-size:11px;font-weight:600">${HKFX[h[6]]||''}</span></button>`).join('')};
+ const paintDet=()=>{const el=$s('hk_d');if(HKSEL==null){el.innerHTML='';return}const h=HK[HKSEL],on=S.hook&&S.hook.n===h[1];
+  el.innerHTML=`<div style="margin-top:10px;padding:12px;border:1px solid var(--a2);border-radius:12px"><div style="font-weight:900;font-size:17px;margin-bottom:6px">${h[1]}</div><div class="mu" style="margin-bottom:8px">💡 ليه بيشتغل: ${h[2]}</div><div style="font-weight:800;margin-bottom:4px">🎥 صوّر كده:</div><ol style="margin:0 0 8px;padding-inline-start:20px;line-height:1.8">${h[3].split('|').map(x=>'<li>'+x+'</li>').join('')}</ol><div style="font-weight:800;margin-bottom:4px">✂️ في المونتاج:</div><div style="margin-bottom:8px;line-height:1.7">${h[4]}</div><div style="font-weight:800;margin-bottom:4px">💬 الجملة (عدّلها):</div><input id="hk_t" value="${esc(fill(h[5]))}" style="width:100%"><label style="display:block;margin-top:8px">التأثير: <select id="hk_f">${Object.keys(HKFX).map(k=>`<option value="${k}" ${(on?S.hook.fx:h[6])===k?'selected':''}>${HKFX[k]}</option>`).join('')}</select></label><div style="display:flex;gap:6px;margin-top:10px"><button type="button" class="b" id="hk_ap" style="flex:1">✅ طبّق على بداية الفيديو</button>${on?'<button type="button" class="b o" id="hk_rm">✕ شيله</button>':''}</div>${on?'<p class="mu" style="margin:6px 0 0">✔ متطبّق: بيظهر أول ٢٫٤ ثانية من الفيديو.</p>':''}</div>`;
+  $s('hk_ap').onclick=()=>{S.hook={n:h[1],text:$s('hk_t').value.trim(),fx:$s('hk_f').value};saveS();paintDet();if(V&&CV){LAY.clear();draw(0.1);say('اتطبّق ✔ — شوف أول الفيديو في المعاينة')}};
+  const rm=$s('hk_rm');if(rm)rm.onclick=()=>{delete S.hook;saveS();paintDet();if(V&&CV)draw(V.currentTime)}};
+ $s('hk_c').onclick=e=>{const b=e.target.closest('[data-c]');if(b){HKCAT=b.dataset.c;paintList()}};
+ $s('hk_p').oninput=()=>{if(HKSEL!=null&&$s('hk_t'))$s('hk_t').value=fill(HK[HKSEL][5])};
+ $s('hk_l').onclick=e=>{const b=e.target.closest('[data-i]');if(!b)return;HKSEL=+b.dataset.i;paintList();paintDet();$s('hk_d').scrollIntoView({behavior:'smooth',block:'nearest'})};
+ paintList()}
+function hkWrap(txt,maxW,fs){CX.font='900 '+fs+'px Cairo,Tajawal,sans-serif';const w=txt.split(/\s+/),L=[];let c='';w.forEach(x=>{const n=c?c+' '+x:x;if(CX.measureText(n).width>maxW&&c){L.push(c);c=x}else c=n});if(c)L.push(c);return L}
+function hookOverlay(t){const h=S.hook;if(!h||!h.text||!CV||!CX)return;const tt=outT(t),D=2.4;if(tt<0||tt>=D)return;const W=CV.width,H=CV.height,u=W/1080,fx=h.fx||'slam',ac=COL(),e=x=>x<0?0:x>1?1:x*x*(3-2*x),fade=tt>D-.35?e((D-tt)/.35):1;
+ CX.save();CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
+ const drawText=(sc,al,yy,col)=>{const fs=Math.round(92*u),L=hkWrap(h.text,W*.84,fs),lh=fs*1.25,cy=(yy==null?H*.4:yy),y0=cy-(L.length-1)*lh/2;CX.save();CX.globalAlpha=al*fade;CX.translate(W/2,cy);CX.scale(sc,sc);CX.translate(-W/2,-cy);
+  CX.font='900 '+fs+'px Cairo,Tajawal,sans-serif';CX.lineJoin='round';CX.lineWidth=fs*.16;CX.strokeStyle='rgba(0,0,0,.85)';CX.shadowColor='rgba(0,0,0,.6)';CX.shadowBlur=24*u;L.forEach((l,i)=>{CX.strokeText(l,W/2,y0+i*lh)});CX.shadowBlur=0;CX.fillStyle=col||'#fff';L.forEach((l,i)=>CX.fillText(l,W/2,y0+i*lh));CX.restore()};
+ if(fx==='slam'){const p=e(tt/.28),sc=1.9-.9*p;CX.fillStyle='rgba(0,0,0,'+(.45*fade)+')';CX.fillRect(0,0,W,H);drawText(sc,p,null,'#fff');CX.fillStyle=ac;CX.globalAlpha=fade*p;CX.fillRect(W*.2,H*.4+Math.round(92*u*1.5),W*.6*p,10*u)}
+ else if(fx==='flash'){const f=Math.max(0,1-tt/.22);CX.fillStyle='rgba(255,255,255,'+(.85*f)+')';CX.fillRect(0,0,W,H);CX.fillStyle='rgba(0,0,0,'+(.4*fade)+')';CX.fillRect(0,0,W,H);drawText(1+.12*(1-e(tt/.4)),e(tt/.15),null,'#ffe27a')}
+ else if(fx==='glitch'){CX.fillStyle='rgba(0,0,0,'+(.5*fade)+')';CX.fillRect(0,0,W,H);const j=tt<.9?(Math.sin(tt*90)*12*u):0;CX.save();CX.translate(j,0);CX.globalCompositeOperation='lighter';CX.save();CX.translate(-6*u,0);drawText(1,1,null,'#ff2d55');CX.restore();CX.save();CX.translate(6*u,0);drawText(1,1,null,'#00e5ff');CX.restore();CX.restore();drawText(1,1,null,'#fff');if(tt<.9){for(let i=0;i<5;i++){const y=((tt*997+i*173)%1)*H;CX.fillStyle='rgba(255,255,255,.2)';CX.fillRect(0,y,W,8*u+(i%3)*5*u)}}}
+ else if(fx==='open'){const p=e(tt/.9),w2=W/2*(1-p);CX.fillStyle='#000';CX.fillRect(0,0,w2,H);CX.fillRect(W-w2,0,w2,H);CX.fillStyle=ac;CX.fillRect(w2-4*u,0,4*u,H);CX.fillRect(W-w2,0,4*u,H);if(tt>.45)drawText(1,e((tt-.45)/.3),H*.28,'#fff')}
+ else if(fx==='redalert'){const pu=.5+.5*Math.sin(tt*14);CX.lineWidth=(26+18*pu)*u;CX.strokeStyle='rgba(255,40,40,'+(.9*fade)+')';CX.strokeRect(0,0,W,H);CX.fillStyle='rgba(120,0,0,'+(.28*fade)+')';CX.fillRect(0,0,W,H);CX.font=Math.round(150*u)+'px sans-serif';CX.globalAlpha=fade*(.7+.3*pu);CX.fillText('⚠️',W/2,H*.22);drawText(1+.05*pu,e(tt/.2),H*.42,'#fff')}
+ else if(fx==='count'){const n=Math.max(1,3-Math.floor(tt/.5)),k=(tt%.5)/.5;CX.fillStyle='rgba(0,0,0,'+(.5*fade)+')';CX.fillRect(0,0,W,H);CX.globalAlpha=fade*(1-k*.5);CX.font='900 '+Math.round(360*u)+'px Cairo,sans-serif';CX.fillStyle=ac;CX.lineWidth=18*u;CX.strokeStyle='#000';if(tt<1.5){CX.save();CX.translate(W/2,H*.3);CX.scale(1.3-.3*e(k*2),1.3-.3*e(k*2));CX.strokeText(String(n),0,0);CX.fillText(String(n),0,0);CX.restore()}CX.globalAlpha=1;drawText(1,e((tt-.2)/.3),H*.58,'#fff');CX.fillStyle=ac;CX.fillRect(W*.1,H*.9,W*.8*Math.max(0,1-tt/D),12*u)}
+ else if(fx==='type'){const bh=H*.2,y=H*.36;CX.fillStyle='rgba(10,10,14,'+(.8*fade)+')';CX.beginPath();if(CX.roundRect)CX.roundRect(W*.06,y,W*.88,bh,26*u);else CX.rect(W*.06,y,W*.88,bh);CX.fill();const full=h.text,n=Math.min(full.length,Math.floor(tt/.045)),part=full.slice(0,n);const fs=Math.round(60*u);CX.font='800 '+fs+'px Cairo,Tajawal,sans-serif';CX.fillStyle='#fff';CX.globalAlpha=fade;CX.fillText(part+(Math.floor(tt*4)%2?'▍':''),W/2,y+bh/2);CX.fillStyle=ac;CX.fillRect(W*.06,y+bh-8*u,W*.88*Math.min(1,tt/1.2),8*u)}
+ CX.restore()}
+const _draw3=draw;draw=function(t){const r=_draw3.apply(this,arguments);try{hookOverlay(t)}catch(e){}return r};
+/* ---------- 🔲 شاشة المونتاج الذكي: أيقونات مربعة بدل ٩ كروت طويلة تحت بعض — دوس أيقونة تفتح اختياراتها، دوس تاني ترجع مربعة ---------- */
+const TILE_CSS=`#v-smart .tl-g{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
+#v-smart .tl{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;aspect-ratio:1;min-width:0;padding:6px 3px;border:1px solid var(--ln);border-radius:16px;background:var(--sf);color:var(--tx);font-family:var(--f);cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:transform .12s,box-shadow .12s}
+#v-smart .tl:active{transform:scale(.95)}
+#v-smart .tl{grid-column:span 2}#v-smart .tl.w{grid-column:span 3;aspect-ratio:auto;min-height:72px;flex-direction:row;gap:8px;padding:8px 10px}
+#v-smart .tl .ti{font-size:28px;line-height:1}#v-smart .tl.w .ti{font-size:30px}
+#v-smart .tl .tt{font-weight:800;font-size:13px;line-height:1.2;color:var(--tx)}
+#v-smart .tl .ts{font-size:11px;color:var(--mu);line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#v-smart .tl.w .tx{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+#v-smart .tl.on{border-color:var(--a2,#D4A537);box-shadow:0 0 0 2px var(--a2,#D4A537) inset;background:color-mix(in srgb,var(--a2) 18%,var(--sf))}
+#v-smart .tl-p>.p{display:none;margin-top:0}#v-smart .tl-p>.p.tl-open{display:block;animation:tlin .16s ease-out}
+@keyframes tlin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}`;
+const TILES=[
+ ['١) الفيديو','📹','الفيديو',()=>F?F.name.slice(0,18):'اختار',1,'pre'],
+ ['📚 فيديوهاتي (متخزنة','📚','فيديوهاتي',()=>'المتخزنة',1,'pre'],
+ ['🎵 موسيقى','🎵','موسيقى ولوجو',()=>MU.buf?(MU.name||'موسيقى').slice(0,14):'مفيش',0,'pre'],
+ ['🎞️ فيديوهات الإدراج','🎞️','الإدراج',()=>BRC.length?BRC.length+' فيديو':'مفيش',0,'pre'],
+ ['🎨 الشكل','🎨','الشكل',()=>'لون وخط وإطار',0,'pre'],
+ ['🪝 الهوكات','🪝','الهوكات',()=>S.hook?'متطبّق':HK.length+' هوك',0,'pre'],['٢) طريقة المونتاج','🛠️','الطريقة',()=>(TPL[S.tpl]&&TPL[S.tpl].n||'').replace(/^\S+\s*/,'').slice(0,14)||'اختار',0,'pre'],
+ ['✍️ الكلام','✍️','الكلام',()=>D&&D.seg?D.seg.length+' جملة':'',0,'res'],
+ ['🧾 اللي اتطبّق','🧾','المتطبّق',()=>'',0,'res'],
+ ['🎞️ أماكن فيديوهات','📍','أماكن الإدراج',()=>BRL&&BRL.length?BRL.length+' مكان':'مفيش',0,'res'],
+ ['📐 التوضيحات','📐','التوضيحات',()=>D&&D.ev?D.ev.filter(e=>e.on).length+' توضيح':'',0,'res']];
+function tileify(){const root=$s('v-smart');if(!root||root.querySelector('.tl-g'))return;
+ if(!document.getElementById('tl-css')){const st=document.createElement('style');st.id='tl-css';st.textContent=TILE_CSS;document.head.appendChild(st)}
+ const cards=[...root.querySelectorAll('.p')].filter(c=>c.querySelector('h2')&&!c.parentElement.closest('.p'));
+ const pre=[],res=[];TILES.forEach(T=>{const c=[...root.querySelectorAll('.p')].find(x=>{const h=x.querySelector('h2');return h&&h.textContent.trim().startsWith(T[0])&&!x.dataset.tl});if(c){c.dataset.tl='1';(T[5]==='res'?res:pre).push([T,c])}});
+ if(!pre.length)return;
+ const build=(items,anchor,inside)=>{const g=document.createElement('div');g.className='tl-g';const pn=document.createElement('div');pn.className='tl-p';
+  items.forEach(([T,c])=>{const b=document.createElement('button');b.type='button';b.className='tl'+(T[4]?' w':'');b.innerHTML=T[4]?`<span class="ti">${T[1]}</span><span class="tx"><span class="tt">${T[2]}</span><span class="ts"></span></span>`:`<span class="ti">${T[1]}</span><span class="tt">${T[2]}</span><span class="ts"></span>`;
+   b._c=c;b._s=T[3];pn.appendChild(c);g.appendChild(b)});
+  g.onclick=e=>{const b=e.target.closest('.tl');if(!b)return;const open=b._c.classList.contains('tl-open');g.querySelectorAll('.tl').forEach(x=>{x.classList.remove('on');x._c.classList.remove('tl-open')});if(!open){b.classList.add('on');b._c.classList.add('tl-open');setTimeout(()=>b._c.scrollIntoView({behavior:'smooth',block:'nearest'}),30)}};
+  if(inside)anchor.appendChild(g),anchor.appendChild(pn);else anchor.before(g),anchor.before(pn);return g};
+ const goBtn=$s('sm_go'),g1=build(pre,goBtn,false);
+ const sres=$s('sm_res'),g2=res.length&&sres?build(res,sres,true):null;
+ const upd=()=>{[g1,g2].forEach(g=>g&&g.querySelectorAll('.tl').forEach(b=>{const s=b.querySelector('.ts');if(s){let v='';try{v=b._s()||''}catch(e){}s.textContent=v}}))};
+ upd();clearInterval(window.__tlT);window.__tlT=setInterval(()=>{if(!document.body.contains(g1)){clearInterval(window.__tlT);return}if(document.visibilityState==='visible')upd()},1200)}
+const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null}),_test:{build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
