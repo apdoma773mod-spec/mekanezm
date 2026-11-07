@@ -326,7 +326,9 @@ function scene(c: CanvasRenderingContext2D) {
   return yb + 100; // where the product stands (on the top face)
 }
 
-export async function generateDimImage(imgs: string[], dims: Dims, foot: string, onStep?: (m: string) => void): Promise<Blob> {
+export async function generateDimImage(imgs0: string[], dims: Dims, foot: string, onStep?: (m: string) => void, pick = ''): Promise<Blob> {
+  // the owner picks the photo (no tape measure on it): only that one is used
+  const imgs = pick && imgs0.includes(pick) ? [pick] : imgs0;
   if (!imgs.length) throw new Error('مفيش صور للمنتج');
   onStep?.('⏳ بختار أوضح صورة…');
   const loaded: HTMLImageElement[] = [];

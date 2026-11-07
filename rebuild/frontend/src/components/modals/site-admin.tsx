@@ -613,6 +613,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [up, setUp] = useState('');
   const [over, setOver] = useState(false);
   const [dimMsg, setDimMsg] = useState('');
+  const [dimPick, setDimPick] = useState('');
   const [dimErr, setDimErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
@@ -728,7 +729,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     if (!force && sig === f.dimSig && f.dimImg && f.imgs.includes(f.dimImg)) return null;
     const phones = ((doc?.data as { phones?: string[] } | undefined)?.phones ?? []).filter(Boolean).join(' - ');
     const pool = f.imgs.filter((u) => u !== f.dimImg);
-    const blob = await generateDimImage(pool, dims, phones ? `ميكانيزم — ${phones}` : 'ميكانيزم — MEKANIZM', setDimMsg);
+    const blob = await generateDimImage(pool, dims, phones ? `ميكانيزم — ${phones}` : 'ميكانيزم — MEKANIZM', setDimMsg, pool.includes(dimPick) ? dimPick : pool[0]);
     setDimMsg('⏳ برفع الصورة…');
     const url = await uploadSiteImage(new File([blob], 'dim.jpg', { type: 'image/jpeg' }));
     return { imgs: [url, ...pool], dimImg: url, dimSig: sig };
@@ -922,6 +923,21 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(4).map(box)}</div>
                   </>
                 );
+              })()}
+              {(() => {
+                const pool = f.imgs.filter((u) => u !== f.dimImg);
+                const cur = pool.includes(dimPick) ? dimPick : pool[0] ?? '';
+                return pool.length ? (
+                  <div style={{ margin: '8px 0' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>دوس على الصورة اللي تتعمل عليها المقاسات (من غير المتر):</div>
+                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                      {pool.map((u) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={u} src={u} alt="" onClick={() => setDimPick(u)} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10, flex: '0 0 auto', cursor: 'pointer', border: u === cur ? '4px solid #1e8e3e' : '2px solid var(--border)' }} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
               })()}
               <button type="button" className="secondary" id="eDimBtn" style={{ marginTop: 6 }} disabled={!!dimMsg} onClick={() => void regenDim()}>
                 🪄 اعملها دلوقتي
