@@ -5,6 +5,7 @@ import { actorOf } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { getFile, putFile } from '../../lib/files.js';
+import { drawDimensions } from './dim-draw.js';
 import { parse } from '../../lib/validate.js';
 import { cleanPhotoSafe } from './clean-photo.js';
 
@@ -30,7 +31,7 @@ const body = z.object({
   desc: z.string().max(3000).default(''),
   img: z.string().max(500).default(''),
   // الصور المتولّدة اتقفلت افتراضيًا (عبده ٢٠٢٦-١١-٠٣: الموديلات المجانية بتغيّر شكل القطعة وتركّبها غلط) — الوصف والمقاسات بس
-  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(process.env.CATALOG_AI_IMAGES === '1') }).default({}),
+  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(true) }).default({}),
 });
 
 type Spec = { k: string; v: string };
@@ -378,6 +379,14 @@ Return JSON: {"prompt":"..."}`,
       await putFile(name, img, 'image/jpeg');
       out.img = `/api/v1/work/files/${name}`;
     };
+    // الصورة الحقيقية زي ما هي + المقاسات مرسومة بالكود (مفيش ذكاء اصطناعي بيرسم القطعة)
+    const dimImage = async () => {
+      if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
+      const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), out.specs, p.name);
+      const name = `${randomBytes(12).toString('hex')}.jpg`;
+      await putFile(name, buf, 'image/jpeg');
+      out.img = `/api/v1/work/files/${name}`;
+    };
     const image = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
       const cf = await getCf();
@@ -408,10 +417,8 @@ Return JSON: {"prompt":"..."}`,
       await putFile(name, Buffer.from(data, 'base64'), mime);
       out.img = `/api/v1/work/files/${name}`;
     };
-    await Promise.all([
-      p.want.text ? text().catch((e) => void (out.textError = friendly(e))) : null,
-      p.want.image ? image().catch((e) => void (out.imgError = friendly(e))) : null,
-    ]);
+    if (p.want.text) await text().catch((e) => void (out.textError = friendly(e)));
+    if (p.want.image) await (process.env.CATALOG_AI_IMAGES === 'ai' ? image : dimImage)().catch((e) => void (out.imgError = friendly(e)));
     return out;
   };
 }
