@@ -59,7 +59,7 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
     fR = fx + iw,
     fB = fy + ih;
 
-  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v)).slice(0, 4);
+  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v) && /(سم|مم|ملم|متر|بوصة|cm|mm|inch|")/i.test(s.v) && !/(حمولة|وزن|كجم|kg)/i.test(s.k + s.v)).slice(0, 4);
   const used = new Set<Slot>();
   const col = '#c0392b';
   const parts: string[] = [];
