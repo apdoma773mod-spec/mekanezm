@@ -5,7 +5,15 @@
 .adm .ad-bar { background: #fff; z-index: 60; flex-wrap: wrap; }
 /* زرار «+» العائم بتاع السيستم مالوش لازمة هنا وكان بيغطي زرار الحفظ */
 body:has(main.adm) .fab { display: none; }
-@media (max-width: 900px) { .adm .ad-bar { bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); padding-left: 92px; } .adm { padding-bottom: 210px; } }
+/* الشريط بيمشي مع الصفحة بسلاسة (sticky بدل fixed اللي كان بيرجّ على الآيفون) وفوق شريط الموبايل */
+@media (max-width: 900px) {
+  .adm .ad-bar { position: sticky; inset: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 78px); margin: 14px -14px 0; padding: 10px 14px 10px 92px; border-radius: 14px 14px 0 0; will-change: transform; transform: translateZ(0); }
+  .adm { padding-bottom: 130px; }
+  .adm label { margin: 0 0 8px; gap: 3px; font-size: 13px; }
+  .adm input:not([type=color]):not([type=file]), .adm textarea, .adm select { padding: 9px 10px; font-size: 15px; }
+  .adm .ad-fold-h { padding: 10px 12px; }
+  .adm .ad-fold-b { padding: 10px; }
+}
 .adm { max-width: 720px; margin: 0 auto; padding: 14px 14px 110px; }
 .adm label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 700; margin: 0 0 12px; }
 .adm input:not([type=color]):not([type=file]), .adm textarea { font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); width: 100%; }
