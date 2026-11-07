@@ -3,6 +3,7 @@
  * Each size is a line hugging the real edge of the part (two end points found by Gemini), a small tick at each end, and the number beside it.
  */
 import { DIM_FONT_B64 } from './dim-font.js';
+import { DIM_LOGO_B64 } from './dim-logo.js';
 
 export type Slot = 'bottom' | 'right' | 'top' | 'left';
 /** line = two end points on the part as fractions of the photo [x0,y0,x1,y1]; without it the line follows the part box on `slot`. */
@@ -30,9 +31,9 @@ const valText = (v: string) => {
 export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '', hint?: [number, number, number, number] | null, _foot = ''): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
   const font = await loadFont();
-  const W = 1200,
-    H = 900;
-  const frame = { x: 40, y: 40, w: W - 80, h: H - 80 };
+  const W = 1254,
+    H = 1254;
+  const frame = { x: 80, y: 250, w: W - 160, h: H - 330 };
   const base = await sharp(photo).rotate().flatten({ background: '#ffffff' }).png().toBuffer();
   const bm = await sharp(base).metadata();
   const BW = bm.width ?? 1,
@@ -125,8 +126,22 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
     draw(seg[0], seg[1], txt, 30 + n * 70);
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${parts.join('')}</svg>`;
-  return sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } })
-    .composite([{ input: img, left: fx, top: fy }, { input: Buffer.from(svg) }])
+  // studio look: soft beige background, thin gold double border, logo top right, the real photo as a rounded card
+  const R = 34;
+  const card = await sharp(img).composite([{ input: Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${iw}" height="${ih}"><rect width="${iw}" height="${ih}" rx="${R}" fill="#fff"/></svg>`), blend: 'dest-in' }]).png().toBuffer();
+  const shadow = await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${iw + 120}" height="${ih + 120}"><rect x="60" y="72" width="${iw}" height="${ih}" rx="${R}" fill="#5a3a1a" opacity=".35"/></svg>`)).blur(22).png().toBuffer();
+  const bg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs><radialGradient id="g" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#fbe9d8"/><stop offset="1" stop-color="#f1cfb0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#g)"/><rect x="18" y="18" width="${W - 36}" height="${H - 36}" rx="44" fill="none" stroke="#b8872f" stroke-width="3"/><rect x="30" y="30" width="${W - 60}" height="${H - 60}" rx="36" fill="none" stroke="#d8b46a" stroke-width="1.5"/></svg>`;
+  const logoW = 400;
+  const logo = await sharp(Buffer.from(DIM_LOGO_B64, 'base64')).resize({ width: logoW }).png().toBuffer();
+  const lm = await sharp(logo).metadata();
+  return sharp(Buffer.from(bg))
+    .composite([
+      { input: shadow, left: fx - 60, top: fy - 48 },
+      { input: card, left: fx, top: fy },
+      { input: logo, left: W - logoW - 70, top: 70 },
+      { input: Buffer.from(svg) },
+    ])
     .jpeg({ quality: 90 })
-    .toBuffer();
+    .toBuffer()
+    .then((x) => (lm.height ? x : x));
 }
