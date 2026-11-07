@@ -2,7 +2,7 @@
  * Real product photo as is + dimension lines/numbers/arrows drawn by code (no AI drawing, the part is never changed).
  * Callouts come from the product specs that contain a number (width / height / depth / mounting sizes).
  */
-export type DimSpec = { k: string; v: string };
+export type DimSpec = { k: string; v: string; slot?: 'bottom' | 'right' | 'top' | 'left' };
 
 
 type Slot = 'bottom' | 'right' | 'top' | 'left';
@@ -57,8 +57,9 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
     fR = fx + iw,
     fB = fy + ih;
 
-  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v) && /(سم|مم|ملم|متر|بوصة|cm|mm|inch|")/i.test(s.v) && !/(حمولة|وزن|كجم|kg)/i.test(s.k + s.v)).slice(0, 4);
+  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v) && /(سم|مم|ملم|متر|بوصة|cm|mm|inch|")/i.test(s.v) && !/(حمولة|وزن|كجم|kg)/i.test(s.k + s.v)).slice(0, 6);
   const used = new Set<Slot>();
+  const stack: Partial<Record<Slot, number>> = {};
   const col = '#c0392b';
   const parts: string[] = [];
   const arrow = (ax: number, ay: number, bx: number, by: number) => {
@@ -93,10 +94,12 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
     return `<g transform="translate(${cx} ${cy}) rotate(${rot})"><rect x="${-bw / 2}" y="-30" width="${bw}" height="60" rx="12" fill="#fff" stroke="${col}" stroke-width="2.5"/>${t.svg}</g>`;
   };
   for (const s of withNum) {
-    const slot = pickSlot(s.k, used);
+    const slot = s.slot ?? pickSlot(s.k, used);
     if (!slot) break;
+    const n = stack[slot] ?? 0;
+    stack[slot] = n + 1;
     used.add(slot);
-    const gap = 34;
+    const gap = 34 + n * 80;
     if (slot === 'bottom' || slot === 'top') {
       const y = Math.min(fB - 30, Math.max(fT + 30, slot === 'bottom' ? y1 + gap : y0 - gap));
       parts.push(`<line x1="${x0}" y1="${y - 22}" x2="${x0}" y2="${y + 22}" stroke="${col}" stroke-width="2"/><line x1="${x1}" y1="${y - 22}" x2="${x1}" y2="${y + 22}" stroke="${col}" stroke-width="2"/>`, arrow(x0, y, x1, y), label((x0 + x1) / 2, y, s.k, s.v));

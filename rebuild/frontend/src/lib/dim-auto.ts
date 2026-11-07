@@ -10,6 +10,27 @@ export interface Dims {
   w?: string;
   h?: string;
   d?: string;
+  l?: string;
+  t?: string;
+  bw?: string;
+  bl?: string;
+}
+
+/** The editor keeps each size in its own box; they are stored together as JSON in the product's dimTxt. */
+export const DIM_FIELDS: [keyof Dims, string][] = [['h', 'الارتفاع'], ['w', 'العرض'], ['l', 'الطول'], ['t', 'التخانة'], ['bw', 'عرض القاعدة'], ['bl', 'طول القاعدة']];
+export function readDimBoxes(typed: string): Dims | null {
+  if (!typed.trim().startsWith('{')) return null;
+  try {
+    const o = JSON.parse(typed) as Record<string, unknown>;
+    const out: Dims = {};
+    for (const [k] of DIM_FIELDS) {
+      const n = numIn(String(o[k] ?? ''));
+      if (n) out[k] = n;
+    }
+    return out;
+  } catch {
+    return null;
+  }
 }
 
 const S = 1200;
@@ -22,6 +43,8 @@ const numIn = (s: string) => arDigits(s).match(/\d+(?:[.,]\d+)?/)?.[0]?.replace(
 
 /** Sizes from labelled spec rows only (عرض/طول، ارتفاع، عمق/سمك) — never a guess from «60×45×12». */
 export function parseDims(specs: [string, string][], typed = ''): Dims {
+  const boxes = readDimBoxes(typed);
+  if (boxes && Object.keys(boxes).length) return boxes; // an empty box = not drawn
   const out: Dims = {};
   for (const [k, v] of specs) {
     const n = numIn(v);
@@ -31,7 +54,7 @@ export function parseDims(specs: [string, string][], typed = ''): Dims {
     else if (/عرض|طول|width|length/i.test(k)) out.w ??= n;
   }
   // typed in the editor when the specs have none: labelled words win («ارتفاع ١٠», «١٠ سم ارتفاع»); bare numbers follow «عرض × ارتفاع × عمق»; one bare number = height
-  if (!out.w && !out.h && !out.d && typed) {
+  if (!out.w && !out.h && !out.d && typed && !typed.trim().startsWith('{')) {
     const t = arDigits(typed);
     const num = '(\\d+(?:[.,]\\d+)?)';
     const lab: [keyof Dims, string][] = [['h', 'ارتفاع|height|طول الرجل|الرجل'], ['d', 'عمق|سمك|depth'], ['w', 'عرض|طول|width|length']];
@@ -51,8 +74,8 @@ export function parseDims(specs: [string, string][], typed = ''): Dims {
   }
   return out;
 }
-export const hasDims = (d: Dims) => !!(d.w || d.h || d.d);
-export const dimSig = (d: Dims) => `${d.w ?? ''}|${d.h ?? ''}|${d.d ?? ''}`;
+export const hasDims = (d: Dims) => !!(d.w || d.h || d.d || d.l || d.t || d.bw || d.bl);
+export const dimSig = (d: Dims) => `${d.w ?? ''}|${d.h ?? ''}|${d.d ?? ''}|${d.l ?? ''}|${d.t ?? ''}|${d.bw ?? ''}|${d.bl ?? ''}`;
 
 const loadImg = (src: string) =>
   new Promise<HTMLImageElement>((ok, bad) => {
@@ -322,7 +345,7 @@ export async function generateDimImage(imgs: string[], dims: Dims, foot: string,
   bc.height = Math.round(best.height * sc0);
   bc.getContext('2d')!.drawImage(best, 0, 0, bc.width, bc.height);
   const imgData = bc.toDataURL("image/jpeg", 0.85).split(',')[1] ?? '';
-  const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { imgData, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', foot });
+  const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { imgData, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', l: dims.l ?? '', t: dims.t ?? '', bw: dims.bw ?? '', bl: dims.bl ?? '', foot });
   const bin = atob(r.data);
   const u8 = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);

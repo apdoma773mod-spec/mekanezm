@@ -332,12 +332,14 @@ export async function catalogAiRoutes(app: FastifyInstance) {
 
   /** صورة المقاسات: صورة المنتج الحقيقية زي ما هي + مقاسات مرسومة على القطعة (من غير فصل خلفية ولا ذكاء بيرسم) */
   app.post('/catalog/ai/dim-image', { bodyLimit: 4 * 1024 * 1024, preHandler: app.requireAdmin, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request) => {
-    const p = parse(z.object({ img: z.string().max(500).default(''), imgData: z.string().max(12_000_000).default(''), w: z.string().max(12).default(''), h: z.string().max(12).default(''), d: z.string().max(12).default(''), foot: z.string().max(120).default('') }), request.body);
+    const p = parse(z.object({ img: z.string().max(500).default(''), imgData: z.string().max(12_000_000).default(''), w: z.string().max(12).default(''), h: z.string().max(12).default(''), d: z.string().max(12).default(''), l: z.string().max(12).default(''), t: z.string().max(12).default(''), bw: z.string().max(12).default(''), bl: z.string().max(12).default(''), foot: z.string().max(120).default('') }), request.body);
     const photo = p.imgData ? { data: p.imgData, mime: 'image/jpeg' } : await loadImage(p.img);
     if (!photo) throw badRequest('مقدرتش أفتح صورة المنتج');
     const k = await getKey();
     const hint = k ? await partBox(k.key, photo) : null;
-    const specs = [p.w && { k: 'العرض', v: p.w + ' سم' }, p.h && { k: 'الارتفاع', v: p.h + ' سم' }, p.d && { k: 'العمق', v: p.d + ' سم' }].filter(Boolean) as Spec[];
+    const mk = (v: string, k: string, slot: 'bottom' | 'right' | 'top' | 'left') => (v ? { k, v: v + ' سم', slot } : null);
+    // every size has its own box in the editor: an empty box is simply not drawn
+    const specs = [mk(p.h, 'الارتفاع', 'right'), mk(p.w, 'العرض', 'top'), mk(p.l, 'الطول', 'top'), mk(p.t, 'التخانة', 'left'), mk(p.bw, 'عرض القاعدة', 'bottom'), mk(p.bl, 'طول القاعدة', 'bottom'), mk(p.d, 'العمق', 'left')].filter(Boolean) as Spec[];
     const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), specs, '', hint, p.foot);
     return { data: buf.toString('base64') };
   });
