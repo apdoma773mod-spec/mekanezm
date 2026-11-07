@@ -14,7 +14,7 @@ const pickSlot = (k: string, used: Set<Slot>): Slot | null => {
   return null;
 };
 
-export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = '', hint?: [number, number, number, number] | null): Promise<Buffer> {
+export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = '', hint?: [number, number, number, number] | null, foot = ''): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
   const W = 1200,
     H = 900;
@@ -87,7 +87,7 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
       parts.push(`<line x1="${x - 22}" y1="${y0}" x2="${x + 22}" y2="${y0}" stroke="${col}" stroke-width="2"/><line x1="${x - 22}" y1="${y1}" x2="${x + 22}" y2="${y1}" stroke="${col}" stroke-width="2"/>`, arrow(x, y0, x, y1), label(x, (y0 + y1) / 2, s.k, s.v, -90));
     }
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${title ? `<text x="${W / 2}" y="46" text-anchor="middle" font-size="30" font-weight="700" fill="#222" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(title, 60))}</text>` : ''}${parts.join('')}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${title ? `<text x="${W / 2}" y="46" text-anchor="middle" font-size="30" font-weight="700" fill="#222" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(title, 60))}</text>` : ''}${parts.join('')}${foot ? `<text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-size="26" fill="#6b5a45" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(foot, 80))}</text>` : ''}</svg>`;
   return sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } })
     .composite([{ input: img, left: fx, top: fy }, { input: Buffer.from(svg) }])
     .jpeg({ quality: 90 })
