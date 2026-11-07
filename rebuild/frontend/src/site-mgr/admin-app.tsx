@@ -9,7 +9,7 @@ import { PendingReviews } from '@/components/modals/site-admin';
 import { ProsTab, ReviewsTab, ShipTab, WorksTab } from './content';
 import { ProductsTab } from './products';
 import { ImportTab } from './import';
-import { AddMany, Img, move, uid7 } from './ui';
+import { AddMany, Img, move, uid7, Fold } from './ui';
 import { DEFAULTS, HEX, THEME_KEYS, WOOD_AREAS, WOOD_KEYS, woodById, type ThemeMap } from './lib/theme';
 import { ThemeTab } from './theme-tab';
 import { SectionsTab } from './sections-tab';
@@ -54,16 +54,6 @@ function applyForm(d: Rec, f: Form) {
   d.sections = [...ordered, ...rest];
 }
 
-/** a group inside a screen: closed by default, tap the header to open/close */
-function Fold({ title, children }: { title: string; children: React.ReactNode }) {
-  const [on, setOn] = useState(false);
-  return (
-    <section className={'ad-fold' + (on ? ' on' : '')}>
-      <button type="button" className="ad-fold-h" onClick={() => setOn(!on)} aria-expanded={on}><b>{title}</b><span className="x">{on ? '✕' : '▾'}</span></button>
-      {on && <div className="ad-fold-b">{children}</div>}
-    </section>
-  );
-}
 type Tab = '' | 'products' | 'sections' | 'works' | 'look' | 'banner' | 'text' | 'reviews' | 'pros' | 'ship' | 'import' | 'more';
 const GLOBAL: Tab[] = ['look', 'banner', 'text', 'sections']; // these share the bottom «حفظ ونشر» bar; the others save inside their own screen
 
