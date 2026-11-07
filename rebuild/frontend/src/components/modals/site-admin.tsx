@@ -930,6 +930,8 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                 return pool.length ? (
                   <div style={{ margin: '8px 0' }}>
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>دوس على الصورة اللي تتعمل عليها المقاسات (من غير المتر):</div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cur} alt="الصورة المختارة" style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 12, border: '3px solid #1e8e3e', background: '#f4efe8', marginBottom: 8 }} />
                     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                       {pool.map((u) => (
                         // eslint-disable-next-line @next/next/no-img-element

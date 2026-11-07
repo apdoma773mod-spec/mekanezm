@@ -9,7 +9,6 @@ export type Slot = 'bottom' | 'right' | 'top' | 'left';
 /** line = two end points on the part as fractions of the photo [x0,y0,x1,y1]; without it the line follows the part box on `slot`. */
 export type DimSpec = { k: string; v: string; slot?: Slot; line?: [number, number, number, number] | null };
 
-const COL = '#b8651b';
 type Pt = { x: number; y: number };
 type Fnt = { getAdvanceWidth(t: string, s: number): number; getPath(t: string, x: number, y: number, s: number): { toPathData(d: number): string } };
 let fontP: Promise<Fnt> | null = null;
@@ -67,6 +66,7 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
   const iw = Math.round((cx1 - cx0) * sc),
     ih = Math.round((cy1 - cy0) * sc);
   const img = await sharp(crop).resize(iw, ih).png().toBuffer();
+  const raw = await sharp(img).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const fx = frame.x + Math.round((frame.w - iw) / 2),
     fy = frame.y + Math.round((frame.h - ih) / 2);
   const toC = (x: number, y: number): Pt => ({ x: fx + (x * BW - cx0) * sc, y: fy + (y * BH - cy0) * sc });
@@ -75,11 +75,30 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
   const centre: Pt = { x: (P0.x + P1.x) / 2, y: (P0.y + P1.y) / 2 };
   const fB = { l: fx + 24, t: fy + 24, r: fx + iw - 24, b: fy + ih - 24 };
 
-  const textSvg = (txt: string, size: number) => {
+  const textSvg = (txt: string, size: number, fill: string, halo: string) => {
     const w = font.getAdvanceWidth(txt, size);
     const d = font.getPath(txt, 0, 0, size).toPathData(2);
     // (the renderer drops glyphs whose path coordinates are negative, so the centring is a translate)
-    return `<g transform="translate(${(-w / 2).toFixed(2)} ${(size * 0.35).toFixed(2)})"><path d="${d}" fill="#fff" stroke="#fff" stroke-width="7" stroke-linejoin="round"/><path d="${d}" fill="${COL}"/></g>`;
+    return `<g transform="translate(${(-w / 2).toFixed(2)} ${(size * 0.35).toFixed(2)})"><path d="${d}" fill="${halo}" stroke="${halo}" stroke-width="11" stroke-linejoin="round"/><path d="${d}" fill="${fill}"/></g>`;
+  };
+  // smart colour: average brightness of the photo around the line decides dark ink or white ink (always with the opposite colour as an outline)
+  const lumAt = (pts: Pt[]) => {
+    let sum = 0,
+      n = 0;
+    for (const p of pts) {
+      const x0 = Math.round(p.x - fx),
+        y0 = Math.round(p.y - fy);
+      for (let dy = -14; dy <= 14; dy += 7)
+        for (let dx = -14; dx <= 14; dx += 7) {
+          const x = x0 + dx,
+            y = y0 + dy;
+          if (x < 0 || y < 0 || x >= raw.info.width || y >= raw.info.height) continue;
+          const i = (y * raw.info.width + x) * raw.info.channels;
+          sum += 0.299 * raw.data[i]! + 0.587 * raw.data[i + 1]! + 0.114 * raw.data[i + 2]!;
+          n++;
+        }
+    }
+    return n ? sum / n : 128;
   };
   const parts: string[] = [];
   const stack: Partial<Record<Slot, number>> = {};
@@ -97,19 +116,19 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
     const clamp = (p: Pt): Pt => ({ x: Math.min(fB.r, Math.max(fB.l, p.x)), y: Math.min(fB.b, Math.max(fB.t, p.y)) });
     const A = clamp({ x: A0.x + nx * off, y: A0.y + ny * off }),
       B = clamp({ x: B0.x + nx * off, y: B0.y + ny * off });
-    const tick = 11;
-    parts.push(
-      `<g stroke="${COL}" stroke-linecap="round">` +
-        `<line x1="${A0.x}" y1="${A0.y}" x2="${A.x + nx * 6}" y2="${A.y + ny * 6}" stroke-width="1.6" opacity=".75"/><line x1="${B0.x}" y1="${B0.y}" x2="${B.x + nx * 6}" y2="${B.y + ny * 6}" stroke-width="1.6" opacity=".75"/>` +
-        `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke-width="3"/>` +
-        `<line x1="${A.x - nx * tick}" y1="${A.y - ny * tick}" x2="${A.x + nx * tick}" y2="${A.y + ny * tick}" stroke-width="3"/><line x1="${B.x - nx * tick}" y1="${B.y - ny * tick}" x2="${B.x + nx * tick}" y2="${B.y + ny * tick}" stroke-width="3"/></g>`,
-    );
+    const mx = (A.x + B.x) / 2 + nx * 40,
+      my = (A.y + B.y) / 2 + ny * 40;
+    const lum = lumAt([A, B, { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 }, { x: mx, y: my }]);
+    const ink = lum > 150 ? '#1a1612' : '#ffffff',
+      halo = lum > 150 ? '#ffffff' : '#101010';
+    const tick = 16;
+    const lines = (col: string, w: number) =>
+      `<g stroke="${col}" stroke-width="${w}" stroke-linecap="round"><line x1="${A0.x}" y1="${A0.y}" x2="${A.x + nx * 8}" y2="${A.y + ny * 8}" stroke-width="${w * 0.5}"/><line x1="${B0.x}" y1="${B0.y}" x2="${B.x + nx * 8}" y2="${B.y + ny * 8}" stroke-width="${w * 0.5}"/><line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/><line x1="${A.x - nx * tick}" y1="${A.y - ny * tick}" x2="${A.x + nx * tick}" y2="${A.y + ny * tick}"/><line x1="${B.x - nx * tick}" y1="${B.y - ny * tick}" x2="${B.x + nx * tick}" y2="${B.y + ny * tick}"/></g>`;
+    parts.push(lines(halo, 10), lines(ink, 5));
     let ang = (Math.atan2(B.y - A.y, B.x - A.x) * 180) / Math.PI;
     if (ang > 90) ang -= 180;
     if (ang <= -90) ang += 180;
-    const mx = (A.x + B.x) / 2 + nx * 26,
-      my = (A.y + B.y) / 2 + ny * 26;
-    parts.push(`<g transform="translate(${mx} ${my}) rotate(${ang})">${textSvg(txt, 36)}</g>`);
+    parts.push(`<g transform="translate(${mx} ${my}) rotate(${ang})">${textSvg(txt, 56, ink, halo)}</g>`);
   };
 
   for (const s of withNum) {
