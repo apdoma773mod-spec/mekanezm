@@ -148,6 +148,38 @@ const partBox = (key: string, photo: { data: string; mime: string }) =>
     .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
     .catch(() => null);
 
+const LINE_WORDS: Record<string, string> = {
+  h: 'height: the full upright height of the product (top edge to bottom edge, along its real vertical edge)',
+  w: 'width: left edge to right edge of the main body',
+  l: 'length: the longest horizontal extent of the main body',
+  t: 'thickness: the thin dimension of the main body',
+  bw: 'base width: one side edge of the base / mounting plate',
+  bl: 'base length: the adjacent side edge of the base / mounting plate',
+  d: 'depth: front to back of the body',
+};
+/** Two end points per wanted size, ON the product's own edges (fractions x0,y0,x1,y1 of the photo). */
+const partLines = (key: string, photo: { data: string; mime: string }, kinds: string[]) =>
+  geminiJson<{ lines?: { kind?: string; p1?: number[]; p2?: number[] }[] }>(
+    key,
+    `Product photo. Ignore the background, logo, text, hands and any measuring tape/ruler. For EACH measurement below give two end points that sit exactly ON the product's own edges, following the direction of that dimension as it appears in the photo (the line may be tilted by perspective). Points are [y,x] integers 0-1000.
+Measurements:
+${kinds.map((k) => `- "${k}" = ${LINE_WORDS[k]}`).join(String.fromCharCode(10))}
+Return JSON only: {"lines":[{"kind":"h","p1":[y,x],"p2":[y,x]}]}`,
+    photo,
+  )
+    .then((d) => {
+      const out: Record<string, [number, number, number, number]> = {};
+      for (const l of d.lines ?? []) {
+        const ok = (p?: number[]) => Array.isArray(p) && p.length === 2 && p.every((n) => Number.isFinite(n));
+        if (l.kind && kinds.includes(l.kind) && ok(l.p1) && ok(l.p2)) {
+          const q = [l.p1![1]! / 1000, l.p1![0]! / 1000, l.p2![1]! / 1000, l.p2![0]! / 1000].map((n) => Math.min(1, Math.max(0, n)));
+          if (Math.hypot(q[2]! - q[0]!, q[3]! - q[1]!) > 0.05) out[l.kind] = q as [number, number, number, number];
+        }
+      }
+      return out;
+    })
+    .catch(() => ({}) as Record<string, [number, number, number, number]>);
+
 export async function geminiJson<T>(key: string, prompt: string, image?: { data: string; mime: string }): Promise<T> {
   const parts = [{ text: prompt }, ...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : [])];
   const b = await firstWorking('text', TEXT_MODELS, (m) => gemini(key, m, { contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 45000)).catch((e) => {
@@ -336,10 +368,11 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     const photo = p.imgData ? { data: p.imgData, mime: 'image/jpeg' } : await loadImage(p.img);
     if (!photo) throw badRequest('مقدرتش أفتح صورة المنتج');
     const k = await getKey();
-    const hint = k ? await partBox(k.key, photo) : null;
-    const mk = (v: string, k: string, slot: 'bottom' | 'right' | 'top' | 'left') => (v ? { k, v: v + ' سم', slot } : null);
+    const vals: [string, string, string, 'bottom' | 'right' | 'top' | 'left'][] = [['h', p.h, 'الارتفاع', 'right'], ['w', p.w, 'العرض', 'top'], ['l', p.l, 'الطول', 'top'], ['t', p.t, 'التخانة', 'left'], ['bw', p.bw, 'عرض القاعدة', 'bottom'], ['bl', p.bl, 'طول القاعدة', 'bottom'], ['d', p.d, 'العمق', 'left']];
+    const want = vals.filter((x) => x[1]);
     // every size has its own box in the editor: an empty box is simply not drawn
-    const specs = [mk(p.h, 'الارتفاع', 'right'), mk(p.w, 'العرض', 'top'), mk(p.l, 'الطول', 'top'), mk(p.t, 'التخانة', 'left'), mk(p.bw, 'عرض القاعدة', 'bottom'), mk(p.bl, 'طول القاعدة', 'bottom'), mk(p.d, 'العمق', 'left')].filter(Boolean) as Spec[];
+    const [hint, lines] = k ? await Promise.all([partBox(k.key, photo), partLines(k.key, photo, want.map((x) => x[0]))]) : [null, {} as Record<string, [number, number, number, number]>];
+    const specs = want.map(([kind, v, name, slot]) => ({ k: name, v: v + ' سم', slot, line: lines[kind] ?? null }));
     const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), specs, '', hint, p.foot);
     return { data: buf.toString('base64') };
   });
