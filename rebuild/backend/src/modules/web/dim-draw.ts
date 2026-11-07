@@ -2,10 +2,8 @@
  * Real product photo as is + dimension lines/numbers/arrows drawn by code (no AI drawing, the part is never changed).
  * Callouts come from the product specs that contain a number (width / height / depth / mounting sizes).
  */
-export type DimSpec = { k: string; v: string };
+export type DimSpec = { k: string; v: string; slot?: 'bottom' | 'right' | 'top' | 'left' };
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
 type Slot = 'bottom' | 'right' | 'top' | 'left';
 const pickSlot = (k: string, used: Set<Slot>): Slot | null => {
@@ -14,7 +12,7 @@ const pickSlot = (k: string, used: Set<Slot>): Slot | null => {
   return null;
 };
 
-export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = '', hint?: [number, number, number, number] | null, foot = ''): Promise<Buffer> {
+export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '', hint?: [number, number, number, number] | null, _foot = ''): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
   const W = 1200,
     H = 900;
@@ -59,8 +57,9 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
     fR = fx + iw,
     fB = fy + ih;
 
-  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v) && /(سم|مم|ملم|متر|بوصة|cm|mm|inch|")/i.test(s.v) && !/(حمولة|وزن|كجم|kg)/i.test(s.k + s.v)).slice(0, 4);
+  const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v) && /(سم|مم|ملم|متر|بوصة|cm|mm|inch|")/i.test(s.v) && !/(حمولة|وزن|كجم|kg)/i.test(s.k + s.v)).slice(0, 6);
   const used = new Set<Slot>();
+  const stack: Partial<Record<Slot, number>> = {};
   const col = '#c0392b';
   const parts: string[] = [];
   const arrow = (ax: number, ay: number, bx: number, by: number) => {
@@ -69,16 +68,38 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
     const head = (px: number, py: number, d: number) => `<path d="M${px} ${py} l${Math.cos(a + d + 2.8) * s} ${Math.sin(a + d + 2.8) * s} M${px} ${py} l${Math.cos(a + d - 2.8) * s} ${Math.sin(a + d - 2.8) * s}" stroke="${col}" stroke-width="3" fill="none"/>`;
     return `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${col}" stroke-width="3"/>${head(ax, ay, Math.PI)}${head(bx, by, 0)}`;
   };
-  const label = (cx: number, cy: number, k: string, v: string, rot = 0) => {
-    const t1 = esc(cut(v, 16)),
-      t2 = esc(cut(k, 20));
-    return `<g transform="translate(${cx} ${cy}) rotate(${rot})"><rect x="-80" y="-26" width="160" height="52" rx="10" fill="#fff" stroke="${col}" stroke-width="2"/><text x="0" y="-2" text-anchor="middle" font-size="21" font-weight="700" fill="${col}" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t1}</text><text x="0" y="19" text-anchor="middle" font-size="15" fill="#444" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t2}</text></g>`;
+  // Text is drawn as plain vector strokes: the cloud server has no fonts at all (Arabic/Latin both came out as squares).
+  const G: Record<string, string> = { '0': 'M1 0H7V14H1Z', '1': 'M2 3L4 0V14', '2': 'M1 0H7V7H1V14H7', '3': 'M1 0H7V14H1M1 7H7', '4': 'M1 0V7H7M7 0V14', '5': 'M7 0H1V7H7V14H1', '6': 'M7 0H1V14H7V7H1', '7': 'M1 0H7V14', '8': 'M1 0H7V14H1ZM1 7H7', '9': 'M7 7H1V0H7V14H1', '.': 'M3 13.5H4', c: 'M7 5H1V14H7', m: 'M1 14V5H4V14M4 5H7V14', i: 'M3 2V3M3 6V14', n: 'M1 14V5H7V14' };
+  const toLatin = (t: string) => t.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/٫|,/g, '.');
+  const valText = (v: string) => {
+    const t = toLatin(v);
+    const n = (t.match(/[0-9]+(?:.[0-9]+)?/) || [''])[0];
+    const u = /مم|ملم|mm/i.test(t) ? 'mm' : /متر|(^|[^a-z])m($|[^a-z])/i.test(t) && !/سم|cm/i.test(t) ? 'm' : /بوصة|inch|"/i.test(t) ? 'in' : 'cm';
+    return n + ' ' + u;
+  };
+  const vtext = (str: string, sc: number, col2: string) => {
+    const adv = 11 * sc;
+    const w = str.length * adv;
+    let x = -w / 2;
+    const out: string[] = [];
+    for (const ch of str) {
+      if (G[ch]) out.push(`<path transform="translate(${x.toFixed(1)} ${(-7 * sc).toFixed(1)}) scale(${sc})" d="${G[ch]}" fill="none" stroke="${col2}" stroke-width="${(3.4 / sc).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      x += adv;
+    }
+    return { svg: out.join(''), w };
+  };
+  const label = (cx: number, cy: number, _k: string, v: string, rot = 0) => {
+    const t = vtext(valText(v), 2.4, col);
+    const bw = Math.round(t.w + 36);
+    return `<g transform="translate(${cx} ${cy}) rotate(${rot})"><rect x="${-bw / 2}" y="-30" width="${bw}" height="60" rx="12" fill="#fff" stroke="${col}" stroke-width="2.5"/>${t.svg}</g>`;
   };
   for (const s of withNum) {
-    const slot = pickSlot(s.k, used);
+    const slot = s.slot ?? pickSlot(s.k, used);
     if (!slot) break;
+    const n = stack[slot] ?? 0;
+    stack[slot] = n + 1;
     used.add(slot);
-    const gap = 34;
+    const gap = 34 + n * 80;
     if (slot === 'bottom' || slot === 'top') {
       const y = Math.min(fB - 30, Math.max(fT + 30, slot === 'bottom' ? y1 + gap : y0 - gap));
       parts.push(`<line x1="${x0}" y1="${y - 22}" x2="${x0}" y2="${y + 22}" stroke="${col}" stroke-width="2"/><line x1="${x1}" y1="${y - 22}" x2="${x1}" y2="${y + 22}" stroke="${col}" stroke-width="2"/>`, arrow(x0, y, x1, y), label((x0 + x1) / 2, y, s.k, s.v));
@@ -87,7 +108,7 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
       parts.push(`<line x1="${x - 22}" y1="${y0}" x2="${x + 22}" y2="${y0}" stroke="${col}" stroke-width="2"/><line x1="${x - 22}" y1="${y1}" x2="${x + 22}" y2="${y1}" stroke="${col}" stroke-width="2"/>`, arrow(x, y0, x, y1), label(x, (y0 + y1) / 2, s.k, s.v, -90));
     }
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${title ? `<text x="${W / 2}" y="46" text-anchor="middle" font-size="30" font-weight="700" fill="#222" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(title, 60))}</text>` : ''}${parts.join('')}${foot ? `<text x="${W / 2}" y="${H - 22}" text-anchor="middle" font-size="26" fill="#6b5a45" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(foot, 80))}</text>` : ''}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${parts.join('')}</svg>`;
   return sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } })
     .composite([{ input: img, left: fx, top: fy }, { input: Buffer.from(svg) }])
     .jpeg({ quality: 90 })

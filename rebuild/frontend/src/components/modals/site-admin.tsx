@@ -10,7 +10,7 @@ import { fileToDataUrl } from '@/lib/image';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
 import { useModal } from './modal-host';
-import { dimSig, generateDimImage, hasDims, parseDims } from '@/lib/dim-auto';
+import { DIM_FIELDS, dimSig, generateDimImage, hasDims, parseDims, readDimBoxes, type Dims } from '@/lib/dim-auto';
 
 /** 🌐 محتوى الموقع (openSiteAdmin القديمة) + 🌐 «على الموقع» للصنف (openSiteProduct). */
 const SHOP_URL = 'https://apdoma773mod-spec.github.io/mekanezm/shop.html';
@@ -742,7 +742,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     setDimErr('');
     try {
       if (!f?.imgs.length) return fail('ارفع صورة للمنتج الأول');
-      if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return fail('اكتب المقاسات الأول: العرض × الارتفاع × العمق (سم) في الخانة اللي فوق الزرار');
+      if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return fail('اكتب مقاس واحد على الأقل في الخانات اللي فوق الزرار');
       const r = await makeDim(true);
       if (r) set(r);
       toast('✔ صورة المقاسات اتعملت — هي الأولى في الصور');
@@ -906,9 +906,23 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>
                 السيستم بيختار أوضح صورة من صور المنتج زي ما هي ويرسم عليها أسهم المقاسات — وبتتحط أول صورة. بتتعمل أوتوماتيك لما تحفظ.
               </div>
-              {!hasDims(parseDims(f.sp)) && (
-                <input value={f.dimTxt} placeholder="مقاسات الصورة: العرض × الارتفاع × العمق (سم) — مثلاً 60 × 45 × 12" onChange={(e) => set({ dimTxt: e.target.value })} style={{ width: '100%' }} />
-              )}
+              {(() => {
+                const bx = readDimBoxes(f.dimTxt) ?? {};
+                const put = (k: keyof Dims, v: string) => set({ dimTxt: JSON.stringify({ ...bx, [k]: v }) });
+                const box = ([k, label]: [keyof Dims, string]) => (
+                  <label key={k} style={{ display: 'block', fontSize: 13 }}>
+                    {label} (سم)
+                    <input inputMode="decimal" value={bx[k] ?? ''} placeholder="سيبها فاضية لو مفيش" onChange={(e) => put(k, e.target.value)} style={{ width: '100%' }} />
+                  </label>
+                );
+                return (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(0, 4).map(box)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, margin: '8px 0 2px' }}>لو المنتج له قاعدة:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(4).map(box)}</div>
+                  </>
+                );
+              })()}
               <button type="button" className="secondary" id="eDimBtn" style={{ marginTop: 6 }} disabled={!!dimMsg} onClick={() => void regenDim()}>
                 🪄 اعملها دلوقتي
               </button>
