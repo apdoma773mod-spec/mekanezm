@@ -14,6 +14,14 @@ export function Mine() {
   const [msg, setMsg] = useState('');
   const pairs = () => { try { return JSON.parse(localStorage.getItem(SCRAP_KEY) || '[]') as { id: string; secret: string }[]; } catch { return []; } };
   async function load() {
+    try { // link from the WhatsApp reply: ?k=id.secret,id2.secret2
+      const k = new URLSearchParams(window.location.search).get('k');
+      if (k) {
+        const a = pairs(); const have = new Set(a.map(x => x.id));
+        for (const part of k.split(',')) { const [id, secret] = part.split('.'); if (id && secret && !have.has(id)) a.push({ id, secret }); }
+        localStorage.setItem(SCRAP_KEY, JSON.stringify(a.slice(-200)));
+      }
+    } catch { /* */ }
     const p = pairs();
     if (!p.length) return setList([]);
     const r = await scrapMine(p);

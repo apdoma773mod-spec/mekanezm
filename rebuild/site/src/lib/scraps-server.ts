@@ -1,12 +1,13 @@
 import 'server-only';
-import { SB_KEY, SB_URL } from './config';
 import type { Scrap } from './scraps';
 
-/** All active offcut listings (no names / phones). Cached 30 s; empty if the table does not exist yet. */
+/** All active offcut listings (no names / phones), from the system backend. Cached 30 s; empty if it is unreachable. */
 export async function getScraps(): Promise<Scrap[]> {
   try {
-    const r = await fetch(`${SB_URL}/rest/v1/rpc/scrap_list`, {
-      method: 'POST', headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' }, body: '{}',
+    const base = process.env.BACKEND_URL?.replace(/\/$/, '');
+    if (!base) return [];
+    const r = await fetch(base + '/api/v1/web/scraps', {
+      headers: { 'ngrok-skip-browser-warning': '1' },
       next: { revalidate: 30, tags: ['scraps'] },
     });
     if (!r.ok) return [];

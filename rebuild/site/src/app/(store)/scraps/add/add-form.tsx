@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { scrapAdd, uploadRequestImage } from '@/lib/api';
+import { scrapAdd, uploadScrapImage as uploadRequestImage } from '@/lib/api';
 import { shrinkImage } from '@/lib/images';
 import { getMe, saveMe } from '@/lib/me';
 import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';

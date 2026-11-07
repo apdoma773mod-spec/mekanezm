@@ -211,9 +211,32 @@ export type ScrapDraft = {
   category: string; material: string; brand: string; code: string; color: string; thick?: number; len: number; wid?: number; qty: number;
   cond: string; edge: boolean; grain: boolean; price_mode: string; price?: number; area: string; name: string; phone: string; note: string; imgs: string[];
 };
-export const scrapAdd = (d: ScrapDraft) => rpc<{ id: string; secret: string }>('scrap_add', { p: d });
-export const scrapContact = (id: string) => rpc<{ name: string; phone: string; area: string }>('scrap_contact', { p_id: id });
-export const scrapDone = (id: string, secret: string, status: 'sold' | 'removed') => rpc<boolean>('scrap_done', { p_id: id, p_secret: secret, p_status: status });
-export const scrapRenew = (id: string, secret: string) => rpc<boolean>('scrap_renew', { p_id: id, p_secret: secret });
-export const scrapReport = (id: string, reason: string) => rpc<null>('scrap_report', { p_id: id, p_reason: reason });
-export const scrapMine = (pairs: { id: string; secret: string }[]) => rpc<Record<string, unknown>[]>('scrap_mine', { p_pairs: pairs });
+/** Offcut market lives in the system backend (via the same-origin /mkapi proxy). */
+async function sc<T>(path: string, body: unknown): Promise<{ ok: boolean; data: T | null; message: string }> {
+  try {
+    const r = await fetch('/mkapi/web/scraps' + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const t = await r.text();
+    let j: unknown = null;
+    try { j = JSON.parse(t); } catch { /* not json */ }
+    const message = (j && typeof j === 'object' && 'message' in j ? String((j as { message: unknown }).message) : '') || '';
+    return { ok: r.ok, data: j as T, message: r.ok ? '' : message || t.slice(0, 200) };
+  } catch (e) { return { ok: false, data: null, message: String(e) }; }
+}
+export const scrapAdd = (d: ScrapDraft) => sc<{ id: string; secret: string }>('', d);
+export const scrapContact = (id: string) => sc<{ name: string; phone: string; area: string }>('/' + encodeURIComponent(id) + '/contact', {});
+export const scrapDone = (id: string, secret: string, status: 'sold' | 'removed') => sc<unknown>('/' + encodeURIComponent(id) + '/done', { secret, status });
+export const scrapRenew = (id: string, secret: string) => sc<unknown>('/' + encodeURIComponent(id) + '/renew', { secret });
+export const scrapReport = (id: string, reason: string) => sc<unknown>('/' + encodeURIComponent(id) + '/report', { reason });
+export const scrapMine = (pairs: { id: string; secret: string }[]) => sc<Record<string, unknown>[]>('/mine', { pairs });
+export const scrapWant = (q: Record<string, unknown>) => sc<{ queued: boolean }>('/want', q);
+
+/** Photo upload for the offcut market: always the system backend (public media endpoint), whatever NEW is. */
+export async function uploadScrapImage(blob: Blob): Promise<string> {
+  const r = await fetch('/mkapi/web/public/media', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: await blobToB64(blob), ext: blob.type === 'image/webp' ? 'webp' : 'jpg' }),
+  });
+  const j = r.ok ? await r.json().catch(() => null) : null;
+  if (!j?.url) throw new Error('upload');
+  return j.url as string;
+}

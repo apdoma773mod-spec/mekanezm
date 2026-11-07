@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat, type Hit } from '@/lib/scraps';
 import { ev } from '@/lib/track';
+import { scrapWant } from '@/lib/api';
 import Link from 'next/link';
 import { ScrapCard } from './scrap-card';
 
@@ -30,7 +31,9 @@ export function ScrapSearch() {
     try {
       const r = await fetch('/api/scraps?' + q);
       if (!r.ok) throw 0;
-      setRes(await r.json());
+      const data = await r.json(); setRes(data);
+      // nothing good found: tell the system, it WhatsApps owners of near pieces (never reveals the searcher)
+      if (!data.hits?.some((h: Hit) => h.level <= 2)) scrapWant({ category: cat, material: f.material.trim(), code: f.code.trim(), thick: thick || undefined, len, wid: wid || undefined }).catch(() => { /* */ });
       ev('search', 'Search', { search_term: 'scrap', category: cat });
     } catch { setMsg('البحث مشتغلش — جرّب تاني'); }
     setBusy(false);
