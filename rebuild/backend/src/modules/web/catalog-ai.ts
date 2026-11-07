@@ -138,6 +138,16 @@ export async function geminiKey(db: FastifyInstance['prisma']): Promise<string |
 }
 
 /** سؤال واحد لـ Gemini بصورة (اختياري) وبيرجّع JSON — بيعدّي على الموديلات المقفولة أو الزحمة */
+/** مكان القطعة المعدن نفسها في الصورة (كسور x0,y0,x1,y1) عشان خطوط المقاسات تتحط عليها هي */
+const partBox = (key: string, photo: { data: string; mime: string }) =>
+  geminiJson<{ box?: number[] }>(
+    key,
+    'Find the main metal hardware product (not the background, logo, text, hands or measuring tape) in this photo. Return JSON only: {"box":[ymin,xmin,ymax,xmax]} with integers 0-1000 tightly around the WHOLE product, nothing cut off.',
+    photo,
+  )
+    .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
+    .catch(() => null);
+
 export async function geminiJson<T>(key: string, prompt: string, image?: { data: string; mime: string }): Promise<T> {
   const parts = [{ text: prompt }, ...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : [])];
   const b = await firstWorking('text', TEXT_MODELS, (m) => gemini(key, m, { contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 45000)).catch((e) => {
@@ -320,6 +330,18 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     return got;
   });
 
+  /** صورة المقاسات: صورة المنتج الحقيقية زي ما هي + مقاسات مرسومة على القطعة (من غير فصل خلفية ولا ذكاء بيرسم) */
+  app.post('/catalog/ai/dim-image', { preHandler: app.requireAdmin, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request) => {
+    const p = parse(z.object({ img: z.string().max(500), w: z.string().max(12).default(''), h: z.string().max(12).default(''), d: z.string().max(12).default(''), foot: z.string().max(120).default('') }), request.body);
+    const photo = await loadImage(p.img);
+    if (!photo) throw badRequest('مقدرتش أفتح صورة المنتج');
+    const k = await getKey();
+    const hint = k ? await partBox(k.key, photo) : null;
+    const specs = [p.w && { k: 'العرض', v: p.w + ' سم' }, p.h && { k: 'الارتفاع', v: p.h + ' سم' }, p.d && { k: 'العمق', v: p.d + ' سم' }].filter(Boolean) as Spec[];
+    const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), specs, '', hint, p.foot);
+    return { data: buf.toString('base64') };
+  });
+
   const runJob = async (key: string, p: z.infer<typeof body>): Promise<AiResult> => {
     const k = { key };
     const photo = await loadImage(p.img);
@@ -382,14 +404,7 @@ Return JSON: {"prompt":"..."}`,
     // الصورة الحقيقية زي ما هي + المقاسات مرسومة بالكود (مفيش ذكاء اصطناعي بيرسم القطعة)
     const dimImage = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
-      // مكان القطعة المعدن نفسها في الصورة (عشان خطوط المقاسات تتحط عليها هي مش على إطار الصورة)
-      const hint = await geminiJson<{ box?: number[] }>(
-        key,
-        'Find the main metal hardware product (not the background, logo, text or hands) in this photo. Return JSON only: {"box":[ymin,xmin,ymax,xmax]} with integers 0-1000 tightly around the whole product.',
-        { data: photo.data, mime: photo.mime },
-      )
-        .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
-        .catch(() => null);
+      const hint = await partBox(key, photo);
       const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), out.specs, p.name, hint);
       const name = `${randomBytes(12).toString('hex')}.jpg`;
       await putFile(name, buf, 'image/jpeg');

@@ -4,6 +4,8 @@
  *  2) cuts the product out of its background (U²-Net-small, runs in the browser, model in /models/u2netp.onnx — Apache-2.0),
  *  3) stands it on a marble slab in front of a soft wall and draws the size arrows around the product itself, like the suppliers' pictures.
  */
+import { api } from '@/lib/api';
+
 export interface Dims {
   w?: string;
   h?: string;
@@ -298,6 +300,18 @@ export async function generateDimImage(imgs: string[], dims: Dims, foot: string,
   }
   if (!loaded.length) throw new Error('مقدرتش أفتح صور المنتج');
   const order = loaded.map((img) => ({ img, q: quality(img) })).sort((a, b) => b.q - a.q).slice(0, 3);
+  // الطريقة الأساسية: صورة المنتج الحقيقية كاملة زي ما هي + المقاسات مرسومة على القطعة (السيرفر بيرسم) — من غير قص ولا فصل خلفية
+  try {
+    onStep?.('⏳ برسم المقاسات على صورة المنتج…');
+    const best = order[0]!.img;
+    const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { img: best.currentSrc || best.src, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', foot });
+    const bin = atob(r.data);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: 'image/jpeg' });
+  } catch {
+    /* السيرفر مش متاح: الطريقة القديمة تحت */
+  }
   let cut: HTMLCanvasElement | null = null;
   for (const o of order) {
     try {
