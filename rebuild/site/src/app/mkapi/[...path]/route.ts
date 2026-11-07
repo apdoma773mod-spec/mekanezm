@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const ALLOWED = /^(?:web\/public\/(?:orders|requests|custom|media|track|track-custom|reviews|notify-me|visit)|web\/scraps\/(?:mine|want)|web\/scraps\/[0-9a-zA-Z_-]+\/(?:contact|done|renew|report))$/;
+const ALLOWED = /^(?:web\/public\/(?:orders|requests|custom|media|track|track-custom|reviews|notify-me|visit)|web\/scraps|web\/scraps\/(?:mine|want)|web\/scraps\/[0-9a-zA-Z_-]+\/(?:contact|done|renew|report))$/;
 const ALLOWED_GET = /^web\/public\/(stock|reviews|site|catalog-latest(?:\/print)?)$/;
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
