@@ -5,6 +5,7 @@ import { reportTick } from '../alerts/report.js';
 import { autoTick } from '../alerts/auto.js';
 import { CameraService } from '../camera/service.js';
 import { notifyBackInStock } from '../web/notify-me.js';
+import { pingWants } from '../scraps/service.js';
 
 /**
  * ⏰ The scheduled jobs (daily copy, end-of-day report, automatic messages, back-in-stock, cameras) as one endpoint.
@@ -24,6 +25,7 @@ export default async function cronRoutes(app: FastifyInstance) {
       auto: () => autoTick(app.prisma),
       notify: () => notifyBackInStock(app.prisma),
       camera: () => new CameraService(app.prisma).tick(),
+      scraps: () => pingWants(app.prisma),
     };
     const result: Record<string, string> = {};
     await Promise.all(
