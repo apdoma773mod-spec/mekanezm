@@ -30,12 +30,24 @@ export function parseDims(specs: [string, string][], typed = ''): Dims {
     else if (/عمق|سمك|depth/i.test(k)) out.d ??= n;
     else if (/عرض|طول|width|length/i.test(k)) out.w ??= n;
   }
-  // «عرض × ارتفاع × عمق» typed once in the editor when the specs have none
-  const t = arDigits(typed).match(/\d+(?:[.,]\d+)?/g);
-  if (t && !out.w && !out.h && !out.d) {
-    out.w = t[0]?.replace(',', '.');
-    out.h = t[1]?.replace(',', '.');
-    out.d = t[2]?.replace(',', '.');
+  // typed in the editor when the specs have none: labelled words win («ارتفاع ١٠», «١٠ سم ارتفاع»); bare numbers follow «عرض × ارتفاع × عمق»; one bare number = height
+  if (!out.w && !out.h && !out.d && typed) {
+    const t = arDigits(typed);
+    const num = '(\\d+(?:[.,]\\d+)?)';
+    const lab: [keyof Dims, string][] = [['h', 'ارتفاع|height|طول الرجل|الرجل'], ['d', 'عمق|سمك|depth'], ['w', 'عرض|طول|width|length']];
+    for (const [key, words] of lab) {
+      const m = t.match(new RegExp('(?:' + words + ')\\s*[:=]?\\s*' + num)) || t.match(new RegExp(num + '\\s*(?:سم|cm|مم|mm)?\\s*(?:' + words + ')'));
+      if (m) out[key] = m[1]!.replace(',', '.');
+    }
+    if (!out.w && !out.h && !out.d) {
+      const x = t.match(/\d+(?:[.,]\d+)?/g) ?? [];
+      if (x.length === 1) out.h = x[0]!.replace(',', '.');
+      else {
+        out.w = x[0]?.replace(',', '.');
+        out.h = x[1]?.replace(',', '.');
+        out.d = x[2]?.replace(',', '.');
+      }
+    }
   }
   return out;
 }
