@@ -1,4 +1,3 @@
-import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = { title: 'استوديو ميكانيزم', manifest: '/manifest.webmanifest', icons: { icon: '/icon-192.png', apple: '/apple-touch-icon.png' } };

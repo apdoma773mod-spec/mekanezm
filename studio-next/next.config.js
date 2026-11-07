@@ -6,8 +6,8 @@ const SEC = [
 module.exports = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // النسخة الكاملة من ستوديو ميكانيزم بالظبط (index.html + smart.js) بتتخدم على الرئيسية؛ بنهاجر أقسامها لكود Next تدريجيًا
-  async rewrites() { return { beforeFiles: [{ source: '/', destination: '/index.html' }, { source: '/admin', destination: '/admin.html' }], afterFiles: [], fallback: [] }; },
+  // الرئيسية بقت Next بالكامل (app/page.tsx). الأدمن لسه صفحة HTML — هيتحول بعدين
+  async rewrites() { return { beforeFiles: [{ source: '/admin', destination: '/admin.html' }], afterFiles: [], fallback: [] }; },
   async headers() {
     return [
       { source: '/:path*', headers: SEC },
