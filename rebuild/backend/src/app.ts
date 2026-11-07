@@ -47,6 +47,7 @@ import alertsRoutes from './modules/alerts/routes.js';
 import webRoutes from './modules/web/routes.js';
 import webPublicRoutes from './modules/web/public.js';
 import scrapRoutes from './modules/scraps/routes.js';
+import { useSavedAiKey } from './modules/web/catalog-ai.js';
 import aiRoutes from './modules/ai/routes.js';
 import portalRoutes from './modules/portal/routes.js';
 import { daybookImportRoutes } from './modules/daybook/import.js';
@@ -75,6 +76,8 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
   await app.register(prismaPlugin, { prisma });
   await app.register(authPlugin);
   // ⏱️ any request slower than 1 s is written to the log with its time, so slow screens can be found later
+  // one Gemini key pasted in the system (catalog page) runs every AI feature
+  app.addHook('onRequest', async () => { await useSavedAiKey(app.prisma); });
   app.addHook('onResponse', async (request, reply) => {
     const ms = reply.elapsedTime;
     if (ms > 1000) request.log.warn({ slow: true, ms: Math.round(ms), url: request.url, method: request.method }, 'slow request');

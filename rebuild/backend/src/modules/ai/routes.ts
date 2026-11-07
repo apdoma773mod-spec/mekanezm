@@ -3,7 +3,7 @@ import { MAX_B64, MODEL, PROMPT, TOOL, TYPES, json, readTransfer, viaGemini } fr
 import { scanRoutes } from './scans.js';
 import visionRoutes from './vision.js';
 
-export const NO_KEY = 'قراءة الصور محتاجة مفتاح ذكاء اصطناعي (GEMINI_API_KEY مجاني أو ANTHROPIC_API_KEY) — كلّم المطوّر';
+export const NO_KEY = 'قراءة الصور محتاجة مفتاح Gemini (مجاني): افتح «📖 الكتالوج» ← خانة مفتاح Gemini والزقه هناك مرة واحدة';
 
 /** One supplier-invoice read (the old parse-invoice): Gemini strong→fast with self-check, else Claude. */
 export async function readInvoiceImage(image: string, mt: string, part?: { i: number; n: number }): Promise<{ status: number; body: Record<string, unknown> }> {
