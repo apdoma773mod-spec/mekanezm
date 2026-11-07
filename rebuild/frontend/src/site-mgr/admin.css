@@ -273,3 +273,7 @@ body:has(main.adm) .fab { display: none; }
 .ad-sc-h b { flex: 1; font-size: 15px; }
 .ad-sc-b { padding: 12px; display: grid; gap: 10px; }
 .ad-sc-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* الأزرار الثانوية (افتحه / نسخة / حذف) في صف عادي فوق الشريط؛ الشريط الثابت فيه الحفظ بس */
+.ad-sec { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; }
+.ad-sec .lnk, .ad-sec a { margin: 0 !important; font-size: 14px; }
+@media (max-width: 900px) { .adm .ad-bar { padding-top: 8px; padding-bottom: 8px; } .adm .ad-bar .pri { min-height: 44px; flex: 1; } }

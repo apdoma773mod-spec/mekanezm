@@ -292,11 +292,13 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
         <label className="ad-ck"><input type="checkbox" checked={f.top} onChange={e => set('top', e.target.checked)} /> ⭐ منتج مميز <small>بيظهر في «الأكثر طلباً» في أول الموقع</small></label>
         <label className="ad-ck"><input type="checkbox" checked={f.hidden} onChange={e => set('hidden', e.target.checked)} /> 🙈 مخفي من الموقع <small>مبيظهرش للزباين، ولسه موجود هنا</small></label>
       </Fold>
-      <div className="ad-bar">
-        <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
+      {cur && <div className="ad-sec">
         {cur && <a className="lnk" href={SITE_URL + '/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={duplicate}>⧉ نسخة منه</button>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={remove}>🗑️ حذف</button>}
+      </div>}
+      <div className="ad-bar">
+        <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
         <button className="pri" disabled={busy} onClick={save}>💾 {cur ? 'حفظ ونشر' : 'إضافة ونشر'}</button>
       </div>
     </div>
