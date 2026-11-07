@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { NAV, THEMES } from '@/lib/nav';
 import { sb, kv } from '@/lib/supabase';
-import Montage from '@/components/Montage';
 
 function Login() {
   const [e, setE] = useState(''), [p, setP] = useState(''), [err, setErr] = useState('');
@@ -49,7 +48,7 @@ export default function Shell() {
       <main className="main">
         <h1>{cur[2]}</h1>
         {tab === 'theme' ? <Theme />
-          : tab === 'vid' ? <Montage />
+          : tab === 'vid' ? <div className="p"><a className="btn" href="/montage">🎬 افتح المونتاج الذكي</a></div>
           : tab === 'set' ? <div className="p"><h2>الحساب</h2><p className="mu">{user}</p><button className="btn" onClick={() => sb().auth.signOut()}>خروج</button></div>
           : <p className="mu">القسم ده لسه هيتبنى في مرحلة لاحقة (راجع PLAN.md).</p>}
       </main>
