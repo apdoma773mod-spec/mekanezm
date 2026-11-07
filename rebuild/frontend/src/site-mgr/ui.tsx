@@ -1,7 +1,7 @@
 'use client';
 // منقول من إدارة الموقع (rebuild/site/src/app/admin) عشان الإدارة كلها تبقى جوه السيستم وتحفظ في نفس المكان اللي الموقع بيقرا منه.
 // Small building blocks shared by the admin screens.
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { uploadImage } from './api';
 import { shrinkImage } from './lib/images';
 
@@ -111,5 +111,16 @@ export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[
       </div>
       <input ref={file} type="file" accept="image/*" multiple hidden onChange={e => { setBusy('⏳ بيجهّز الصور…'); void pick(e.target.files); e.target.value = ''; }} />
     </div>
+  );
+}
+
+/** A group inside a screen: closed (one line) until tapped, tap the header again to close. Keeps the screens short. */
+export function Fold({ title, children, open }: { title: ReactNode; children: ReactNode; open?: boolean }) {
+  const [on, setOn] = useState(!!open);
+  return (
+    <section className={'ad-fold' + (on ? ' on' : '')}>
+      <button type="button" className="ad-fold-h" onClick={() => setOn(!on)} aria-expanded={on}><b>{title}</b><span className="x">{on ? '✕' : '▾'}</span></button>
+      {on && <div className="ad-fold-b">{children}</div>}
+    </section>
   );
 }

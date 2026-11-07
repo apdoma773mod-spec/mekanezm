@@ -8,7 +8,7 @@ import { useProductInfo, useProducts, type ProductInfo } from '@/lib/trade-queri
 import { saveDoc, SITE_URL, type Rec, type SiteDoc } from './api';
 import { HandDiagram } from './hand-stub';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from './lib/hand';
-import { Imgs, uid7 } from './ui';
+import { Imgs, uid7, Fold } from './ui';
 
 type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
@@ -249,8 +249,7 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
           {sysInfo && <button type="button" className="lnk" onClick={repull}>⟳ هات بيانات السيستم تاني</button>}
         </p>
       )}
-      <section className="ad-s">
-        <h3>📝 البيانات الأساسية</h3>
+      <Fold title={<>📝 البيانات الأساسية</>} open>
         <label>اسم المنتج على الموقع<input value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={e => set('name', e.target.value)} /></label>
         <label>كود المنتج <small>(نفس كوده في السيستم — منه بيتحسب المخزون والطلبات)</small><input dir="ltr" value={f.code} disabled={!!cur || !!sys} onChange={e => set('code', e.target.value)} /></label>
         <label>القسم
@@ -258,17 +257,15 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
             <option value="">— اختار القسم —</option>{secs.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}<option value="__new">＋ قسم جديد…</option>
           </select>
         </label>
-      </section>
-      <section className="ad-s"><h3>📷 الصور <small>أول صورة هي اللي بتظهر في الكارت</small></h3><Imgs value={f.imgs} onChange={u => set('imgs', u)} /></section>
-      <section className="ad-s">
-        <h3>📋 الوصف والمواصفات</h3>
+      </Fold>
+      <Fold title={<>📷 الصور <small>أول صورة هي اللي بتظهر في الكارت</small></>}><Imgs value={f.imgs} onChange={u => set('imgs', u)} /></Fold>
+      <Fold title={<>📋 الوصف والمواصفات</>}>
         <p className="mut">اكتب كل مواصفة في سطر: <b dir="ltr">المقاس: 50 سم</b> — بتتحول لجدول في صفحة المنتج وفلاتر المقارنة.</p>
         <textarea rows={9} value={f.desc} onChange={e => set('desc', e.target.value)} placeholder={'سطر أو اتنين عن المنتج.\nالمقاس: 50 سم\nالخامة: ...'} />
         <div className="ad-chips">{SPEC_CHIPS.map(c => <button key={c} type="button" onClick={() => set('desc', (f.desc.trim() ? f.desc.replace(/\s+$/, '') + '\n' : '') + c + ': ')}>＋ {c}</button>)}</div>
-      </section>
-      <section className="ad-s"><h3>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></h3><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} /></section>
-      <section className="ad-s">
-        <h3>↔️ اتجاه الفتح (يمين / شمال)</h3>
+      </Fold>
+      <Fold title={<>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></>}><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} /></Fold>
+      <Fold title={<>↔️ اتجاه الفتح (يمين / شمال)</>}>
         <p className="mut">للمنتجات اللي ليها نسخة يمين ونسخة شمال (ماجيك كورنر، فاصوليا…). الموقع بيشرح للعميل إزاي يختار الصح ويوديه للنسخة التانية.</p>
         <div className="ad-seg">{([['auto', 'تلقائي من الاسم'], ['on', 'هحدده بنفسي'], ['off', 'من غير اتجاه']] as const).map(([k, t]) => <button key={k} type="button" className={f.dirMode === k ? 'on' : ''} onClick={() => set('dirMode', k)}>{t}</button>)}</div>
         {f.dirMode === 'auto' && <p className="mut">النوع اللي اتعرف من الاسم: <b>{KIND_LABEL[pvKind]}</b>. {autoHand ? `الاسم فيه «${HAND_LABEL[autoHand]}» — هيظهر شرح الاتجاه تلقائياً، والنسخة التانية بتتلقى لوحدها لو اسمها زي ده بالظبط وفيه الاتجاه العكسي.` : 'الاسم مفيهوش «يمين» أو «شمال»، فمفيش شرح اتجاه. اختار «هحدده بنفسي» لو المنتج ليه اتجاه.'}</p>}
@@ -281,28 +278,27 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
           <label>موشن مخصوص <small>(اختياري — لينك GIF أو صورة أو فيديو قصير بيظهر بدل الموشن الجاهز)</small><input dir="ltr" value={f.media} placeholder="https://…" onChange={e => set('media', e.target.value)} /></label>
         </>}
         {f.dirMode !== 'off' && pvHand && pvKind !== 'other' && !f.media.trim() && <div className="ad-prevbox"><b>معاينة اللي الزبون هيشوفه:</b><HandDiagram hand={pvHand} kind={pvKind} /></div>}
-      </section>
-      <section className="ad-s">
-        <h3>🏷️ شارة وتصنيف</h3>
+      </Fold>
+      <Fold title={<>🏷️ شارة وتصنيف</>}>
         <label>شارة على الكارت <small>(اختياري — بتظهر بدل «جديد»)</small><input value={f.badge} maxLength={20} onChange={e => set('badge', e.target.value)} /></label>
         <div className="ad-chips">{BADGES.map(b => <button key={b} type="button" onClick={() => set('badge', b)}>{b}</button>)}{f.badge && <button type="button" onClick={() => set('badge', '')}>✕ من غير شارة</button>}</div>
         <label>البراند <small>(اختياري)</small><input value={f.brand} maxLength={40} onChange={e => set('brand', e.target.value)} /></label>
         <label>كلمات بحث إضافية <small>(بالفاصلة — العميل يلاقي المنتج بيها: مثلاً «بلوم، مجرى مخفي»)</small><input value={f.tags} onChange={e => set('tags', e.target.value)} /></label>
-      </section>
-      <section className="ad-s">
-        <h3>📦 التوفر</h3>
+      </Fold>
+      <Fold title={<>📦 التوفر</>}>
         <label>حالة التوفر<select value={f.avail} onChange={e => set('avail', e.target.value as typeof f.avail)}><option value="">تلقائي (من مخزون السيستم)</option><option value="in">متوفر دايماً</option><option value="out">غير متوفر</option><option value="order">بالحجز</option></select></label>
-      </section>
-      <section className="ad-s">
-        <h3>👁️ الظهور</h3>
+      </Fold>
+      <Fold title={<>👁️ الظهور</>}>
         <label className="ad-ck"><input type="checkbox" checked={f.top} onChange={e => set('top', e.target.checked)} /> ⭐ منتج مميز <small>بيظهر في «الأكثر طلباً» في أول الموقع</small></label>
         <label className="ad-ck"><input type="checkbox" checked={f.hidden} onChange={e => set('hidden', e.target.checked)} /> 🙈 مخفي من الموقع <small>مبيظهرش للزباين، ولسه موجود هنا</small></label>
-      </section>
-      <div className="ad-bar">
-        <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
+      </Fold>
+      {cur && <div className="ad-sec">
         {cur && <a className="lnk" href={SITE_URL + '/p/' + cur.id} target="_blank" rel="noopener">↗ افتحه على الموقع</a>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={duplicate}>⧉ نسخة منه</button>}
         {cur && <button type="button" className="lnk" disabled={busy} onClick={remove}>🗑️ حذف</button>}
+      </div>}
+      <div className="ad-bar">
+        <span className={msg.startsWith('✗') || /اكتب|اختار|مفيش|الكود/.test(msg) ? 'err' : 'mut'} aria-live="polite">{msg}</span>
         <button className="pri" disabled={busy} onClick={save}>💾 {cur ? 'حفظ ونشر' : 'إضافة ونشر'}</button>
       </div>
     </div>

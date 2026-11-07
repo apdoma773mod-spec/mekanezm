@@ -5,7 +5,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { saveDoc, type Rec, type SiteDoc } from './api';
 import { FIELD_LABEL, guessField, parseDelimited, readTable, truthy, type Table } from './lib/import-files';
-import { sendPhoto, uid7 } from './ui';
+import { sendPhoto, uid7, Fold } from './ui';
 
 const lite = (s: string) => String(s ?? '').trim().toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 const FIELDS = Object.keys(FIELD_LABEL);
@@ -98,8 +98,7 @@ function ProductImport({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => vo
   }
 
   return (
-    <section className="ad-s">
-      <h2>📥 استيراد منتجات من ملف</h2>
+    <Fold title={<>📥 استيراد منتجات من ملف</>}>
       <p className="mut">Excel (xlsx) أو CSV أو JSON — أو انسخ الخلايا من Excel والصقها هنا. أول صف لازم يكون عناوين الأعمدة (كود، اسم، قسم، وصف…). الكود هو اللي بيربط بالسيستم، فلو الكود موجود المنتج بيتحدّث، ولو جديد بيتضاف.</p>
       <div className="ad-acts">
         <button type="button" className="sec" onClick={() => file.current?.click()}>📂 اختار ملف</button>
@@ -132,7 +131,7 @@ function ProductImport({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => vo
         </div>
       </>}
       {msg && <p className={msg.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{msg}</p>}
-    </section>
+    </Fold>
   );
 }
 
@@ -175,8 +174,7 @@ function BulkPhotos({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => void 
     setBusy(false);
   }
   return (
-    <section className="ad-s">
-      <h2>🖼️ رفع صور بالجملة</h2>
+    <Fold title={<>🖼️ رفع صور بالجملة</>}>
       <p className="mut">اختار صور كتير مرة واحدة. اسم كل ملف لازم يبدأ بكود المنتج: <b dir="ltr">1001.jpg</b> أو <b dir="ltr">1001-2.jpg</b> أو <b dir="ltr">1001_front.png</b>، والصور بتتوزع على منتجاتها لوحدها.</p>
       <button type="button" className="sec" onClick={() => input.current?.click()}>📷 اختار الصور</button>
       <input ref={input} type="file" accept="image/*" multiple hidden onChange={e => { setFiles([...(e.target.files ?? [])]); e.target.value = ''; }} />
@@ -190,7 +188,7 @@ function BulkPhotos({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => void 
         <div className="ad-acts"><button type="button" className="pri" disabled={busy || !match.groups.length} onClick={apply}>✔ ارفع ووزّع</button><button type="button" className="lnk" onClick={() => setFiles([])}>إلغاء</button></div>
       </>}
       {msg && <p className={msg.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{msg}</p>}
-    </section>
+    </Fold>
   );
 }
 
@@ -226,8 +224,7 @@ function Restore({ doc, onDoc, backup }: { doc: SiteDoc; onDoc: (d: SiteDoc) => 
   }
   const has = (k: string) => k === 'settings' || (data && Array.isArray(data[k]));
   return (
-    <section className="ad-s">
-      <h2>♻️ استرجاع نسخة احتياطية</h2>
+    <Fold title={<>♻️ استرجاع نسخة احتياطية</>}>
       <p className="mut">الموقع الحالي فيه {doc.data.products?.length ?? 0} منتج. اختار ملف النسخة اللي نزّلتها قبل كده من «💾 نسخة احتياطية».</p>
       <div className="ad-acts"><button type="button" className="sec" onClick={backup}>💾 نزّل نسخة من الموقع الحالي</button><button type="button" className="sec" onClick={() => input.current?.click()}>📂 اختار نسخة للاسترجاع</button></div>
       <input ref={input} type="file" accept=".json" hidden onChange={e => { load(e.target.files?.[0]); e.target.value = ''; }} />
@@ -236,6 +233,6 @@ function Restore({ doc, onDoc, backup }: { doc: SiteDoc; onDoc: (d: SiteDoc) => 
         <div className="ad-acts"><button type="button" className="pri" disabled={busy || !pick.size} onClick={apply}>♻️ استرجع المختار</button><button type="button" className="lnk" onClick={() => setData(null)}>إلغاء</button></div>
       </>}
       {msg && <p className={msg.startsWith('✗') ? 'err' : 'mut'} aria-live="polite">{msg}</p>}
-    </section>
+    </Fold>
   );
 }

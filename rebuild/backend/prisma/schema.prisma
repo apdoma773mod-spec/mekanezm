@@ -1117,3 +1117,65 @@ model StoredFile {
   data      Bytes
   createdAt DateTime @default(now()) @db.Timestamptz(3)
 }
+
+/// «سوق الفضلة»: a craftsman lists an offcut (board / solid wood / aluminium) for others to find by size. Mekanizm is only the middleman.
+/// Name and phone leave the system only through POST /web/scraps/:id/contact (logged in `reveals`).
+model Scrap {
+  id        String    @id @default(uuid())
+  secret    String
+  /// sheet | solid | alu
+  category  String
+  material  String    @default("")
+  brand     String    @default("")
+  code      String    @default("")
+  color     String    @default("")
+  /// mm
+  thick     Float?
+  /// cm
+  len       Float
+  /// cm (null for aluminium lengths)
+  wid       Float?
+  qty       Int       @default(1)
+  /// new | used | scratched
+  cond      String    @default("new")
+  edge      Boolean   @default(false)
+  grain     Boolean   @default(false)
+  /// free | swap | ask | price
+  priceMode String    @default("ask")
+  price     Float?
+  area      String    @default("")
+  name      String
+  phone     String
+  note      String    @default("")
+  imgs      String[]  @default([])
+  /// site | whatsapp
+  source    String    @default("site")
+  /// active | sold | removed | hidden
+  status    String    @default("active")
+  reports   Int       @default(0)
+  reveals   Int       @default(0)
+  /// last «حد دوّر على مقاسك» WhatsApp sent to the owner about this piece
+  pingedAt  DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime  @db.Timestamptz(3)
+
+  @@index([status, expiresAt])
+  @@index([phone])
+}
+
+/// A search on the site that found nothing (or only weak matches): owners of near pieces get one WhatsApp each.
+model ScrapWant {
+  id        String   @id @default(cuid())
+  category  String
+  material  String   @default("")
+  code      String   @default("")
+  thick     Float?
+  len       Float
+  wid       Float?
+  /// queued | done
+  status    String   @default("queued")
+  pinged    Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}

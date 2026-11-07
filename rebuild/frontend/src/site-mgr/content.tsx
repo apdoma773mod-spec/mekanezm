@@ -7,7 +7,7 @@ import { saveDoc, type Rec, type SiteDoc } from './api';
 import { PROS } from './lib/config';
 import { DEFAULT_ROUTES, type Route } from './lib/directions';
 import { KINDS, SKILLS } from './lib/pros';
-import { Imgs, uid7 } from './ui';
+import { Imgs, uid7, Fold } from './ui';
 
 type Work = { id: string; title: string; desc?: string; imgs: string[] };
 type Rev = { id: string; name: string; area?: string; stars: number; text: string };
@@ -113,8 +113,7 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
   };
   return (
     <>
-      <section className="ad-s">
-        <h2>🚚 التوصيل والاستبدال</h2>
+      <Fold title={<>🚚 التوصيل والاستبدال</>}>
         <label>جملة عن التوصيل <small>(اختياري)</small><input value={note} placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام" onChange={e => setNote(e.target.value)} /></label>
         <h3>🛵 توصيل القاهرة والجيزة</h3>
         <label>المصاريف<input value={loc.fee} onChange={e => setLoc({ ...loc, fee: e.target.value })} placeholder="مثلاً: من 50 لـ 100 ج.م حسب المنطقة" /></label>
@@ -139,9 +138,8 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
           x.delivery = rows.map(r => ({ area: r.area.trim(), fee: String(r.fee).trim(), days: r.days.trim() })).filter(r => r.area);
           x.deliveryNote = note; x.policy = pol.trim(); x.shipLocal = loc; x.shipGov = gov;
         })}>💾 حفظ التوصيل</button><span className={msg.ship?.startsWith('✗') ? 'err' : 'mut'}>{msg.ship}</span></div>
-      </section>
-      <section className="ad-s">
-        <h2>📞 التواصل</h2>
+      </Fold>
+      <Fold title={<>📞 التواصل</>}>
         <label>رقم الواتساب الأساسي <small>(اللي عليه الكتالوج)</small><input dir="ltr" value={wa} onChange={e => setWa(e.target.value)} /></label>
         <label>رقم المحل 1<input dir="ltr" value={p1} onChange={e => setP1(e.target.value)} /></label>
         <label>رقم المحل 2<input dir="ltr" value={p2} onChange={e => setP2(e.target.value)} /></label>
@@ -151,9 +149,8 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
         <div className="ad-sv"><button className="pri" disabled={!!busy} onClick={() => run('contact', x => {
           x.phone = wa.trim() || x.phone; x.phones = [p1.trim(), p2.trim()].filter(Boolean); x.hours = hours.trim(); x.mapUrl = map.trim(); x.catalog = cat;
         })}>💾 حفظ التواصل</button><span className={msg.contact?.startsWith('✗') ? 'err' : 'mut'}>{msg.contact}</span></div>
-      </section>
-      <section className="ad-s">
-        <h2>🗺️ تجيلنا إزاي</h2>
+      </Fold>
+      <Fold title={<>🗺️ تجيلنا إزاي</>}>
         <p className="mut">بتظهر في صفحة «خريطة: تجيلنا إزاي». كل طريق: منين، والخطوات (كل خطوة في سطر)، وملاحظة مهمة تظهر بلون مميز.</p>
         {routes.map((r, i) => (
           <div key={i} className="ad-route">
@@ -167,7 +164,7 @@ export function ShipTab({ doc, onDoc }: { doc: SiteDoc; onDoc: (d: SiteDoc) => v
         <div className="ad-sv"><button className="pri" disabled={!!busy} onClick={() => run('routes', x => {
           x.routes = routes.map(r => ({ from: r.from.trim(), text: r.text.trim(), note: r.note.trim() })).filter(r => r.from || r.text);
         })}>💾 حفظ الطريق</button><span className={msg.routes?.startsWith('✗') ? 'err' : 'mut'}>{msg.routes}</span></div>
-      </section>
+      </Fold>
     </>
   );
 }

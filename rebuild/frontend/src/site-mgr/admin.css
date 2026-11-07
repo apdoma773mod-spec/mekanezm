@@ -5,7 +5,15 @@
 .adm .ad-bar { background: #fff; z-index: 60; flex-wrap: wrap; }
 /* زرار «+» العائم بتاع السيستم مالوش لازمة هنا وكان بيغطي زرار الحفظ */
 body:has(main.adm) .fab { display: none; }
-@media (max-width: 900px) { .adm .ad-bar { bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); padding-left: 92px; } .adm { padding-bottom: 210px; } }
+/* الشريط بيمشي مع الصفحة بسلاسة (sticky بدل fixed اللي كان بيرجّ على الآيفون) وفوق شريط الموبايل */
+@media (max-width: 900px) {
+  .adm .ad-bar { position: sticky; inset: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 78px); margin: 14px -14px 0; padding: 10px 14px 10px 92px; border-radius: 14px 14px 0 0; will-change: transform; transform: translateZ(0); }
+  .adm { padding-bottom: 130px; }
+  .adm label { margin: 0 0 8px; gap: 3px; font-size: 13px; }
+  .adm input:not([type=color]):not([type=file]), .adm textarea, .adm select { padding: 9px 10px; font-size: 15px; }
+  .adm .ad-fold-h { padding: 10px 12px; }
+  .adm .ad-fold-b { padding: 10px; }
+}
 .adm { max-width: 720px; margin: 0 auto; padding: 14px 14px 110px; }
 .adm label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 700; margin: 0 0 12px; }
 .adm input:not([type=color]):not([type=file]), .adm textarea { font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); width: 100%; }
@@ -230,3 +238,42 @@ body:has(main.adm) .fab { display: none; }
 .ad-tbl tr.bad td { color: #b3261e; }
 .ad-tbl tr.upd td:last-child { color: #8a4b00; }
 .ad-route { border: 1px solid var(--line, #ddd); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+
+/* every screen of the site management is an icon tile: tap to open (full width), tap again to close */
+.ad-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; margin: 10px 0; }
+.ad-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 100px; padding: 12px 6px; border: 1px solid var(--a-border, #dfe7ea); border-radius: 16px; background: #fff; color: var(--a-brand, #087f8c); font: inherit; text-align: center; cursor: pointer; box-shadow: 0 1px 3px #0000000d; }
+.ad-tile b { font-size: 13.5px; color: var(--a-text, #1d2b30); line-height: 1.3; }
+.ad-tile:active { transform: scale(.97); }
+.ad-open { grid-column: 1 / -1; border: 2px solid var(--a-brand, #087f8c); border-radius: 16px; background: #fff; overflow: hidden; scroll-margin-top: 70px; }
+.ad-open-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; background: #e6f2f3; color: var(--a-brand, #087f8c); font: inherit; text-align: start; cursor: pointer; }
+.ad-open-h b { flex: 1; font-size: 15px; color: var(--a-text, #1d2b30); }
+.ad-open-h .x { font-size: 18px; opacity: .7; }
+.ad-open-b { padding: 12px; }
+.ad-open-b > .ad-s, .ad-open-b > section.ad-s { box-shadow: none; }
+.ad-fold { border: 1px solid var(--a-border, #dfe7ea); border-radius: 14px; margin: 0 0 8px; background: #fff; overflow: hidden; }
+.ad-fold.on { border: 2px solid var(--a-brand, #087f8c); }
+.ad-fold-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 14px; border: 0; background: transparent; font: inherit; text-align: start; cursor: pointer; }
+.ad-fold.on .ad-fold-h { background: #e6f2f3; }
+.ad-fold-h b { flex: 1; font-size: 15px; }
+.ad-fold-b { padding: 12px; }
+/* sections screen: small cards, tap to edit */
+.ad-secs-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ad-secs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.ad-sc { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border: 1px solid var(--a-border, #dfe7ea); border-radius: 16px; background: #fff; font: inherit; cursor: pointer; box-shadow: 0 1px 3px #0000000d; }
+.ad-sc:active { transform: scale(.97); }
+.ad-sc .th { width: 100%; aspect-ratio: 4/3; border-radius: 12px; overflow: hidden; background: #f1f4f6; display: grid; place-items: center; }
+.ad-sc .th img { width: 100%; height: 100%; object-fit: cover; }
+.ad-sc .th em { font-style: normal; font-size: 34px; opacity: .6; }
+.ad-sc b { font-size: 14px; line-height: 1.3; }
+.ad-sc small { font-size: 12px; color: var(--mut, #62767c); }
+.ad-sc .no, .ad-sc-h .no { display: grid; place-items: center; min-width: 24px; height: 24px; border-radius: 12px; background: #1b8aae; color: #fff; font-size: 12px; font-weight: 800; }
+.ad-sc .no { position: absolute; top: 12px; inset-inline-start: 12px; }
+.ad-sc-open { grid-column: 1 / -1; border: 2px solid var(--a-brand, #087f8c); border-radius: 16px; background: #fff; overflow: hidden; scroll-margin-top: 80px; }
+.ad-sc-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; background: #e6f2f3; font: inherit; text-align: start; cursor: pointer; }
+.ad-sc-h b { flex: 1; font-size: 15px; }
+.ad-sc-b { padding: 12px; display: grid; gap: 10px; }
+.ad-sc-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* الأزرار الثانوية (افتحه / نسخة / حذف) في صف عادي فوق الشريط؛ الشريط الثابت فيه الحفظ بس */
+.ad-sec { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; }
+.ad-sec .lnk, .ad-sec a { margin: 0 !important; font-size: 14px; }
+@media (max-width: 900px) { .adm .ad-bar { padding-top: 8px; padding-bottom: 8px; } .adm .ad-bar .pri { min-height: 44px; flex: 1; } }

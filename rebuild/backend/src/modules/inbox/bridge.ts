@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { forbidden } from '../../lib/errors.js';
+import { handleScrapMessage } from '../scraps/service.js';
 
 /**
  * 🔌 الجسر اللي على جهاز المحل (واتساب + الطابعة). بيكلّم السيستم بسر واحد في الهيدر x-bridge-secret،
@@ -66,6 +67,8 @@ export async function bridgeRoutes(app: FastifyInstance) {
       .parse(request.body);
     // the site's single «إرسال الطلب» button also opens WhatsApp with the same order (رقم الطلب: xxxxxxxx): it is already in «طلبات الموقع», so keep it out of the new WhatsApp orders
     if (await blocked(b.phone)) return { id: 'blocked' };
+    // «فضلة …» from a craftsman: listed in سوق الفضلة (or one short question asked), not a customer order
+    if (await handleScrapMessage(db, { phone: b.phone, name: b.name, text: b.body })) return { id: 'scrap' };
     const ref = /رقم الطلب:\s*([a-z0-9]{8})/i.exec(b.body)?.[1]?.toLowerCase();
     const dup = ref ? !!(await db.webOrder.findFirst({ where: { id: { startsWith: ref } }, select: { id: true } })) : false;
     try {
@@ -93,6 +96,7 @@ export async function bridgeRoutes(app: FastifyInstance) {
     if (await blocked(b.phone)) return { id: 'blocked' };
     if (!PHOTO.test(b.img)) throw forbidden('مش صورة (jpeg/png/webp)');
     if (b.img.length > MAX_PHOTO_CHARS) throw forbidden('الصورة كبيرة');
+    if (await handleScrapMessage(db, { phone: b.phone, name: b.name, text: b.caption, img: b.img })) return { id: 'scrap' };
     try {
       const row = await db.waPhoto.create({
         data: { msgId: b.msgId || null, phone: b.phone, name: b.name, caption: b.caption, img: b.img },

@@ -5,6 +5,7 @@ import { actorOf } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { getFile, putFile } from '../../lib/files.js';
+import { drawDimensions } from './dim-draw.js';
 import { parse } from '../../lib/validate.js';
 import { cleanPhotoSafe } from './clean-photo.js';
 
@@ -30,7 +31,7 @@ const body = z.object({
   desc: z.string().max(3000).default(''),
   img: z.string().max(500).default(''),
   // الصور المتولّدة اتقفلت افتراضيًا (عبده ٢٠٢٦-١١-٠٣: الموديلات المجانية بتغيّر شكل القطعة وتركّبها غلط) — الوصف والمقاسات بس
-  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(process.env.CATALOG_AI_IMAGES === '1') }).default({}),
+  want: z.object({ text: z.boolean().default(true), image: z.boolean().default(true) }).default({}),
 });
 
 type Spec = { k: string; v: string };
@@ -113,6 +114,22 @@ const IMAGE_PROMPT = (p: z.infer<typeof body>) =>
 const CF_PROMPT = (p: z.infer<typeof body>) =>
   `Photorealistic premium furniture-hardware catalog photo. Take the exact hardware product shown in image 0 ("${p.name}", category: ${p.section || 'furniture hardware'}) and show it installed and in use in its real place: for example a drawer runner mounted on the side of an open drawer, a hinge fitted on an open cabinet door, a corner pull-out unit swung out of an open kitchen corner cabinet, a pull-out basket inside a tall pantry cabinet, a lift-up fitting on a wall cabinet, a handle on a cabinet front. Keep the product's shape, colour and material the same as image 0 and make it the clear hero of the shot. Modern kitchen or wardrobe interior, soft natural daylight, clean premium look. No text, no logos, no watermark, no people.`;
 
+/**
+ * The Gemini key the owner pasted in the system (catalog page) also serves every other AI feature (invoice / transfer reading,
+ * photo search, product details), which read process.env. Only used when the server has no GEMINI_API_KEY of its own.
+ * Checked at most once a minute per server instance.
+ */
+const ENV_HAD_KEY = !!process.env.GEMINI_API_KEY;
+let savedAt = 0;
+export async function useSavedAiKey(db: FastifyInstance['prisma']): Promise<void> {
+  if (ENV_HAD_KEY || Date.now() - savedAt < 60_000) return;
+  savedAt = Date.now();
+  const v = (await db.setting.findUnique({ where: { key: KEY_SETTING } }).catch(() => null))?.value as { key?: string } | null;
+  if (v?.key) process.env.GEMINI_API_KEY = v.key;
+  else delete process.env.GEMINI_API_KEY;
+}
+export const forgetSavedAiKey = () => { savedAt = 0; };
+
 /** مفتاح Gemini: من .env أو اللي اتحفظ من صفحة الكتالوج */
 export async function geminiKey(db: FastifyInstance['prisma']): Promise<string | null> {
   if (process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
@@ -135,7 +152,7 @@ export async function geminiJson<T>(key: string, prompt: string, image?: { data:
 export async function catalogAiRoutes(app: FastifyInstance) {
   const db = app.prisma;
   const getKey = async () => {
-    if (process.env.GEMINI_API_KEY) return { key: process.env.GEMINI_API_KEY, source: 'env' as const };
+    if (ENV_HAD_KEY && process.env.GEMINI_API_KEY) return { key: process.env.GEMINI_API_KEY, source: 'env' as const };
     const v = (await db.setting.findUnique({ where: { key: KEY_SETTING } }))?.value as { key?: string } | null;
     return v?.key ? { key: v.key, source: 'saved' as const } : null;
   };
@@ -254,6 +271,7 @@ export async function catalogAiRoutes(app: FastifyInstance) {
       await db.setting.upsert({ where: { key: KEY_SETTING }, create: { key: KEY_SETTING, value: { key }, updatedById: actor.id }, update: { value: { key }, updatedById: actor.id } });
     }
     await writeAudit(db, { userId: actor.id, action: 'SETTING_UPDATE', entity: 'Setting', entityId: KEY_SETTING, after: { set: !!key }, ip: actor.ip });
+    forgetSavedAiKey();
     return { set: !!key };
   });
 
@@ -361,6 +379,22 @@ Return JSON: {"prompt":"..."}`,
       await putFile(name, img, 'image/jpeg');
       out.img = `/api/v1/work/files/${name}`;
     };
+    // الصورة الحقيقية زي ما هي + المقاسات مرسومة بالكود (مفيش ذكاء اصطناعي بيرسم القطعة)
+    const dimImage = async () => {
+      if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
+      // مكان القطعة المعدن نفسها في الصورة (عشان خطوط المقاسات تتحط عليها هي مش على إطار الصورة)
+      const hint = await geminiJson<{ box?: number[] }>(
+        key,
+        'Find the main metal hardware product (not the background, logo, text or hands) in this photo. Return JSON only: {"box":[ymin,xmin,ymax,xmax]} with integers 0-1000 tightly around the whole product.',
+        { data: photo.data, mime: photo.mime },
+      )
+        .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
+        .catch(() => null);
+      const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), out.specs, p.name, hint);
+      const name = `${randomBytes(12).toString('hex')}.jpg`;
+      await putFile(name, buf, 'image/jpeg');
+      out.img = `/api/v1/work/files/${name}`;
+    };
     const image = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
       const cf = await getCf();
@@ -391,10 +425,8 @@ Return JSON: {"prompt":"..."}`,
       await putFile(name, Buffer.from(data, 'base64'), mime);
       out.img = `/api/v1/work/files/${name}`;
     };
-    await Promise.all([
-      p.want.text ? text().catch((e) => void (out.textError = friendly(e))) : null,
-      p.want.image ? image().catch((e) => void (out.imgError = friendly(e))) : null,
-    ]);
+    if (p.want.text) await text().catch((e) => void (out.textError = friendly(e)));
+    if (p.want.image) await (process.env.CATALOG_AI_IMAGES === 'ai' ? image : dimImage)().catch((e) => void (out.imgError = friendly(e)));
     return out;
   };
 }
