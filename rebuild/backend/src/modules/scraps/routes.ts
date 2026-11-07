@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { parse } from '../../lib/validate.js';
-import { activeCount, addWant, expiry, newSecret, publicView } from './service.js';
+import { API, activeCount, addWant, expiry, newSecret, publicView } from './service.js';
 
 /**
  * 🪵 «سوق الفضلة» for the public site (replaces the old Supabase functions scrap_list, scrap_add, scrap_contact,
@@ -13,7 +13,12 @@ const limit = (max: number) => ({ config: { rateLimit: { max, timeWindow: '1 min
 const cat = z.enum(['sheet', 'solid', 'alu']);
 const num = z.union([z.number(), z.string().regex(/^\d+(\.\d+)?$/).transform(Number)]);
 const numOpt = z.union([num, z.literal(''), z.null()]).optional().transform((v) => (v === '' || v == null ? null : v));
-const imgUrl = z.string().max(500).regex(/^https:\/\//);
+// a full https link, or what /web/public/media returns (/api/v1/work/files/…), kept as a full link so the site can show it
+const imgUrl = z
+  .string()
+  .max(500)
+  .regex(/^(https:\/\/|\/api\/v1\/work\/files\/[\w.-]+$)/)
+  .transform((u) => (u.startsWith('/') ? API + u : u));
 const pair = z.object({ id: z.string().uuid(), secret: z.string().min(8).max(64) });
 
 export default async function scrapRoutes(app: FastifyInstance) {

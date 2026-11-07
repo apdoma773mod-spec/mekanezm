@@ -8,7 +8,7 @@ import { describe, isHit, isNear, isScrapText, missing, parseScrapText, cleanTex
  * Mekanizm only connects people: it never sells these pieces.
  */
 export const SITE = 'https://mekanezm.vercel.app';
-const API = process.env.PUBLIC_API_URL || 'https://mekanizm-api.vercel.app';
+export const API = process.env.PUBLIC_API_URL || 'https://mekanizm-api.vercel.app';
 const DAYS = 30;
 const MAX_ACTIVE = 40;
 const PENDING_KEY = 'scrap_wa_pending';
