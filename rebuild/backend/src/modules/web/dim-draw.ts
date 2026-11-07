@@ -14,20 +14,50 @@ const pickSlot = (k: string, used: Set<Slot>): Slot | null => {
   return null;
 };
 
-export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''): Promise<Buffer> {
+export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = '', hint?: [number, number, number, number] | null): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
   const W = 1200,
-    H = 900,
-    M = 150; // margin that holds the dimension lines
-  const box = { x: M + 40, y: M + 10, w: W - 2 * M - 80, h: H - 2 * M - 40 };
-  const img = await sharp(photo).rotate().flatten({ background: '#ffffff' }).resize(box.w, box.h, { fit: 'inside', background: '#ffffff' }).png().toBuffer();
-  const meta = await sharp(img).metadata();
-  const iw = meta.width ?? box.w,
-    ih = meta.height ?? box.h;
-  const x0 = box.x + Math.round((box.w - iw) / 2),
-    y0 = box.y + Math.round((box.h - ih) / 2),
-    x1 = x0 + iw,
-    y1 = y0 + ih;
+    H = 900;
+  const frame = { x: 60, y: 90, w: W - 120, h: H - 150 };
+  const base = await sharp(photo).rotate().flatten({ background: '#ffffff' }).png().toBuffer();
+  const bm = await sharp(base).metadata();
+  const BW = bm.width ?? 1,
+    BH = bm.height ?? 1;
+  // the metal part itself: Gemini box (fractions x0,y0,x1,y1) if given, else the non-background area
+  let pb: [number, number, number, number] = hint && hint[2] - hint[0] > 0.05 && hint[3] - hint[1] > 0.05 ? hint : [0.1, 0.1, 0.9, 0.9];
+  if (!hint) {
+    try {
+      const t = await sharp(base).trim({ threshold: 28 }).toBuffer({ resolveWithObject: true });
+      const l = -(t.info.trimOffsetLeft ?? 0),
+        tp = -(t.info.trimOffsetTop ?? 0);
+      if (t.info.width > BW * 0.08 && t.info.height > BH * 0.08 && (t.info.width < BW * 0.9 || t.info.height < BH * 0.9)) pb = [l / BW, tp / BH, (l + t.info.width) / BW, (tp + t.info.height) / BH];
+    } catch {
+      /* keep full */
+    }
+  }
+  const px = { x0: pb[0] * BW, y0: pb[1] * BH, x1: pb[2] * BW, y1: pb[3] * BH };
+  const padX = (px.x1 - px.x0) * 0.32,
+    padY = (px.y1 - px.y0) * 0.32;
+  const cx0 = Math.max(0, Math.floor(px.x0 - padX)),
+    cy0 = Math.max(0, Math.floor(px.y0 - padY)),
+    cx1 = Math.min(BW, Math.ceil(px.x1 + padX)),
+    cy1 = Math.min(BH, Math.ceil(px.y1 + padY));
+  const crop = await sharp(base).extract({ left: cx0, top: cy0, width: cx1 - cx0, height: cy1 - cy0 }).toBuffer();
+  const sc = Math.min(frame.w / (cx1 - cx0), frame.h / (cy1 - cy0));
+  const iw = Math.round((cx1 - cx0) * sc),
+    ih = Math.round((cy1 - cy0) * sc);
+  const img = await sharp(crop).resize(iw, ih).png().toBuffer();
+  const fx = frame.x + Math.round((frame.w - iw) / 2),
+    fy = frame.y + Math.round((frame.h - ih) / 2);
+  // product edges in canvas coordinates: the dimension lines sit right on the part
+  const x0 = fx + Math.round((px.x0 - cx0) * sc),
+    x1 = fx + Math.round((px.x1 - cx0) * sc),
+    y0 = fy + Math.round((px.y0 - cy0) * sc),
+    y1 = fy + Math.round((px.y1 - cy0) * sc);
+  const fL = fx,
+    fT = fy,
+    fR = fx + iw,
+    fB = fy + ih;
 
   const withNum = specs.filter((s) => /[0-9٠-٩]/.test(s.v)).slice(0, 4);
   const used = new Set<Slot>();
@@ -40,26 +70,26 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], title = ''
     return `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${col}" stroke-width="3"/>${head(ax, ay, Math.PI)}${head(bx, by, 0)}`;
   };
   const label = (cx: number, cy: number, k: string, v: string, rot = 0) => {
-    const t1 = esc(cut(v, 22)),
-      t2 = esc(cut(k, 26));
-    return `<g transform="translate(${cx} ${cy}) rotate(${rot})"><rect x="-110" y="-34" width="220" height="68" rx="12" fill="#fff" stroke="${col}" stroke-width="2"/><text x="0" y="-4" text-anchor="middle" font-size="26" font-weight="700" fill="${col}" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t1}</text><text x="0" y="24" text-anchor="middle" font-size="19" fill="#444" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t2}</text></g>`;
+    const t1 = esc(cut(v, 16)),
+      t2 = esc(cut(k, 20));
+    return `<g transform="translate(${cx} ${cy}) rotate(${rot})"><rect x="-80" y="-26" width="160" height="52" rx="10" fill="#fff" stroke="${col}" stroke-width="2"/><text x="0" y="-2" text-anchor="middle" font-size="21" font-weight="700" fill="${col}" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t1}</text><text x="0" y="19" text-anchor="middle" font-size="15" fill="#444" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${t2}</text></g>`;
   };
   for (const s of withNum) {
     const slot = pickSlot(s.k, used);
     if (!slot) break;
     used.add(slot);
-    const gap = 70;
+    const gap = 34;
     if (slot === 'bottom' || slot === 'top') {
-      const y = slot === 'bottom' ? y1 + gap : y0 - gap;
+      const y = Math.min(fB - 30, Math.max(fT + 30, slot === 'bottom' ? y1 + gap : y0 - gap));
       parts.push(`<line x1="${x0}" y1="${y - 22}" x2="${x0}" y2="${y + 22}" stroke="${col}" stroke-width="2"/><line x1="${x1}" y1="${y - 22}" x2="${x1}" y2="${y + 22}" stroke="${col}" stroke-width="2"/>`, arrow(x0, y, x1, y), label((x0 + x1) / 2, y, s.k, s.v));
     } else {
-      const x = slot === 'right' ? x1 + gap : x0 - gap;
+      const x = Math.min(fR - 30, Math.max(fL + 30, slot === 'right' ? x1 + gap : x0 - gap));
       parts.push(`<line x1="${x - 22}" y1="${y0}" x2="${x + 22}" y2="${y0}" stroke="${col}" stroke-width="2"/><line x1="${x - 22}" y1="${y1}" x2="${x + 22}" y2="${y1}" stroke="${col}" stroke-width="2"/>`, arrow(x, y0, x, y1), label(x, (y0 + y1) / 2, s.k, s.v, -90));
     }
   }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${title ? `<text x="${W / 2}" y="46" text-anchor="middle" font-size="30" font-weight="700" fill="#222" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(title, 60))}</text>` : ''}<rect x="${x0 - 1}" y="${y0 - 1}" width="${iw + 2}" height="${ih + 2}" fill="none" stroke="#ddd"/>${parts.join('')}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${title ? `<text x="${W / 2}" y="46" text-anchor="middle" font-size="30" font-weight="700" fill="#222" font-family="Cairo,Tahoma,Arial,sans-serif" direction="rtl">${esc(cut(title, 60))}</text>` : ''}${parts.join('')}</svg>`;
   return sharp({ create: { width: W, height: H, channels: 3, background: '#ffffff' } })
-    .composite([{ input: img, left: x0, top: y0 }, { input: Buffer.from(svg) }])
+    .composite([{ input: img, left: fx, top: fy }, { input: Buffer.from(svg) }])
     .jpeg({ quality: 90 })
     .toBuffer();
 }

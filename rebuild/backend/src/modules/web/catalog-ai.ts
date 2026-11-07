@@ -382,7 +382,15 @@ Return JSON: {"prompt":"..."}`,
     // الصورة الحقيقية زي ما هي + المقاسات مرسومة بالكود (مفيش ذكاء اصطناعي بيرسم القطعة)
     const dimImage = async () => {
       if (!photo) throw new Error('المنتج مالوش صورة نبني عليها');
-      const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), out.specs, p.name);
+      // مكان القطعة المعدن نفسها في الصورة (عشان خطوط المقاسات تتحط عليها هي مش على إطار الصورة)
+      const hint = await geminiJson<{ box?: number[] }>(
+        key,
+        'Find the main metal hardware product (not the background, logo, text or hands) in this photo. Return JSON only: {"box":[ymin,xmin,ymax,xmax]} with integers 0-1000 tightly around the whole product.',
+        { data: photo.data, mime: photo.mime },
+      )
+        .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
+        .catch(() => null);
+      const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), out.specs, p.name, hint);
       const name = `${randomBytes(12).toString('hex')}.jpg`;
       await putFile(name, buf, 'image/jpeg');
       out.img = `/api/v1/work/files/${name}`;
