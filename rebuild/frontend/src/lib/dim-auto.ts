@@ -301,17 +301,30 @@ export async function generateDimImage(imgs: string[], dims: Dims, foot: string,
   if (!loaded.length) throw new Error('مقدرتش أفتح صور المنتج');
   const order = loaded.map((img) => ({ img, q: quality(img) })).sort((a, b) => b.q - a.q).slice(0, 3);
   // الطريقة الأساسية: صورة المنتج الحقيقية كاملة زي ما هي + المقاسات مرسومة على القطعة (السيرفر بيرسم) — من غير قص ولا فصل خلفية
-  try {
-    onStep?.('⏳ برسم المقاسات على صورة المنتج…');
-    const best = order[0]!.img;
-    const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { img: best.currentSrc || best.src, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', foot });
-    const bin = atob(r.data);
-    const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    return new Blob([u8], { type: 'image/jpeg' });
-  } catch {
-    /* السيرفر مش متاح: الطريقة القديمة تحت */
+  onStep?.('⏳ برسم المقاسات على صورة المنتج…');
+  const best = order[0]!.img;
+  // الصورة بتتبعت من المتصفح نفسه (هو فتحها خلاص) فمفيش مشكلة روابط
+  const sc0 = Math.min(1, 1400 / Math.max(best.width, best.height));
+  const bc = document.createElement('canvas');
+  bc.width = Math.round(best.width * sc0);
+  bc.height = Math.round(best.height * sc0);
+  bc.getContext('2d')!.drawImage(best, 0, 0, bc.width, bc.height);
+  const imgData = bc.toDataURL("image/jpeg", 0.85).split(',')[1] ?? '';
+  const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { imgData, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', foot });
+  const bin = atob(r.data);
+  const u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: 'image/jpeg' });
+}
+
+/** الطريقة القديمة (قص المنتج على رخامة) — مبقتش بتتستخدم */
+export async function generateDimImageOld(imgs: string[], dims: Dims, foot: string, onStep?: (m: string) => void): Promise<Blob> {
+  if (!imgs.length) throw new Error('مفيش صور للمنتج');
+  const loaded: HTMLImageElement[] = [];
+  for (const u of imgs.slice(0, 10)) {
+    try { loaded.push(await loadImg(u)); } catch { /* skipped */ }
   }
+  const order = loaded.map((img) => ({ img, q: quality(img) })).sort((a, b) => b.q - a.q).slice(0, 3);
   let cut: HTMLCanvasElement | null = null;
   for (const o of order) {
     try {

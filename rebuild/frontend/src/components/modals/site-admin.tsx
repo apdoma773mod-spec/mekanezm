@@ -731,7 +731,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     const blob = await generateDimImage(pool, dims, phones ? `ميكانيزم — ${phones}` : 'ميكانيزم — MEKANIZM', setDimMsg);
     setDimMsg('⏳ برفع الصورة…');
     const url = await uploadSiteImage(new File([blob], 'dim.jpg', { type: 'image/jpeg' }));
-    return { imgs: [pool[0]!, url, ...pool.slice(1)], dimImg: url, dimSig: sig };
+    return { imgs: [url, ...pool], dimImg: url, dimSig: sig };
   };
 
   const fail = (m: string) => {
@@ -745,7 +745,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
       if (!hasDims(parseDims(f?.sp ?? [], f?.dimTxt ?? ''))) return fail('اكتب المقاسات الأول: العرض × الارتفاع × العمق (سم) في الخانة اللي فوق الزرار');
       const r = await makeDim(true);
       if (r) set(r);
-      toast('✔ صورة المقاسات اتعملت — هي التانية في الصور');
+      toast('✔ صورة المقاسات اتعملت — هي الأولى في الصور');
     } catch (e) {
       fail('صورة المقاسات ماتعملتش: ' + errorMessage(e));
     }
@@ -904,7 +904,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
             <div style={{ margin: '8px 0', padding: 10, borderRadius: 12, background: '#fff8e8', border: '1px solid #f0d98a' }}>
               <b>📐 صورة المقاسات</b>
               <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>
-                السيستم بيختار أوضح صورة من صور المنتج، ويفصل المنتج عن الخلفية، ويرسم عليه أسهم المقاسات لوحده — وبتتحط تاني صورة. بتتعمل أوتوماتيك لما تحفظ.
+                السيستم بيختار أوضح صورة من صور المنتج زي ما هي ويرسم عليها أسهم المقاسات — وبتتحط أول صورة. بتتعمل أوتوماتيك لما تحفظ.
               </div>
               {!hasDims(parseDims(f.sp)) && (
                 <input value={f.dimTxt} placeholder="مقاسات الصورة: العرض × الارتفاع × العمق (سم) — مثلاً 60 × 45 × 12" onChange={(e) => set({ dimTxt: e.target.value })} style={{ width: '100%' }} />
@@ -914,6 +914,11 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               </button>
               <span style={{ fontSize: 13, marginInlineStart: 8 }}>{dimMsg}</span>
               {dimErr && <div style={{ fontSize: 13, marginTop: 6, color: '#c0392b', fontWeight: 700 }}>{dimErr}</div>}
+              {f.dimImg && f.imgs.includes(f.dimImg) && (
+                <a href={f.dimImg} target="_blank" rel="noopener" style={{ display: 'block', marginTop: 10 }}>
+                  <img src={f.dimImg} alt="صورة المقاسات" style={{ width: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 12, border: '1px solid var(--border)', background: '#fff' }} />
+                </a>
+              )}
             </div>
             <div className="ig" id="eImgs">
               {f.imgs.length ? (

@@ -68,7 +68,7 @@ export function DimBulk() {
             const o = d.products.find((x) => x.id === p.id) as Prod | undefined;
             if (!o) return;
             const now = o.imgs.filter((u) => u !== o.dimImg);
-            o.imgs = [now[0] ?? url, ...(now[0] ? [url] : []), ...now.slice(1)];
+            o.imgs = [url, ...now];
             o.img = o.imgs[0] ?? '';
             o.dimImg = url;
             o.dimSig = sig;
