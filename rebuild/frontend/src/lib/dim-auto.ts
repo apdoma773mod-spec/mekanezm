@@ -336,7 +336,8 @@ export async function generateDimImage(imgs0: string[], dims: Dims, foot: string
     try { loaded.push(await loadImg(u)); } catch { /* an image that does not open is skipped */ }
   }
   if (!loaded.length) throw new Error('مقدرتش أفتح صور المنتج');
-  const order = loaded.map((img) => ({ img, q: quality(img) })).sort((a, b) => b.q - a.q).slice(0, 3);
+  // no automatic «clearest photo» choice (it picked the one with the tape measure): the picked photo, else the first one
+  const order = loaded.map((img) => ({ img, q: quality(img) }));
   // الطريقة الأساسية: صورة المنتج الحقيقية كاملة زي ما هي + المقاسات مرسومة على القطعة (السيرفر بيرسم) — من غير قص ولا فصل خلفية
   onStep?.('⏳ برسم المقاسات على صورة المنتج…');
   const best = order[0]!.img;
