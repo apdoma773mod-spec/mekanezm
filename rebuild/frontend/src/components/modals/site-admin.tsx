@@ -1033,7 +1033,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                       set({ video: url });
                       toast('✔ الفيديو اترفع');
                     })
-                    .catch((err) => toast(errorMessage(err), 'bad'))
+                    .catch((err) => toast(err instanceof Error ? err.message : 'الفيديو مارفعش', 'bad'))
                     .finally(() => setVidPct(null));
                 }}
               />
