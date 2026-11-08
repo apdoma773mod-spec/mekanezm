@@ -73,6 +73,7 @@ export function gate(){
       <label>الإيميل</label><input id="gt-e" type="email" autocomplete="username" placeholder="name@example.com">
       <label>الباسورد</label><input id="gt-w" type="password" autocomplete="${tab === 'new' ? 'new-password' : 'current-password'}" placeholder="٦ حروف أو أكتر">
       <button id="gt-go">${tab === 'new' ? 'ابدأ التجربة المجانية' : 'دخول'}</button>
+      <button class="o" id="gt-fp">نسيت الباسورد؟ ابعتلي رابط أعمل باسورد جديد</button>
       <button class="o" id="gt-ml">أو ابعتلي رابط دخول على الإيميل (من غير باسورد)</button>
       <div id="gt-msg" class="msg"></div>`);
     ov.onclick = e => { const b = e.target.closest('[data-t]'); if (b) { ls.set('mkz-gate-tab', b.dataset.t); showLogin(b.dataset.t) } };
@@ -91,6 +92,12 @@ export function gate(){
           const r = await sb.auth.signInWithPassword({ email: em, password: pw }); if (r.error) throw r.error;
         }
       } catch (e) { say(errAr(e.message), 'bad'); $('#gt-go').disabled = false; }
+    };
+    $('#gt-fp').onclick = async () => {
+      const em = $('#gt-e').value.trim(); if (!em) return say('اكتب الإيميل الأول', 'bad');
+      $('#gt-fp').disabled = true; say('ثانية…');
+      const r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + '/' });
+      $('#gt-fp').disabled = false; r.error ? say(errAr(r.error.message), 'bad') : say('بعتنالك رابط على الإيميل — افتحه من نفس الموبايل وهتكتب باسورد جديد.', 'ok');
     };
     $('#gt-ml').onclick = async () => {
       const em = $('#gt-e').value.trim(); if (!em) return say('اكتب الإيميل الأول', 'bad');
@@ -126,20 +133,33 @@ export function gate(){
       const r = await sb.rpc('studio_my_sub', { p_name: nm || null, p_phone: ph || null, p_src: 'web' });
       if (r.error) { if (/jwt|not_signed_in|invalid/i.test(r.error.message)) { await sb.auth.signOut().catch(() => { }); return showLogin('in'); } throw r.error; }
       const s = r.data; window.mkzSub = s;
-      if (s.status === 'trial' || s.status === 'active' || s.status === 'admin') { hideOverlay(); paintBar(s); if (!timer) timer = setInterval(() => check(), 5 * 60 * 1000); }
+      if (s.status === 'trial' || s.status === 'active' || s.status === 'admin') { hideOverlay(); paintBar(s); try { const u = (await sb.auth.getUser()).data.user; if (u) accountCard(u.email) } catch (e) { } if (!timer) timer = setInterval(() => check(), 5 * 60 * 1000); }
       else { if (bar) { bar.remove(); bar = null } showBlocked(s.status, s); }
     } catch (e) {
       overlay(`<h1>🎬 ميكانيزم ستوديو</h1><p class="sub">${esc(errAr(e.message))}</p><button id="gt-rt">جرّب تاني</button>`); $('#gt-rt').onclick = () => { checking = false; check(true) };
     } finally { checking = false; }
   }
 
+  function recover() {
+    overlay('<h1>🔑 باسورد جديد</h1><p class="sub">اكتب الباسورد اللي انت عايزه (٦ حروف أو أرقام على الأقل).</p><label>الباسورد الجديد<input id="gt-np" type="password" autocomplete="new-password"></label><button id="gt-sp">احفظ وادخل</button><div id="gt-msg" class="msg"></div>');
+    $('#gt-sp').onclick = async () => { const p = $('#gt-np').value; if (p.length < 6) return say('٦ حروف على الأقل', 'bad'); const r = await sb.auth.updateUser({ password: p }); if (r.error) return say(errAr(r.error.message), 'bad'); say('اتحفظ ✅', 'ok'); setTimeout(() => { history.replaceState(null, '', '/'); check(true) }, 700); };
+  }
+  function accountCard(email) {
+    const set = document.getElementById('v-set'); if (!set || document.getElementById('gt-acct')) return;
+    const c = E('div', { id: 'gt-acct', className: 'p' }, '<h2>👤 حسابي</h2><p class="mu">داخل بـ: <b>' + esc(email) + '</b></p><label>إيميل جديد<input id="ac-e" type="email" inputmode="email" autocomplete="email"></label><button class="b o" id="ac-eb" type="button">غيّر الإيميل</button><label style="margin-top:10px">باسورد جديد<input id="ac-p" type="password" autocomplete="new-password" placeholder="٦ حروف أو أرقام على الأقل"></label><button class="b o" id="ac-pb" type="button">غيّر الباسورد</button><div id="ac-m" class="mu" style="margin-top:8px"></div><button class="b o" id="ac-x" type="button" style="margin-top:8px">خروج من الحساب</button>');
+    set.insertBefore(c, set.children[1] || null);
+    const m = t => { $('#ac-m').textContent = t };
+    $('#ac-pb').onclick = async () => { const p = $('#ac-p').value; if (p.length < 6) return m('الباسورد ٦ حروف على الأقل'); const r = await sb.auth.updateUser({ password: p }); m(r.error ? errAr(r.error.message) : '✅ الباسورد اتغيّر'); if (!r.error) $('#ac-p').value = ''; };
+    $('#ac-eb').onclick = async () => { const e = $('#ac-e').value.trim(); if (!e) return m('اكتب الإيميل الجديد'); const r = await sb.auth.updateUser({ email: e }, { emailRedirectTo: location.origin + '/' }); m(r.error ? errAr(r.error.message) : '✅ بعتنا رسالة تأكيد للإيميل الجديد — افتحها عشان التغيير يتم.'); };
+    $('#ac-x').onclick = signOut;
+  }
   async function init() {
     cfg = await getCfg();
     if (!cfg || !cfg.gate) return;                     /* البوابة مقفولة: الستوديو زي ما هو */
     overlay('<h1>🎬 ميكانيزم ستوديو</h1><p class="sub">ثانية…</p>');
     try { await lib(); } catch (e) { return overlay('<h1>🎬 ميكانيزم ستوديو</h1><p class="sub">مفيش نت — اتأكد من الاتصال وحدّث الصفحة.</p>'); }
     sb = window.supabase.createClient(URL_, KEY, { auth: { lock: (n, t, fn) => fn() } });
-    sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'SIGNED_IN' && ses) check(); else if (ev === 'SIGNED_OUT') { if (bar) { bar.remove(); bar = null } showLogin('in'); } });
+    sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'PASSWORD_RECOVERY') return recover(); if (ev === 'SIGNED_IN' && ses) check(); else if (ev === 'SIGNED_OUT') { if (bar) { bar.remove(); bar = null } showLogin('in'); } });
     const { data } = await sb.auth.getSession();
     if (data.session) check(); else showLogin();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && sb && window.mkzSub) check(); });
