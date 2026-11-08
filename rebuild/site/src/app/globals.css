@@ -1056,3 +1056,6 @@ footer.ft { padding: 20px 16px 12px; }
 .pvs > div.lq { background-size: cover; }
 .framed > .pvs { overflow-x: auto; }
 .pvs > .lq { background: #fff !important; }
+
+/* no blurred copy behind photos: it showed as soft blurred edges around every picture */
+.lq::before { display: none !important; }
