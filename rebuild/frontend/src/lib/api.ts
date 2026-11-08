@@ -109,5 +109,7 @@ export const api = {
 
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiClientError) return err.message;
-  return 'حصلت مشكلة غير متوقعة';
+  // رسائلنا العربي (من الكود نفسه) بتظهر زي ما هي بدل الرسالة العامة اللي بتخبّي السبب
+  if (err instanceof Error && /[؀-ۿ]/.test(err.message)) return err.message;
+  return 'حصلت مشكلة غير متوقعة' + (err instanceof Error && err.message ? ' (' + err.message.slice(0, 80) + ')' : '');
 }
