@@ -2,6 +2,8 @@
 // so product pages open fast and the pictures survive the PC being off.
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
+import { unframe } from '@/lib/unframe';
+import { FRAME_B64 } from '@/lib/frame-data';
 
 export const runtime = 'nodejs';
 
@@ -45,7 +47,19 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ file: strin
   const want = Number(req.nextUrl.searchParams.get('w')) || 640;
   const w = WIDTHS.find(x => x >= want) ?? WIDTHS[WIDTHS.length - 1];
   try {
-    const out = await sharp(await original(file)).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 75 }).toBuffer();
+    const photo = await sharp(await unframe(await original(file))).rotate().resize({ width: w, withoutEnlargement: true }).toBuffer({ resolveWithObject: true });
+    let out: Buffer;
+    if (req.nextUrl.searchParams.get('f') === '1') {
+      // The frame's picture window: 2.2% left/right, 10.1% top, 7% bottom of the frame. Grow the canvas so the window fits the photo exactly.
+      const pw = photo.info.width, ph = photo.info.height;
+      const cw = Math.round(pw / (1 - 0.0444)), ch = Math.round(ph / (1 - 0.1706));
+      const frame = await sharp(Buffer.from(FRAME_B64, 'base64')).resize(cw, ch, { fit: 'fill' }).png().toBuffer();
+      out = await sharp({ create: { width: cw, height: ch, channels: 3, background: '#ffffff' } })
+        .composite([{ input: photo.data, left: Math.round(cw * 0.0222), top: Math.round(ch * 0.1008) }, { input: frame }])
+        .webp({ quality: 78 }).toBuffer();
+    } else {
+      out = await sharp(photo.data).webp({ quality: 75 }).toBuffer();
+    }
     return new NextResponse(new Uint8Array(out), {
       headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable' },
     });

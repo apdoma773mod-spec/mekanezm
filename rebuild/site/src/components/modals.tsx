@@ -1,6 +1,7 @@
 'use client';
 // All popups (bottom sheets). Wording and checks follow the old site's final version.
 import Image from 'next/image';
+import { framedUrl } from '@/lib/image-loader';
 import { PAY } from '@/lib/config';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { addNotifyMe, addReview, placeOrder, placeRequest, trackCustom, trackOrder, uploadRequestImage, type TrackedCustom, type TrackedOrder } from '@/lib/api';
@@ -560,7 +561,7 @@ function Lightbox({ srcs, start, onClose }: { srcs: string[]; start: number; onC
     <div className="lb" role="dialog" aria-modal="true" aria-label="الصور">
       <button className="lb-x" onClick={onClose} aria-label="إغلاق">✕</button>
       <div className="lb-s" ref={strip} onScroll={e => setI(Math.round(Math.abs(e.currentTarget.scrollLeft) / e.currentTarget.clientWidth))}>
-        {srcs.map(u => <div key={u}><img src={u} alt="" /></div>)}
+        {srcs.map(u => <div key={u}><img src={framedUrl(u)} alt="" /></div>)}
       </div>
       {srcs.length > 1 && <>
         <button className="lb-a r" onClick={() => go(i - 1)} aria-label="السابقة">›</button>

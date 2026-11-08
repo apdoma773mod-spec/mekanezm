@@ -80,8 +80,8 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
             <button type="button" className={view === 'photos' ? 'on' : ''} onClick={() => setView('photos')}>📷 صور</button>
           </div>}
           {view === 'spin' && spinF.length > 0 && <div className="framed"><SpinViewer frames={spinF} alt={p.name} /></div>}
-          <div style={{ position: 'relative', display: view === 'spin' && spinF.length > 0 ? 'none' : undefined }}>
-            <div className="pvs framed" ref={strip} style={{ position: 'relative' }}
+          <div className="framed" style={{ position: 'relative', display: view === 'spin' && spinF.length > 0 ? 'none' : undefined }}>
+            <div className="pvs" ref={strip} style={{ position: 'relative' }}
               onScroll={e => { const s = e.currentTarget; const k = Math.round(Math.abs(s.scrollLeft) / s.clientWidth); if (k !== i) setI(k); }}>
               {im.length ? im.map((x, k) => (
                 <div key={x} className="lq" style={lqip(x)} onClick={() => open({ kind: 'image', srcs: im, i: k })}>

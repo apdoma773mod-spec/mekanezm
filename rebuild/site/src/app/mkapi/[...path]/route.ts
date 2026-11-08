@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
     // The catalog page points at the system's own /api/v1/work/files/… (relative): here that would be a 404 and white pictures.
     // Send those through the site's resizing image route instead.
     if (path.startsWith('web/public/catalog-latest')) {
-      body = body.replace(/(?:https?:\/\/[^"')\s]+)?\/api\/v1\/work\/files\/([0-9a-f]{24}\.(?:jpe?g|png|webp))(?:\?[^"')\s]*)?/gi, '/mkimg/$1?w=1200');
+      body = body.replace(/(?:https?:\/\/[^"')\s]+)?\/api\/v1\/work\/files\/([0-9a-f]{24}\.(?:jpe?g|png|webp))(?:\?[^"')\s]*)?/gi, '/mkimg/$1?w=1200&v=2');
     }
     return new NextResponse(body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'application/json' } });
   } catch {
