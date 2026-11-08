@@ -7,6 +7,7 @@ import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { fileToDataUrl } from '@/lib/image';
+import { uploadSiteVideo } from '@/lib/video-upload';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
 import { useModal } from './modal-host';
@@ -614,6 +615,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [over, setOver] = useState(false);
   const [dimMsg, setDimMsg] = useState('');
   const [dimPick, setDimPick] = useState('');
+  const [vidPct, setVidPct] = useState<number | null>(null);
   const [dimErr, setDimErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
@@ -1014,6 +1016,29 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small>
             </h3>
             <input id="eVid" dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => set({ video: e.target.value })} />
+            <label className="secondary" style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
+              {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ بيترفع… ${vidPct}%`}
+              <input
+                type="file"
+                accept="video/*"
+                hidden
+                disabled={vidPct != null}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setVidPct(0);
+                  uploadSiteVideo(file, setVidPct)
+                    .then((url) => {
+                      set({ video: url });
+                      toast('✔ الفيديو اترفع');
+                    })
+                    .catch((err) => toast(errorMessage(err), 'bad'))
+                    .finally(() => setVidPct(null));
+                }}
+              />
+            </label>
+            {/\.(mp4|webm|mov)(\?|$)/i.test(f.video) && <video src={f.video} controls playsInline preload="metadata" style={{ display: 'block', marginTop: 8, width: 240, borderRadius: 10 }} />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {vid && <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" style={{ marginTop: 8, width: 220, borderRadius: 10 }} />}
           </div>

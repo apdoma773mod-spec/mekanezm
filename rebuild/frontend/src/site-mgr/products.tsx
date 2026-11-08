@@ -9,6 +9,7 @@ import { saveDoc, SITE_URL, type Rec, type SiteDoc } from './api';
 import { HandDiagram } from './hand-stub';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from './lib/hand';
 import { Imgs, uid7, Fold } from './ui';
+import { uploadSiteVideo } from '@/lib/video-upload';
 
 type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
@@ -149,7 +150,7 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
     kind: (cur?.dir?.kind ? normKind(cur.dir.kind) : kindFromName(cur?.name ?? '')) as HandKind, media: cur?.dir?.media ?? '',
     pairCode: all.find(x => x.id === cur?.dir?.pair)?.code ?? '', note: cur?.dir?.note ?? '',
   }));
-  const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false), [msg, setMsg] = useState(''), [vidPct, setVidPct] = useState<number | null>(null);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF(x => ({ ...x, [k]: v }));
   // fill from the system once, only what is empty here (never overwrites what was written on the site)
   const filled = useRef('');
@@ -264,7 +265,17 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
         <textarea rows={9} value={f.desc} onChange={e => set('desc', e.target.value)} placeholder={'سطر أو اتنين عن المنتج.\nالمقاس: 50 سم\nالخامة: ...'} />
         <div className="ad-chips">{SPEC_CHIPS.map(c => <button key={c} type="button" onClick={() => set('desc', (f.desc.trim() ? f.desc.replace(/\s+$/, '') + '\n' : '') + c + ': ')}>＋ {c}</button>)}</div>
       </Fold>
-      <Fold title={<>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></>}><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} /></Fold>
+      <Fold title={<>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></>}><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} />
+        <label style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
+          {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ بيترفع… ${vidPct}%`}
+          <input type="file" accept="video/*" hidden disabled={vidPct != null} onChange={e => {
+            const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
+            setVidPct(0);
+            uploadSiteVideo(file, setVidPct).then(url => { set('video', url); setMsg('✔ الفيديو اترفع'); }).catch(err => setMsg(err instanceof Error ? err.message : 'الفيديو مارفعش')).finally(() => setVidPct(null));
+          }} />
+        </label>
+        {/\.(mp4|webm|mov)(\?|$)/i.test(f.video) && <video src={f.video} controls playsInline preload="metadata" style={{ display: 'block', marginTop: 8, width: 240, borderRadius: 10 }} />}
+      </Fold>
       <Fold title={<>↔️ اتجاه الفتح (يمين / شمال)</>}>
         <p className="mut">للمنتجات اللي ليها نسخة يمين ونسخة شمال (ماجيك كورنر، فاصوليا…). الموقع بيشرح للعميل إزاي يختار الصح ويوديه للنسخة التانية.</p>
         <div className="ad-seg">{([['auto', 'تلقائي من الاسم'], ['on', 'هحدده بنفسي'], ['off', 'من غير اتجاه']] as const).map(([k, t]) => <button key={k} type="button" className={f.dirMode === k ? 'on' : ''} onClick={() => set('dirMode', k)}>{t}</button>)}</div>
