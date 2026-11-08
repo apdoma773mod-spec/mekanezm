@@ -121,12 +121,12 @@ export function AddForm() {
       const r = await scrapReadTape(b);
       if (!r.ok || !r.data) return setMsg(r.message || 'مقدرتش أقرا المتر — صوّر أقرب وبإضاءة أحسن');
       const d = r.data;
-      if (!d.ambiguous && d.len) { applyRead(d.len, d.wid); setMsg(`✔ قريت ${fmt(d.len)}${cat !== 'alu' && d.wid ? ' × ' + fmt(d.wid) : ''} سم — راجعه وعدّله لو غلط`); }
-      else {
-        const c = d.candidates.filter(k => k.len);
-        if (!c.length) return setMsg('مش متأكد من القراءة — اكتب المقاس بإيدك أو صوّر تاني أقرب');
-        setCands(c); setMsg('مش متأكد — اختار القراءة الصح:');
-      }
+      const c = d.candidates.filter(k => k.len);
+      if (!d.len && !c.length) return setMsg('مش متأكد من القراءة — اكتب المقاس بإيدك أو صوّر من فوق والمتر لازق على الحتة');
+      const first = d.len ? { len: d.len, wid: d.wid } : c[0];
+      applyRead(first.len, first.wid);
+      setCands(c.length > 1 ? c : []);
+      setMsg(`اتحط ${fmt(first.len)}${cat !== 'alu' && first.wid ? ' × ' + fmt(first.wid) : ''} سم — اتأكد من الرقم${c.length > 1 ? ' أو اختار قراءة تانية' : ''}`);
     } catch { setMsg('مقدرتش أقرا المتر — جرّب تاني'); }
   }
   useEffect(() => {
@@ -251,6 +251,8 @@ export function AddForm() {
 
       {open === 'size' && <div className="sc-panel">
         <button type="button" className="sc-chip on" style={{ width: '100%', padding: 12 }} onClick={() => tape.current?.click()}>📏 صوّر المتر على الحتة (بيقرا المقاس لوحده)</button>
+        <small className="mut">💡 صوّر من فوق والمتر لازق على الحتة، والرقم باين.</small>
+        {msg && <p className={/^اتحط|⏳/.test(msg) ? "mut" : "err"} aria-live="polite" style={{ margin: "6px 0" }}><b>{msg}</b></p>}
         {cands.length > 0 && <div className="chips2" style={{ marginTop: 8 }}>{cands.map((k, i) => <button key={i} type="button" className="sc-chip" onClick={() => { applyRead(k.len, k.wid); setCands([]); setMsg('✔ اتحط ' + fmt(k.len) + (cat !== 'alu' && k.wid ? ' × ' + fmt(k.wid) : '') + ' — راجعه'); }}>{fmt(k.len)}{cat !== 'alu' && k.wid ? ' × ' + fmt(k.wid) : ''}</button>)}</div>}
         {cat !== 'alu' && <>
           <b>السمك (مم)</b>
