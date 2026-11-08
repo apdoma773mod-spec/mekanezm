@@ -29,7 +29,10 @@ for (const where of ['/', '/shipping', '/products']) {
     await p.keyboard.press('Enter');
     await p.waitForTimeout(3500);
     const txt = (await p.evaluate(() => document.querySelector('.modal')?.textContent ?? 'NO MODAL')).slice(0, 80);
-    const ok = txt.includes(expect) && !txt.includes('شحنة جديدة');
+    const full = await p.evaluate(() => document.querySelector('.modal')?.textContent ?? '');
+    // شحنة: شاشة المتابعة (خطوات + الملصق) مش فورمة البيانات (اسم العميل / النوع)
+    const shipOk = !expect.startsWith('SP-') || (full.includes('🖨️ الملصق') && !full.includes('اسم العميل') && !full.includes('شحنة جديدة'));
+    const ok = txt.includes(expect) && shipOk;
     if (!ok) bad++;
     console.log(ok ? 'ok ' : 'BAD', where.padEnd(10), code.padEnd(8), '→', txt);
   }

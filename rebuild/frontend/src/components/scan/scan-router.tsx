@@ -102,7 +102,7 @@ export function ScanRouter() {
           if (s) {
             beep();
             say(`الشحنة ${no}`);
-            return open({ kind: 'shipEdit', id: s.id });
+            return open({ kind: 'shipView', id: s.id });
           }
         } else {
           const inv = (await api.get<Found>('/invoices', { q: no, pageSize: 5 })).items.find((x) => x.no.toUpperCase() === no);

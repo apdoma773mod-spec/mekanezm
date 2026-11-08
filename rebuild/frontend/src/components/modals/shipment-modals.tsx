@@ -11,6 +11,7 @@ import { useContacts, useInvoice } from '@/lib/trade-queries';
 import { Modal } from '../ui/modal';
 import { useToast } from '../ui/toast';
 import { useIsAdmin } from '../use-role';
+import { ShipCard } from '../shipping-card';
 import { useModal } from './modal-host';
 
 export function stLabel(s: ShipStatus, k: ShipmentDto['kind']) {
@@ -463,6 +464,27 @@ export function ShipPaid({ s }: { s: ShipmentDto }) {
           إلغاء
         </button>
       </div>
+    </Modal>
+  );
+}
+
+/**
+ * 📦 شاشة الشحنة (من الباركود): فين وصلت، آخر تحديث، الخطوة الجاية، الملصق، بلّغ العميل — مش فورمة البيانات.
+ * بتستنى الشحنة تتحمّل، وبتتحدّث لوحدها بعد أي خطوة.
+ */
+export function ShipmentView({ id }: { id: string }) {
+  const { close } = useModal();
+  const all = useShipments({ tab: 'all' });
+  const s = all.data?.items.find((x) => x.id === id);
+  return (
+    <Modal title={s ? `🚚 شحنة ${s.no}` : '🚚 الشحنة'} onClose={close}>
+      {all.isPending ? (
+        <div className="empty">⏳ جاري التحميل…</div>
+      ) : s ? (
+        <ShipCard s={s} />
+      ) : (
+        <div className="empty">{all.isError ? 'مقدرتش أحمّل الشحنات — اتأكد من النت وجرب تاني' : 'الشحنة دي مش موجودة (ممكن تكون اتمسحت)'}</div>
+      )}
     </Modal>
   );
 }

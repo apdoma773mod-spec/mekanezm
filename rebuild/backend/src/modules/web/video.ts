@@ -68,7 +68,7 @@ async function fetchParts(parts: string[], dir: string): Promise<string> {
 }
 
 async function put(n: string, buf: Buffer, type = 'video/mp4') {
-  const r = await fetch(`${SB}/storage/v1/object/${BUCKET}/${n}`, { method: 'POST', headers: { authorization: `Bearer ${ANON}`, apikey: ANON, 'content-type': type, 'x-upsert': 'true' }, body: new Uint8Array(buf) });
+  const r = await fetch(`${SB}/storage/v1/object/${BUCKET}/${n}`, { method: 'POST', headers: { authorization: `Bearer ${ANON}`, apikey: ANON, 'content-type': type }, body: new Uint8Array(buf) });
   if (!r.ok) throw new Error(`رفع الفيديو المتحوّل فشل (${r.status}) ${(await r.text()).slice(0, 120)}`);
 }
 
@@ -116,6 +116,8 @@ export default async function videoRoutes(app: FastifyInstance) {
       await encodeSegment(f, b.start, b.len, o);
       await put(b.out, await readFile(o));
       return { ok: true };
+    } catch (e) {
+      throw badRequest('segment: ' + String((e as Error).message ?? e).slice(0, 400));
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -154,6 +156,10 @@ export default async function videoRoutes(app: FastifyInstance) {
       const outName = `${Date.now().toString(36)}${randomBytes(5).toString('hex')}.mp4`;
       await put(outName, buf);
       return { url: pub(outName), seconds: Math.round(dur), mb: Math.round((buf.length / 1048576) * 10) / 10 };
+    } catch (e) {
+      const m = String((e as { message?: string }).message ?? e);
+      if ((e as { statusCode?: number }).statusCode) throw e;
+      throw badRequest('تحويل الفيديو فشل: ' + m.slice(0, 400));
     } finally {
       await rm(dir, { recursive: true, force: true });
       void removeTmp([...parts, ...segNames]);

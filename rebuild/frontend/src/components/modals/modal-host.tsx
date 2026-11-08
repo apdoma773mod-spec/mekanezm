@@ -17,7 +17,7 @@ import { ExpenseModal } from './expense-modal';
 import { ClosingHistory, ClosingModal } from './closing-modal';
 import { CountResult } from './count-result';
 import { QuoteView } from './quote-view';
-import { ShipmentEdit, ShipPaid, ShipWho } from './shipment-modals';
+import { ShipmentEdit, ShipmentView, ShipPaid, ShipWho } from './shipment-modals';
 import { Phase4Modal, type Phase4Spec } from './phase4-modals';
 import { ProductToolModal, type ProductToolSpec } from './product-tools';
 import { ProductCard, ProductCardModal, type ProductCardSpec } from './product-card';
@@ -43,6 +43,7 @@ export type ModalSpec =
   | { kind: 'quote'; id?: string }
   | { kind: 'quoteView'; id: string }
   | { kind: 'shipEdit'; id?: string; invoiceId?: string }
+  | { kind: 'shipView'; id: string }
   | { kind: 'shipWho'; s: ShipmentDto; next: ShipStatus }
   | { kind: 'shipPaid'; s: ShipmentDto }
   | Phase4Spec
@@ -152,6 +153,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'quoteView':
         content = <QuoteView key={spec.id} id={spec.id} />;
+        break;
+      case 'shipView':
+        content = <ShipmentView key={spec.id} id={spec.id} />;
         break;
       case 'shipEdit':
         content = <ShipmentEdit key={spec.id ?? spec.invoiceId ?? 'new'} id={spec.id} invoiceId={spec.invoiceId} />;
