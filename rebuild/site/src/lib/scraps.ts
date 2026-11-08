@@ -112,4 +112,9 @@ export const BRAND_LINKS: { match: RegExp; name: string; url: string }[] = [
   { match: /كرونو|kronospan/i, name: 'كرونوسبان', url: 'https://www.kronospan.com' },
   { match: /كاستامونو|kastamonu/i, name: 'كاستامونو', url: 'https://www.kastamonu.com' },
 ];
-export const codesFor = (brand: string) => BRAND_CODES.find(b => b.match.test(brand))?.codes ?? [];
+import { GOODWOOD_GROUPS } from './goodwood';
+export const GROUPS: { match: RegExp; groups: { name: string; codes: string[] }[] }[] = [
+  { match: /جودs?وود|goodwood/i, groups: GOODWOOD_GROUPS },
+];
+export const groupsFor = (brand: string) => GROUPS.find(b => b.match.test(brand))?.groups ?? [];
+export const codesFor = (brand: string) => BRAND_CODES.find(b => b.match.test(brand))?.codes ?? groupsFor(brand).flatMap(g => g.codes);

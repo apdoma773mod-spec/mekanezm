@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { scrapAdd, scrapReadTape, uploadScrapImage as uploadRequestImage } from '@/lib/api';
 import { shrinkImage } from '@/lib/images';
 import { getMe, saveMe } from '@/lib/me';
-import { ALU_TYPES, BRAND_LINKS, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
+import { ALU_TYPES, BRAND_LINKS, CATS, COMMON_THICK, codesFor, groupsFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
 import { ev } from '@/lib/track';
 import { WOOD_LIB } from '@/lib/woods';
 
@@ -222,7 +222,7 @@ export function AddForm() {
     { k: 'who', ic: '👤', t: 'بياناتك', sum: whoSum },
   ];
   const brandLink = BRAND_LINKS.find(b => b.match.test(f.brand));
-  const codes = codesFor(f.brand);
+  const codes = codesFor(f.brand), groups = groupsFor(f.brand);
   return (
     <div className="info-cards form">
       <div>
@@ -303,7 +303,8 @@ export function AddForm() {
             {codes.length ? <>أكواد <b>{f.brand}</b> — دوس على الكود:</> : <>أكواد <b>{f.brand}</b> لسه مش متسجّلة هنا — اكتب الكود بإيدك.</>}
             {brandLink && <> · <a href={brandLink.url} target="_blank" rel="noopener noreferrer">افتح كتالوج {brandLink.name} ↗</a></>}
           </p>}
-          {codes.length > 0 && <div className="chips2">{codes.map(c => <button key={c} type="button" className={'sc-chip' + (f.code === c ? ' on' : '')} onClick={() => setF(x => ({ ...x, code: x.code === c ? '' : c }))}>{c}</button>)}</div>}
+          {groups.map(g => <div key={g.name}><small><b>{g.name}</b></small><div className="chips2">{g.codes.map(c => <button key={c} type="button" className={'sc-chip' + (f.code === c ? ' on' : '')} onClick={() => setF(x => ({ ...x, code: x.code === c ? '' : c }))}>{c}</button>)}</div></div>)}
+          {codes.length > 0 && !groups.length && <div className="chips2">{codes.map(c => <button key={c} type="button" className={'sc-chip' + (f.code === c ? ' on' : '')} onClick={() => setF(x => ({ ...x, code: x.code === c ? '' : c }))}>{c}</button>)}</div>}
           <label>كود اللون <small>(مكتوب على اللوح أو الفاتورة)</small><input value={f.code} onChange={set('code')} maxLength={30} /></label>
           <b>اللون (دوس على اللون الأقرب)</b>
           <div className="chips2" style={{ gap: 8 }}>{COLOR_SWATCHES.map(([n, c]) => <button key={n} type="button" title={n} aria-label={n} onClick={() => setF(x => ({ ...x, color: x.color === n ? '' : n }))}
