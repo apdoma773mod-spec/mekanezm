@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { parse } from '../../lib/validate.js';
 import { getFile } from '../../lib/files.js';
-import { geminiJson, geminiKey } from '../web/catalog-ai.js';
+import { geminiKey } from '../web/catalog-ai.js';
+import { readTape } from './tape.js';
 import { API, activeCount, addWant, expiry, newSecret, publicView } from './service.js';
 
 /**
@@ -49,35 +50,7 @@ export default async function scrapRoutes(app: FastifyInstance) {
     if (!buf?.length || buf.length > 9 * 1024 * 1024) throw badRequest('الصورة مش واضحة أو كبيرة');
     const key = await geminiKey(db);
     if (!key) throw badRequest('قراءة المتر مش شغالة دلوقتي');
-    const photo = { data: buf.toString('base64'), mime: buf.subarray(0, 4).toString('hex') === '89504e47' ? 'image/png' : 'image/jpeg' };
-    const prompt = `الصورة فيها قطعة (خشب/ألواح/ألمنيوم) وجنبها أو عليها متر شريط قياس. اقرا مقاس القطعة نفسها.
-قواعد الدقة (مهمة جدًا):
-- اقرا الرقم المطبوع على المتر عند حافة القطعة بالظبط (آخر نقطة بتلمس فيها القطعة)، مش أقرب رقم باين.
-- الأرقام على المتر بتتقري بالترتيب (...41 42 43 44...): تأكد إن الرقم منطقي بين اللي قبله واللي بعده، ماتقلبش 43 بـ 34 ولا تزوّد رقم.
-- فرّق السم من المم: الرقم الكبير = سم، والعلامات الصغيرة بين الأرقام = مم. رجّع كل حاجة بالسنتيمتر (ممكن كسر عشري زي 43.5).
-- len_cm = الضلع الأطول، wid_cm = الضلع الأقصر. لو مش باين الضلع التاني حطه null.
-- لو مش متأكد من رقم، حط الاحتمالين في len_alt أو wid_alt بدل ما تخمّن.
-- confidence من 0 لـ 1 (أد إيه أنت متأكد إن الأرقام صح).
-رجّع JSON بس: {"len_cm":number|null,"wid_cm":number|null,"len_alt":[number],"wid_alt":[number],"confidence":number,"note":"string"}`;
-    type R = { len_cm?: number | null; wid_cm?: number | null; len_alt?: number[]; wid_alt?: number[]; confidence?: number };
-    const one = () => geminiJson<R>(key, prompt, photo).catch(() => null);
-    const reads = (await Promise.all([one(), one()])).filter((r): r is R => !!r);
-    if (!reads.length) throw badRequest('معرفتش أقرا المتر، صوّر تاني أقرب وأوضح');
-    const ok = (n: unknown): n is number => typeof n === 'number' && isFinite(n) && n > 0 && n < 1000;
-    const rnd = (n: number) => Math.round(n * 10) / 10;
-    const pick = (f: 'len' | 'wid') => {
-      const main = reads.map((r) => r[`${f}_cm`]).filter(ok).map(rnd);
-      const alts = reads.flatMap((r) => r[`${f}_alt`] ?? []).filter(ok).map(rnd);
-      const all = [...new Set([...main, ...alts])];
-      return { val: main[0] ?? null, all, agree: main.length === reads.length && all.length === 1 };
-    };
-    const L = pick('len'), W = pick('wid');
-    const conf = Math.min(...reads.map((r) => (typeof r.confidence === 'number' ? r.confidence : 0.5)));
-    const ambiguous = L.val == null || conf < 0.7 || !L.agree || (W.val != null && !W.agree) || reads.length < 2;
-    const ls: (number | null)[] = L.all.length ? L.all.slice(0, 3) : [null];
-    const ws: (number | null)[] = W.all.length ? W.all.slice(0, 3) : [null];
-    const candidates = ls.flatMap((len) => ws.map((wid) => ({ len, wid }))).slice(0, 6);
-    return { len: L.val, wid: W.val, confidence: Math.round(conf * 100) / 100, ambiguous, candidates };
+    return readTape(key, buf);
   });
 
   app.post('/', limit(10), async (request) => {
