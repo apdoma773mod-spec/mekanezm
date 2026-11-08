@@ -1,5 +1,6 @@
 // @ts-nocheck
 // محرك المونتاج الذكي: آخر شكل نهائي من studio/smart.js، متغلّف كموديول Next.js (بيتركّب جوه #mk-host). المنطق النضيف اتنقل لـ lib/montage/*.
+import { loudGain, peakOf, findHooks, paceReport, coverCandidates, frameScore, preflight } from './pro';
 export function startEngine(){
 /* ===== 🎬 مونتاج ذكي — فيديو خام من الموبايل → ترجمة كلامك + توضيح المقاسات والأصناف والأسعار + قالب مونتاج → MP4 جاهز للنشر
    ١) الصوت بيتسحب من الفيديو جوه الموبايل (١٦ كيلو مونو) ويتقسم أجزاء ٤٠ ثانية → دالة video-ai على سيرفر ميكانيزم (Gemini) → كلام بتوقيته + أحداث + الإعادات اللي تتشال + الكلمات المهمة
@@ -128,7 +129,7 @@ async function analyze(prog){
  const run=async j=>{for(let k=0;;k++){try{res[j.i]=await callAI(wav64(f32.subarray(j.a,j.b)),j.a/16000,j.i===0,tok);break}catch(e){if(k>=2||/LOGIN|دخول|مفتاح Gemini|API key/.test(e.message))throw e;await new Promise(r=>setTimeout(r,2500*(k+1)))}}done++;prog('🧠 بفهم الكلام… '+done+' من '+jobs.length)};
  prog('🧠 بفهم الكلام… 0 من '+jobs.length);
  for(let i=0;i<jobs.length;i+=3)await Promise.all(jobs.slice(i,i+3).map(run));
- return Object.assign(mergeAI(res,jobs.map(j=>j.a/16000)),{dur:f32.length/16000,vad:vad(f32),ch:jobs.map(j=>[j.a/16000,j.b/16000])})}
+ return Object.assign(mergeAI(res,jobs.map(j=>j.a/16000)),{dur:f32.length/16000,vad:vad(f32),loud:loudGain(f32,vad(f32)),peak:peakOf(f32),ch:jobs.map(j=>[j.a/16000,j.b/16000])})}
 
 /* ---------- 👀 مكان الشخص في الفيديو (عشان الكلام والكروت ماتغطيش وشه) ---------- */
 /* MediaPipe Pose: بيتحمّل مرة واحدة من النت. لو فشل، بنكمل بتقدير تقريبي لمكان الراس */
@@ -581,7 +582,7 @@ async function exportVid(){if(busy)return;if(typeof MediaRecorder==='undefined'|
  const mt=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));if(!mt)return say('التصدير مش مدعوم على الموبايل ده');
  busy=true;const btn=$s('sm_ex');btn.disabled=true;
  try{setupCanvas();V.pause();V.currentTime=GAPS.length&&GAPS[0][0]<=0?GAPS[0][1]:0;await new Promise(r=>{V.onseeked=()=>{V.onseeked=null;r()};setTimeout(r,800)});
-  const AC=window.AudioContext||window.webkitAudioContext;if(!V._ac){V._ac=new AC();V._src=V._ac.createMediaElementSource(V);V._dst=V._ac.createMediaStreamDestination();V._src.connect(V._ac.destination);const a=V._ac,hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=85;const pk=a.createBiquadFilter();pk.type='peaking';pk.frequency.value=3000;pk.Q.value=1;pk.gain.value=3;const cp=a.createDynamicsCompressor();cp.threshold.value=-26;cp.knee.value=8;cp.ratio.value=4;cp.attack.value=.005;cp.release.value=.2;const mg=a.createGain();mg.gain.value=1.7;hp.connect(pk);pk.connect(cp);cp.connect(mg);V._cl=[hp,mg]}
+  const AC=window.AudioContext||window.webkitAudioContext;if(!V._ac){V._ac=new AC();V._src=V._ac.createMediaElementSource(V);V._dst=V._ac.createMediaStreamDestination();V._src.connect(V._ac.destination);const a=V._ac,hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=85;const pk=a.createBiquadFilter();pk.type='peaking';pk.frequency.value=3000;pk.Q.value=1;pk.gain.value=3;const cp=a.createDynamicsCompressor();cp.threshold.value=-26;cp.knee.value=8;cp.ratio.value=4;cp.attack.value=.005;cp.release.value=.2;const mg=a.createGain();mg.gain.value=Math.max(1,Math.min(3.2,(D&&D.loud?D.loud.gain*1.15:1.7)));hp.connect(pk);pk.connect(cp);cp.connect(mg);V._cl=[hp,mg]}
   {const [hp,mg]=V._cl;try{V._src.disconnect(V._dst)}catch(e){}try{V._src.disconnect(hp)}catch(e){}try{mg.disconnect()}catch(e){}if(S.clean!==false){V._src.connect(hp);mg.connect(V._dst)}else V._src.connect(V._dst)}
   await V._ac.resume();const st=CV.captureStream(30);V._dst.stream.getAudioTracks().forEach(tr=>st.addTrack(tr));
   const ch=[];REC=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:S.q>=1080?8e6:5e6,audioBitsPerSecond:128000});REC.ondataavailable=e=>e.data&&e.data.size&&ch.push(e.data);
@@ -715,7 +716,7 @@ function exportSrt(){const tc=t=>{const ms=Math.round(Math.max(0,t)*1000),p=(x,l
 ${tc(outT(c.s))} --> ${tc(Math.max(outT(c.s)+.3,outT(c.e)))}
 ${c.w.join(' ')}
 `).join('\n');dlBlob(new Blob([L],{type:'text/plain;charset=utf-8'}),(D.title||'ترجمة')+'.srt')}
-async function exportCover(){const t=srcT(Math.max(2.8,Math.min(outDur()*.25,outDur()-.6)));await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2500)});draw(V.currentTime);CV.toBlob(b=>b&&dlBlob(b,(D.title||'غلاف')+'.jpg'),'image/jpeg',.92)}
+async function exportCover(tt){const t=typeof tt==='number'?tt:srcT(Math.max(2.8,Math.min(outDur()*.25,outDur()-.6)));await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2500)});draw(V.currentTime);CV.toBlob(b=>b&&dlBlob(b,(D.title||'غلاف')+'.jpg'),'image/jpeg',.92)}
 function wirePlayer(){$s('sm_pl').onclick=async()=>{if(V.paused){try{if(V._ac)await V._ac.resume();await V.play()}catch(e){}$s('sm_pl').textContent='⏸️'}else{V.pause();$s('sm_pl').textContent='▶️'}};
  V.onended=()=>{$s('sm_pl').textContent='▶️'};const sk=$s('sm_seek');sk.oninput=()=>{sk._drag=1;V.currentTime=sk.value/1000*(V.duration||0)};sk.onchange=()=>{sk._drag=0};
  $s('sm_ex').onclick=exportVid;$s('sm_srt').onclick=exportSrt;$s('sm_post').onclick=copyPost;$s('sm_scb').onclick=showScore;$s('sm_chb').onclick=copyChapters;$s('sm_pv').onclick=quickPreview;$s('sm_cov').onclick=exportCover;const ti=$s('sm_ti');ti.value=D.title||'';ti.oninput=()=>{D.title=ti.value;draw(V.currentTime)}}
@@ -1363,7 +1364,26 @@ function tileify(){const root=$s('v-smart');if(!root||root.querySelector('.tl-g'
  const sres=$s('sm_res'),g2=res.length&&sres?build(res,sres,true):null;
  const upd=()=>{[g1,g2].forEach(g=>g&&g.querySelectorAll('.tl').forEach(b=>{const s=b.querySelector('.ts');if(s){let v='';try{v=b._s()||''}catch(e){}s.textContent=v}}))};
  upd();clearInterval(window.__tlT);window.__tlT=setInterval(()=>{if(!document.body.contains(g1)){clearInterval(window.__tlT);return}if(document.visibilityState==='visible')upd()},1200)}
-const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
+
+/* ---------- 🚀 أدوات احترافية: فحص قبل النشر + أقوى هوك + مدرّب الإيقاع + أفضل غلاف + معايرة الصوت (lib/montage/pro.ts) ---------- */
+function proSegs(){return (D&&D.seg||[]).filter(g=>!(O('takes')&&g.cut))}
+function proOut(h){const o=$s('sm_p_out');if(o)o.innerHTML=h}
+function proUI(){const a=$s('sm_sc');if(!a||$s('sm_pro'))return;const box=document.createElement('div');box.id='sm_pro';box.className='p';box.style.marginTop='8px';
+ box.innerHTML='<h2>🚀 أدوات احترافية</h2><div class="r2"><button class="b o" id="sm_p_qa">✅ فحص قبل النشر</button><button class="b o" id="sm_p_hk">🎣 أقوى هوك</button><button class="b o" id="sm_p_pc">⏱️ مدرّب الإيقاع</button><button class="b o" id="sm_p_cv">🖼️ أفضل غلاف تلقائي</button></div><div id="sm_p_out" class="mu" style="white-space:pre-line;margin-top:8px"></div>';a.after(box);
+ const need=()=>{if(!D||!(D.seg||[]).length){say('اعمل التحليل الأول');return false}return true};
+ $s('sm_p_qa').onclick=()=>{if(!need())return;const q=preflight({seg:proSegs(),outDur:outDur(),title:D.title,peak:D.peak,aspect:S.aspect,hasCap:O('cap')!=='none'});
+  const ld=D.loud?'🔊 صوتك '+D.loud.db+' dB ← اتعدّل تلقائي ×'+D.loud.gain+' عشان يوصل للمستوى القياسي (−١٦)\n':'';
+  proOut(esc(ld+q.ok.map(x=>'✅ '+x).concat(q.warn.map(x=>'⚠️ '+x)).join('\n')+'\n')+'<br>'+q.platforms.map(p=>'<span class="ch'+(p.fit?' on':'')+'">'+(p.fit?'✔ ':'✖ ')+esc(p.name)+'</span>').join(''))};
+ $s('sm_p_hk').onclick=()=>{if(!need())return;const H=findHooks(proSegs());if(!H.length)return proOut('مفيش جملة قوية كفاية في أول الفيديو — جرّب سؤال أو رقم في الافتتاح');
+  proOut('أقوى جمل تفتح بيها (دوس للاستخدام كعنوان الهوك):<br>'+H.map((h,i)=>'<div class="it"><div style="flex:1"><b>'+esc(h.text)+'</b><br><span class="mu">'+esc(h.why.join(' • '))+'</span></div><button class="b o" data-hk="'+i+'">استخدمها</button></div>').join(''));
+  $s('sm_p_out').querySelectorAll('[data-hk]').forEach(b=>b.onclick=()=>{D.title=H[+b.dataset.hk].text.slice(0,42);try{changed()}catch(e){}say('✔ اتحطت كهوك أول ثانيتين')})};
+ $s('sm_p_pc').onclick=()=>{if(!need())return;const p=paceReport(proSegs(),D.dur||outDur(),GAPS),mm=t=>fmt(t);
+  proOut(esc('الإيقاع: '+ar(String(p.wps))+' كلمة/ثانية — سكوت '+ar(String(p.deadPct))+'٪'+(p.slow.length?'\nبطيء عند: '+p.slow.map(x=>mm(x[0])).join('، '):'')+(p.fast.length?'\nسريع عند: '+p.fast.map(x=>mm(x[0])).join('، '):'')+'\n'+(p.tips.length?p.tips.map(x=>'• '+x).join('\n'):'الإيقاع تمام 👌')))};
+ $s('sm_p_cv').onclick=async()=>{if(!need()||!V)return;const C=coverCandidates(proSegs());if(!C.length)return say('مفيش لقطات كفاية');proOut('🔎 بدوّر على أحسن لقطة…');
+  const cv=document.createElement('canvas'),w=72,h=Math.max(40,Math.round(72*(V.videoHeight||16)/(V.videoWidth||9)));cv.width=w;cv.height=h;const cx=cv.getContext('2d',{willReadFrequently:true});let best=C[0],bs=-1;
+  for(const t of C){await new Promise(r=>{const d=()=>{V.removeEventListener('seeked',d);r()};V.addEventListener('seeked',d);V.currentTime=t;setTimeout(d,2000)});try{cx.drawImage(V,0,0,w,h);const sc=frameScore(cx.getImageData(0,0,w,h).data,w,h);if(sc>bs){bs=sc;best=t}}catch(e){}}
+  proOut('✔ أحسن لقطة عند '+fmt(best)+' — بنزّلها…');await exportCover(best)}}
+const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null}),_test:{build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
