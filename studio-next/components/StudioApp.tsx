@@ -15,9 +15,11 @@ export default function StudioApp() {
       const { gate } = await import('@/lib/studio/gate');
       const { startEngine } = await import('@/lib/montage/engine');
       const { pro } = await import('@/lib/studio/pro');
+      const { mountTemplates } = await import('@/lib/templates/ui');
       if (off || (window as any).__studioStarted) return;
       (window as any).__studioStarted = 1;
       boot(); main(); gate(); startEngine(); pro();
+      try { mountTemplates(); } catch (e) { console.warn('templates', e); }
     })();
     return () => { off = true; };
   }, []);
