@@ -650,6 +650,7 @@ export default function DaybookPage() {
             }}
             placeholder="اكتب اسم الصنف أو الكود..."
             autoComplete="off"
+            data-scan="own"
           />
           <button type="button" className="secondary" id="dbScan" title="امسح باركود" onClick={() => setScanning(true)}>
             📷

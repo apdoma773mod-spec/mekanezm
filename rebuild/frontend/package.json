@@ -20,8 +20,6 @@
     "heic-to": "^1.6.7",
     "heic2any": "^0.0.4",
     "jose": "6.2.13",
-    "mp4-muxer": "^5.2.2",
-    "mp4box": "^0.5.4",
     "next": "15.5.28",
     "onnxruntime-web": "^1.20.1",
     "react": "19.2.9",

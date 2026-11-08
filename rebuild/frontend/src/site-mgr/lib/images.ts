@@ -4,7 +4,7 @@ export function shrinkImage(f: Blob, max: number, quality = 0.8): Promise<Blob> 
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(f);
     const im = new Image();
-    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('img')); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('الصورة دي المتصفح مش عارف يفتحها — جرّب صورة JPG أو PNG')); };
     im.onload = () => {
       URL.revokeObjectURL(url);
       const k = Math.min(1, max / Math.max(im.width, im.height));

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Tile, Tiles, useShowMore } from '@/components/ui/tiles';
 import type { ReorderSuggestion } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { ErrorBox, Loading } from '@/components/ui/states';
@@ -28,6 +29,7 @@ function SupplierCard({ sup, L, shop }: { sup: string; L: ReorderSuggestion[]; s
   const [off, setOff] = useState<Record<string, boolean>>({});
   const [qty, setQty] = useState<Record<string, string>>({});
   const phone = L[0]?.supplierPhone ?? '';
+  const { shown, more } = useShowMore(L, 40);
 
   const text = () => {
     const lines = L.filter((s) => !off[s.productId]).map((s) => `• ${s.name} — ${Math.max(1, Math.round(Number(qty[s.productId] ?? s.need) || 0))} ${s.unit || 'قطعة'}`);
@@ -47,7 +49,7 @@ function SupplierCard({ sup, L, shop }: { sup: string; L: ReorderSuggestion[]; s
           {L.length} صنف{sup && !phone ? ' • مفيش رقم للمورد' : ''}
         </small>
       </h3>
-      {L.map((s) => (
+      {shown.map((s) => (
         <div key={s.productId} className="rorow">
           <input type="checkbox" checked={!off[s.productId]} onChange={(e) => setOff({ ...off, [s.productId]: !e.target.checked })} />
           <div className="nm">
@@ -68,6 +70,7 @@ function SupplierCard({ sup, L, shop }: { sup: string; L: ReorderSuggestion[]; s
           />
         </div>
       ))}
+      {more}
       <div className="btnrow" style={{ marginTop: 10 }}>
         <button
           type="button"
@@ -140,9 +143,13 @@ function ReorderScreen() {
           <p style={{ margin: '0 0 10px', color: 'var(--muted)' }}>
             {n} صنف محتاج طلب — مترتبين بالأسرع خلوصاً. غيّر الكمية أو شيل علامة الصنف اللي مش عايزه قبل ما تبعت.
           </p>
-          {groups.map(([sup, L]) => (
-            <SupplierCard key={`${sup}-${days}`} sup={sup} L={L} shop={shop} />
-          ))}
+          <Tiles id="reorder">
+            {groups.map(([sup, L]) => (
+              <Tile key={`${sup}-${days}`} k={sup || '-'} icon={sup ? '🏭' : '❔'} title={sup || 'مورد غير محدد'} sub={`${L.length} صنف`}>
+                <SupplierCard sup={sup} L={L} shop={shop} />
+              </Tile>
+            ))}
+          </Tiles>
         </>
       )}
     </>

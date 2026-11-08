@@ -146,6 +146,7 @@ export function ScanRouter() {
     let last = 0;
     let bad = false;
     let el0: Element | null = null;
+    let v0 = '';
     const k = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.altKey || e.metaKey) return;
       const t = Date.now();
@@ -154,6 +155,7 @@ export function ScanRouter() {
         bad = false;
         t0 = t;
         el0 = document.activeElement;
+        v0 = el0 && /^(INPUT|TEXTAREA)$/.test(el0.tagName) ? (el0 as HTMLInputElement).value : '';
       }
       last = t;
       if (e.key === 'Enter' || e.key === 'Tab') {
@@ -162,8 +164,20 @@ export function ScanRouter() {
         const code = buf;
         buf = '';
         if (!fast || bad) return;
-        if (typing(el0) || typing(document.activeElement)) return; // the field has its own handler
         if (avg > SURE && !SYS.test(code)) return; // slow typing is a person, not the device
+        const field = typing(el0) ? el0 : typing(document.activeElement) ? document.activeElement : null;
+        if (field) {
+          // خانة بتاعتها معالج باركود (سطر الفاتورة، اليومية): الصنف يروح لها — إلا لو اللي اتقري فاتورة/شحنة/عرض سعر
+          if (field.closest('[data-scan="own"]') && !SYS.test(code)) return;
+          // أي خانة تانية (بحث وغيره): الباركود يفتح حاجته على طول، والخانة ترجع زي ما كانت قبل المسحة
+          if (/^(INPUT|TEXTAREA)$/.test(field.tagName)) {
+            const el = field as HTMLInputElement;
+            const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+            Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(el, v0);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.blur();
+          }
+        }
         e.preventDefault();
         e.stopPropagation();
         void routeRef.current(code);

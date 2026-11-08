@@ -4,12 +4,13 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { uploadImage } from './api';
 import { shrinkImage } from './lib/images';
+import { isImageFile, toDecodable } from '@/lib/heic';
 
 export const uid7 = () => Math.random().toString(36).slice(2, 9);
 export const move = <T,>(arr: T[], i: number, d: number) => { const j = i + d; if (j < 0 || j >= arr.length) return arr; const c = [...arr]; [c[i], c[j]] = [c[j], c[i]]; return c; };
 
 /** Shrink and upload one photo. */
-export const sendPhoto = async (f: File) => uploadImage(await shrinkImage(f, 1800, 0.82));
+export const sendPhoto = async (f: File) => uploadImage(await shrinkImage(await toDecodable(f), 1800, 0.82));
 
 /** One photo (logo, banner, section picture…). */
 export function Img({ value, onChange, label, wide }: { value: string; onChange: (u: string) => void; label: string; wide?: boolean }) {
@@ -40,7 +41,7 @@ export function Imgs({ value, onChange }: { value: string[]; onChange: (u: strin
   const [busy, setBusy] = useState(''), [err, setErr] = useState('');
   const file = useRef<HTMLInputElement>(null);
   async function pick(fl: FileList | File[] | null) {
-    const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
+    const list = [...(fl ?? [])].filter(isImageFile);
     if (!list.length) return;
     setErr(''); const added: string[] = [];
     for (let i = 0; i < list.length; i++) {
@@ -78,7 +79,7 @@ export function AddMany({ label, onAdd }: { label: string; onAdd: (urls: string[
   const [busy, setBusy] = useState(''), [err, setErr] = useState('');
   const file = useRef<HTMLInputElement>(null);
   async function pick(fl: FileList | File[] | null) {
-    const list = [...(fl ?? [])].filter(f => f.type.startsWith('image/'));
+    const list = [...(fl ?? [])].filter(isImageFile);
     if (!list.length) return;
     setErr(''); let done = 0;
     // keep the screen awake while uploading (a locked iPhone pauses the page); come back and re-take it if the page was hidden
