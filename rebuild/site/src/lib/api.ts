@@ -228,6 +228,12 @@ export const scrapDone = (id: string, secret: string, status: 'sold' | 'removed'
 export const scrapRenew = (id: string, secret: string) => sc<unknown>('/' + encodeURIComponent(id) + '/renew', { secret });
 export const scrapReport = (id: string, reason: string) => sc<unknown>('/' + encodeURIComponent(id) + '/report', { reason });
 export const scrapMine = (pairs: { id: string; secret: string }[]) => sc<Record<string, unknown>[]>('/mine', { pairs });
+export type TapeRead = { len: number | null; wid: number | null; confidence: number; ambiguous: boolean; candidates: { len: number | null; wid: number | null }[] };
+/** Photo of a tape measure on the piece → sizes in cm (system backend reads it; ambiguous reads come back as candidates). */
+export async function scrapReadTape(blob: Blob) {
+  const url = await uploadScrapImage(blob);
+  return sc<TapeRead>('/read-tape', { image: url });
+}
 export const scrapWant = (q: Record<string, unknown>) => sc<{ queued: boolean }>('/want', q);
 
 /** Photo upload for the offcut market: always the system backend (public media endpoint), whatever NEW is. */

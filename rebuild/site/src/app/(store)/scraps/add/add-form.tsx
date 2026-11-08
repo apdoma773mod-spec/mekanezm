@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { scrapAdd, uploadScrapImage as uploadRequestImage } from '@/lib/api';
+import { scrapAdd, scrapReadTape, uploadScrapImage as uploadRequestImage } from '@/lib/api';
 import { shrinkImage } from '@/lib/images';
 import { getMe, saveMe } from '@/lib/me';
 import { ALU_TYPES, CATS, COMMON_THICK, codesFor, SHEET_BRANDS, SHEET_MATERIALS, SOLID_SPECIES, type Cat } from '@/lib/scraps';
@@ -108,6 +108,26 @@ export function AddForm() {
   const [cnt, setCnt] = useState(0), [recent, setRecent] = useState<string[]>([]), [editWho, setEditWho] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const cam = useRef<HTMLInputElement>(null);
+  const tape = useRef<HTMLInputElement>(null);
+  const [cands, setCands] = useState<{ len: number | null; wid: number | null }[]>([]);
+  const fmt = (n: number | null) => (n == null ? '' : String(Math.round(n * 10) / 10));
+  const applyRead = (len: number | null, wid: number | null) => setF(x => ({ ...x, len: fmt(len) || x.len, wid: cat === 'alu' ? x.wid : fmt(wid) || x.wid }));
+  async function readTape(fs: FileList | null) {
+    const x = fs?.[0]; if (!x) return;
+    setCands([]); setMsg('⏳ بقرا المتر من الصورة…');
+    try {
+      const b = await shrinkImage(x, 1600);
+      const r = await scrapReadTape(b);
+      if (!r.ok || !r.data) return setMsg(r.message || 'مقدرتش أقرا المتر — صوّر أقرب وبإضاءة أحسن');
+      const d = r.data;
+      if (!d.ambiguous && d.len) { applyRead(d.len, d.wid); setMsg(`✔ قريت ${fmt(d.len)}${cat !== 'alu' && d.wid ? ' × ' + fmt(d.wid) : ''} سم — راجعه وعدّله لو غلط`); }
+      else {
+        const c = d.candidates.filter(k => k.len);
+        if (!c.length) return setMsg('مش متأكد من القراءة — اكتب المقاس بإيدك أو صوّر تاني أقرب');
+        setCands(c); setMsg('مش متأكد — اختار القراءة الصح:');
+      }
+    } catch { setMsg('مقدرتش أقرا المتر — جرّب تاني'); }
+  }
   useEffect(() => {
     const m = getMe(); setWho(w => ({ ...w, name: m.name, phone: m.phone }));
     try { setWho(w => ({ ...w, area: localStorage.getItem('mk_scrap_area') || '' })); } catch { /* */ }
@@ -236,6 +256,9 @@ export function AddForm() {
           <label>الطول (سم)<input inputMode="decimal" value={f.len} onChange={set('len')} /></label>
           {cat !== 'alu' && <label>العرض (سم)<input inputMode="decimal" value={f.wid} onChange={set('wid')} /></label>}
         </div>
+        <input ref={tape} type="file" accept="image/*" capture="environment" hidden onChange={e => { readTape(e.target.files); e.target.value = ''; }} />
+        <button type="button" className="sc-chip on" onClick={() => tape.current?.click()}>📏 صوّر المتر على الحتة (القراءة أوتوماتيك)</button>
+        {cands.length > 0 && <div className="chips2" style={{ marginTop: 8 }}>{cands.map((k, i) => <button key={i} type="button" className="sc-chip" onClick={() => { applyRead(k.len, k.wid); setCands([]); setMsg('✔ اتحط ' + fmt(k.len) + (cat !== 'alu' && k.wid ? ' × ' + fmt(k.wid) : '') + ' — راجعه'); }}>{fmt(k.len)}{cat !== 'alu' && k.wid ? ' × ' + fmt(k.wid) : ''}</button>)}</div>}
         {cat !== 'alu' && <>
           <button type="button" className="sc-chip" onClick={() => setShowDraw(v => !v)}>{showDraw ? 'اقفل الرسم' : '✏️ ارسم المقاس بصباعك'}</button>
           {showDraw && <DrawBox maxL={cat === 'sheet' ? 244 : 400} maxW={cat === 'sheet' ? 122 : 40} len={num(f.len)} wid={num(f.wid)} onSet={(l, w) => setF(x => ({ ...x, len: String(l), wid: String(w) }))} />}
