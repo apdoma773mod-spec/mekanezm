@@ -156,14 +156,19 @@ function Shell({ children }: { children: ReactNode }) {
   const T = settings.data?.theme;
   useApplyTheme(T);
   const [pro, setPro] = useState(false);
-  useEffect(() => setPro(proOn()), []);
+  // أول رسم لازم يطابق اللي السيرفر رسمه (السيرفر مايعرفش المستخدم المحفوظ في الجهاز) — وإلا React بيرمي الصفحة ويرسمها تاني
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setPro(proOn());
+    setMounted(true);
+  }, []);
   // the old body.emp: staff get the same trimmed screen and an orange user button
   const role = me.data?.role;
   useEffect(() => {
     if (role) document.body.classList.toggle('emp', role !== 'ADMIN');
   }, [role]);
 
-  if (me.isPending) return <Loading />;
+  if (!mounted || me.isPending) return <Loading />;
   if (me.isError) return <ErrorBox message={errorMessage(me.error)} onRetry={() => me.refetch()} />;
 
   const admin = me.data.role === 'ADMIN';
