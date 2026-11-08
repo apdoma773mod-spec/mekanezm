@@ -449,6 +449,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onSearchKey}
+              data-scan="own"
             />
             <button type="button" className="secondary" id="txScan" title="امسح باركود (كل مسحة = قطعة)" aria-label="امسح باركود" onClick={() => setScanning(true)}>
               📷

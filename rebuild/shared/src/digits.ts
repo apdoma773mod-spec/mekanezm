@@ -31,3 +31,27 @@ export function normalizePhone(input: string): string {
 }
 
 export const EG_MOBILE_RE = /^01[0125]\d{8}$/;
+
+/**
+ * باركود اتقري والكيبورد عربي: جهاز الباركود بيدوس نفس زراير الكيبورد، فلو اللغة عربي «P» بتطلع «ح» أو «؛».
+ * ده بيرجّع الحروف لمكانها على الكيبورد الإنجليزي (لوحة Arabic 101 على ويندوز/ماك)، والأرقام العربي لأرقام عادية.
+ */
+const AR_KEYS: Record<string, string> = {
+  ض: 'Q', ص: 'W', ث: 'E', ق: 'R', ف: 'T', غ: 'Y', ع: 'U', ه: 'I', خ: 'O', ح: 'P', ج: '[', د: ']',
+  ش: 'A', س: 'S', ي: 'D', ب: 'F', ل: 'G', ا: 'H', ت: 'J', ن: 'K', م: 'L', ك: ';', ط: "'",
+  ئ: 'Z', ء: 'X', ؤ: 'C', ر: 'V', ى: 'N', ة: 'M', و: ',', ز: '.', ظ: '/',
+  'َ': 'Q', 'ً': 'W', 'ُ': 'E', 'ٌ': 'R', إ: 'Y', '÷': 'I', '×': 'O', '؛': 'P', 'ِ': 'A', 'ٍ': 'S',
+  أ: 'H', 'ـ': 'J', '،': 'K', '~': 'Z', 'ْ': 'X', آ: 'N', '’': 'M', '؟': '/', 'ذ': '`',
+};
+const AR_PAIRS: Record<string, string> = { لا: 'B', لإ: 'T', لأ: 'G', لآ: 'B' };
+
+export function arabicKeysToLatin(input: string): string {
+  let s = normalizeDigits(input);
+  for (const [k, v] of Object.entries(AR_PAIRS)) s = s.split(k).join(v);
+  let out = '';
+  for (const ch of s) out += AR_KEYS[ch] ?? ch;
+  return out;
+}
+
+/** فيه حروف عربي؟ (يعني غالبًا اتكتب والكيبورد عربي) */
+export const hasArabic = (s: string) => /[؀-ۿ]/.test(s);

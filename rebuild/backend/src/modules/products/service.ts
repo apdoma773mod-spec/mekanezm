@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient, type Product } from '@prisma/client';
+import { arabicKeysToLatin, hasArabic } from '@mk/shared';
 import { alertStockAdjust } from '../../lib/alert-hooks.js';
 import type {
   AdjustStockInput,
@@ -142,8 +143,11 @@ export class ProductsService {
 
   /** Exact match on code or barcode, for scanners and typed codes. */
   async lookup(code: string, actor: Actor): Promise<ProductDto> {
+    // الباركود لو اتقري والكيبورد عربي بيوصل «ح0997» أو «؛0997» بدل «P0997»: بندوّر بالاتنين
+    const alt = hasArabic(code) ? arabicKeysToLatin(code) : code;
+    const codes = [...new Set([code.toUpperCase(), alt.toUpperCase()])];
     const p = await this.prisma.product.findFirst({
-      where: { deletedAt: null, OR: [{ code: code.toUpperCase() }, { barcode: code }] },
+      where: { deletedAt: null, OR: [{ code: { in: codes } }, { barcode: { in: [...new Set([code, alt])] } }] },
     });
     if (!p) throw notFound('مفيش صنف بالكود ده');
     return toProductDto(p, isAdmin(actor));

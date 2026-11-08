@@ -288,6 +288,13 @@ function Labels({ all: preAll }: { all?: boolean }) {
   const [size, setSize] = useState('50x30');
   const [price, setPrice] = useState(false);
   const [shop, setShop] = useState(true);
+  // تظبيط مكان الطباعة على الرول (بعض الطابعات بتبدأ أعلى/أوطى شوية): بيتحفظ على الجهاز
+  const [off, setOff] = useState(() => (typeof window === 'undefined' ? 0 : Number(localStorage.getItem('mk_label_off')) || 0));
+  const putOff = (v: number) => {
+    const n = Math.max(-8, Math.min(8, Math.round(v * 2) / 2));
+    setOff(n);
+    localStorage.setItem('mk_label_off', String(n));
+  };
   const [add, setAdd] = useState('');
   const [allN, setAllN] = useState('1');
   const seeded = useRef(false);
@@ -332,10 +339,11 @@ function Labels({ all: preAll }: { all?: boolean }) {
           : '<div class="tx">مفيش كود</div>';
       return `<div class="lb" style="border-top:1.2mm solid ${color}"><div class="sh" style="color:${color};font-weight:800">${shop ? esc(CO_NAME[p.company]) : shopName}</div><div class="nm">${esc(p.name)}</div>${bc}${price ? `<div class="pr">${esc(money(p.price))}</div>` : ''}</div>`;
     };
+    // الملصق كله مالي الورقة: الاسم فوق، والباركود بياخد كل المساحة اللي فاضلة، والكود تحته — مفيش فراغ تحت
     const css = a4
       ? '@page{size:A4;margin:8mm}body{margin:0}.g{display:grid;grid-template-columns:repeat(3,1fr);gap:0}.lb{height:35mm;padding:2mm;box-sizing:border-box;border:1px dashed #ccc}'
-      : `@page{size:${dims[0]}mm ${dims[1]}mm;margin:0}body{margin:0}.lb{width:${dims[0]}mm;height:${dims[1]}mm;padding:1.5mm;box-sizing:border-box;page-break-after:always;overflow:hidden}`;
-    printHtml(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"><title>ملصقات</title><style>${css}*{font-family:Cairo,Tahoma,sans-serif}.lb{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.sh{font-size:7pt;color:#555}.nm{font-size:${a4 ? 9 : 8}pt;font-weight:700;line-height:1.2;max-height:2.4em;overflow:hidden}.bcw{width:95%;display:flex;flex-direction:column;align-items:center}.bc{width:100%;height:${a4 ? 12 : dims[1]! > 28 ? 10 : 7}mm}.bt{font-size:8pt;direction:ltr;line-height:1}.tx{font-size:9pt;direction:ltr}.pr{font-size:9pt;font-weight:800}</style></head><body><div class="${a4 ? 'g' : ''}">${items.map(lab).join('')}</div></body></html>`);
+      : `@page{size:${dims[0]}mm ${dims[1]}mm;margin:0}html,body{margin:0;padding:0}.lb{width:${dims[0]}mm;height:${dims[1]}mm;padding:1mm 1.5mm;box-sizing:border-box;page-break-after:always;overflow:hidden;position:relative;top:${off}mm}`;
+    printHtml(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&display=swap"><title>ملصقات</title><style>${css}*{font-family:Cairo,Tahoma,sans-serif}.lb{display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;gap:.4mm}.sh{font-size:7pt;line-height:1.1}.nm{font-size:${a4 ? 9 : dims[0]! >= 50 ? 9 : 8}pt;font-weight:800;line-height:1.15;max-height:2.3em;overflow:hidden}.bcw{flex:1;min-height:0;width:96%;display:flex;flex-direction:column;align-items:stretch;justify-content:center}.bc{display:block;flex:1;min-height:5mm;width:100%;height:auto}.bt{font-size:${a4 ? 9 : 10}pt;font-weight:800;direction:ltr;line-height:1.05;letter-spacing:.5px}.tx{font-size:9pt;direction:ltr}.pr{font-size:10pt;font-weight:800;line-height:1.1}</style></head><body><div class="${a4 ? 'g' : ''}">${items.map(lab).join('')}</div></body></html>`);
   };
 
   return (
@@ -358,6 +366,16 @@ function Labels({ all: preAll }: { all?: boolean }) {
             <input type="checkbox" checked={shop} onChange={(e) => setShop(e.target.checked)} /> اسم المحل
           </label>
         </div>
+        {size !== 'a4' && (
+          <div className="field">
+            <label>تظبيط مكان الطباعة (لو الكلام طالع لفوق أو لتحت)</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button type="button" className="secondary" onClick={() => putOff(off - 0.5)}>⬆️ لفوق</button>
+              <b style={{ minWidth: 70, textAlign: 'center' }}>{off > 0 ? `${off} مم ⬇️` : off < 0 ? `${-off} مم ⬆️` : 'مظبوط'}</b>
+              <button type="button" className="secondary" onClick={() => putOff(off + 0.5)}>⬇️ لتحت</button>
+            </div>
+          </div>
+        )}
         <div className="field full">
           <label>ضيف أصناف</label>
           <input placeholder="اكتب اسم الصنف..." autoComplete="off" value={add} onChange={(e) => setAdd(e.target.value)} />
