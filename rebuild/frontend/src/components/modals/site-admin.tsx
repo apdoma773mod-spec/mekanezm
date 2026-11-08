@@ -692,8 +692,14 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const secName = secs.find((x) => x.id === f.sec)?.name;
 
   const upload = async (list: FileList | File[] | null) => {
-    const fs = [...(list ?? [])].filter((x) => /^image\//.test(x.type));
-    if (!fs.length) return;
+    const all = [...(list ?? [])];
+    // ويندوز أوقات بيدّي الصورة نوع فاضي (jfif / webp / صور محفوظة من واتساب ويب): نعرفها من الامتداد كمان بدل ما نتجاهلها
+    const fs = all.filter((x) => /^image\//.test(x.type) || /\.(jpe?g|jfif|png|webp|gif|bmp|avif|heic|heif)$/i.test(x.name));
+    if (all.length > fs.length) toast(`${all.length - fs.length} ملف مش صورة اتتجاهل`, 'bad');
+    if (!fs.length) {
+      if (!all.length) toast('ماوصلش أي ملف — جرّب تختار الصور بالزرار بدل السحب', 'bad');
+      return;
+    }
     setBusy((n) => n + 1);
     const got: string[] = [];
     for (let k = 0; k < fs.length; k++) {
@@ -707,6 +713,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     }
     setUp('');
     setBusy((n) => n - 1);
+    if (got.length) toast(`✔ اترفع ${got.length} صورة — لا تنسى تدوس حفظ`);
   };
 
   const newSection = async () => {
