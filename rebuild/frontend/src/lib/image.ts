@@ -21,12 +21,29 @@ export async function fileToDataUrl(file: File, maxSide: number): Promise<string
   } catch {
     // صور الآيفون (HEIC) كروم على الكمبيوتر مابيفتحهاش: نحوّلها لـ JPEG الأول
     if (!isHeic(file)) throw new Error(`الملف "${file.name}" مش صورة المتصفح يعرف يفتحها (${file.type || 'نوع مجهول'}) — صوّرها JPG أو PNG`);
+    // محوّلين: heic-to (libheif أحدث، بيفهم صور الآيفون الجديدة) وبعده heic2any احتياطي
+    const why: string[] = [];
+    let jpg: Blob | null = null;
     try {
-      const { default: heic2any } = await import('heic2any');
-      const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
-      img = await load(Array.isArray(out) ? out[0]! : out);
+      const { heicTo } = await import('heic-to');
+      jpg = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 });
+    } catch (e) {
+      why.push('1:' + String((e as Error)?.message ?? e).slice(0, 60));
+    }
+    if (!jpg) {
+      try {
+        const { default: heic2any } = await import('heic2any');
+        const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+        jpg = Array.isArray(out) ? out[0]! : out;
+      } catch (e) {
+        why.push('2:' + String((e as { message?: string })?.message ?? JSON.stringify(e)).slice(0, 60));
+      }
+    }
+    try {
+      if (!jpg) throw new Error('no');
+      img = await load(jpg);
     } catch {
-      throw new Error(`مقدرتش أحوّل صورة الآيفون "${file.name}" — ابعتها من الآيفون بصيغة JPG (الإعدادات ← الكاميرا ← التنسيقات ← الأكثر توافقًا)`);
+      throw new Error(`مقدرتش أحوّل صورة الآيفون "${file.name}" (${why.join(' | ') || 'decode'}) — ابعتها من الآيفون بصيغة JPG (الإعدادات ← الكاميرا ← التنسيقات ← الأكثر توافقًا)`);
     }
   }
   const scale = Math.min(1, maxSide / Math.max(img.width, img.height));

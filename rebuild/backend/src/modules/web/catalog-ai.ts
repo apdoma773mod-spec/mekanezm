@@ -180,9 +180,11 @@ Return JSON only: {"lines":[{"kind":"h","p1":[y,x],"p2":[y,x]}]}`,
     })
     .catch(() => ({}) as Record<string, [number, number, number, number]>);
 
-export async function geminiJson<T>(key: string, prompt: string, image?: { data: string; mime: string }): Promise<T> {
+export async function geminiJson<T>(key: string, prompt: string, image?: { data: string; mime: string }, opts: { ms?: number; thinking?: string; kind?: string } = {}): Promise<T> {
   const parts = [{ text: prompt }, ...(image ? [{ inline_data: { mime_type: image.mime, data: image.data } }] : [])];
-  const b = await firstWorking('text', TEXT_MODELS, (m) => gemini(key, m, { contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json' } }, 45000)).catch((e) => {
+  // thinking: 'minimal'/'low' = رد أسرع بكتير (للحاجات اللي محتاجة رد في ثواني زي قراءة المتر)
+  const generationConfig = { temperature: 0.1, responseMimeType: 'application/json', ...(opts.thinking ? { thinkingConfig: { thinkingLevel: opts.thinking } } : {}) };
+  const b = await firstWorking(opts.kind ?? 'text', TEXT_MODELS, (m) => gemini(key, m, { contents: [{ parts }], generationConfig }, opts.ms ?? 45000)).catch((e) => {
     throw new Error(friendly(e));
   });
   const t = (b.candidates?.[0]?.content?.parts ?? []).map((x) => x.text || '').join('');
