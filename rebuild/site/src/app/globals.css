@@ -897,3 +897,16 @@ a.tb-cart { display: grid; place-items: center; text-decoration: none; }
 .spin-tabs { display: flex; gap: 6px; justify-content: center; margin: 8px 0 0; }
 .spin-tabs button { border: 1px solid #ccc; background: #fff; border-radius: 16px; padding: 4px 14px; font-size: 14px; }
 .spin-tabs button.on { background: #111; color: #fff; border-color: #111; }
+
+/* scraps add: icon tiles that open one panel at a time (short page) */
+.sc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+.sc-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 1.5px solid var(--line); background: var(--card); border-radius: 16px; padding: 12px 6px; font-family: Cairo, Tahoma, sans-serif; color: var(--fg); min-height: 92px; }
+.sc-tile .ic { font-size: 28px; line-height: 1.1; }
+.sc-tile b { font-size: 14px; }
+.sc-tile small { font-size: 11px; opacity: .7; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-tile.ok { border-color: var(--accent); }
+.sc-tile.ok small { opacity: 1; font-weight: 700; color: var(--accent); }
+.sc-tile.on { background: var(--accent); border-color: var(--accent); color: var(--on-acc, #fff); }
+.sc-tile.on small { color: inherit; opacity: .9; }
+.sc-panel { animation: scp .15s ease-out; }
+@keyframes scp { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }

@@ -103,4 +103,13 @@ export const BRAND_CODES: { match: RegExp; brand: string; codes: string[] }[] = 
   { match: /شرقاو|sharkawy/i, brand: 'الشرقاوي', codes: ['1', '2', '7', '8', '9', '12', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '70', '71', '72', '73', '74', '75', '76', '78', '80', '85', '86', '88', '90', '91', '92', '93', '94', '95', '96', '97', '98', '99', '100', '101', '102', '103'] },
   { match: /توب\s?وود|top\s?wood/i, brand: 'توبوود', codes: ['9009', '3031', '3026', '0310', '6015'] },
 ];
+/** Where each maker publishes its colour catalogue (codes are listed in BRAND_CODES only for the makers we could read). */
+export const BRAND_LINKS: { match: RegExp; name: string; url: string }[] = [
+  { match: /شرقاو|sharkawy/i, name: 'الشرقاوي', url: 'https://counterelsharkawy.com/en/melamine-colors' },
+  { match: /توب\s?وود|top\s?wood/i, name: 'توبوود', url: 'https://top-wood.net' },
+  { match: /جود\s?وود|goodwood/i, name: 'جودوود', url: 'https://goodwood.com.eg' },
+  { match: /egger|إيجر|ايجر/i, name: 'Egger', url: 'https://www.egger.com' },
+  { match: /كرونو|kronospan/i, name: 'كرونوسبان', url: 'https://www.kronospan.com' },
+  { match: /كاستامونو|kastamonu/i, name: 'كاستامونو', url: 'https://www.kastamonu.com' },
+];
 export const codesFor = (brand: string) => BRAND_CODES.find(b => b.match.test(brand))?.codes ?? [];
