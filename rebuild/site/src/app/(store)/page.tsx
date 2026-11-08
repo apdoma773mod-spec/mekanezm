@@ -1,22 +1,20 @@
-import { Categories, Finder, OpenBtn, ProductRow, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
-import { CatalogBanner } from '@/components/catalog-link';
+import { Categories, Finder, Recent, ReqHome, Reveal, Reviews, Works, type Slide } from '@/components/home';
+import { HeroDeck, Services } from '@/components/hero-deck';
+import { ProductCard } from '@/components/product-card';
 import { OpenNow } from '@/components/open-now';
 import { Subscribe } from '@/components/subscribe';
 import { Footer, Header, Socials } from '@/components/site-parts';
 import Link from 'next/link';
 import { getCatalog, getSettings } from '@/lib/catalog';
 import { GUIDES } from '@/lib/guides';
-import { getScraps } from '@/lib/scraps-server';
-import { ago, sizeText, titleOf } from '@/lib/scraps';
 import { SITE_URL } from '@/lib/config';
-import { catalogUrl, deliveryFee, FAQ, MAP_URL, productPath, sectionPath, slidesList, waUrl } from '@/lib/shop';
+import { catalogUrl, deliveryFee, FAQ, MAP_URL, productPath, slidesList, waUrl } from '@/lib/shop';
 
 export const revalidate = 60;
 
 const ROW = 12;
 
 export default async function Home() {
-  const scraps = (await getScraps()).slice(0, 6);
   const [{ site: full, ok, fresh }, site] = await Promise.all([getCatalog(), getSettings()]);
   const P = full.products;
   const cat = catalogUrl(site);
@@ -24,13 +22,10 @@ export default async function Home() {
   const top = P.filter(p => p.top);
   const latest = P.slice(-ROW).reverse();
   const rows = site.sections.map(s => ({ s, ps: P.filter(p => p.sec === s.id) })).filter(r => r.ps.length);
-  const card = (p: (typeof P)[number]) => ({ p, ok: ok(p), fresh: fresh(p) });
   const byId = new Map(P.map(p => [p.img, p.id]));
   const slides: Slide[] = slidesList(full).map(s => ({ ...s, href: s.c && byId.get(s.img) ? productPath(byId.get(s.img)!) : '/search' }));
-  const trust = site.trust?.filter(Boolean).length ? site.trust : [
-    ...(site.delivery.length ? ['🚚 توصيل'] : []), ...(site.policy.trim() ? ['🔁 استبدال'] : []),
-    ...(site.works.length ? ['🏗️ أعمال حقيقية'] : []),
-  ];
+  const shown = [...top, ...latest.filter(p => !p.top), ...P.filter(p => !p.top && !latest.includes(p))].slice(0, 12);
+  const best = [...top, ...latest.filter(p => !p.top)].slice(0, 8).map(p => ({ p, ok: ok(p) }));
   const ld = [
     {
       '@context': 'https://schema.org', '@type': 'HardwareStore', name: site.name, description: site.tagline, telephone: site.phone,
@@ -49,41 +44,16 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
-      <Header site={site} slides={slides} />
+      <Header site={site}><HeroDeck best={best} photos={slides} /></Header>
       <main id="main">
-        <CatalogBanner />
         <Categories />
-        <nav className="qtools" aria-label="أدوات">
-          <Link href="/kits"><span>🧰</span><b>أطقم جاهزة</b><small>جهّز مطبخك أو دولابك</small></Link>
-          <Link href="/tools"><span>🧮</span><b>حاسبات النجار</b><small>الدراعات القلاب، المفصلات، المجرى</small></Link>
-          <Link href="/works"><span>🏗️</span><b>من شغلنا</b><small>صور حقيقية</small></Link>
-          <Link href="/brands"><span>🏷️</span><b>البراندات</b><small>بلوم، جراس، هيتتش، ويل ماكس</small></Link>
-          <Link href="/directions" className="wide"><span>🗺️</span><b>خريطة: تجيلنا إزاي</b><small>الطريق خطوة بخطوة من جامعة الدول والدائري</small></Link>
-        </nav>
-        {top.length > 0 && <ProductRow id="top-row" title="⭐ الأكثر طلباً" href="/search?top=1" items={top.slice(0, ROW).map(card)} total={top.length} priority />}
-        {rows.map(({ s, ps }, i) => (
-          <ProductRow key={s.id} id={'r-' + s.id} title={s.name} href={sectionPath(s.id)} items={ps.slice(0, ROW).map(card)} total={ps.length} priority={!top.length && i === 0} />
-        ))}
-        {P.length > 0 && <ProductRow id="new-row" title="🆕 وصل حديثاً" href="/search?sort=new" items={latest.map(card)} total={P.length} />}
+        <section className="blk" id="prods">
+          <div className="sh"><h2>المنتجات</h2></div>
+          <div className="grid">{shown.map((p, k) => <ProductCard key={p.id} p={p} ok={ok(p)} fresh={fresh(p)} priority={k < 2} />)}</div>
+          {P.length > shown.length && <Link className="more" href="/search">شوف كل المنتجات ({P.length}) ←</Link>}
+        </section>
         <Recent />
-
-        {trust.length > 0 && <div className="trust">{trust.map(t => <span key={t}>{t}</span>)}</div>}
-        {cat && <a className="catbtn" href={cat} target="_blank" rel="noopener">📒 شوف كتالوجنا على واتساب</a>}
-        <OpenBtn modal={{ kind: 'ship' }} className="homebtn">
-          <span className="i">🚚</span><span><b>توصيل القاهرة والجيزة • شحن لكل المحافظات</b><small>اختار طريقة الاستلام وانت بتبعت طلبك</small></span><span className="go">التفاصيل ←</span>
-        </OpenBtn>
-        <OpenBtn modal={{ kind: 'track' }} className="homebtn trk">
-          <span className="i">📦</span><span><b>تتبّع طلبك</b><small>اعرف طلبك وصل لفين برقم موبايلك</small></span>
-        </OpenBtn>
-        <div className="mkhow">
-          <div><b>🛒</b><span>اختار</span><small>ضيف للطلب</small></div>
-          <div><b>💬</b><span>أكّد</span><small>على الواتساب</small></div>
-          <div><b>🚚</b><span>استلم</span><small>توصيل أو من المحل</small></div>
-        </div>
-        <a className="cust" href="/custom">
-          <i>🛠️</i>
-          <div><b>تجهيز المنتجات بمقاسك</b><span>استانلس حماية الباب • درج بامبو • دلف دريسنج روم — اكتب المقاسات واشوف الرسمة واطلب</span></div>
-        </a>
+        <Services waCatalog={cat || undefined} />
         <Finder />
         <ReqHome />
         <Works />
@@ -92,10 +62,6 @@ export default async function Home() {
           <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
-        {scraps.length > 0 && <section className="mkp" aria-labelledby="sl-h"><h2 id="sl-h">♻️ أحدث الفضلات</h2><div className="glist">{scraps.map(s => <Link key={s.id} href="/scraps"><b>{titleOf(s)}</b><small>{sizeText(s)} · {ago(s.created_at)}</small></Link>)}</div></section>}
-        <Link className="scrap-tile" href="/scraps" aria-label="فضلة"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="14" width="48" height="36" rx="4" fill="#d9b98a" stroke="#fff" strokeWidth="3"/><path d="M8 28h34M24 14v36" stroke="#fff" strokeWidth="2" strokeDasharray="4 4" fill="none"/><path d="M44 50l12-12" stroke="#fff" strokeWidth="3"/></svg><b>فضلة</b></Link>
-        <Link className="trade-strip help-strip" href="/help"><span>🙋</span><b>محتاج حد ينفّذ الشغل؟</b><small>احكيلنا محتاج إيه ونرشّحلك نجار أو مهندس مستقل</small></Link>
-        <Link className="trade-strip" href="/trade"><span>🧰</span><b>نجار أو تاجر؟</b><small>سجّل ورشتك أو محلك واحصل على أسعار جملة</small></Link>
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
           <section className="blk" id="info">
             <div className="sh"><h2>🚚 التوصيل والاستبدال</h2></div>

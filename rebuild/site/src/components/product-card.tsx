@@ -34,7 +34,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
   return (
     <div className="card">
       <div className="imw lq" style={lqip(img)}>
-        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:600px) 92vw, (max-width:1000px) 46vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
+        {img ? <Image src={img} alt={p.name} fill sizes="(max-width:600px) 48vw, (max-width:1000px) 32vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
         {/* Second photo fades in on hover (desktop only, loaded lazily). */}
         {all[1] && <Image className="alt" src={all[1]} alt="" fill sizes="340px" loading="lazy" />}
         {(p.brand || all.length > 1) && (

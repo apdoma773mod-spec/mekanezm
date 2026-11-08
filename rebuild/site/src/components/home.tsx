@@ -125,7 +125,7 @@ export function Categories({ current }: { current?: string }) {
   return (
     <section className="blk" id="cats">
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" dangerouslySetInnerHTML={{ __html: ART_DEFS }} />
-      <div className="sh"><h2>تسوق حسب التصنيف</h2></div>
+      <div className="sh"><h2>تصفح حسب التصنيف</h2></div>
       <div className="tiles">
         {visibleSections(site).map(s => (
           <Link key={s.id} href={sectionPath(s.id)} className={'tile' + (current === s.id ? ' on' : '')} aria-current={current === s.id ? 'page' : undefined}>

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import type { Settings } from '@/lib/schema';
 import { catalogUrl, shopPhones, waUrl } from '@/lib/shop';
 import { SOCIAL_ICONS, SOCIAL_NAMES } from '@/lib/social-icons';
-import { OpenBtn, Slider, type Slide } from './home';
+import type { ReactNode } from 'react';
+import { OpenBtn } from './home';
 import { CatalogFooterLink } from './catalog-link';
 import { OpenNow } from './open-now';
 
@@ -35,12 +36,12 @@ function Ticker({ text }: { text: string }) {
   );
 }
 
-export function Header({ site, slides }: { site: Settings; slides: Slide[] }) {
+export function Header({ site, children }: { site: Settings; children?: ReactNode }) {
   const pr = site.promo.trim();
   return (
     <header id="top">
       {site.logo && <Image className="logo-banner" src={site.logo} alt={site.name} width={1200} height={480} priority sizes="100vw" />}
-      <Slider slides={slides} />
+      {children}
       {pr && <Ticker text={pr} />}
     </header>
   );
