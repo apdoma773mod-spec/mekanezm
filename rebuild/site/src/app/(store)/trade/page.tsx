@@ -17,7 +17,7 @@ export default async function Trade() {
       <main id="main" className="page narrow">
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><span>الجملة</span></nav>
         <h1 className="page-h">🧰 أسعار خاصة للنجارين والتجار</h1>
-        <div className="info-cards">
+        <details className="fold"><summary>ليه تسجّل؟ وبيمشي إزاي؟</summary><div className="info-cards">
           <div>
             <h2>ليه تسجّل معانا؟</h2>
             <ul style={{ margin: 0, paddingInlineStart: 20 }}>
@@ -35,7 +35,7 @@ export default async function Trade() {
               <li><b>حسابك يتفعّل</b><span>وتاخد أسعار الجملة على رقمك</span></li>
             </ol>
           </div>
-        </div>
+        </div></details>
         <TradeForm />
         <p className="mut" style={{ marginTop: 12 }}>عندك الأكواد؟ <Link href="/quick">اطلب بالكود على طول</Link>.</p>
       </main>

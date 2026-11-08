@@ -24,7 +24,7 @@ export default async function Home() {
   const rows = site.sections.map(s => ({ s, ps: P.filter(p => p.sec === s.id) })).filter(r => r.ps.length);
   const byId = new Map(P.map(p => [p.img, p.id]));
   const slides: Slide[] = slidesList(full).map(s => ({ ...s, href: s.c && byId.get(s.img) ? productPath(byId.get(s.img)!) : '/search' }));
-  const shown = [...top, ...latest.filter(p => !p.top), ...P.filter(p => !p.top && !latest.includes(p))].slice(0, 12);
+  const shown = [...top, ...latest.filter(p => !p.top), ...P.filter(p => !p.top && !latest.includes(p))].slice(0, 8);
   const best = [...top, ...latest.filter(p => !p.top)].slice(0, 8).map(p => ({ p, ok: ok(p) }));
   const ld = [
     {
@@ -59,7 +59,7 @@ export default async function Home() {
         <Works />
         <section className="mkp" aria-labelledby="gd-h">
           <h2 id="gd-h">📘 قبل ما تشتري: دليل الاختيار</h2>
-          <div className="glist">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
+          <div className="glist hrow">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
         {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (

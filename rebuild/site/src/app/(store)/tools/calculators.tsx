@@ -1,7 +1,7 @@
 'use client';
 // Quick calculators for carpenters and customers. Each answer links to matching products.
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { hingesFor } from '@/lib/custom-draw';
 
 const n = (s: string) => Number(String(s).replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[^\d.]/g, '')) || 0;
@@ -78,6 +78,21 @@ function Corner() {
   );
 }
 
+const TABS: { id: string; t: string; C: () => React.JSX.Element }[] = [
+  { id: 'hinges', t: '🔩 المفصلات', C: Hinges }, { id: 'slides', t: '🗃️ المجرى', C: Slides }, { id: 'drawer', t: '📐 عرض الدرج', C: DrawerWidth },
+  { id: 'sliding', t: '🚪 الجرار', C: Sliding }, { id: 'corner', t: '🌀 الكورنر', C: Corner },
+];
+/** Tabs: one calculator on screen at a time instead of five stacked. */
 export function Calculators() {
-  return <div className="calcs"><Hinges /><Slides /><DrawerWidth /><Sliding /><Corner /></div>;
+  const [tab, setTab] = useState('hinges');
+  useEffect(() => { const h = location.hash.slice(1); if (TABS.some(t => t.id === h)) setTab(h); }, []);
+  const T = TABS.find(t => t.id === tab) || TABS[0];
+  return (
+    <>
+      <div className="chips ctabs" role="tablist" aria-label="الحاسبات">
+        {TABS.map(x => <button key={x.id} type="button" role="tab" aria-selected={x.id === T.id} className={x.id === T.id ? 'on' : ''} onClick={() => setTab(x.id)}>{x.t}</button>)}
+      </div>
+      <div className="calcs"><T.C /></div>
+    </>
+  );
 }

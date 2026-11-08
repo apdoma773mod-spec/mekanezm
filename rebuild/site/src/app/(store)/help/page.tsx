@@ -20,7 +20,7 @@ export default async function Help() {
       <main id="main" className="page narrow">
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><span>محتاج حد ينفّذ؟</span></nav>
         <h1 className="page-h">🙋 محتاج حد ينفّذ الشغل؟</h1>
-        <div className="info-cards" style={{ marginBottom: 12 }}>
+        <details className="fold"><summary>إحنا مين وبنساعدك إزاي؟</summary><div className="info-cards" style={{ marginBottom: 12 }}>
           <div>
             <h2>الأول، إحنا مين وبنعمل إيه؟</h2>
             ميكانيزم بتبيع <b>الإكسسوارات والخامات</b> بس. <b>مبنركّبش ومبنشتغلش بنفسنا، ومعندناش فنيين ولا صنايعية تبعنا.</b> علشان كده لو بتعمل حاجة جديدة أو محتاج تصلّح أو تغيّر حاجة في بيتك، بنساعدك نوصل لحد يعملهالك.
@@ -29,7 +29,7 @@ export default async function Help() {
             <h2>بنساعدك إزاي؟</h2>
             احكيلنا محتاج إيه (تنفيذ جديد، تغيير أو إصلاح، تصميم، أو أي حاجة تانية) وفي أنهي منطقة، وبنرشّحلك نجارين ومهندسين <b>مستقلين</b> راجعنا شغلهم. بتكلمهم مباشرة وتتفق معاهم على السعر والميعاد، وإحنا مش طرف في الاتفاق. وكمان بنقولك على الإكسسوارات المناسبة لشغلك لو حبيت.
           </div>
-        </div>
+        </div></details>
         <HelpForm pros={pros} />
       </main>
       <Footer site={site} />
