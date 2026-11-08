@@ -21,6 +21,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const T = `window.mkzSmart._test`;
   console.log('inject:', await ev(`(()=>{const T=${T};T.setV(window.__tv);T.setD({title:'الدرج الصامت أحسن من العادي',dur:6,seg:[{s:.2,e:1.6,t:'ليه الدرج الصامت أحسن من العادي؟',kw:['الدرج']},{s:1.8,e:3,t:'يعني سعره ٣٥٠ جنيه بس'},{s:3.2,e:4.6,t:'المفصلة سوفت كلوز بتقفل لوحدها مستحيل تخبط'},{s:4.8,e:5.8,t:'اطلب دلوقتي من ميكانيزم'}],ev:[],vad:[[.2,1.6],[1.8,3],[3.2,4.6],[4.8,5.8]],ch:[[0,6]],loud:{db:-20,gain:1.6},peak:.5,cs:2,rt:1});
     document.getElementById('sm_res').style.display='block';T.setup();T.build();return 'ok'})()`));
+  await sleep(900);console.log('sticky:',await ev(`(()=>{const w=document.getElementById('sm_stk'),c=document.getElementById('sm_cv');if(!w)return 'no wrapper';const r=c.getBoundingClientRect();return JSON.stringify({on:w.classList.contains('on'),pos:getComputedStyle(w).position,canvasInWrap:w.contains(c),h:Math.round(r.height),w:Math.round(r.width)})})()`));
   // شغّل كل اللمسات
   console.log('toggle fx:', await ev(`(()=>{const b=[...document.querySelectorAll('#sm_p2_fx [data-px]')];b.forEach(x=>x.click());return document.querySelectorAll('#sm_p2_fx .on').length})()`));
   for (const t of [0.05, 0.9, 2.2, 3.3, 4.0, 5.6, 5.95]) {

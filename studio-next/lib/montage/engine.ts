@@ -1461,7 +1461,18 @@ function pro2UI(){const a=$s('sm_pro');if(!a||$s('sm_pro2'))return;if(!document.
    const files=[bl&&new File([bl],nm+'-غلاف.jpg',{type:'image/jpeg'}),new File(['تيك توك:\n'+C.tt+'\n\nإنستجرام:\n'+C.ig+'\n\nفيسبوك:\n'+C.fb+'\n\nيوتيوب:\n'+C.yt+'\n'],nm+'-كابشن.txt',{type:'text/plain'}),new File(['﻿'+toSrt(CAP,outT)],nm+'.srt',{type:'application/x-subrip'})].filter(Boolean);
    p2Out('✅ الحزمة جاهزة: غلاف + كابشن ٤ منصات + ترجمة SRT <button class="b" id="sm_p2_pk" style="width:100%;margin-top:6px">📤 شارك / نزّل الحزمة</button>');$s('sm_p2_pk').onclick=async()=>{try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return}}catch(x){if(x&&x.name==='AbortError')return}files.forEach(f=>dlBlob(f,f.name))}}}}
 
-const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI();pro2UI()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
+/* ---------- 📌 معاينة ثابتة فوق: تختار أي شكل/قالب/لمسة وتشوفها قدامك من غير ما تطلع وتنزل ---------- */
+const STK_CSS=`#sm_stk{display:none;position:sticky;top:env(safe-area-inset-top,0px);z-index:7;background:var(--bg);padding:6px 0 8px;margin:0 0 8px;border-bottom:1px solid var(--ln);text-align:center}
+#sm_stk.on{display:block}#sm_stk #sm_cv{width:auto!important;max-width:100%!important;height:36vh!important;max-height:none!important;margin:0 auto;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+#sm_stk>div{margin-top:6px!important}#sm_stk .b{min-height:40px;padding:4px 12px}
+@media(min-width:960px){#sm_stk #sm_cv{height:52vh!important}}`;
+function stkPrev(){const root=$s('v-smart'),cv=$s('sm_cv');if(!root||!cv)return;
+ if(!document.getElementById('stk-css')){const st=document.createElement('style');st.id='stk-css';st.textContent=STK_CSS;document.head.appendChild(st)}
+ if(!$s('sm_stk')){const row=cv.nextElementSibling,card=cv.closest('.p'),w=document.createElement('div');w.id='sm_stk';
+  const anchor=root.querySelector('.tl-g')||$s('sm_go');if(!anchor)return;anchor.before(w);w.appendChild(cv);if(row)w.appendChild(row);
+  if(card){const h=card.querySelector('h2');if(h)h.textContent='٣) التصدير والأدوات'}}
+ const show=()=>{const w=$s('sm_stk');if(!w){clearInterval(window.__stkT);return}w.classList.toggle('on',!!(D&&V&&CV))};show();clearInterval(window.__stkT);window.__stkT=setInterval(show,500)}
+const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI();pro2UI();stkPrev()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
 window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null}),_test:{build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
