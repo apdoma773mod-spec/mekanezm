@@ -150,7 +150,7 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
     kind: (cur?.dir?.kind ? normKind(cur.dir.kind) : kindFromName(cur?.name ?? '')) as HandKind, media: cur?.dir?.media ?? '',
     pairCode: all.find(x => x.id === cur?.dir?.pair)?.code ?? '', note: cur?.dir?.note ?? '',
   }));
-  const [busy, setBusy] = useState(false), [msg, setMsg] = useState(''), [vidPct, setVidPct] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false), [msg, setMsg] = useState(''), [vidPct, setVidPct] = useState<string | null>(null);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF(x => ({ ...x, [k]: v }));
   // fill from the system once, only what is empty here (never overwrites what was written on the site)
   const filled = useRef('');
@@ -267,10 +267,10 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
       </Fold>
       <Fold title={<>🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small></>}><input dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=…" onChange={e => set('video', e.target.value)} />
         <label style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
-          {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ بيترفع… ${vidPct}%`}
+          {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ ${vidPct}`}
           <input type="file" accept="video/*" hidden disabled={vidPct != null} onChange={e => {
             const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
-            setVidPct(0);
+            setVidPct('بيبدأ…');
             uploadSiteVideo(file, setVidPct).then(url => { set('video', url); setMsg('✔ الفيديو اترفع'); }).catch(err => setMsg(err instanceof Error ? err.message : 'الفيديو مارفعش')).finally(() => setVidPct(null));
           }} />
         </label>

@@ -615,7 +615,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [over, setOver] = useState(false);
   const [dimMsg, setDimMsg] = useState('');
   const [dimPick, setDimPick] = useState('');
-  const [vidPct, setVidPct] = useState<number | null>(null);
+  const [vidPct, setVidPct] = useState<string | null>(null);
   const [dimErr, setDimErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const p = prod.data;
@@ -1017,7 +1017,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
             </h3>
             <input id="eVid" dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => set({ video: e.target.value })} />
             <label className="secondary" style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
-              {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ بيترفع… ${vidPct}%`}
+              {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ ${vidPct}`}
               <input
                 type="file"
                 accept="video/*"
@@ -1027,7 +1027,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                   const file = e.target.files?.[0];
                   e.target.value = '';
                   if (!file) return;
-                  setVidPct(0);
+                  setVidPct('بيبدأ…');
                   uploadSiteVideo(file, setVidPct)
                     .then((url) => {
                       set({ video: url });
