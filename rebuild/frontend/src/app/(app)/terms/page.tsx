@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useShowMore } from '@/components/ui/tiles';
 import type { ContactDto, Paginated } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { Loading } from '@/components/ui/states';
@@ -41,8 +42,9 @@ function TermsTable() {
     const L = (customers ?? []).filter((c) => !nq || norm(c.name).includes(nq) || String(c.phone || '').includes(q));
     const withT = L.filter((c) => termsFor(T, c.name));
     const rest = L.filter((c) => !termsFor(T, c.name));
-    return { all: [...withT, ...rest].slice(0, 150), withT: withT.length };
+    return { all: [...withT, ...rest], withT: withT.length };
   }, [customers, terms.data, q]);
+  const { shown: shownT, more: moreT } = useShowMore(list.all, 30, q);
 
   const commit = async (name: string, patch: (t: CustTerm) => CustTerm) => {
     const T: CustTerms = { ...(terms.data ?? {}) };
@@ -84,7 +86,7 @@ function TermsTable() {
                 <td colSpan={6}>مفيش عملاء</td>
               </tr>
             )}
-            {list.all.map((c) => {
+            {shownT.map((c) => {
               const t = termsFor(T, c.name)?.t ?? {};
               const bal = c.balance || 0;
               const over = !!(t.limit && bal >= t.limit);
@@ -133,6 +135,7 @@ function TermsTable() {
             })}
           </tbody>
         </table>
+        {moreT}
       </div>
     </>
   );

@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { fileToDataUrl } from '@/lib/image';
 import { uploadSiteVideo } from '@/lib/video-upload';
+import { Tile, Tiles } from '@/components/ui/tiles';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
 import { useProduct } from '@/lib/trade-queries';
 import { useModal } from './modal-host';
@@ -877,201 +878,211 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
               </p>
             )}
           </div>
-          <div className="sec">
-            <h3>
-              📷 الصور <small>أول صورة هي اللي بتظهر في الكارت — رتّبهم بالأسهم</small>
-            </h3>
-            <div
-              className={`drop${over ? ' over' : ''}`}
-              id="eDrop"
-              onClick={() => fileRef.current?.click()}
-              onDragEnter={(e) => (e.preventDefault(), setOver(true))}
-              onDragOver={(e) => (e.preventDefault(), setOver(true))}
-              onDragLeave={(e) => (e.preventDefault(), setOver(false))}
-              onDrop={(e) => {
-                e.preventDefault();
-                setOver(false);
-                void upload(e.dataTransfer.files);
-              }}
-            >
-              📷 دوس هنا تضيف صور، أو اسحبها وارميها هنا
-              <br />
-              <small style={{ fontWeight: 400 }}>ممكن تختار كذا صورة مرة واحدة — بتتصغّر وتترفع لوحدها</small>
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              id="eFile"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={(e) => {
-                void upload(e.target.files);
-                e.target.value = '';
-              }}
-            />
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
-            <div style={{ margin: '8px 0', padding: 10, borderRadius: 12, background: '#fff8e8', border: '1px solid #f0d98a' }}>
-              <b>📐 صورة المقاسات</b>
-              <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>
-                السيستم بيختار أوضح صورة من صور المنتج زي ما هي ويرسم عليها أسهم المقاسات — وبتتحط أول صورة. بتتعمل أوتوماتيك لما تحفظ.
-              </div>
-              {(() => {
-                const bx = readDimBoxes(f.dimTxt) ?? {};
-                const put = (k: keyof Dims, v: string) => set({ dimTxt: JSON.stringify({ ...bx, [k]: v }) });
-                const box = ([k, label]: [keyof Dims, string]) => (
-                  <label key={k} style={{ display: 'block', fontSize: 13 }}>
-                    {label} (سم)
-                    <input inputMode="decimal" value={bx[k] ?? ''} placeholder="سيبها فاضية لو مفيش" onChange={(e) => put(k, e.target.value)} style={{ width: '100%' }} />
-                  </label>
-                );
-                return (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(0, 4).map(box)}</div>
-                    <div style={{ fontWeight: 700, fontSize: 13, margin: '8px 0 2px' }}>لو المنتج له قاعدة:</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(4).map(box)}</div>
-                  </>
-                );
-              })()}
-              {(() => {
-                const pool = f.imgs.filter((u) => u !== f.dimImg);
-                const cur = pool.includes(dimPick) ? dimPick : pool[0] ?? '';
-                return pool.length ? (
-                  <div style={{ margin: '8px 0' }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>دوس على الصورة اللي تتعمل عليها المقاسات (من غير المتر):</div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={cur} alt="الصورة المختارة" style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 12, border: '3px solid #1e8e3e', background: '#f4efe8', marginBottom: 8 }} />
-                    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                      {pool.map((u) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={u} src={u} alt="" onClick={() => setDimPick(u)} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10, flex: '0 0 auto', cursor: 'pointer', border: u === cur ? '4px solid #1e8e3e' : '2px solid var(--border)' }} />
-                      ))}
-                    </div>
+          <Tiles id="siteEditor" cols={2} defaultOpen={isNew || !f.imgs.length ? "photos" : ""}>
+            <Tile k="photos" icon="📷" title="الصور والمقاسات" sub={`${f.imgs.length} صورة`}>
+              <div className="sec">
+                <h3>
+                  📷 الصور <small>أول صورة هي اللي بتظهر في الكارت — رتّبهم بالأسهم</small>
+                </h3>
+                <div
+                  className={`drop${over ? ' over' : ''}`}
+                  id="eDrop"
+                  onClick={() => fileRef.current?.click()}
+                  onDragEnter={(e) => (e.preventDefault(), setOver(true))}
+                  onDragOver={(e) => (e.preventDefault(), setOver(true))}
+                  onDragLeave={(e) => (e.preventDefault(), setOver(false))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setOver(false);
+                    void upload(e.dataTransfer.files);
+                  }}
+                >
+                  📷 دوس هنا تضيف صور، أو اسحبها وارميها هنا
+                  <br />
+                  <small style={{ fontWeight: 400 }}>ممكن تختار كذا صورة مرة واحدة — بتتصغّر وتترفع لوحدها</small>
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  id="eFile"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    void upload(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
+                <div style={{ margin: '8px 0', padding: 10, borderRadius: 12, background: '#fff8e8', border: '1px solid #f0d98a' }}>
+                  <b>📐 صورة المقاسات</b>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>
+                    السيستم بيختار أوضح صورة من صور المنتج زي ما هي ويرسم عليها أسهم المقاسات — وبتتحط أول صورة. بتتعمل أوتوماتيك لما تحفظ.
                   </div>
-                ) : null;
-              })()}
-              <button type="button" className="secondary" id="eDimBtn" style={{ marginTop: 6 }} disabled={!!dimMsg} onClick={() => void regenDim()}>
-                🪄 اعملها دلوقتي
-              </button>
-              <span style={{ fontSize: 13, marginInlineStart: 8 }}>{dimMsg}</span>
-              {dimErr && <div style={{ fontSize: 13, marginTop: 6, color: '#c0392b', fontWeight: 700 }}>{dimErr}</div>}
-              {f.dimImg && f.imgs.includes(f.dimImg) && (
-                <a href={f.dimImg} target="_blank" rel="noopener" style={{ display: 'block', marginTop: 10 }}>
-                  <img src={f.dimImg} alt="صورة المقاسات" style={{ width: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 12, border: '1px solid var(--border)', background: '#fff' }} />
-                </a>
-              )}
-            </div>
-            <div className="ig" id="eImgs">
-              {f.imgs.length ? (
-                f.imgs.map((u, i) => (
-                  <div key={u + i} className={`it${i ? '' : ' main'}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={u} alt="" loading="lazy" />
-                    <div className="ctl">
-                      <button type="button" title="شيل" style={{ color: '#c0392b' }} onClick={() => set({ imgs: f.imgs.filter((_, k) => k !== i) })}>
+                  {(() => {
+                    const bx = readDimBoxes(f.dimTxt) ?? {};
+                    const put = (k: keyof Dims, v: string) => set({ dimTxt: JSON.stringify({ ...bx, [k]: v }) });
+                    const box = ([k, label]: [keyof Dims, string]) => (
+                      <label key={k} style={{ display: 'block', fontSize: 13 }}>
+                        {label} (سم)
+                        <input inputMode="decimal" value={bx[k] ?? ''} placeholder="سيبها فاضية لو مفيش" onChange={(e) => put(k, e.target.value)} style={{ width: '100%' }} />
+                      </label>
+                    );
+                    return (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(0, 4).map(box)}</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, margin: '8px 0 2px' }}>لو المنتج له قاعدة:</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{DIM_FIELDS.slice(4).map(box)}</div>
+                      </>
+                    );
+                  })()}
+                  {(() => {
+                    const pool = f.imgs.filter((u) => u !== f.dimImg);
+                    const cur = pool.includes(dimPick) ? dimPick : pool[0] ?? '';
+                    return pool.length ? (
+                      <div style={{ margin: '8px 0' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>دوس على الصورة اللي تتعمل عليها المقاسات (من غير المتر):</div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cur} alt="الصورة المختارة" style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 12, border: '3px solid #1e8e3e', background: '#f4efe8', marginBottom: 8 }} />
+                        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                          {pool.map((u) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={u} src={u} alt="" onClick={() => setDimPick(u)} style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 10, flex: '0 0 auto', cursor: 'pointer', border: u === cur ? '4px solid #1e8e3e' : '2px solid var(--border)' }} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                  <button type="button" className="secondary" id="eDimBtn" style={{ marginTop: 6 }} disabled={!!dimMsg} onClick={() => void regenDim()}>
+                    🪄 اعملها دلوقتي
+                  </button>
+                  <span style={{ fontSize: 13, marginInlineStart: 8 }}>{dimMsg}</span>
+                  {dimErr && <div style={{ fontSize: 13, marginTop: 6, color: '#c0392b', fontWeight: 700 }}>{dimErr}</div>}
+                  {f.dimImg && f.imgs.includes(f.dimImg) && (
+                    <a href={f.dimImg} target="_blank" rel="noopener" style={{ display: 'block', marginTop: 10 }}>
+                      <img src={f.dimImg} alt="صورة المقاسات" style={{ width: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 12, border: '1px solid var(--border)', background: '#fff' }} />
+                    </a>
+                  )}
+                </div>
+                <div className="ig" id="eImgs">
+                  {f.imgs.length ? (
+                    f.imgs.map((u, i) => (
+                      <div key={u + i} className={`it${i ? '' : ' main'}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={u} alt="" loading="lazy" />
+                        <div className="ctl">
+                          <button type="button" title="شيل" style={{ color: '#c0392b' }} onClick={() => set({ imgs: f.imgs.filter((_, k) => k !== i) })}>
+                            ✕
+                          </button>
+                          <span>
+                            {i > 0 && (
+                              <button type="button" title="قدّم" onClick={() => mv(i - 1, i)}>
+                                ▶
+                              </button>
+                            )}
+                            {i < f.imgs.length - 1 && (
+                              <button type="button" title="أخّر" onClick={() => mv(i, i + 1)}>
+                                ◀
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                        {i ? (
+                          <button type="button" style={{ position: 'absolute', bottom: 4, right: 4, fontSize: 11, borderRadius: 8, padding: '1px 6px', border: 0, background: '#fffe' }} onClick={() => set({ imgs: [f.imgs[i]!, ...f.imgs.filter((_, k) => k !== i)] })}>
+                            ⭐ أساسية
+                          </button>
+                        ) : (
+                          <span className="tag">الأساسية</span>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <small style={{ color: 'var(--muted)' }}>لسه مفيش صور</small>
+                  )}
+                </div>
+              </div>
+            </Tile>
+            <Tile k="desc" icon="📋" title="الوصف والمواصفات" sub={f.sp.filter((x) => x[0].trim()).length ? `${f.sp.filter((x) => x[0].trim()).length} مواصفة` : ''}>
+              <div className="sec">
+                <h3>📋 الوصف والمواصفات</h3>
+                <label className="l">وصف قصير (بيظهر في صفحة المنتج)</label>
+                <textarea id="eTxt" rows={3} value={f.txt} placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج" onChange={(e) => set({ txt: e.target.value })} />
+                <label className="l">المواصفات</label>
+                <div id="eSpecs">
+                  {f.sp.map((x, i) => (
+                    <div key={i} className="spec">
+                      <input value={x[0]} placeholder="مثلاً: المقاس" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [e.target.value, y[1]] : y)) })} />
+                      <input value={x[1]} placeholder="مثلاً: 50 سم" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [y[0], e.target.value] : y)) })} />
+                      <button type="button" onClick={() => set({ sp: f.sp.filter((_, j) => j !== i) })}>
                         ✕
                       </button>
-                      <span>
-                        {i > 0 && (
-                          <button type="button" title="قدّم" onClick={() => mv(i - 1, i)}>
-                            ▶
-                          </button>
-                        )}
-                        {i < f.imgs.length - 1 && (
-                          <button type="button" title="أخّر" onClick={() => mv(i, i + 1)}>
-                            ◀
-                          </button>
-                        )}
-                      </span>
                     </div>
-                    {i ? (
-                      <button type="button" style={{ position: 'absolute', bottom: 4, right: 4, fontSize: 11, borderRadius: 8, padding: '1px 6px', border: 0, background: '#fffe' }} onClick={() => set({ imgs: [f.imgs[i]!, ...f.imgs.filter((_, k) => k !== i)] })}>
-                        ⭐ أساسية
-                      </button>
-                    ) : (
-                      <span className="tag">الأساسية</span>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <small style={{ color: 'var(--muted)' }}>لسه مفيش صور</small>
-              )}
-            </div>
-          </div>
-          <div className="sec">
-            <h3>📋 الوصف والمواصفات</h3>
-            <label className="l">وصف قصير (بيظهر في صفحة المنتج)</label>
-            <textarea id="eTxt" rows={3} value={f.txt} placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج" onChange={(e) => set({ txt: e.target.value })} />
-            <label className="l">المواصفات</label>
-            <div id="eSpecs">
-              {f.sp.map((x, i) => (
-                <div key={i} className="spec">
-                  <input value={x[0]} placeholder="مثلاً: المقاس" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [e.target.value, y[1]] : y)) })} />
-                  <input value={x[1]} placeholder="مثلاً: 50 سم" onChange={(e) => set({ sp: f.sp.map((y, j) => (j === i ? [y[0], e.target.value] : y)) })} />
-                  <button type="button" onClick={() => set({ sp: f.sp.filter((_, j) => j !== i) })}>
-                    ✕
-                  </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <button type="button" className="secondary" id="eAddSp" style={{ marginTop: 4 }} onClick={() => set({ sp: [...f.sp, ['', '']] })}>
-              ＋ مواصفة
-            </button>
-          </div>
-          <div className="sec">
-            <h3>
-              🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small>
-            </h3>
-            <input id="eVid" dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => set({ video: e.target.value })} />
-            <label className="secondary" style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
-              {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ ${vidPct}`}
-              <input
-                type="file"
-                accept="video/*"
-                hidden
-                disabled={vidPct != null}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = '';
-                  if (!file) return;
-                  setVidPct('بيبدأ…');
-                  uploadSiteVideo(file, setVidPct)
-                    .then((url) => {
-                      set({ video: url });
-                      toast('✔ الفيديو اترفع');
-                    })
-                    .catch((err) => toast(err instanceof Error ? err.message : 'الفيديو مارفعش', 'bad'))
-                    .finally(() => setVidPct(null));
-                }}
-              />
-            </label>
-            {/\.(mp4|webm|mov)(\?|$)/i.test(f.video) && <video src={f.video} controls playsInline preload="metadata" style={{ display: 'block', marginTop: 8, width: 240, borderRadius: 10 }} />}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {vid && <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" style={{ marginTop: 8, width: 220, borderRadius: 10 }} />}
-          </div>
-          <div className="sec">
-            <h3>👁️ الظهور</h3>
-            <div className="tg">
-              <div>
-                <b>يظهر على الموقع</b>
-                <small>لو قفلته المنتج بيختفي من الموقع ويفضل في السيستم</small>
+                <button type="button" className="secondary" id="eAddSp" style={{ marginTop: 4 }} onClick={() => set({ sp: [...f.sp, ['', '']] })}>
+                  ＋ مواصفة
+                </button>
               </div>
-              <label className="sw">
-                <input type="checkbox" id="eOn" checked={f.on} onChange={(e) => set({ on: e.target.checked })} />
-                <span />
-              </label>
-            </div>
-            <div className="tg">
-              <div>
-                <b>⭐ منتج مميز</b>
-                <small>يظهر في «الأكثر طلباً» في أول الموقع</small>
+            </Tile>
+            <Tile k="video" icon="🎬" title="الفيديو" sub={f.video ? '✔ فيه فيديو' : 'اختياري'}>
+              <div className="sec">
+                <h3>
+                  🎬 فيديو <small>اختياري — يوتيوب أو لينك فيديو</small>
+                </h3>
+                <input id="eVid" dir="ltr" value={f.video} placeholder="https://youtube.com/watch?v=..." onChange={(e) => set({ video: e.target.value })} />
+                <label className="secondary" style={{ display: 'inline-block', marginTop: 8, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', border: '1px solid #cfd3e6', fontWeight: 700 }}>
+                  {vidPct == null ? '📤 ارفع فيديو من التليفون أو الكمبيوتر' : `⏳ ${vidPct}`}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    hidden
+                    disabled={vidPct != null}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      setVidPct('بيبدأ…');
+                      uploadSiteVideo(file, setVidPct)
+                        .then((url) => {
+                          set({ video: url });
+                          toast('✔ الفيديو اترفع');
+                        })
+                        .catch((err) => toast(err instanceof Error ? err.message : 'الفيديو مارفعش', 'bad'))
+                        .finally(() => setVidPct(null));
+                    }}
+                  />
+                </label>
+                {/\.(mp4|webm|mov)(\?|$)/i.test(f.video) && <video src={f.video} controls playsInline preload="metadata" style={{ display: 'block', marginTop: 8, width: 240, borderRadius: 10 }} />}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {vid && <img src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`} alt="" style={{ marginTop: 8, width: 220, borderRadius: 10 }} />}
               </div>
-              <label className="sw">
-                <input type="checkbox" id="eTop" checked={f.top} onChange={(e) => set({ top: e.target.checked })} />
-                <span />
-              </label>
-            </div>
-          </div>
+            </Tile>
+            <Tile k="vis" icon="👁️" title="الظهور" sub={f.on ? 'ظاهر' : 'مخفي'}>
+              <div className="sec">
+                <h3>👁️ الظهور</h3>
+                <div className="tg">
+                  <div>
+                    <b>يظهر على الموقع</b>
+                    <small>لو قفلته المنتج بيختفي من الموقع ويفضل في السيستم</small>
+                  </div>
+                  <label className="sw">
+                    <input type="checkbox" id="eOn" checked={f.on} onChange={(e) => set({ on: e.target.checked })} />
+                    <span />
+                  </label>
+                </div>
+                <div className="tg">
+                  <div>
+                    <b>⭐ منتج مميز</b>
+                    <small>يظهر في «الأكثر طلباً» في أول الموقع</small>
+                  </div>
+                  <label className="sw">
+                    <input type="checkbox" id="eTop" checked={f.top} onChange={(e) => set({ top: e.target.checked })} />
+                    <span />
+                  </label>
+                </div>
+              </div>
+            </Tile>
+          </Tiles>
         </div>
         <div className="pv">
           <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>👀 شكله في الموقع</div>

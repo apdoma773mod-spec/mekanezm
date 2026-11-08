@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useShowMore } from '@/components/ui/tiles';
 import { phoneImportCount } from '@/components/modals/phone-import';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { useModal } from '@/components/modals/modal-host';
@@ -43,6 +44,7 @@ function ContactsScreen() {
       return true;
     });
   }, [L, q, mode, bf]);
+  const { shown, more } = useShowMore(rows, 40, `${mode}|${bf}|${q[mode] ?? ''}`);
 
   const pick = (m: 'CUSTOMER' | 'SUPPLIER') => {
     if (m !== mode) setBf('all');
@@ -126,7 +128,7 @@ function ContactsScreen() {
             </thead>
             <tbody>
               <TableState cols={5} loading={list.isPending} error={list.isError ? errorMessage(list.error) : null} empty={!rows.length} onRetry={() => list.refetch()}>
-                {rows.map((c) => (
+                {shown.map((c) => (
                   <tr key={c.id} className="prow" onClick={() => open({ kind: 'contactFile', id: c.id })}>
                     <td>
                       <b>{c.name}</b>
@@ -160,6 +162,7 @@ function ContactsScreen() {
             </tbody>
           </table>
         </div>
+        {more}
       </div>
     </>
   );

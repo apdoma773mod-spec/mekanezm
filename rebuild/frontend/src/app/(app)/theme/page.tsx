@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { Tile, Tiles } from '@/components/ui/tiles';
 import { useQueryClient } from '@tanstack/react-query';
 import { DEFAULT_THEME, FONT_CHOICES, type InvoiceDto, type SettingsMap, type ThemeSettings } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
@@ -125,154 +126,167 @@ function ThemeEditor({ settings }: { settings: SettingsMap }) {
           </button>
         }
       />
-      <ProThemeCard />
-      <NavCard />
-      <ProUiCard />
-      <div className="grid2">
-        <div className="card">
-          <h3>لوجو ميكانيزم</h3>
-          <div className="settings">
-            <div className="logoBox">{T.logo ? <img src={T.logo} alt="اللوجو" /> : 'مفيش لوجو'}</div>
-            <div className="btnrow">
-              <label className="primary" style={{ cursor: 'pointer' }}>
-                رفع لوجو
-                <input type="file" accept="image/*" hidden onChange={upload('logo', 800)} />
-              </label>
-              <button type="button" className="secondary danger" onClick={() => set('logo', '')}>
-                إزالة اللوجو
-              </button>
-            </div>
-            <label className="chk">
-              <input type="checkbox" checked={T.logoHeader} onChange={(e) => set('logoHeader', e.target.checked)} /> إظهار اللوجو أعلى النظام
-            </label>
-            <label className="chk">
-              <input type="checkbox" checked={T.logoInv} onChange={(e) => set('logoInv', e.target.checked)} /> إظهار اللوجو في الفاتورة
-            </label>
-            <label className="chk">
-              <input type="checkbox" checked={T.watermark} onChange={(e) => set('watermark', e.target.checked)} /> علامة مائية باهتة بالفاتورة
-            </label>
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>ألوان النظام</h3>
-          <div className="settings">
-            <div className="presets">
-              {PRESETS.map(([name, primary, accent]) => (
-                <button key={name} type="button" className="preset" onClick={() => setMany({ primary, accent })}>
-                  <i style={{ background: primary }} />
-                  <i style={{ background: accent }} />
-                  {name}
+      <Tiles id="theme">
+        <Tile icon="✨" title="تصميم ميكانيزم برو" sub="الأرضية والقايمة الجانبية">
+          <ProThemeCard />
+        </Tile>
+        <Tile icon="📱" title="القايمة السفلية" sub="الموبايل">
+          <NavCard />
+        </Tile>
+        <Tile icon="🎛️" title="تحكّم في الشكل">
+          <ProUiCard />
+        </Tile>
+        <Tile icon="🖼️" title="اللوجو">
+          <div className="card">
+            <h3>لوجو ميكانيزم</h3>
+            <div className="settings">
+              <div className="logoBox">{T.logo ? <img src={T.logo} alt="اللوجو" /> : 'مفيش لوجو'}</div>
+              <div className="btnrow">
+                <label className="primary" style={{ cursor: 'pointer' }}>
+                  رفع لوجو
+                  <input type="file" accept="image/*" hidden onChange={upload('logo', 800)} />
+                </label>
+                <button type="button" className="secondary danger" onClick={() => set('logo', '')}>
+                  إزالة اللوجو
                 </button>
-              ))}
-            </div>
-            <div className="form">
-              <div className="field">
-                <label htmlFor="thPrimary">اللون الأساسي</label>
-                <input id="thPrimary" type="color" value={T.primary} onChange={(e) => set('primary', e.target.value)} />
               </div>
-              <div className="field">
-                <label htmlFor="thAccent">اللون المميز</label>
-                <input id="thAccent" type="color" value={T.accent} onChange={(e) => set('accent', e.target.value)} />
-              </div>
-              <div className="field">
-                <label htmlFor="thBg">لون الخلفية</label>
-                <input id="thBg" type="color" value={T.bg} onChange={(e) => set('bg', e.target.value)} />
-              </div>
-              <div className="field">
-                <label htmlFor="thText">لون النصوص</label>
-                <input id="thText" type="color" value={T.text} onChange={(e) => set('text', e.target.value)} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>خلفية النظام</h3>
-          <div className="settings">
-            <div className="logoBox">{T.bgImg ? <img src={T.bgImg} alt="الخلفية" /> : 'خلفية سادة (بدون صورة)'}</div>
-            <div className="btnrow">
-              <label className="primary" style={{ cursor: 'pointer' }}>
-                رفع صورة خلفية
-                <input type="file" accept="image/*" hidden onChange={upload('bgImg', 1600)} />
+              <label className="chk">
+                <input type="checkbox" checked={T.logoHeader} onChange={(e) => set('logoHeader', e.target.checked)} /> إظهار اللوجو أعلى النظام
               </label>
-              <button type="button" className="secondary danger" onClick={() => set('bgImg', '')}>
-                إزالة الصورة
-              </button>
-            </div>
-            <div className="field">
-              <label htmlFor="thClarity">وضوح صورة الخلفية</label>
-              <input id="thClarity" type="range" min={10} max={100} value={T.bgClarity} onChange={(e) => set('bgClarity', Number(e.target.value))} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>مسافة أعلى الشاشة</h3>
-          <div className="settings">
-            <div className="field">
-              <label htmlFor="thTopGap">نزّل الأيقونات لتحت (لو متغطيّة بأزرار التطبيق)</label>
-              <select id="thTopGap" value={T.topGap} onChange={(e) => set('topGap', Number(e.target.value))}>
-                <option value={0}>بدون مسافة</option>
-                <option value={30}>مسافة صغيرة</option>
-                <option value={62}>مسافة متوسطة</option>
-                <option value={90}>مسافة كبيرة</option>
-              </select>
+              <label className="chk">
+                <input type="checkbox" checked={T.logoInv} onChange={(e) => set('logoInv', e.target.checked)} /> إظهار اللوجو في الفاتورة
+              </label>
+              <label className="chk">
+                <input type="checkbox" checked={T.watermark} onChange={(e) => set('watermark', e.target.checked)} /> علامة مائية باهتة بالفاتورة
+              </label>
             </div>
           </div>
-        </div>
-
-        <div className="card">
-          <h3>الخط</h3>
-          <div className="settings">
-            <div className="field">
-              <label htmlFor="thFont">خط النظام</label>
-              <select id="thFont" value={T.font} onChange={(e) => set('font', e.target.value as ThemeSettings['font'])}>
-                {fontOptions}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="thInvFont">خط الفاتورة</label>
-              <select id="thInvFont" value={T.invFont} onChange={(e) => set('invFont', e.target.value as ThemeSettings['invFont'])}>
-                <option value="same">نفس خط النظام</option>
-                {fontOptions}
-              </select>
-            </div>
-            <div className="sample" style={{ fontFamily: fontStack(T.font) }}>
-              ميكانيزم لتجهيزات المطابخ والدريسنج روم — ١٢٣٤٥٦ ج.م
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 14 }}>
-        <h3>ألوان الفاتورة</h3>
-        <div className="settings">
-          <label className="chk">
-            <input type="checkbox" checked={T.invSync} onChange={(e) => set('invSync', e.target.checked)} /> نفس ألوان النظام
-          </label>
-          {!T.invSync && (
-            <div className="form">
-              <div className="field">
-                <label htmlFor="thInvHeader">لون رأس الفاتورة</label>
-                <input id="thInvHeader" type="color" value={T.invHeader} onChange={(e) => set('invHeader', e.target.value)} />
+        </Tile>
+        <Tile icon="🎨" title="ألوان النظام">
+          <div className="card">
+            <h3>ألوان النظام</h3>
+            <div className="settings">
+              <div className="presets">
+                {PRESETS.map(([name, primary, accent]) => (
+                  <button key={name} type="button" className="preset" onClick={() => setMany({ primary, accent })}>
+                    <i style={{ background: primary }} />
+                    <i style={{ background: accent }} />
+                    {name}
+                  </button>
+                ))}
               </div>
-              <div className="field">
-                <label htmlFor="thInvAccent">لون الخط المميز</label>
-                <input id="thInvAccent" type="color" value={T.invAccent} onChange={(e) => set('invAccent', e.target.value)} />
+              <div className="form">
+                <div className="field">
+                  <label htmlFor="thPrimary">اللون الأساسي</label>
+                  <input id="thPrimary" type="color" value={T.primary} onChange={(e) => set('primary', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="thAccent">اللون المميز</label>
+                  <input id="thAccent" type="color" value={T.accent} onChange={(e) => set('accent', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="thBg">لون الخلفية</label>
+                  <input id="thBg" type="color" value={T.bg} onChange={(e) => set('bg', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="thText">لون النصوص</label>
+                  <input id="thText" type="color" value={T.text} onChange={(e) => set('text', e.target.value)} />
+                </div>
               </div>
             </div>
-          )}
-          <button type="button" className="primary" onClick={() => setPreview(true)}>
-            معاينة الفاتورة
-          </button>
-          {preview && (
-            <Modal title="معاينة الفاتورة" onClose={() => setPreview(false)}>
-              <HtmlPreview html={invoiceA4Html(SAMPLE, { ...settings, theme: T })} />
-            </Modal>
-          )}
+          </div>
+        </Tile>
+        <Tile icon="🌄" title="الخلفية">
+          <div className="card">
+            <h3>خلفية النظام</h3>
+            <div className="settings">
+              <div className="logoBox">{T.bgImg ? <img src={T.bgImg} alt="الخلفية" /> : 'خلفية سادة (بدون صورة)'}</div>
+              <div className="btnrow">
+                <label className="primary" style={{ cursor: 'pointer' }}>
+                  رفع صورة خلفية
+                  <input type="file" accept="image/*" hidden onChange={upload('bgImg', 1600)} />
+                </label>
+                <button type="button" className="secondary danger" onClick={() => set('bgImg', '')}>
+                  إزالة الصورة
+                </button>
+              </div>
+              <div className="field">
+                <label htmlFor="thClarity">وضوح صورة الخلفية</label>
+                <input id="thClarity" type="range" min={10} max={100} value={T.bgClarity} onChange={(e) => set('bgClarity', Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+        </Tile>
+        <Tile icon="↕️" title="مسافة أعلى الشاشة">
+          <div className="card">
+            <h3>مسافة أعلى الشاشة</h3>
+            <div className="settings">
+              <div className="field">
+                <label htmlFor="thTopGap">نزّل الأيقونات لتحت (لو متغطيّة بأزرار التطبيق)</label>
+                <select id="thTopGap" value={T.topGap} onChange={(e) => set('topGap', Number(e.target.value))}>
+                  <option value={0}>بدون مسافة</option>
+                  <option value={30}>مسافة صغيرة</option>
+                  <option value={62}>مسافة متوسطة</option>
+                  <option value={90}>مسافة كبيرة</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </Tile>
+        <Tile icon="🔤" title="الخط">
+          <div className="card">
+            <h3>الخط</h3>
+            <div className="settings">
+              <div className="field">
+                <label htmlFor="thFont">خط النظام</label>
+                <select id="thFont" value={T.font} onChange={(e) => set('font', e.target.value as ThemeSettings['font'])}>
+                  {fontOptions}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="thInvFont">خط الفاتورة</label>
+                <select id="thInvFont" value={T.invFont} onChange={(e) => set('invFont', e.target.value as ThemeSettings['invFont'])}>
+                  <option value="same">نفس خط النظام</option>
+                  {fontOptions}
+                </select>
+              </div>
+              <div className="sample" style={{ fontFamily: fontStack(T.font) }}>
+                ميكانيزم لتجهيزات المطابخ والدريسنج روم — ١٢٣٤٥٦ ج.م
+              </div>
+            </div>
+          </div>
+        </Tile>
+        <Tile icon="🧾" title="ألوان الفاتورة">
+        <div className="card">
+          <h3>ألوان الفاتورة</h3>
+          <div className="settings">
+            <label className="chk">
+              <input type="checkbox" checked={T.invSync} onChange={(e) => set('invSync', e.target.checked)} /> نفس ألوان النظام
+            </label>
+            {!T.invSync && (
+              <div className="form">
+                <div className="field">
+                  <label htmlFor="thInvHeader">لون رأس الفاتورة</label>
+                  <input id="thInvHeader" type="color" value={T.invHeader} onChange={(e) => set('invHeader', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="thInvAccent">لون الخط المميز</label>
+                  <input id="thInvAccent" type="color" value={T.invAccent} onChange={(e) => set('invAccent', e.target.value)} />
+                </div>
+              </div>
+            )}
+            <button type="button" className="primary" onClick={() => setPreview(true)}>
+              معاينة الفاتورة
+            </button>
+            {preview && (
+              <Modal title="معاينة الفاتورة" onClose={() => setPreview(false)}>
+                <HtmlPreview html={invoiceA4Html(SAMPLE, { ...settings, theme: T })} />
+              </Modal>
+            )}
+          </div>
         </div>
-      </div>
+        </Tile>
+      </Tiles>
     </>
   );
 }

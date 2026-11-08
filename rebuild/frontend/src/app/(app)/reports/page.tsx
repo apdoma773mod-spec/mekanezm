@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Tile, Tiles } from '@/components/ui/tiles';
 import { REPORTS, type ReportCell, type ReportColType, type ReportId, type ReportResult, type ReportRow, type ReportTone } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { ContactReportCard, ReportsStatsRow, StockStatusCard } from '@/components/reports-extras';
@@ -413,59 +414,7 @@ function ReportsScreen() {
           🖨️ طباعة التقرير
         </button>
       </div>
-      <OnlineReportCard />
-      <ReturnsAnalysisCard />
-      <AccountantExportCard />
-      <div className="card" style={{ marginBottom: 14, marginTop: 14 }}>
-        <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
-        {chips}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, margin: '6px 0 12px' }}>
-          {(
-            [
-              ['صافي المبيعات', h?.net],
-              ['مجمل الربح', h?.gross],
-              ['صافي الربح', h?.np],
-            ] as [string, number | undefined][]
-          ).map(([l, v]) => (
-            <div key={l} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '8px 10px', minWidth: 0 }}>
-              <small style={{ color: 'var(--muted)', fontSize: 11 }}>{l}</small>
-              <div style={{ fontWeight: 800, fontSize: 14, ...((v ?? 0) < 0 ? { color: 'var(--danger)' } : {}) }}>{v === undefined ? '…' : money(v)}</div>
-            </div>
-          ))}
-        </div>
-        {groups.map((g) => (
-          <div key={g}>
-            <h4 style={{ margin: '14px 0 8px' }}>{g}</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {REPORTS.filter((x) => x.g === g).map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  onClick={() => setCur(x.id)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: 3,
-                    padding: 12,
-                    border: '1px solid var(--border)',
-                    borderRadius: 14,
-                    background: 'var(--card)',
-                    color: 'inherit',
-                    textAlign: 'right',
-                    minHeight: 92,
-                  }}
-                >
-                  <span style={{ fontSize: 26, lineHeight: 1 }}>{x.i}</span>
-                  <b style={{ fontSize: 14 }}>{x.t}</b>
-                  <small style={{ color: 'var(--muted)', fontSize: 11, lineHeight: 1.4 }}>{x.d}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
+      {/* الأرقام المهمة فوق على طول، وكل الباقي أيقونات بتتفتح لما تحتاجها */}
       <div className="stats">
         <div className="stat">
           <small>صافي الربح (الإجمالي)</small>
@@ -484,60 +433,129 @@ function ReportsScreen() {
           <strong>{o ? money(o.receivables) : '…'}</strong>
         </div>
       </div>
-      <ReportsStatsRow />
-      <div className="card" style={{ marginTop: 14 }}>
-        <h3>تقرير الفترات</h3>
-        <div className="table-wrap">
-          <table className="table" style={{ minWidth: 420 }}>
-            <thead>
-              <tr>
-                <th>البند</th>
-                <th>اليوم</th>
-                <th>الشهر</th>
-                <th>السنة</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {P &&
-                PERIOD_ROWS.map(([t, k]) => {
-                  const strong = k === 'net' || k === 'gross';
-                  return (
-                    <tr key={k} style={strong ? { fontWeight: 800, background: 'var(--tint2)' } : undefined}>
-                      <td>{t}</td>
-                      {(['day', 'month', 'year', 'all'] as const).map((c) => (
-                        <td key={c} style={strong ? { color: P[c][k] < 0 ? 'var(--danger)' : 'var(--green)' } : undefined}>
-                          {money(P[c][k])}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <ContactReportCard />
-      <div className="stats" style={{ marginTop: 14 }}>
-        <div className="stat">
-          <small>إجمالي المبيعات</small>
-          <strong>{o ? money(o.salesTotal) : '…'}</strong>
-        </div>
-        <div className="stat">
-          <small>إجمالي المشتريات</small>
-          <strong>{o ? money(o.purchasesTotal) : '…'}</strong>
-        </div>
-        <div className="stat">
-          <small>إجمالي المصروفات</small>
-          <strong>{o ? money(o.expensesTotal) : '…'}</strong>
-        </div>
-        <div className="stat">
-          <small>إجمالي الربح</small>
-          <strong>{P ? money(P.all.gross) : '…'}</strong>
-        </div>
-      </div>
+      <Tiles id="reports">
+        <Tile icon="📊" title="مركز التقارير" sub={`${REPORTS.length} تقرير`}>
+          <div className="card" style={{ marginBottom: 14, marginTop: 14 }}>
+            <h3 style={{ margin: '0 0 6px' }}>📊 مركز التقارير</h3>
+            {chips}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, margin: '6px 0 12px' }}>
+              {(
+                [
+                  ['صافي المبيعات', h?.net],
+                  ['مجمل الربح', h?.gross],
+                  ['صافي الربح', h?.np],
+                ] as [string, number | undefined][]
+              ).map(([l, v]) => (
+                <div key={l} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '8px 10px', minWidth: 0 }}>
+                  <small style={{ color: 'var(--muted)', fontSize: 11 }}>{l}</small>
+                  <div style={{ fontWeight: 800, fontSize: 14, ...((v ?? 0) < 0 ? { color: 'var(--danger)' } : {}) }}>{v === undefined ? '…' : money(v)}</div>
+                </div>
+              ))}
+            </div>
+            {groups.map((g) => (
+              <div key={g}>
+                <h4 style={{ margin: '14px 0 8px' }}>{g}</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {REPORTS.filter((x) => x.g === g).map((x) => (
+                    <button
+                      key={x.id}
+                      type="button"
+                      onClick={() => setCur(x.id)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 3,
+                        padding: 12,
+                        border: '1px solid var(--border)',
+                        borderRadius: 14,
+                        background: 'var(--card)',
+                        color: 'inherit',
+                        textAlign: 'right',
+                        minHeight: 92,
+                      }}
+                    >
+                      <span style={{ fontSize: 26, lineHeight: 1 }}>{x.i}</span>
+                      <b style={{ fontSize: 14 }}>{x.t}</b>
+                      <small style={{ color: 'var(--muted)', fontSize: 11, lineHeight: 1.4 }}>{x.d}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
 
-      <StockStatusCard />
+        </Tile>
+        <Tile icon="📅" title="تقرير الفترات" sub="اليوم/الشهر/السنة">
+          <div className="card" style={{ marginTop: 14 }}>
+            <h3>تقرير الفترات</h3>
+            <div className="table-wrap">
+              <table className="table" style={{ minWidth: 420 }}>
+                <thead>
+                  <tr>
+                    <th>البند</th>
+                    <th>اليوم</th>
+                    <th>الشهر</th>
+                    <th>السنة</th>
+                    <th>الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {P &&
+                    PERIOD_ROWS.map(([t, k]) => {
+                      const strong = k === 'net' || k === 'gross';
+                      return (
+                        <tr key={k} style={strong ? { fontWeight: 800, background: 'var(--tint2)' } : undefined}>
+                          <td>{t}</td>
+                          {(['day', 'month', 'year', 'all'] as const).map((c) => (
+                            <td key={c} style={strong ? { color: P[c][k] < 0 ? 'var(--danger)' : 'var(--green)' } : undefined}>
+                              {money(P[c][k])}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <ReportsStatsRow />
+          <div className="stats" style={{ marginTop: 14 }}>
+            <div className="stat">
+              <small>إجمالي المبيعات</small>
+              <strong>{o ? money(o.salesTotal) : '…'}</strong>
+            </div>
+            <div className="stat">
+              <small>إجمالي المشتريات</small>
+              <strong>{o ? money(o.purchasesTotal) : '…'}</strong>
+            </div>
+            <div className="stat">
+              <small>إجمالي المصروفات</small>
+              <strong>{o ? money(o.expensesTotal) : '…'}</strong>
+            </div>
+            <div className="stat">
+              <small>إجمالي الربح</small>
+              <strong>{P ? money(P.all.gross) : '…'}</strong>
+            </div>
+          </div>
+
+        </Tile>
+        <Tile icon="🌐" title="العملاء الأونلاين">
+          <OnlineReportCard />
+        </Tile>
+        <Tile icon="↩️" title="تحليل المرتجعات">
+          <ReturnsAnalysisCard />
+        </Tile>
+        <Tile icon="📤" title="تصدير للمحاسب" sub="ملف إكسيل للشهر">
+          <AccountantExportCard />
+        </Tile>
+        <Tile icon="👤" title="تقرير عميل / مورد">
+          <ContactReportCard />
+        </Tile>
+        <Tile icon="📦" title="حالة المخزون">
+          <StockStatusCard />
+        </Tile>
+      </Tiles>
 
       {cur && <ReportView id={cur} onBack={() => setCur(null)} chips={chips} range={range} rangeText={rngTxt(pre, range)} />}
     </>

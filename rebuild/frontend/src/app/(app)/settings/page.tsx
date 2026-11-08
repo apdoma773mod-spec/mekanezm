@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { VersionCard } from '@/components/nav-card';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
@@ -11,6 +10,7 @@ import { AutoMessagesCard } from '@/components/auto-messages-card';
 import { InstallCard } from '@/components/install-card';
 import { useModal } from '@/components/modals/modal-host';
 import { Input } from '@/components/ui/field';
+import { Tile, TileLink, Tiles } from '@/components/ui/tiles';
 import { ErrorBox, FormError, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
@@ -106,49 +106,30 @@ function SettingsScreen() {
           </div>
         }
       />
-      <div className="grid2">
-        <VersionCard />
-        <CompanyForm initial={settings.data.store} />
-        <div className="card">
-          <h3>المستخدمين والأمان</h3>
-          <div className="settings">
-            <Link className="secondary" href="/users">
-              👥 المستخدمين والصلاحيات
-            </Link>
-            <Link className="secondary" href="/audit">
-              📜 سجل العمليات (مين عمل إيه)
-            </Link>
-            <Link className="secondary" href="/account">
-              🔑 حسابي وتغيير كلمة السر
-            </Link>
-            <button type="button" className="secondary" onClick={() => open({ kind: 'recat' })}>
-              إعادة تصنيف الأصناف
-            </button>
-            <button
-              type="button"
-              className="secondary danger"
-              disabled={logout.isPending}
-              onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })}
-            >
-              تسجيل الخروج
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="card" id="kwCard" style={{ marginTop: 14 }}>
-        <h3>🔑 كلمات الواتساب المفتاحية</h3>
-        <p style={{ margin: '0 0 10px', color: 'var(--muted)', fontSize: 13 }}>الرسايل اللي مفيهاش كلمة منهم بتتجاهل. تضيف وتعدّل بنفسك.</p>
-        <Link className="primary" href="/keywords" style={{ textDecoration: 'none' }}>
-          فتح الشاشة
-        </Link>
-      </div>
-      <div className="card" id="wkCard" style={{ marginTop: 14 }}>
-        <h3>🛠️ أنظمة الشغل</h3>
-        <p style={{ margin: '0 0 10px', color: 'var(--muted)', fontSize: 13 }}>أوردرات دلف واستانلس بخط سير، طباعة وباركود، العرض والمصاريف.</p>
-        <Link className="primary" href="/work" style={{ textDecoration: 'none' }}>
-          فتح
-        </Link>
-      </div>
+      <Tiles id="settings">
+        <Tile icon="🏪" title="بيانات الشركة" sub="الاسم والأرقام والعنوان">
+          <CompanyForm initial={settings.data.store} />
+        </Tile>
+        <Tile icon="🔄" title="تحديث السيستم" sub="النسخة">
+          <VersionCard />
+        </Tile>
+        <TileLink icon="👥" title="المستخدمين والصلاحيات" href="/users" />
+        <TileLink icon="📜" title="سجل العمليات" sub="مين عمل إيه" href="/audit" />
+        <TileLink icon="🔑" title="حسابي وكلمة السر" href="/account" />
+        <TileLink icon="🗂️" title="إعادة تصنيف الأصناف" onClick={() => open({ kind: 'recat' })} />
+        <TileLink icon="💬" title="كلمات الواتساب" sub="المفتاحية" href="/keywords" />
+        <TileLink icon="🛠️" title="أنظمة الشغل" sub="دلف واستانلس" href="/work" />
+        <Tile icon="📲" title="ثبّت السيستم" sub="على الموبايل">
+          <InstallCard />
+        </Tile>
+        <Tile icon="🤖" title="الرسايل التلقائية">
+          <AutoMessagesCard />
+        </Tile>
+        <Tile icon="💾" title="النسخ الاحتياطي">
+          <BackupCard />
+        </Tile>
+        <TileLink icon="🚪" title="تسجيل الخروج" danger onClick={() => logout.mutate(undefined, { onSettled: () => router.replace('/login') })} />
+      </Tiles>
     </>
   );
 }
@@ -157,9 +138,6 @@ export default function SettingsPage() {
   return (
     <AdminOnly>
       <SettingsScreen />
-      <InstallCard />
-      <AutoMessagesCard />
-      <BackupCard />
     </AdminOnly>
   );
 }

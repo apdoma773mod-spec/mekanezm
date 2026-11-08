@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useShowMore } from '@/components/ui/tiles';
 import type { ProductDto } from '@mk/shared';
 import { AdminOnly } from '@/components/app-shell';
 import { useModal } from '@/components/modals/modal-host';
@@ -145,6 +146,8 @@ function CountScreen() {
     const i = lines.findIndex((l) => l.id === hit);
     if (i > 0) lines.unshift(lines.splice(i, 1)[0]!);
   }
+  // ٤٠ صنف في المرة: الشاشة خفيفة على الموبايل، والبحث والباركود شغالين على الكل (الصنف اللي اتمسح بيطلع فوق)
+  const { shown: shownLines, more: moreLines } = useShowMore(lines, 40, `${show}|${q}|${cat}`);
 
   let n = 0;
   let sv = 0;
@@ -262,7 +265,7 @@ function CountScreen() {
           ) : show === 'all' && products.isError ? (
             <ErrorBox message={errorMessage(products.error)} onRetry={() => products.refetch()} />
           ) : lines.length ? (
-            lines.map((p) => {
+            shownLines.map((p) => {
               const l = draft[p.id];
               const df = has(l) ? r2(Number(l!.v) - p.qty) : null;
               return (
@@ -297,6 +300,7 @@ function CountScreen() {
           ) : (
             <div className="empty">مفيش أصناف</div>
           )}
+          {moreLines}
           {show === 'all' && (products.data?.total ?? 0) > 200 && (
             <p style={{ color: 'var(--muted)', fontSize: 12, padding: 8 }}>ظاهر أول 200 — استخدم البحث أو التصنيف</p>
           )}
