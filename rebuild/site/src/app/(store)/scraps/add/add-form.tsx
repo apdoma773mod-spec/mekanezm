@@ -117,7 +117,7 @@ export function AddForm() {
     const x = fs?.[0]; if (!x) return;
     setCands([]); setMsg('⏳ بقرا المتر من الصورة…');
     try {
-      const b = await shrinkImage(x, 1600);
+      const b = await shrinkImage(x, 1100, 0.72);
       const r = await scrapReadTape(b);
       if (!r.ok || !r.data) return setMsg(r.message || 'مقدرتش أقرا المتر — صوّر أقرب وبإضاءة أحسن');
       const d = r.data;

@@ -37,22 +37,17 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
         {img ? <Image src={img} alt={p.name} fill sizes="(max-width:600px) 48vw, (max-width:1000px) 32vw, 340px" priority={priority} /> : <Placeholder section={sec?.name} />}
         {/* Second photo fades in on hover (desktop only, loaded lazily). */}
         {all[1] && <Image className="alt" src={all[1]} alt="" fill sizes="340px" loading="lazy" />}
-        {(p.brand || all.length > 1) && (
-          <span className="imtags">
-            {p.brand && <span className="brandp">{p.brand}</span>}
-            {all.length > 1 && <span className="nph" aria-label={`${all.length} صور`}>📷 {all.length}</span>}
-          </span>
-        )}
-        <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
-        <span className={'avb' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
       </div>
       <div className="cb">
         <div className="cmeta">
+          <span className={'avt' + (ok ? '' : ' no')}>{ok ? 'متوفر' : 'بالحجز'}</span>
+          {p.brand && <span className="csec">{p.brand}</span>}
           {p.code && <span className="code">كود {p.code}</span>}
           {sec && <span className="csec">{sec.name}</span>}
           {p.video && <span className="vidc">🎬 فيديو</span>}
           {p.badge && <span className="newc">{p.badge}</span>}
           {fresh && !p.badge && <span className="newc">جديد</span>}
+          <button className={'hrt' + (fav[p.id] ? ' on' : '')} onClick={() => toggleFav(item)} aria-label="المفضلة" aria-pressed={!!fav[p.id]}>♥</button>
         </div>
         <h3><Link href={productPath(p.id)}>{p.name}</Link></h3>
         {p.desc && <p className="cdesc">{p.desc}</p>}

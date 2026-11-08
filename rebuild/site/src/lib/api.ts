@@ -232,7 +232,15 @@ export type TapeRead = { len: number | null; wid: number | null; confidence: num
 /** Photo of a tape measure on the piece → sizes in cm (system backend reads it; ambiguous reads come back as candidates). */
 export async function scrapReadTape(blob: Blob) {
   const url = await uploadScrapImage(blob);
-  return sc<TapeRead>('/read-tape', { image: url });
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 40000);
+  try {
+    const r = await fetch('/mkapi/web/scraps/read-tape', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: url }), signal: ctl.signal });
+    const j = await r.json().catch(() => null);
+    const message = r.ok ? '' : (j?.error?.message || j?.message || 'مقدرتش أقرا المتر — صوّر أقرب وبإضاءة أحسن');
+    return { ok: r.ok, data: (r.ok ? j : null) as TapeRead | null, message };
+  } catch (e) {
+    return { ok: false, data: null, message: (e as Error).name === 'AbortError' ? 'القراءة أخدت وقت طويل — جرّب تاني بعد شوية أو اكتب المقاس بإيدك' : 'النت قطع — جرّب تاني' };
+  } finally { clearTimeout(t); }
 }
 export const scrapWant = (q: Record<string, unknown>) => sc<{ queued: boolean }>('/want', q);
 

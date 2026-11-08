@@ -976,3 +976,28 @@ a.tb-cart { display: grid; place-items: center; text-decoration: none; }
 .svc-t.main .ic { background: linear-gradient(135deg, #f6d77a, #a8741a); }
 .svc-t.main b { color: var(--gold-l); }
 .svc-t.main small { color: #d8e3ea; }
+
+/* ---- product card: the photo stays clean; availability, brand and the heart sit under it ---- */
+.cmeta .hrt { position: relative; z-index: 3; top: auto; left: auto; flex: none; margin-inline-start: auto; width: 32px; height: 32px; font-size: 16px; box-shadow: none; background: var(--bg); }
+.cmeta .newc, .cmeta .vidc { margin-inline-start: 0; }
+.cmeta .avt { flex: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 800; color: #166c3d; }
+.cmeta .avt::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #22a35a; }
+.cmeta .avt.no { color: #8a5a12; }
+.cmeta .avt.no::before { background: #d99a2b; }
+.cmeta { flex-wrap: wrap; row-gap: 6px; }
+@container (max-width: 260px) { .cmeta .code { display: none; } }
+
+/* ---- home deck in the site's own colours (navy + gold + green), not the blue it first had ---- */
+.hd-card { color: #fff; background: linear-gradient(150deg, #10202c, #1b5e7b); border: 1px solid #d9a73a55; }
+.hd-card.t-g { background: linear-gradient(150deg, #0f1a14, #2e6b27); }
+.hd-card.t-b { background: linear-gradient(150deg, #10202c, #1b5e7b); }
+.hd-card.t-p { background: linear-gradient(150deg, #1a1530, #3a2f66); }
+.hd-card.t-o { background: linear-gradient(150deg, #2a1c04, #8a5c12); }
+.hd-card .hd-tag { background: #ffffff22; color: var(--gold-l); }
+.hd-h { color: var(--gold-l); }
+.hd-s { color: #d8e3ea; }
+.hd-btn { background: var(--gd); color: #2a1c04; box-shadow: 0 6px 16px #0004; }
+.hd-mini { color: var(--fg); }
+.hd-mf button { background: var(--accent); color: var(--on-acc, #fff); }
+.hd-dots button { background: #b9c2bb; }
+.hd-dots button.on { background: var(--accent); }
