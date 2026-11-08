@@ -31,14 +31,16 @@ async function trimWhite(buf: Buffer): Promise<Buffer> {
     const k = m.width! / w;
     const cw = Math.round((r - l + 1) * k), chh = Math.round((b - t + 1) * k);
     if (cw >= m.width! * 0.4 && chh >= m.height! * 0.4 && (cw < m.width! * 0.97 || chh < m.height! * 0.97))
-      return await sharp(buf).extract({ left: Math.round(l * k), top: Math.round(t * k), width: Math.min(cw, m.width! - Math.round(l * k)), height: Math.min(chh, m.height! - Math.round(t * k)) }).toBuffer();
+      return await sharp(buf).extract({ left: Math.round(l * k), top: Math.round(t * k), width: Math.min(cw, m.width! - Math.round(l * k)), height: Math.min(chh, m.height! - Math.round(t * k)) }).jpeg({ quality: 92 }).toBuffer();
     return buf;
   } catch { return buf; }
 }
 
 export async function unframe(input: Buffer): Promise<Buffer> {
   try {
-    const rot = await sharp(input).rotate().toBuffer();
+    // Keep the pixels untouched (no re-encode) unless the photo needs turning.
+    const o = (await sharp(input).metadata()).orientation ?? 1;
+    const rot = o > 1 ? await sharp(input).rotate().png().toBuffer() : input;
     const { data, info } = await sharp(rot).resize({ width: 600, withoutEnlargement: true }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
     const w = info.width, h = info.height, ch = info.channels;
     const gold = (x: number, y: number) => { const i = (y * w + x) * ch; return isGold(data[i], data[i + 1], data[i + 2]); };
@@ -55,7 +57,7 @@ export async function unframe(input: Buffer): Promise<Buffer> {
     const inset = Math.round(w * 0.012);
     const L = Math.round((left + inset) * k), T = Math.round((top + inset) * k);
     const W = Math.round((right - left - 2 * inset) * k), H = Math.round((bottom - top - 2 * inset) * k);
-    const cut = await sharp(rot).extract({ left: L, top: T, width: W, height: H }).toBuffer();
+    const cut = await sharp(rot).extract({ left: L, top: T, width: W, height: H }).jpeg({ quality: 92 }).toBuffer();
     return await trimWhite(cut);
   } catch {
     return input;
