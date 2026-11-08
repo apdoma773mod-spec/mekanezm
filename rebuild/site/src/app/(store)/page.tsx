@@ -62,7 +62,7 @@ export default async function Home() {
           <div className="glist hrow">{GUIDES.map(g => <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b></Link>)}</div>
         </section>
         <Subscribe />
-        {(D.length > 0 || site.policy.trim() || site.deliveryNote.trim()) && (
+        {false && (
           <section className="blk" id="info">
             <div className="sh"><h2>🚚 التوصيل والاستبدال</h2></div>
             <div className="infobox">

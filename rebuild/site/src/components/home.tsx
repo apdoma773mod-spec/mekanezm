@@ -161,6 +161,7 @@ export function Reviews() {
   // hand-picked reviews first, then the ones customers sent from the site
   const L = mine && [...site.reviews.filter(r => r.text).map(r => ({ name: r.name + (r.area ? ' — ' + r.area : ''), rating: r.stars, body: r.text })), ...mine];
   const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
+  if (L && !L.length) return null; // nothing to show yet: no empty block on the home page
   return (
     <section className="mkp" id="mkRev" aria-labelledby="rev-h">
       <h2 id="rev-h">⭐ آراء عملائنا</h2>
@@ -198,7 +199,6 @@ export function Reveal({ children, className, id, label }: { children: ReactNode
 export function ReqHome() {
   return (
     <section className="blk" id="reqHome" style={{ marginTop: 22 }}>
-      <HowToRequest />
       <OpenBtn modal={{ kind: 'req' }} className="reqbtn">📷 مش لاقي اللي بتدوّر عليه؟<small>صوّر المنتج وابعتهولنا — هنرد عليك ونقولك نوفّره إمتى</small></OpenBtn>
     </section>
   );

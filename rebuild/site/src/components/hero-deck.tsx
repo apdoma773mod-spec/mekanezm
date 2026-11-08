@@ -47,9 +47,9 @@ export function HeroDeck({ best, photos }: { best: P[]; photos: Slide[] }) {
   const { open } = useShop();
   const hasCat = useCatalog();
   const pairs: P[][] = [];
-  for (let k = 0; k < Math.min(best.length, 6); k += 2) pairs.push(best.slice(k, k + 2));
-  const feats = FEATS.filter(f => !f.needsCatalog || hasCat);
-  const ph = photos.slice(0, 3);
+  for (let k = 0; k < Math.min(best.length, 4); k += 2) pairs.push(best.slice(k, k + 2));
+  const feats = FEATS.filter(f => !f.needsCatalog || hasCat).slice(0, 4);
+  const ph = photos.slice(0, 2);
   // Round robin: best sellers, a feature, a banner, …
   const L: Card[] = [];
   for (let k = 0; k < Math.max(pairs.length, feats.length, ph.length); k++) {
@@ -83,7 +83,6 @@ export function HeroDeck({ best, photos }: { best: P[]; photos: Slide[] }) {
               <div className="hd-card t-best">
                 <span className="hd-tag">⭐ اختيارات مميزة</span>
                 <p className="hd-h">تسوق الأكثر مبيعًا</p>
-                <p className="hd-s">أكتر حاجات النجارين بيطلبوها مننا.</p>
                 <Link className="hd-btn" href="/search?top=1" tabIndex={tab}>تسوق الآن ←</Link>
                 <div className="hd-pair">{c.items.map(x => <Mini key={x.p.id} {...x} load={load} />)}</div>
               </div>

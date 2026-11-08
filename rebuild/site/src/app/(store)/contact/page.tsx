@@ -26,35 +26,17 @@ export default async function Contact() {
       <main id="main" className="page narrow">
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><span>تواصل معانا</span></nav>
         <h1 className="page-h">📞 تواصل معانا</h1>
-        <div className="info-cards">
-          <div>
-            <h2>💬 واتساب</h2>
-            <p style={{ margin: 0 }}>أسرع طريقة — بنرد ونقولك السعر والتوفر.</p>
-            <a className="btn-g" style={{ marginTop: 8 }} target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم')}>💬 كلّمنا واتساب {site.phone}</a>
-            {cat && <a style={{ display: 'block', marginTop: 8 }} href={cat} target="_blank" rel="noopener">📒 كتالوج الواتساب</a>}
-          </div>
-          <div>
-            <h2>☎️ تليفونات</h2>
-            {shopPhones(site).map(n => <a key={n} style={{ display: 'block' }} href={'tel:' + n.replace(/\s/g, '')}>📞 {n}</a>)}
-          </div>
-          <div>
-            <h2>📍 العنوان</h2>
-            <p style={{ margin: 0 }}>{site.address || 'أرض اللواء – الجيزة'}</p>
-            <a href={site.mapUrl || MAP_URL} target="_blank" rel="noopener">🗺️ افتح على الخريطة</a>
-            <Link style={{ display: 'block', marginTop: 6 }} href="/directions">🧭 تجيلنا إزاي خطوة بخطوة</Link>
-          </div>
-          <div>
-            <h2>🕒 مواعيد الشغل</h2>
-            <p style={{ margin: 0 }}>{site.hours}</p>
-            <OpenNow />
-          </div>
-          <div>
-            <h2>📦 طلبك</h2>
-            <OpenBtn modal={{ kind: 'track' }} className="sec">📦 تتبّع طلبك</OpenBtn>{' '}
-            <OpenBtn modal={{ kind: 'req' }} className="sec">📷 اطلب منتج مش موجود</OpenBtn>
-          </div>
-          <div><h2>تابعنا</h2><Socials site={site} /></div>
+        <div className="svc-g ct-g">
+          <a className="svc-t main ct-wide" target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم')}><span className="ic" aria-hidden="true">💬</span><b>كلّمنا واتساب</b><small>{site.phone} — أسرع رد</small></a>
+          {shopPhones(site).map(n => <a key={n} className="svc-t" href={'tel:' + n.replace(/\s/g, '')}><span className="ic" aria-hidden="true">📞</span><b>اتصل</b><small>{n}</small></a>)}
+          <a className="svc-t" href={site.mapUrl || MAP_URL} target="_blank" rel="noopener"><span className="ic" aria-hidden="true">📍</span><b>الخريطة</b><small>{site.address || 'أرض اللواء – الجيزة'}</small></a>
+          <Link className="svc-t" href="/directions"><span className="ic" aria-hidden="true">🧭</span><b>تجيلنا إزاي</b><small>خطوة بخطوة</small></Link>
+          <OpenBtn modal={{ kind: 'track' }} className="svc-t"><span className="ic" aria-hidden="true">📦</span><b>تتبّع طلبك</b><small>برقم موبايلك</small></OpenBtn>
+          <OpenBtn modal={{ kind: 'req' }} className="svc-t"><span className="ic" aria-hidden="true">📷</span><b>منتج مش موجود</b><small>صوّره وابعته</small></OpenBtn>
+          {cat && <a className="svc-t" href={cat} target="_blank" rel="noopener"><span className="ic" aria-hidden="true">📒</span><b>كتالوج واتساب</b><small>كل الأصناف</small></a>}
         </div>
+        <div className="ct-hrs"><span>🕒 {site.hours}</span><OpenNow /></div>
+        <div className="ct-soc"><b>تابعنا</b><Socials site={site} /></div>
       </main>
       <Footer site={site} />
     </>

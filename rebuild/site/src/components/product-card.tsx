@@ -61,7 +61,7 @@ export function ProductCard({ p, ok, priority, fresh }: { p: Product; ok: boolea
             </div>
           ) : <>
             <button className={'add' + (ok ? '' : ' bo')} onClick={addIt}>{ok ? '🛒 أضف للطلب' : '📦 اطلبه بالحجز'}</button>
-            <button type="button" className="ask" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>💬 اسأل عن السعر</button>
+            <button type="button" className="ask" aria-label="اسأل عن السعر" title="اسأل عن السعر" onClick={() => open({ kind: 'price', lines: [{ item, q: 1 }] })}>💬</button>
           </>}
         </div>
       </div>
