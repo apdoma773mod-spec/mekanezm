@@ -1,38 +1,45 @@
 /**
- * رفع فيديو من التليفون/الكمبيوتر مباشرة لمخزن Supabase (الباك إند على Vercel بياخد 4.5 ميجا بس، والفيديو أكبر).
- * المخزن المجاني بيقبل ملف لحد ٥٠ ميجا، فأي فيديو أكبر بيتصغّر على الجهاز الأول (من غير تقصير) وبعدين يترفع.
- * بيرجّع لينك مباشر للفيديو والموقع بيشغّله.
+ * رفع فيديو المنتج من أي جهاز وبأي صيغة (آيفون .mov/HEVC، أندرويد، أي حاجة):
+ * ١) الأصل بيترفع لمخزن Supabase على أجزاء (كل جزء ٤٥ ميجا — حد المخزن المجاني ٥٠ للملف) في tmp/
+ * ٢) السيرفر بيحوّله لـ H.264 mp4 (بيشتغل في أي متصفح، حتى الكمبيوترات اللي مابتشغلش فيديو الآيفون) ويرجّع لينكه.
  */
-import { compressVideo } from './video-compress';
+import { api } from './api';
 
 const SB = 'https://aglwhwrwhobxykizjytc.supabase.co';
 // مفتاح الـ anon علني بطبعه (زي أي موقع Supabase)، والمخزن نفسه مقفول على الفيديوهات بس
 const ANON = 'sb_publishable_dcjzvoUOmi__7tFVpeTIDA_t6HNC-Ki';
-const LIMIT = 48 * 1024 * 1024;
-const MAX_SRC = 450 * 1024 * 1024;
+const PART = 45 * 1024 * 1024;
+const MAX_PARTS = 8;
 
-function put(f: File, say: (label: string) => void): Promise<string> {
-  const ext = /\.webm$/i.test(f.name) || f.type === 'video/webm' ? 'webm' : /\.mov$/i.test(f.name) || f.type === 'video/quicktime' ? 'mov' : 'mp4';
-  const type = ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4';
-  const name = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}.${ext}`;
+function putPart(name: string, blob: Blob, onPct: (loaded: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
     x.open('POST', `${SB}/storage/v1/object/mk-videos/${name}`);
     x.setRequestHeader('authorization', `Bearer ${ANON}`);
     x.setRequestHeader('apikey', ANON);
-    x.setRequestHeader('content-type', type);
-    x.upload.onprogress = (e) => e.lengthComputable && say(`بيترفع… ${Math.round((e.loaded / e.total) * 100)}%`);
-    x.onload = () => (x.status >= 200 && x.status < 300 ? resolve(`${SB}/storage/v1/object/public/mk-videos/${name}`) : reject(new Error(`الفيديو مارفعش (${x.status})`)));
+    x.setRequestHeader('content-type', 'application/octet-stream');
+    x.upload.onprogress = (e) => e.lengthComputable && onPct(e.loaded);
+    x.onload = () => (x.status >= 200 && x.status < 300 ? resolve() : reject(new Error(`الفيديو مارفعش (${x.status}) ${x.responseText.slice(0, 120)}`)));
     x.onerror = () => reject(new Error('النت قطع وانت بترفع الفيديو، جرّب تاني'));
-    x.send(f);
+    x.send(blob);
   });
 }
 
 export async function uploadSiteVideo(f: File, say: (label: string) => void): Promise<string> {
-  let file = f;
-  if (f.size > LIMIT) {
-    if (f.size > MAX_SRC) throw new Error(`الفيديو ${Math.round(f.size / 1048576)} ميجا — كبير قوي على التليفون يصغّره. ارفعه يوتيوب غير مدرج وحط اللينك`);
-    file = await compressVideo(f, 44 * 1024 * 1024, say);
+  const n = Math.ceil(f.size / PART);
+  if (!f.size) throw new Error('الفيديو فاضي');
+  if (n > MAX_PARTS) throw new Error(`الفيديو ${Math.round(f.size / 1048576)} ميجا — كبير قوي. الحد ${Math.round((PART * MAX_PARTS) / 1048576)} ميجا (حوالي دقيقة ونص فيديو آيفون)`);
+  const job = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  const parts: string[] = [];
+  let done = 0;
+  for (let i = 0; i < n; i++) {
+    const name = `tmp/${job}/p${i}`;
+    const blob = f.slice(i * PART, Math.min(f.size, (i + 1) * PART));
+    await putPart(name, blob, (loaded) => say(`بيترفع… ${Math.min(99, Math.round(((done + loaded) / f.size) * 100))}%`));
+    done += blob.size;
+    parts.push(name);
   }
-  return put(file, say);
+  say('بيحوّل الفيديو عشان يشتغل على أي جهاز… (ممكن ياخد دقيقة)');
+  const r = await api.post<{ url: string }>('/web/video/convert', { parts });
+  return r.url;
 }
