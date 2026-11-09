@@ -658,7 +658,7 @@ export function NotifyBar({ waPhotos, sms, web }: { waPhotos: number; sms: numbe
   const L: [string, number, string][] = [];
   if (web?.orders) L.push(['🛒 طلب من الموقع', web.orders, '/weborders']);
   if (web?.custom) L.push(['🛠️ طلب تجهيز', web.custom, '/weborders#cuBody']);
-  if (web?.requests) L.push(['📷 طلب بالصور', web.requests, '/weborders#rqBody']);
+  if (web && web.requests - (web.subs ?? 0) > 0) L.push(['📷 طلب بالصور', web.requests - (web.subs ?? 0), '/weborders#rqBody']);
   if (web?.subs) L.push(['📣 مشترك جديد', web.subs, '/weborders#subBody']);
   if (waPhotos) L.push(['💬 صورة واتساب', waPhotos, '/transfers']);
   if (sms) L.push(['📲 فلوس واصلة', sms, '/vodafone']);
