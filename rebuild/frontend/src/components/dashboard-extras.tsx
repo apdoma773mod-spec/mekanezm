@@ -171,6 +171,7 @@ export function DashboardBanners() {
   const wc = useWebCounts().data;
   const web = wc?.orders ?? 0;
   const rq = wc?.requests ?? 0;
+  const subs = wc?.subs ?? 0;
   const cu = wc?.custom ?? 0;
   const msgs = usePortalNewCount().data ?? 0;
   const { open } = useModal();
@@ -187,6 +188,11 @@ export function DashboardBanners() {
       {rq > 0 && (
         <Link href="/weborders#rqBody" style={{ ...banner, background: '#eef6ff', color: '#0b4a8b', border: '1px solid #9cc3ef' }}>
           📷 عندك <b>{rq}</b> طلب بالصور (منتج مش في الموقع) — اضغط للعرض
+        </Link>
+      )}
+      {subs > 0 && (
+        <Link href="/weborders#subBody" style={{ ...banner, background: '#eefaf0', color: '#0f6b34', border: '1px solid #9fd7b3' }}>
+          📣 عندك <b>{subs}</b> مشترك جديد في جديد الواتساب — رحّب بيه
         </Link>
       )}
       {cu > 0 && (

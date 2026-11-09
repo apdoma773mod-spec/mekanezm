@@ -43,7 +43,7 @@ export const useWebCounts = (enabled = true) =>
   useQuery({
     enabled,
     queryKey: ['web', 'counts'],
-    queryFn: ({ signal }) => api.get<{ orders: number; requests: number; custom: number }>('/web/counts', undefined, signal),
+    queryFn: ({ signal }) => api.get<{ orders: number; requests: number; subs?: number; custom: number }>('/web/counts', undefined, signal),
     refetchInterval: 60_000,
     staleTime: 20_000,
   });

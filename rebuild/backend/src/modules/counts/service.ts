@@ -4,6 +4,7 @@ import type { Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { D, ZERO, money, num, qty as roundQty } from '../../lib/money.js';
+import { tbl } from '../../lib/db-schema.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
 
@@ -53,7 +54,7 @@ export async function qtyAtTimes(tx: Prisma.TransactionClient, items: { productI
   const out = new Map<string, Prisma.Decimal>();
   if (!items.length) return out;
   const rows = await tx.$queryRaw<{ id: string; moved: Prisma.Decimal | null }[]>(Prisma.sql`
-    SELECT v.id, (SELECT COALESCE(SUM(m."qtyChange"), 0) FROM "StockMove" m WHERE m."productId" = v.id AND m."createdAt" > v.at) AS moved
+    SELECT v.id, (SELECT COALESCE(SUM(m."qtyChange"), 0) FROM ${tbl('StockMove')} m WHERE m."productId" = v.id AND m."createdAt" > v.at) AS moved
     FROM (VALUES ${Prisma.join(items.map((i) => Prisma.sql`(${i.productId}::text, ${i.at}::timestamptz)`))}) AS v(id, at)`);
   for (const r of rows) out.set(r.id, D(r.moved ?? 0));
   return out;

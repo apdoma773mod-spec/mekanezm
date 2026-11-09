@@ -5,6 +5,7 @@ import { actorOf } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
 import { badRequest, notFound } from '../../lib/errors.js';
 import { num } from '../../lib/money.js';
+import { tbl } from '../../lib/db-schema.js';
 import { parse } from '../../lib/validate.js';
 
 /**
@@ -23,8 +24,8 @@ export default async function warehouseRoutes(app: FastifyInstance) {
       db.warehouse.findMany({ orderBy: [{ sort: 'asc' }, { createdAt: 'asc' }] }),
       db.$queryRaw<{ w: string; n: bigint }[]>(Prisma.sql`
         SELECT e->>'w' AS w, COUNT(DISTINCT i."productId") AS n
-        FROM "ProductInfo" i
-        JOIN "Product" p ON p."id" = i."productId" AND p."deletedAt" IS NULL,
+        FROM ${tbl('ProductInfo')} i
+        JOIN ${tbl('Product')} p ON p."id" = i."productId" AND p."deletedAt" IS NULL,
         LATERAL jsonb_array_elements(i."stores") e
         GROUP BY 1`),
     ]);
@@ -39,8 +40,8 @@ export default async function warehouseRoutes(app: FastifyInstance) {
     if (!w) throw notFound('المخزن ده مش موجود');
     const rows = await db.$queryRaw<{ id: string; code: string; name: string; unit: string; qty: Prisma.Decimal; shelf: Prisma.Decimal | null; spot: string }[]>(Prisma.sql`
       SELECT p."id", p."code", p."name", p."unit", p."qty", i."shelfQty" AS shelf, e->>'s' AS spot
-      FROM "ProductInfo" i
-      JOIN "Product" p ON p."id" = i."productId" AND p."deletedAt" IS NULL,
+      FROM ${tbl('ProductInfo')} i
+      JOIN ${tbl('Product')} p ON p."id" = i."productId" AND p."deletedAt" IS NULL,
       LATERAL jsonb_array_elements(i."stores") e
       WHERE e->>'w' = ${id}
       ORDER BY e->>'s', p."name"
@@ -88,7 +89,7 @@ export default async function warehouseRoutes(app: FastifyInstance) {
     const w = await db.warehouse.findUnique({ where: { id } });
     if (!w) throw notFound('المخزن ده مش موجود');
     const [{ n }] = await db.$queryRaw<{ n: bigint }[]>(Prisma.sql`
-      SELECT COUNT(*) AS n FROM "ProductInfo" i, LATERAL jsonb_array_elements(i."stores") e WHERE e->>'w' = ${id}`);
+      SELECT COUNT(*) AS n FROM ${tbl('ProductInfo')} i, LATERAL jsonb_array_elements(i."stores") e WHERE e->>'w' = ${id}`);
     if (Number(n) > 0) throw badRequest(`مينفعش تمسح «${w.name}» — فيه ${Number(n)} منتج مسجل جواه. انقلهم لمخزن تاني الأول.`);
     const actor = actorOf(request);
     await db.$transaction(async (tx) => {
