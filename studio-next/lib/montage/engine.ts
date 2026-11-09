@@ -93,7 +93,7 @@ async function pcmFromFile(file,prog){
   prog('🎧 بسحب الصوت من الفيديو…');const buf=await file.arrayBuffer(),ac=new AC();
   const ab=await new Promise((ok,no)=>{const p=ac.decodeAudioData(buf,ok,no);if(p&&p.then)p.then(ok,no)});ac.close&&ac.close();
   const off=new OfflineAudioContext(1,Math.ceil(ab.duration*16000),16000),src=off.createBufferSource();src.buffer=ab;src.connect(off.destination);src.start();
-  const r=await off.startRendering();return r.getChannelData(0)}catch(e){console.warn('decode',e)}}
+  const r=await off.startRendering();return r.getChannelData(0)}catch(e){console.warn('decode',e);prog('⚠️ السحب السريع للصوت فشل ('+String((e&&e.message)||e||'صيغة').slice(0,60)+') — هسمعه وهو شغال وهياخد وقت الفيديو')}}
  /* فيديو كبير أو الصيغة مش بتتفك: نسمعه وهو شغال (بياخد نفس مدة الفيديو) */
  return await new Promise((ok,no)=>{const v=document.createElement('video');v.src=URL.createObjectURL(file);v.playsInline=true;v.muted=false;
   const ac=new AC(),src=ac.createMediaElementSource(v),sp=ac.createScriptProcessor(4096,1,1),parts=[],g=ac.createGain();g.gain.value=0;
