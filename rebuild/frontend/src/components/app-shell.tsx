@@ -37,6 +37,7 @@ interface NavItem {
 const MAIN: NavItem[] = [
   { href: '/', label: 'لوحة التحكم', short: 'الرئيسية', icon: 'grid', mobile: true },
   { href: '/products', label: 'المنتجات والمخزون', short: 'المخزون', icon: 'box', adminOnly: true, mobile: true },
+  { href: '/warehouses', label: 'المخازن', icon: '🏬' },
   { href: '/count', label: 'الجرد', icon: '🧮', adminOnly: true },
   { href: '/purchases', label: 'المشتريات', icon: 'down', mobile: true },
   // Order read from the old system as it runs today (2026-10-29), after «ميكانيزم برو» moved the work screens.

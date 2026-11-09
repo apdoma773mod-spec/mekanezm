@@ -10,6 +10,7 @@ import { HandDiagram } from './hand-stub';
 import { handFromName, kindFromName, normKind, HAND_LABEL, KIND_LABEL, type HandKind } from './lib/hand';
 import { Imgs, uid7, Fold } from './ui';
 import { uploadSiteVideo } from '@/lib/video-upload';
+import { AiDescribeButton, hintOf } from '@/components/ai-describe';
 
 type P = { badge?: string; brand?: string; tags?: string[]; avail?: 'in' | 'out' | 'order'; seoTitle?: string; seoDesc?: string; from?: string; until?: string; id: string; code: string; name: string; desc?: string; sec: string; imgs: string[]; img?: string; top?: boolean; video?: string; hidden?: boolean; dir?: { off?: boolean; hand?: 'R' | 'L'; kind?: string; pair?: string; note?: string; media?: string } };
 const SPEC_CHIPS = ['المقاس', 'الخامة', 'اللون', 'النوع', 'القفلة', 'الحمل', 'البراند', 'المنشأ', 'يناسب', 'اتجاه الفتح', 'دليل التركيب'];
@@ -261,6 +262,31 @@ function ProductEditor({ doc, id, sys, onDoc, onClose }: { doc: SiteDoc; id: str
       </Fold>
       <Fold title={<>📷 الصور <small>أول صورة هي اللي بتظهر في الكارت</small></>}><Imgs value={f.imgs} onChange={u => set('imgs', u)} /></Fold>
       <Fold title={<>📋 الوصف والمواصفات</>}>
+        <div style={{ marginBottom: 8 }}>
+          <AiDescribeButton
+            id="smAi"
+            build={() => {
+              if (!f.name.trim()) return 'اكتب اسم المنتج الأول';
+              const known = f.desc.split('\n').map(l => l.trim()).filter(l => /^[^:：]{1,30}[:：]\s*\S/.test(l)).join('، ');
+              return {
+                name: f.name.trim(),
+                cat: secs.find(x => x.id === f.sec)?.name ?? sysProd?.category ?? '',
+                hint: [hintOf({ الماركة: f.brand || sysInfo?.brand, التشطيب: sysInfo?.finish, المقاس: sysInfo?.size }), known].filter(Boolean).join('، '),
+                image_url: f.imgs[0] ?? '',
+              };
+            }}
+            onDone={r => {
+              if (f.desc.trim() && !window.confirm('تستبدل الوصف والمواصفات الحاليين بالجديد؟ (المواصفات المكتوبة بإيدك هتفضل)')) return;
+              // the spec lines the owner typed stay; the AI only adds the ones that are missing
+              const lines = f.desc.split('\n').map(l => l.trim()).filter(Boolean);
+              const specLines = lines.filter(l => /^[^:：]{1,30}[:：]\s*\S/.test(l));
+              const have = new Set(specLines.map(l => l.split(/[:：]/)[0]!.trim()));
+              const added = r.specs.filter(x => !have.has(x.k)).map(x => `${x.k}: ${x.v}`);
+              set('desc', [r.description, ...specLines, ...added].join('\n'));
+              setMsg('✔ الوصف والمواصفات اتكتبوا — راجعهم ودوس «حفظ»');
+            }}
+          />
+        </div>
         <p className="mut">اكتب كل مواصفة في سطر: <b dir="ltr">المقاس: 50 سم</b> — بتتحول لجدول في صفحة المنتج وفلاتر المقارنة.</p>
         <textarea rows={9} value={f.desc} onChange={e => set('desc', e.target.value)} placeholder={'سطر أو اتنين عن المنتج.\nالمقاس: 50 سم\nالخامة: ...'} />
         <div className="ad-chips">{SPEC_CHIPS.map(c => <button key={c} type="button" onClick={() => set('desc', (f.desc.trim() ? f.desc.replace(/\s+$/, '') + '\n' : '') + c + ': ')}>＋ {c}</button>)}</div>

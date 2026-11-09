@@ -90,7 +90,7 @@ function flatJSON(j: unknown): Record<string, unknown>[] {
 }
 
 export function PurchaseImport() {
-  const { close } = useModal();
+  const { close, open } = useModal();
   const toast = useToast();
   const qc = useQueryClient();
   const { co } = useCompany();
@@ -293,13 +293,18 @@ export function PurchaseImport() {
               <br />
               <b>1) ملف</b> من الأبلكيشن القديم: Excel أو CSV أو JSON.
               <br />
-              <b>2) صور</b> فواتير ورقية: بتتقري بالذكاء الاصطناعي وتلاقيها في «قراءة الفواتير بالصورة».
+              <b>2) صور</b> فواتير ورقية: بتتقري بالذكاء الاصطناعي جوه شاشة فاتورة الشراء (الزرار اللي تحت بيفتحهالك).
             </div>
             <button type="button" className="primary" style={bt(true)} onClick={() => pick('.xlsx,.xls,.xlsm,.csv,.json,.txt', (f) => void readFile(f))}>
               📄 اختار ملف (Excel / CSV / JSON)
             </button>
-            <button type="button" className="secondary" style={bt(false)} onClick={() => toast('قراءة صور الفواتير بالذكاء الاصطناعي لسه محتاجة مفتاح الخدمة على السيرفر الجديد', 'bad')}>
-              🖼️ ارفع صور فواتير (قراءة OCR)
+            <button type="button" className="secondary" style={bt(false)} onClick={() => {
+                // قراءة الصور شغّالة جوه شاشة فاتورة الشراء (📷 صوّر / 🖼️ من الصور): بنفتحهالك على طول
+                close();
+                setTimeout(() => open({ kind: 'transaction', type: 'PURCHASE' }), 150);
+                toast('📷 دوس «صوّر الفاتورة» أو «من الصور» — بتتقري وتتحط بنودها في الفاتورة');
+              }}>
+              🖼️ ارفع صور فواتير (قراءة بالذكاء الاصطناعي)
             </button>
           </>
         )}

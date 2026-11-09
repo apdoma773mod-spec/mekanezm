@@ -962,3 +962,20 @@ svg.i {
 .mk-more{display:block;width:100%;margin:10px 0;padding:13px}
 #spEd .mk-tile-b > .sec,.mk-tile-b > .sec{border:0;box-shadow:none;padding:0;margin:0;background:transparent}
 #spEd .mk-tile-b > .sec > h3:first-child,.mk-tile-b > .sec > h3:first-child{display:none}
+
+/* 📦 قايمة المخزن على الموبايل: كارت مضغوط (الاسم + سطر واحد: كود · كمية · سعر بيع · حالة)، والباقي بيظهر لما تدوس عليه */
+@media (max-width: 700px) {
+  body.mk-tcards main table.mkTc.mk-pcards tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 12px; margin-bottom: 8px; border-width: 1.5px; }
+  body.mk-tcards main table.mkTc.mk-pcards td { display: inline-flex; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 600; flex: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td::before { font-size: 11px; font-weight: 600; margin-inline-end: 4px; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="المنتج"] { order: -2; flex: 1 1 100%; font-size: 15px; font-weight: 800; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="المنتج"]::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الكود"] { order: -1; font-size: 12px; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الكود"]::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="التصنيف"],
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="سعر الشراء"] { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"] { margin-inline-start: auto; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"]::before { display: none; }
+}
+
+.pc-place-ed{display:grid;gap:10px}

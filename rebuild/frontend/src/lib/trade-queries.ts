@@ -540,7 +540,29 @@ export interface ProductInfo {
   descr: string;
   packs: ProductPack[];
   imgs: string[];
+  /** كام قطعة على الرف في المحل (null = مش متحدد). الباقي من الرصيد في المخزن. */
+  shelfQty: number | null;
+  /** أماكن الباقي في المخازن */
+  stores: ProductStore[];
 }
+export interface ProductStore {
+  /** Warehouse id */
+  w: string;
+  /** عين / رف جوه المخزن */
+  s: string;
+}
+export interface WarehouseDto {
+  id: string;
+  name: string;
+  note: string;
+  products: number;
+}
+export const useWarehouses = () =>
+  useQuery({
+    queryKey: ["warehouses"],
+    queryFn: ({ signal }) => api.get<{ warehouses: WarehouseDto[] }>("/warehouses", undefined, signal).then((r) => r.warehouses),
+    staleTime: 60_000,
+  });
 export const useAllProductInfo = (enabled = true) =>
   useQuery({
     queryKey: ['product-info', 'all'],

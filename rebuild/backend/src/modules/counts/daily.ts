@@ -8,7 +8,7 @@ import { raiseAlert } from '../../lib/alerts.js';
 import { currentUser } from '../../plugins/auth.js';
 import { parse } from '../../lib/validate.js';
 import { num } from '../../lib/money.js';
-import { CountsService } from './service.js';
+import { CountsService, qtyAtTimes } from './service.js';
 
 /**
  * 🧮 الجرد اليومي: كل يوم 10 أصناف (اللي ماتعدّتش من أطول وقت الأول). أي حد يعدّها من غير ما يشوف الرصيد
@@ -62,6 +62,9 @@ async function view(db: PrismaClient, s: State, admin: boolean) {
   const prods = await db.product.findMany({ where: { id: { in: s.ids } }, select: { id: true, code: true, name: true, unit: true, qty: true, cost: true } });
   const by = new Map(prods.map((p) => [p.id, p]));
   const ans = new Map(s.answers.map((a) => [a.productId, a.counted]));
+  // بعد ما العدّ يتسلّم، رصيد السيستم المقارَن بيه هو رصيده «وقت العد» (مش بعد ما البيع كمل)، عشان الفرق يبقى فرق حقيقي
+  const moved = s.at && s.answers.length ? await qtyAtTimes(db, s.answers.map((a) => ({ productId: a.productId, at: new Date(s.at!) }))) : new Map<string, never>();
+  const sys = (p: { id: string; qty: unknown }) => (s.at && ans.has(p.id) ? Math.round((num(p.qty as never) - num((moved.get(p.id) as never) ?? 0)) * 1000) / 1000 : num(p.qty as never));
   const items = s.ids
     .map((id) => by.get(id))
     .filter((p): p is NonNullable<typeof p> => !!p)
@@ -72,7 +75,7 @@ async function view(db: PrismaClient, s: State, admin: boolean) {
       unit: p.unit,
       counted: ans.get(p.id) ?? null,
       // the system quantity is hidden from whoever counts; the owner sees it with the difference
-      ...(admin ? { system: num(p.qty), diff: ans.has(p.id) ? Math.round((ans.get(p.id)! - num(p.qty)) * 1000) / 1000 : null, cost: num(p.cost) } : {}),
+      ...(admin ? { system: sys(p), diff: ans.has(p.id) ? Math.round((ans.get(p.id)! - sys(p)) * 1000) / 1000 : null, cost: num(p.cost) } : {}),
     }));
   return { day: s.day, status: s.status, by: s.by ?? null, at: s.at ?? null, approvedBy: s.approvedBy ?? null, items };
 }
@@ -110,7 +113,7 @@ export default async function dailyCountRoutes(app: FastifyInstance) {
     const s = await read(db);
     if (s.status !== 'submitted') throw badRequest('مفيش جرد مستني اعتماد');
     const items = s.answers;
-    await new CountsService(db).create({ items: items.map((a) => ({ productId: a.productId, counted: a.counted })), note: 'جرد يومي' }, actorOf(request));
+    await new CountsService(db).create({ items: items.map((a) => ({ productId: a.productId, counted: a.counted, ...(s.at ? { countedAt: s.at } : {}) })), note: 'جرد يومي' }, actorOf(request));
     const last = { ...s.last };
     for (const a of items) last[a.productId] = s.day;
     const next: State = { ...s, status: 'approved', last, approvedBy: currentUser(request).name };

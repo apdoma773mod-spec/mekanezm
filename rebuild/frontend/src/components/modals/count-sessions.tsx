@@ -7,7 +7,8 @@ import { money } from '@/lib/format';
 import { vn } from '@/lib/import-daily';
 import { printHtml, reportHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
-import { useAllProducts, useCreateCount } from '@/lib/trade-queries';
+import { serverNowIso, syncServerTime } from '@/lib/server-time';
+import { useAllProducts } from '@/lib/trade-queries';
 import { CameraScanner } from '../scan/camera-scanner';
 import { Portal } from '../ui/portal';
 import { Loading } from '../ui/states';
@@ -20,7 +21,10 @@ const KEY = 'count_sessions';
 interface Item {
   start: number;
   cnt: string | null;
+  /** رصيد السيستم وقت العد (بيتسجّل من السيرفر) */
   qAt: number | null;
+  /** وقت العد بساعة السيرفر — الاعتماد بيحسب على رصيد الوقت ده */
+  at?: string;
 }
 interface Session {
   id: string;
@@ -43,7 +47,6 @@ export function CountSessions() {
   const toast = useToast();
   const settings = useSettings().data;
   const products = useAllProducts({}).data;
-  const createCount = useCreateCount();
   const [S, setS] = useState<Session[] | null>(null);
   const [curId, setCurId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -52,31 +55,77 @@ export function CountSessions() {
   const [st, setSt] = useState<'all' | 'pending' | 'done' | 'diff'>('all');
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const live = useRef<Session[] | null>(null);
 
+  /** تعديلات لسه ماوصلتش السيرفر (بنبعتها بعد ٠٫٦ ثانية من آخر كتابة في الخانة) */
+  const pending = useRef(new Map<string, { sid: string; pid: string; cnt: string | null; at: string; timer?: ReturnType<typeof setTimeout> }>());
+  const overlay = useCallback((list: Session[]) => {
+    if (!pending.current.size) return list;
+    return list.map((x) => {
+      if (x.status !== 'open') return x;
+      let items = x.items;
+      pending.current.forEach((p) => {
+        if (p.sid !== x.id || !items[p.pid]) return;
+        items = { ...items, [p.pid]: p.cnt == null ? { ...items[p.pid]!, cnt: null, qAt: null, at: undefined } : { ...items[p.pid]!, cnt: p.cnt, at: p.at } };
+      });
+      return items === x.items ? x : { ...x, items };
+    });
+  }, []);
+  const adopt = useCallback(
+    (list: Session[]) => {
+      const m = overlay(list);
+      live.current = m;
+      setS(m);
+    },
+    [overlay],
+  );
+  /** أي تعديل بيتطبّق على نسخة السيرفر الحالية (مش بنكتب فوق شغل جهاز تاني) */
+  const op = useCallback(
+    async (body: Record<string, unknown>) => {
+      const r = await api.post<{ value: Session[] }>('/counts/session-op', body);
+      adopt(r.value);
+      return r.value;
+    },
+    [adopt],
+  );
+  const flush = useCallback(async () => {
+    const all = [...pending.current.entries()];
+    for (const [k, p] of all) {
+      clearTimeout(p.timer);
+      try {
+        await op({ op: 'set', sid: p.sid, pid: p.pid, cnt: p.cnt, at: p.at });
+        if (pending.current.get(k) === p) pending.current.delete(k);
+      } catch (e) {
+        toast(errorMessage(e), 'bad');
+        return false;
+      }
+    }
+    return true;
+  }, [op, toast]);
+
+  // تحميل الجلسات + تحديث كل ١٥ ثانية (عشان عدّ الأجهزة التانية يظهر عندك)
   useEffect(() => {
-    api
-      .get<{ value: Session[] | null }>(`/work/kv/${KEY}`)
-      .then((r) => {
-        const v = Array.isArray(r.value) ? r.value : [];
-        live.current = v;
-        setS(v);
-      })
-      .catch(() => setS([]));
+    void syncServerTime();
+    const load = () =>
+      api
+        .get<{ value: Session[] | null }>(`/work/kv/${KEY}`)
+        .then((r) => adopt(Array.isArray(r.value) ? r.value : []))
+        .catch(() => {
+          if (!live.current) setS([]);
+        });
+    void load();
+    const t = setInterval(() => void load(), 15000);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      clearInterval(t);
       document.body.style.overflow = prev;
+      pending.current.forEach((p) => {
+        clearTimeout(p.timer);
+        void api.post('/counts/session-op', { op: 'set', sid: p.sid, pid: p.pid, cnt: p.cnt, at: p.at }).catch(() => undefined);
+      });
     };
-  }, []);
-
-  const persist = useCallback((next: Session[]) => {
-    live.current = next;
-    setS(next);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => void api.put(`/work/kv/${KEY}`, { value: live.current }).catch(() => undefined), 700);
-  }, []);
+  }, [adopt]);
 
   const byId = useMemo(() => new Map((products ?? []).map((p) => [p.id, p])), [products]);
   const cats = useMemo(() => [...new Set((products ?? []).map((p) => p.category || '').filter(Boolean))].sort(), [products]);
@@ -111,35 +160,58 @@ export function CountSessions() {
     const it = s.items[pid];
     if (!it) return;
     const p = byId.get(pid);
-    const nx: Item = v === '' ? { ...it, cnt: null, qAt: null } : { ...it, cnt: v.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))), qAt: it.cnt == null || it.cnt === '' || it.qAt == null ? num(p?.qty ?? 0) : it.qAt };
-    persist((live.current ?? []).map((x) => (x.id === s.id ? { ...x, items: { ...x.items, [pid]: nx } } : x)));
+    const cnt = v === '' ? null : v.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[٫،]/g, '.');
+    const at = serverNowIso();
+    // الشاشة بتتحدّث فوراً، والسيرفر بياخد آخر قيمة بعد ٠٫٦ ثانية. وقت العد بيتجدّد مع كل تعديل (العدّ الأخير هو اللي بيحسب).
+    const key = `${s.id}|${pid}`;
+    clearTimeout(pending.current.get(key)?.timer);
+    const rec = { sid: s.id, pid, cnt, at, timer: undefined as ReturnType<typeof setTimeout> | undefined };
+    rec.timer = setTimeout(() => {
+      void api
+        .post<{ value: Session[] }>('/counts/session-op', { op: 'set', sid: rec.sid, pid, cnt: rec.cnt, at: rec.at })
+        .then((r) => {
+          if (pending.current.get(key) === rec) pending.current.delete(key);
+          adopt(r.value);
+        })
+        .catch((e) => toast(`العدد ماتحفظش على السيرفر: ${errorMessage(e)}`, 'bad'));
+    }, 600);
+    pending.current.set(key, rec);
+    const nx: Item = cnt == null ? { ...it, cnt: null, qAt: null, at: undefined } : { ...it, cnt, at, qAt: p ? num(p.qty) : it.qAt };
+    const next = (live.current ?? []).map((x) => (x.id === s.id ? { ...x, items: { ...x.items, [pid]: nx } } : x));
+    live.current = next;
+    setS(next);
   };
 
   const approve = async (s: Session) => {
-    const ch: { p: ProductDto; nq: number; from: number }[] = [];
-    Object.keys(s.items).forEach((pid) => {
-      const it = s.items[pid]!;
-      const p = byId.get(pid);
-      if (!p || !done(it)) return;
-      const nq = Math.max(0, r2(num(it.cnt) + (p.qty - num(it.qAt))));
-      if (nq !== p.qty) ch.push({ p, nq, from: p.qty });
-    });
-    const left = Object.keys(s.items).length - stats(s).counted;
-    const msg = `هتعتمد الجرد "${s.name}":\n• ${ch.length} صنف هيتعدّل رصيده\n• ${left} صنف لسه ماتعدّش (مش هيتأثر)\n${ch
-      .slice(0, 8)
-      .map((x) => `- ${x.p.name}: ${x.from} ← ${x.nq}`)
-      .join('\n')}${ch.length > 8 ? '\n...' : ''}\n\nالرصيد الجديد = العدد + الحركة اللي حصلت بعد العد. مينفعش يترجع. نكمّل؟`;
-    if (!window.confirm(msg)) return;
     setBusy(true);
     try {
-      if (ch.length) await createCount.mutateAsync({ items: ch.map((x) => ({ productId: x.p.id, counted: x.nq })), note: `جلسة جرد: ${s.name}` });
-      persist((live.current ?? []).map((x) => (x.id === s.id ? { ...x, status: 'closed' as const, approved: new Date().toISOString() } : x)));
-      toast(`✔ اتعتمد الجرد وتعدّل ${ch.length} صنف`);
+      if (!(await flush())) return;
+      // السيرفر هو اللي بيحسب: رصيد كل صنف وقت ما اتعدّ + البيع والشراء اللي حصل بعده
+      const pv = await api.post<{ total: number; lines: { name: string; current: number; before: number; counted: number; diff: number; after: number }[]; negative: { name: string; after: number }[] }>('/counts/session-preview', { sid: s.id });
+      const ch = pv.lines.filter((x) => x.diff !== 0);
+      const moved = pv.lines.filter((x) => r2(x.current - x.before) !== 0).length;
+      const msg = [
+        `هتعتمد الجرد "${s.name}":`,
+        `• ${pv.lines.length} صنف اتعدّ، منهم ${ch.length} فيه فرق عن السيستم وقت العد`,
+        `• ${pv.total - pv.lines.length} صنف لسه ماتعدّش (مش هيتأثر)`,
+        moved ? `• ${moved} صنف اتباع أو اتشترى منه بعد ما اتعدّ — الحركة دي محسوبة ومش هتتمسح` : '',
+        ...ch.slice(0, 8).map((x) => `- ${x.name}: عددت ${x.counted} والسيستم كان ${x.before} (${x.diff > 0 ? '+' : ''}${x.diff}) ← الرصيد بعد الاعتماد ${x.after}`),
+        ch.length > 8 ? '...' : '',
+        pv.negative.length ? `⚠️ ${pv.negative.length} صنف هيطلع رصيده بالسالب — راجعهم: ${pv.negative.slice(0, 4).map((x) => x.name).join('، ')}` : '',
+        'الرصيد الجديد = العدد + الحركة اللي حصلت بعد العد. مينفعش يترجع. نكمّل؟',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      if (!window.confirm(msg)) return;
+      const r = await api.post<{ count: { itemCount: number }; value: Session[] }>('/counts/session-approve', { sid: s.id });
+      adopt(r.value);
+      toast(`✔ اتعتمد الجرد (${r.count.itemCount} صنف اتحسبوا، ${ch.length} فيهم فرق)`);
       setCurId(null);
     } catch (e) {
       toast(`مقدرتش أكمّل: ${errorMessage(e)}`, 'bad');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const printSheet = (s: Session) => {
@@ -188,9 +260,8 @@ export function CountSessions() {
                 const items: Record<string, Item> = {};
                 products.filter((p) => !cat || (p.category || '') === cat).forEach((p) => (items[p.id] = { start: p.qty, cnt: null, qAt: null }));
                 const s: Session = { id: `cs${Date.now().toString(36)}`, name: name.trim() || `جرد ${new Date().toISOString().slice(0, 10)}`, cat, created: new Date().toISOString(), status: 'open', items };
-                persist([...(live.current ?? []), s]);
+                void op({ op: 'create', session: s }).then(() => setCurId(s.id)).catch((e) => toast(errorMessage(e), 'bad'));
                 setName('');
-                setCurId(s.id);
               }}
             >
               ابدأ الجلسة
@@ -224,7 +295,7 @@ export function CountSessions() {
                     type="button"
                     className="secondary danger"
                     onClick={() => {
-                      if (window.confirm('تمسح الجلسة دي؟ (المخزون مش هيتأثر)')) persist((live.current ?? []).filter((x) => x.id !== s.id));
+                      if (window.confirm('تمسح الجلسة دي؟ (المخزون مش هيتأثر)')) void op({ op: 'delete', sid: s.id }).catch((e) => toast(errorMessage(e), 'bad'));
                     }}
                   >
                     مسح

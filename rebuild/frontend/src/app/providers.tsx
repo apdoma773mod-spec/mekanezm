@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { installFileNormalizer } from '@/lib/heic';
+import { installDigitNormalizer } from '@/lib/digits-input';
 import { ApiClientError } from '@/lib/api';
 import { ToastProvider } from '@/components/ui/toast';
 import { CompanyProvider } from '@/components/company';
@@ -10,6 +11,7 @@ import { CompanyProvider } from '@/components/company';
 export function Providers({ children }: { children: ReactNode }) {
   // صور الآيفون HEIC تتقبل في كل خانات الصور
   useEffect(() => installFileNormalizer(), []);
+  useEffect(() => installDigitNormalizer(), []);
   const [client] = useState(
     () =>
       new QueryClient({

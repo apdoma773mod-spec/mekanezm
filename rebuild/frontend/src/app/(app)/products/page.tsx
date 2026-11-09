@@ -153,7 +153,7 @@ function ProductsScreen() {
       {products.data && <div className="count-line">{products.data.total.toLocaleString('ar-EG')} صنف</div>}
       <div className="card">
         <div className="table-wrap">
-          <table className="table" style={{ opacity: products.isFetching && !products.isPending ? 0.7 : 1 }}>
+          <table className="table mk-pcards" style={{ opacity: products.isFetching && !products.isPending ? 0.7 : 1 }}>
             <thead>
               <tr>
                 <th>الكود</th>

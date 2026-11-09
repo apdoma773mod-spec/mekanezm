@@ -83,7 +83,7 @@ const GSCHEMA = {
 // جوجل بيقفل موديلات قديمة (gemini-2.5-pro اتقفل للمستخدمين الجداد): كل درجة ليها قايمة، ولو موديل اتقفل بنعدّي للي بعده على طول
 const uniq = (a: (string | undefined)[]) => a.filter((m, i) => m && a.indexOf(m) === i) as string[];
 const STRONG_LIST = uniq([env("INVOICE_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest", "gemini-2.5-pro"]);
-const FAST_LIST = uniq([env("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash"]);
+const FAST_LIST = uniq([env("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
 const GONE = /no longer available|not found|is not supported|deprecated|unknown model/i;
 const INV_STRONG = STRONG_LIST[0];
 type Inv = { items?: { text?: string; qty?: number; price?: number; total?: number }[]; row_count?: number; grand_total?: number; discount?: number; [k: string]: unknown };
@@ -201,7 +201,7 @@ const TF_PROMPT = `دي صورة جاية على واتساب محل في مصر
 - confidence عالية (0.9+) بس لو المبلغ واضح تمامًا ومفيش شك.
 - status=failed لو مكتوب فشلت/مرفوضة/failed، pending لو قيد التنفيذ.`;
 
-const TF_MODELS = [...new Set([env("TRANSFER_MODEL"), env("GEMINI_MODEL"), "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean))] as string[];
+const TF_MODELS = [...new Set([env("TRANSFER_MODEL"), env("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-flash-lite-latest"].filter(Boolean))] as string[];
 const TF_STRONG = [...new Set([env("TRANSFER_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest"].filter(Boolean))] as string[];
 
 async function tfGemini(key: string, models: string[], image: string, mt: string, hint = "") {
