@@ -10,7 +10,7 @@ import { AppError } from '../../lib/errors.js';
  * The old edge functions are not in the repo, so the prompts here are written from how the old screens used them:
  *  match-product({image}) → {seen, matches:[{code, score 0-100, why}]}   describe-product({name,cat,hint,image_url,kind}) → {description}
  */
-const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean))] as string[];
+const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3-flash-preview', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))] as string[];
 
 type Schema = { gemini: Record<string, unknown>; claude: Record<string, unknown>; tool: string };
 
@@ -32,8 +32,9 @@ async function askJson(prompt: string, schema: Schema, img?: { data: string; mt:
       const body = (await r.json().catch(() => ({}))) as { error?: { message?: string }; candidates?: { content?: { parts?: { text?: string }[] } }[] };
       if (!r.ok) {
         last = body?.error?.message || `Gemini ${r.status}`;
-        if ([400, 404, 429, 500, 503].includes(r.status)) continue;
-        break;
+        // مفتاح غلط = مفيش فايدة نكمل؛ أي حاجة تانية (موديل اتقفل/زحمة) نجرّب اللي بعده
+        if (r.status === 401) break;
+        continue;
       }
       try {
         return JSON.parse(body.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '') as Record<string, unknown>;
