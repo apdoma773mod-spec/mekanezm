@@ -3,9 +3,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Works } from '@/components/home';
 import { OpenNow } from '@/components/open-now';
-import { Footer, Socials } from '@/components/site-parts';
+import { Footer } from '@/components/site-parts';
 import { getSettings } from '@/lib/catalog';
-import { MAP_URL, sectionPath, shopPhones, waUrl } from '@/lib/shop';
+import { MAP_URL, sectionPath, waUrl } from '@/lib/shop';
 
 export const metadata: Metadata = {
   title: 'مين إحنا | ميكانيزم — إكسسوارات المطابخ والدريسنج روم',
@@ -19,7 +19,6 @@ const PHOTOS: { src: string; alt: string }[] = [];
 export default async function About() {
   const site = await getSettings();
   const secs = site.sections.filter(s => site.counts[s.id]);
-  const phones = [site.phone, ...shopPhones(site)].filter((x, i, a) => x && a.indexOf(x) === i);
   return (
     <>
       <main id="main" className="page narrow">
@@ -44,9 +43,7 @@ export default async function About() {
           </div>
           <div>
             <h2>📍 تلاقينا فين؟</h2>
-            {site.address}{site.hours && <div>🕒 {site.hours}</div>}
-            <div style={{ margin: '6px 0' }}><OpenNow /></div>
-            {phones.length > 0 && <div dir="ltr" style={{ textAlign: 'right' }}>{phones.map(p => <a key={p} href={'tel:' + p} style={{ marginInlineEnd: 12 }}>{p}</a>)}</div>}
+            {site.address} · <OpenNow />
             <div className="row" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <a className="sec" style={{ flex: 1, textAlign: 'center' }} target="_blank" rel="noopener" href={site.mapUrl || MAP_URL}>🗺️ الخريطة</a>
               <a className="btn-g" style={{ flex: 1, textAlign: 'center' }} target="_blank" rel="noopener" href={waUrl(site)}>💬 واتساب</a>
@@ -60,7 +57,6 @@ export default async function About() {
           )}
         </div>
         <Works />
-        <Socials site={site} />
       </main>
       <Footer site={site} />
     </>

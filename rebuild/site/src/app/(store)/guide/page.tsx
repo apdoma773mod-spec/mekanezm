@@ -18,7 +18,7 @@ export default async function Guides() {
         <nav className="bc" aria-label="مكانك في الموقع"><Link href="/">الرئيسية</Link><span>›</span><span>دليل الاختيار</span></nav>
         <h1 className="page-h">📘 دليل الاختيار</h1>
         <p className="mut">قبل ما تشتري: اعرف تاخد إيه وبأنهي مقاس.</p>
-        <div className="glist">{GUIDES.map(g => (
+        <div className="glist gcomp">{GUIDES.map(g => (
           <Link key={g.slug} href={`/guide/${g.slug}`}><span>{g.emoji}</span><b>{g.title}</b><small>{g.desc}</small></Link>
         ))}</div>
       </main>

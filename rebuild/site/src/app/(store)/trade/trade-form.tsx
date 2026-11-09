@@ -95,13 +95,12 @@ export function TradeForm() {
         </>}
       </div>
       <div>
-        <h2>📋 الشروط</h2>
-        <ul style={{ margin: 0, paddingInlineStart: 20, lineHeight: 1.9 }}>
+        <details className="fold tterms"><summary>📋 الشروط (اقراها قبل ما توافق)</summary><ul style={{ margin: 0, paddingInlineStart: 20, lineHeight: 1.9 }}>
           <li>أسعار الجملة بتتفعّل بعد مراجعة الإثبات، مش أوتوماتيك.</li>
           <li>بنراجع ونرد عليك على الواتساب خلال {TRADE.reviewDays === 1 ? 'يوم شغل' : `${TRADE.reviewDays} أيام شغل`}.</li>
           <li>الحساب بيتراجع كل {TRADE.months} شهور، ولو مفيش مشتريات ممكن يرجع قطاعي.</li>
           <li>أسعار الجملة لصاحب الحساب بس، وبتتأكد على رقم الموبايل المسجّل.</li>
-        </ul>
+        </ul></details>
         <label className="agree"><input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} /> البيانات صحيحة وموافق على الشروط</label>
         <p className={msg ? 'err' : 'mut'} aria-live="polite">{msg}</p>
         <button className="pri" style={{ width: '100%' }} onClick={go} disabled={busy}>ابعت طلب الحساب</button>

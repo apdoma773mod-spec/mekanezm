@@ -53,13 +53,13 @@ export function Footer({ site }: { site: Settings }) {
   return (
     <footer className="ft">
       <div className="ft-top"><b>{site.name}</b>{site.tagline && <span>{site.tagline}</span>}</div>
-      <div className="ft-ct">
-        {site.phone && <a href={waUrl(site)} target="_blank" rel="noopener">💬 واتساب {site.phone}</a>}
-        {shopPhones(site).map(n => <a key={n} href={'tel:' + n.replace(/\s/g, '')}>📞 {n}</a>)}
-        {site.address && <a href={site.mapUrl || MAP_URL} target="_blank" rel="noopener">📍 {site.address}</a>}
-        {cat && <a href={cat} target="_blank" rel="noopener">📒 كتالوج الواتساب</a>}
-        {site.hours && <span>🕒 {site.hours} · <OpenNow /></span>}
+      <div className="ft-ic">
+        {site.phone && <a href={waUrl(site)} target="_blank" rel="noopener" aria-label={'واتساب ' + site.phone}><i aria-hidden="true">💬</i>واتساب</a>}
+        {shopPhones(site)[0] && <a href={'tel:' + shopPhones(site)[0].replace(/\s/g, '')} aria-label={'اتصل ' + shopPhones(site)[0]}><i aria-hidden="true">📞</i>اتصل</a>}
+        <a href={site.mapUrl || MAP_URL} target="_blank" rel="noopener" aria-label="الخريطة"><i aria-hidden="true">📍</i>الخريطة</a>
+        {cat && <a href={cat} target="_blank" rel="noopener" aria-label="كتالوج الواتساب"><i aria-hidden="true">📒</i>الكتالوج</a>}
       </div>
+      {site.hours && <div className="ft-hr">🕒 {site.hours} · <OpenNow /></div>}
       <div className="ft-gs">
         <FtGroup title="🛍️ التسوق">
           <Link href="/">الرئيسية</Link>

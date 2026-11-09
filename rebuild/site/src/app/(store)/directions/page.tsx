@@ -26,16 +26,16 @@ export default async function Directions() {
           <a className="btn-g" href={site.mapUrl || MAP_URL} target="_blank" rel="noopener">🧭 افتح الطريق على خرائط جوجل</a>
           <a className="sec" href={waUrl(site, 'السلام عليكم، ممكن اللوكيشن بتاع المحل؟')} target="_blank" rel="noopener">💬 ابعتولي اللوكيشن واتساب</a>
         </div>
+        <p className="mut" style={{ margin: '14px 0 8px' }}>جاي منين؟ دوس على طريقك:</p>
         <div className="routes">
           {routes.map((r, i) => (
-            <section className="route" key={i}>
-              <h2>🚗 {r.from}</h2>
+            <details className="route" key={i} open={routes.length === 1}>
+              <summary><h2>🚗 {r.from}</h2></summary>
               <ol>{r.text.split('\n').map(x => x.trim()).filter(Boolean).map((x, k) => <li key={k}>{x}</li>)}</ol>
               {r.note.trim() && <p className="rnote">⚠️ {r.note}</p>}
-            </section>
+            </details>
           ))}
         </div>
-        {site.hours && <p style={{ marginTop: 16 }}>🕒 مواعيد الشغل: {site.hours}</p>}
       </main>
       <Footer site={site} />
     </>
