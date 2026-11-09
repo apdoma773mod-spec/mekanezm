@@ -10,6 +10,7 @@ export const BRIDGE_SECRET = 'bridge-test-secret';
 
 export async function createTestApp(): Promise<{ app: FastifyInstance; prisma: PrismaClient }> {
   const url = process.env.TEST_DATABASE_URL!;
+  process.env.DATABASE_URL = url; // الاستعلامات المباشرة بتقرا اسم المخطط (schema) من هنا زي الإنتاج
   const prisma = new PrismaClient({ datasources: { db: { url } } });
   const config = loadConfig({
     NODE_ENV: 'test',
