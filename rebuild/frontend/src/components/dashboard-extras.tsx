@@ -170,8 +170,8 @@ export function DashboardBanners() {
   const reorder = useReorderCount(30).data ?? 0;
   const wc = useWebCounts().data;
   const web = wc?.orders ?? 0;
+  const rq = wc?.requests ?? 0;
   const subs = wc?.subs ?? 0;
-  const rq = Math.max(0, (wc?.requests ?? 0) - subs);
   const cu = wc?.custom ?? 0;
   const msgs = usePortalNewCount().data ?? 0;
   const { open } = useModal();

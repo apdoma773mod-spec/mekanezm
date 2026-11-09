@@ -308,11 +308,11 @@ export default async function webRoutes(app: FastifyInstance) {
 
   // ---- admin: photo requests and custom orders ----
   app.get('/counts', { preHandler: app.requireAdmin }, async () => {
-    // requests = كل الطلبات الجديدة (زي الأول — الأيقونة القديمة بتعتمد عليه)، وsubs = اللي منهم «اشتراك في جديد الواتساب»؛ الشاشة الجديدة بتطرحهم
+    // «اشتراك في جديد الواتساب» مش طلب منتج بالصور: بيتعدّ لوحده (subs) عشان التنبيه يكون صح
     const sub = { startsWith: '📣 اشتراك' };
     const [orders, requests, subs, custom] = await Promise.all([
       db.webOrder.count({ where: { status: 'new' } }),
-      db.webRequest.count({ where: { status: 'new' } }),
+      db.webRequest.count({ where: { status: 'new', NOT: { note: sub } } }),
       db.webRequest.count({ where: { status: 'new', note: sub } }),
       db.webCustom.count({ where: { status: 'new' } }),
     ]);
