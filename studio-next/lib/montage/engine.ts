@@ -77,7 +77,7 @@ const MOTIONS=[['punch','زووم مع كل قطع (يوتيوب)'],['soft','ز�
 const CUTS=[[3,'قوي — من غير ولا سكتة'],[2,'عادي'],[1,'خفيف'],[0,'من غير قص']];
 const LOOKS=[['auto','تلقائي — يشيل الصفار'],['vivid','ألوان أقوى'],['warm','دافي'],['bw','أبيض وأسود'],['off','زي ما هو']];
 const COLORS=[['#F6DC8A','ذهبي'],['#FFE600','أصفر'],['#2EC4B6','تركواز ميكانيزم'],['#35E0A0','أخضر'],['#4FC3FF','أزرق'],['#FF7A45','برتقالي'],['#FFFFFF','أبيض']];
-let S=Object.assign({tpl:'magic',o:{},font:'Cairo',size:1,color:'#F6DC8A',aspect:'916',q:1080,fps:30,clar:true,intro:true,outro:true,smart:true},(()=>{try{return JSON.parse(localStorage.getItem('mkz-smart')||'{}')}catch(e){return {}}})());
+let S=Object.assign({tpl:'magic',o:{},font:'Cairo',size:1,color:'#F6DC8A',aspect:'916',q:1080,fps:30,clar:true,sharp:true,dn:true,auto:true,stab:false,intro:true,outro:true,smart:true},(()=>{try{return JSON.parse(localStorage.getItem('mkz-smart')||'{}')}catch(e){return {}}})());
 if(!S.mixMig){S.tpl='mix';S.o={};S.mixMig=1}if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={};
 const saveS=()=>{try{localStorage.setItem('mkz-smart',JSON.stringify(S))}catch(e){}};
 var STY={on:false,o:{},color:'',font:'',rad:1,bw:2,kw:'under',lift:0,snd:{w:null,f:1}};const STYK=['cap','motion','trans','look','cut'];
@@ -493,7 +493,7 @@ function draw(t){if(!CV||!CX)return;const [W,H]=[CV.width,CV.height];CX.setTrans
  if(!V||!V.videoWidth)return;
  const f=xf(t);
  if(f.side){/* فيديو عرضي في ٩:١٦: خلفية مكبّرة غامقة + الفيديو كامل في النص */const kb=Math.max(W/f.vw,H/f.vh)*1.1;CX.globalAlpha=.35;if('filter' in CX)CX.filter='blur(22px)';CX.drawImage(V,(W-f.vw*kb)/2,(H-f.vh*kb)/2,f.vw*kb,f.vh*kb);if('filter' in CX)CX.filter='none';CX.globalAlpha=1;CX.drawImage(V,(W-f.w)/2,(H-f.h)/2,f.w,f.h)}
- else CX.drawImage(V,f.x,f.y,f.w,f.h);
+ else{const sb=stab(f,t);CX.drawImage(V,sb[0],sb[1],sb[2],sb[3])}
  applyLook(t,W,H);
  const BR=brActive(t);if(BR)drawBroll(BR,t,W,H);else BRC.forEach(c=>{if(c.v&&!c.v.paused)c.v.pause()});
  drawFinish(t,W,H);
@@ -589,17 +589,17 @@ async function exportVid(){if(busy)return;if(typeof MediaRecorder==='undefined'|
   let WL=null;try{WL=await navigator.wakeLock.request('screen')}catch(e){}
   const AC=window.AudioContext||window.webkitAudioContext;if(!V._ac){try{V._ac=new AC({sampleRate:48000,latencyHint:'playback'})}catch(e){V._ac=new AC()}V._src=V._ac.createMediaElementSource(V);V._dst=V._ac.createMediaStreamDestination();V._src.connect(V._ac.destination);const a=V._ac,hp=a.createBiquadFilter();hp.type='highpass';hp.frequency.value=85;const pk=a.createBiquadFilter();pk.type='peaking';pk.frequency.value=3000;pk.Q.value=1;pk.gain.value=3;const cp=a.createDynamicsCompressor();cp.threshold.value=-26;cp.knee.value=8;cp.ratio.value=4;cp.attack.value=.005;cp.release.value=.2;const mg=a.createGain();mg.gain.value=Math.max(1,Math.min(3.2,(D&&D.loud?D.loud.gain*1.15:1.7)));hp.connect(pk);pk.connect(cp);cp.connect(mg);V._cl=[hp,mg]}
   {const [hp,mg]=V._cl;try{V._src.disconnect(V._dst)}catch(e){}try{V._src.disconnect(hp)}catch(e){}try{mg.disconnect()}catch(e){}if(S.clean!==false){V._src.connect(hp);mg.connect(V._dst)}else V._src.connect(V._dst)}
-  await V._ac.resume();const FPS=S.fps===60?60:30,st=CV.captureStream(FPS);V._dst.stream.getAudioTracks().forEach(tr=>st.addTrack(tr));
+  await V._ac.resume();HQOFF.sharp=HQOFF.dn=HQOFF.clar=false;HQOFF.ema=0;const FPS=S.fps===60?60:30,st=CV.captureStream(FPS);V._dst.stream.getAudioTracks().forEach(tr=>st.addTrack(tr));
   const ch=[];const VB=hqBits(CV.width,CV.height,FPS);try{REC=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:VB,audioBitsPerSecond:256000})}catch(e){REC=new MediaRecorder(st,{mimeType:mt,videoBitsPerSecond:VB})}REC.ondataavailable=e=>e.data&&e.data.size&&ch.push(e.data);
   const total=outDur();let rendered=0,lastT=V.currentTime;
   const stop=new Promise(r=>REC.onstop=r),vis=()=>{if(!REC)return;if(document.hidden){try{REC.pause()}catch(e){}V.pause();say('⏸️ وقفت التسجيل لأنك خرجت من الصفحة — ارجع وهيكمل')}else{try{REC.resume()}catch(e){}V.play().catch(()=>{})}};document.addEventListener('visibilitychange',vis);V.muted=false;REC.start(500);await V.play();if(MU.buf)musStart();
   await new Promise(res=>{const tick=()=>{if(!REC)return res();const t=V.currentTime;if(t>lastT)rendered+=t-lastT;lastT=t;
     const g=inGap(t);if(g&&!V.seeking){if(g[1]>=V.duration-.05)return res();try{REC.pause()}catch(e){}V.currentTime=g[1];lastT=g[1];V.onseeked=()=>{V.onseeked=null;try{REC.resume()}catch(e){}}}
     btn.textContent='⏺️ بسجّل الفيديو… '+Math.min(99,Math.round(rendered/total*100))+'%';if(V.ended||t>=V.duration-0.05)return res();setTimeout(tick,60)};V.onended=()=>res();tick()});
-  REC.stop();await stop;document.removeEventListener('visibilitychange',vis);try{WL&&WL.release()}catch(e){}V.pause();const blob=new Blob(ch,{type:mt.split(';')[0]}),ext=/mp4/.test(mt)?'mp4':'webm',name='ميكانيزم-'+new Date().toISOString().slice(0,10)+'.'+ext,file=new File([blob],name,{type:blob.type});
+  REC.stop();await stop;const hqCut=HQOFF.sharp||HQOFF.dn||HQOFF.clar;HQOFF.sharp=HQOFF.dn=HQOFF.clar=false;document.removeEventListener('visibilitychange',vis);try{WL&&WL.release()}catch(e){}V.pause();const blob=new Blob(ch,{type:mt.split(';')[0]}),ext=/mp4/.test(mt)?'mp4':'webm',name='ميكانيزم-'+new Date().toISOString().slice(0,10)+'.'+ext,file=new File([blob],name,{type:blob.type});
   musStop();REC=null;btn.textContent='💾 صدّر الفيديو';btn.disabled=false;busy=false;
   libPut(blob,name,D&&D.title).then(()=>{renderLib();const n=$s('sm_ln');if(n)n.textContent='✅ اتحفظ كمان في «📚 فيديوهاتي» فوق — هتلاقيه حتى لو قفلت الصفحة.'}).catch(()=>{const n=$s('sm_ln');if(n)n.textContent='⚠️ ماقدرتش أحفظه في «فيديوهاتي» (المساحة؟) — شاركه أو نزّله دلوقتي.'});
-  const out=$s('sm_out');out.innerHTML=`<div class="p"><h2>✅ الفيديو جاهز (${(blob.size/1048576).toFixed(1)} ميجا)</h2><p class="mu" style="margin:0 0 6px">📊 ${CV.width}×${CV.height} — ${FPS} إطار/ث — ${(blob.size*8/Math.max(1,total)/1e6).toFixed(1)} ميجابت/ث${blob.size*8/Math.max(1,total)<VB*.55?' ⚠️ المتصفح قلّل الجودة — جرّب جودة أقل أو فيديو أقصر':' ✅ جودة عالية'}${Math.min(V.videoWidth,V.videoHeight)<Math.min(CV.width,CV.height)*.95?' — الفيديو الأصلي أقل دقة من التصدير، مش هيزيد تفاصيل':''}</p><video src="${URL.createObjectURL(blob)}" controls playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>
+  const out=$s('sm_out');out.innerHTML=`<div class="p"><h2>✅ الفيديو جاهز (${(blob.size/1048576).toFixed(1)} ميجا)</h2><p class="mu" style="margin:0 0 6px">📊 ${CV.width}×${CV.height} — ${FPS} إطار/ث — ${(blob.size*8/Math.max(1,total)/1e6).toFixed(1)} ميجابت/ث${blob.size*8/Math.max(1,total)<VB*.55?' ⚠️ المتصفح قلّل الجودة — جرّب جودة أقل أو فيديو أقصر':' ✅ جودة عالية'}${hqCut?' — ⚡ الجهاز بطيء فقفلت الشحذ/التنعيم تلقائي عشان الحركة ماتتقطعش':''}${Math.min(V.videoWidth,V.videoHeight)<Math.min(CV.width,CV.height)*.95?' — الفيديو الأصلي أقل دقة من التصدير، مش هيزيد تفاصيل':''}</p><video src="${URL.createObjectURL(blob)}" controls playsinline style="width:100%;max-height:60vh;border-radius:12px;background:#000"></video>
    <button class="b" id="sm_sh" style="width:100%;margin-top:8px">📤 شارك / احفظ في الصور</button><a class="b o" style="width:100%" download="${esc(name)}" href="${URL.createObjectURL(blob)}">⬇️ تنزيل الملف</a>
    <p class="mu" id="sm_ln">⏳ بحفظه في «فيديوهاتي»…</p><p class="mu">من «شارك» تقدر تحفظه في الصور أو تبعته على طول لتيك توك وإنستجرام وفيسبوك.${ext!=='mp4'?' (الصيغة WebM — لو المنصة رفضته نزّله واستخدم تحويل)':''}</p></div>`;
   $s('sm_sh').onclick=async()=>{try{if(navigator.canShare&&navigator.canShare({files:[file]}))await navigator.share({files:[file],title:D.title||'ميكانيزم'});else say('المشاركة مش متاحة — استخدم «تنزيل الملف»')}catch(e){}};
@@ -633,7 +633,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label>حجم الكلام<input type="range" id="sm_sz" min="0.7" max="1.5" step="0.05" value="${S.size}"></label>
   <label>المقاس<select id="sm_as"><option value="916" ${S.aspect==='916'?'selected':''}>طولي ٩:١٦ (تيك توك/ريلز)</option><option value="orig" ${S.aspect==='orig'?'selected':''}>زي الفيديو الأصلي</option></select></label>
   <label>الجودة<select id="sm_q"><option value="1440" ${S.q==1440?'selected':''}>فائقة 1440 (أنقى — أبطأ وأتقل)</option><option value="1080" ${S.q==1080?'selected':''}>عالية جدًا 1080</option><option value="720" ${S.q==720?'selected':''}>متوسطة 720 (أسرع وأخف)</option></select></label>
-  <label>نعومة الحركة<select id="sm_fps"><option value="30" ${S.fps!=60?'selected':''}>٣٠ إطار (عادي)</option><option value="60" ${S.fps==60?'selected':''}>٦٠ إطار (لو صوّرته ٦٠)</option></select></label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cr" ${S.clar!==false?'checked':''}> ✨ وضوح وعمق للصورة</label>
+  <label>نعومة الحركة<select id="sm_fps"><option value="30" ${S.fps!=60?'selected':''}>٣٠ إطار (عادي)</option><option value="60" ${S.fps==60?'selected':''}>٦٠ إطار (لو صوّرته ٦٠)</option></select></label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cr" ${S.clar!==false?'checked':''}> ✨ وضوح وعمق للصورة</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqs" ${S.sharp!==false?'checked':''}> 🔪 شحذ احترافي للتفاصيل</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqd" ${S.dn!==false?'checked':''}> 🧼 تقليل الضوضاء (المشاهد الثابتة)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqa" ${S.auto!==false?'checked':''}> 🎨 ضبط النور واللون تلقائي</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqb" ${S.stab?'checked':''}> 📐 تثبيت اهتزاز الكاميرا (بيقص ٨٪)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cln" ${S.clean!==false?'checked':''}> 🎙️ نضّف صوتي وثبّت علوّه في الفيديو المتصدّر</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
@@ -655,7 +655,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  $s('sm_tp').onclick=e=>{const b=e.target.closest('[data-tp]');if(!b)return;S.tpl=b.dataset.tp;S.o={};saveS();paintTpl();paintOpts();changed()};
  paintOpts();
  const ch=(id,k,f)=>{$s(id).oninput=$s(id).onchange=()=>{S[k]=f?f($s(id)):$s(id).value;saveS();if(D){if(k==='aspect'||k==='q')setupCanvas();LAY.clear();draw(V.currentTime)}}};
- ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_fps','fps',x=>+x.value);ch('sm_cr','clar',x=>x.checked);ch('sm_in','intro',x=>x.checked);ch('sm_fx','fx',x=>x.checked);ch('sm_cln','clean',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
+ ch('sm_ft','font');ch('sm_cl','color');ch('sm_sz','size',x=>+x.value);ch('sm_as','aspect');ch('sm_q','q',x=>+x.value);ch('sm_fps','fps',x=>+x.value);ch('sm_cr','clar',x=>x.checked);ch('sm_hqs','sharp',x=>x.checked);ch('sm_hqd','dn',x=>x.checked);ch('sm_hqa','auto',x=>x.checked);ch('sm_hqb','stab',x=>x.checked);ch('sm_in','intro',x=>x.checked);ch('sm_fx','fx',x=>x.checked);ch('sm_cln','clean',x=>x.checked);ch('sm_ou','outro',x=>x.checked);
  $s('sm_f').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;F=f;D=null;$s('sm_res').style.display='none';$s('sm_out').innerHTML='';
   if(V){V.pause();URL.revokeObjectURL(V.src)}V=document.createElement('video');V.playsInline=true;V.preload='auto';V.src=URL.createObjectURL(f);V.setAttribute('webkit-playsinline','');
   V.onloadedmetadata=()=>{$s('sm_fi').textContent='✔ '+f.name+' — '+fmt(V.duration)+' — '+(f.size/1048576).toFixed(0)+' ميجا — '+V.videoWidth+'×'+V.videoHeight};V.load()};
@@ -1406,7 +1406,28 @@ function pxGrade(W,H){
  if(PX('grain')){CX.save();const vg=CX.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.hypot(W,H)*.58);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');CX.fillStyle=vg;CX.fillRect(0,0,W,H);
   if(!GRN){GRN=document.createElement('canvas');GRN.width=GRN.height=192;const g=GRN.getContext('2d'),im=g.createImageData(192,192);for(let i=0;i<im.data.length;i+=4){const v=Math.random()*255|0;im.data[i]=im.data[i+1]=im.data[i+2]=v;im.data[i+3]=255}g.putImageData(im,0,0)}
   CX.globalCompositeOperation='overlay';CX.globalAlpha=.09;const pt=CX.createPattern(GRN,'repeat');if(pt){CX.translate(Math.random()*192|0,Math.random()*192|0);CX.fillStyle=pt;CX.fillRect(-192,-192,W+384,H+384)}CX.restore()}}
-const _al0=applyLook;applyLook=function(t,W,H){const r=_al0.apply(this,arguments);try{if(S.clar!==false&&CX){CX.save();CX.globalCompositeOperation='soft-light';CX.globalAlpha=.22;CX.drawImage(CV,0,0);CX.restore()}}catch(e){}return r};
+/* ---------- جودة الصورة: شحذ احترافي + تقليل ضوضاء + تثبيت اهتزاز + ضبط ألوان تلقائي ---------- */
+let HQOFF={sharp:false,dn:false,clar:false,ema:0},SMPC=null,SMPT=-1,SMPD=null,PREVG=null,DNC=null,HPC=null,AUTO=null,STAB={px:0,py:0,sx:0,sy:0,t:-9,g:null};
+function smp(){const t=V.currentTime;if(SMPT===t&&SMPD)return SMPD;if(!SMPC){SMPC=document.createElement('canvas');SMPC.width=SMPC.height=48}const c=SMPC.getContext('2d',{willReadFrequently:true});c.drawImage(V,0,0,48,48);SMPD=c.getImageData(0,0,48,48).data;SMPT=t;return SMPD}
+function stab(f,t){if(!S.stab||!V||!V.videoWidth)return [f.x,f.y,f.w,f.h];
+ const d=smp(),g=new Float32Array(2304);for(let i=0;i<2304;i++)g[i]=d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11;const st=STAB,ct=V.currentTime;
+ if(st.g&&ct!==st.t&&Math.abs(ct-st.t)<.2){let best=1e18,bx=0,by=0;for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){let sm=0;for(let y=4;y<44;y+=2)for(let x=4;x<44;x+=2)sm+=Math.abs(g[y*48+x]-st.g[(y+dy)*48+x+dx]);if(sm<best){best=sm;bx=dx;by=dy}}
+  st.px+=bx;st.py+=by;st.sx=st.sx*.92+st.px*.08;st.sy=st.sy*.92+st.py*.08}
+ else if(Math.abs(ct-st.t)>=.2){st.px=st.py=st.sx=st.sy=0}
+ st.g=g;st.t=ct;const k=1.09,w=f.w*k,h=f.h*k,mx=(w-f.w)/2*.9,my=(h-f.h)/2*.9,ox=Math.max(-mx,Math.min(mx,(st.px-st.sx)*f.w/48)),oy=Math.max(-my,Math.min(my,(st.py-st.sy)*f.h/48));
+ return [f.x+f.w/2-w/2+ox,f.y+f.h/2-h/2+oy,w,h]}
+function autoCol(W,H){const d=smp();let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++}r/=n;g/=n;b/=n;const l=r*.3+g*.59+b*.11;
+ const A=AUTO=AUTO||{l,r,g,b};A.l+=(l-A.l)*.08;A.r+=(r-A.r)*.08;A.b+=(b-A.b)*.08;CX.save();
+ if(A.l<90){CX.globalCompositeOperation='screen';CX.fillStyle='rgba(255,255,255,'+((90-A.l)/90*.2).toFixed(3)+')';CX.fillRect(0,0,W,H)}
+ else if(A.l>175){CX.globalCompositeOperation='multiply';CX.fillStyle='rgba(60,60,60,'+((A.l-175)/80*.25).toFixed(3)+')';CX.fillRect(0,0,W,H)}
+ const cast=A.r-A.b;if(Math.abs(cast)>12){CX.globalCompositeOperation='soft-light';CX.fillStyle=(cast>0?'rgba(90,150,255,':'rgba(255,170,90,')+Math.min(.35,Math.abs(cast)/255*1.2).toFixed(3)+')';CX.fillRect(0,0,W,H)}CX.restore()}
+function denoise(W,H){const d=smp();let m=0;if(PREVG)for(let i=0;i<d.length;i+=16)m+=Math.abs(d[i]-PREVG[i]);m/=d.length/16;
+ if(PREVG&&m<4&&DNC&&DNC.width===W&&DNC.height===H){CX.save();CX.globalAlpha=.22;CX.drawImage(DNC,0,0);CX.restore()}
+ PREVG=new Uint8ClampedArray(d);if(!DNC)DNC=document.createElement('canvas');if(DNC.width!==W||DNC.height!==H){DNC.width=W;DNC.height=H}DNC.getContext('2d').drawImage(CV,0,0)}
+function hqSharp(W,H){if(!S.sharp||HQOFF.sharp||!('filter' in CX))return;if(!HPC)HPC=document.createElement('canvas');if(HPC.width!==W||HPC.height!==H){HPC.width=W;HPC.height=H}
+ const h=HPC.getContext('2d');h.globalAlpha=1;h.filter='none';h.drawImage(CV,0,0);h.filter='invert(1) blur('+Math.max(1,W/540).toFixed(2)+'px)';h.globalAlpha=.5;h.drawImage(CV,0,0);h.filter='none';h.globalAlpha=1;
+ CX.save();CX.globalCompositeOperation='overlay';CX.globalAlpha=.55;CX.drawImage(HPC,0,0);CX.restore()}
+const _al0=applyLook;applyLook=function(t,W,H){const h0=performance.now();try{if(V&&V.videoWidth&&CX){if(S.auto!==false)autoCol(W,H);if(S.dn!==false&&!HQOFF.dn)denoise(W,H)}}catch(e){}const r=_al0.apply(this,arguments);try{if(V&&V.videoWidth&&CX)hqSharp(W,H)}catch(e){}try{if(S.clar!==false&&!HQOFF.clar&&CX){CX.save();CX.globalCompositeOperation='soft-light';CX.globalAlpha=.22;CX.drawImage(CV,0,0);CX.restore()}}catch(e){}if(REC){HQOFF.ema=HQOFF.ema*.9+(performance.now()-h0)*.1;if(HQOFF.ema>30)HQOFF.sharp=true;if(HQOFF.ema>45)HQOFF.dn=true;if(HQOFF.ema>60)HQOFF.clar=true}return r};
 const _al2=applyLook;applyLook=function(t,W,H){const r=_al2.apply(this,arguments);try{pxGrade(W,H)}catch(e){}return r};
 let LOOPC=null,LOOPD=null,PWC=[],PWK=null,BEATS=[],BEATB=null;
 const pxE=x=>x<0?0:x>1?1:x*x*(3-2*x),pxBack=x=>{x=x<0?0:x>1?1:x;const c=1.70158;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)};

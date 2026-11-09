@@ -164,7 +164,7 @@ function thumbs(list: Style[]) {
   const step = () => {
     if (job !== THUMBJOB) return; const s = list[i++]; if (!s) return; const cv = document.querySelector(`[data-cv="${s.id}"]`) as HTMLCanvasElement; if (!cv) return setTimeout(step, 0);
     try {
-      const P = proj(cv.width / asp()[2], false, s), c = cv.getContext('2d')!;
+      const P = proj(cv.width / asp()[2], false, s), c = cv.getContext('2d')!; if (!P.T.title) P.T = { ...P.T, title: 'اسم المنتج هنا', sub: 'من ميكانيزم', price: P.T.price || '٤٥٠', cta: P.T.cta || 'اطلب دلوقتي' };
       if (s.kind === 'image') poster(c, P); else { const sl = P.segs.find(x => x.k === 'slide') || P.segs[0]; frame(c, P, sl.s + (sl.e - sl.s) * (s.special === 'ba-wipe' || s.special === 'ba-split' ? .62 : .5)); }
     } catch (e) { console.warn('thumb', s.id, e); }
     setTimeout(step, 16);
@@ -309,3 +309,14 @@ function mountNow() {
     else { stopPlay(); cancelAnimationFrame(RAF); ITEMS.forEach(it => { try { it.vel && it.vel.pause(); } catch { } }); }
   });
 }
+
+/** خطّاف اختبار: بيرسم أي قالب عند وقت معيّن ويرجّع صورة (للتأكد من الشكل في الاختبارات). */
+if (typeof window !== 'undefined') (window as any).__tplTest = {
+  ids: () => STYLES.map(s => s.id),
+  render(id: string, ts: number[], w = 360, ar?: number[]) {
+    const s = styleById(id), P = proj(w / asp()[2], false, s); if (ar) { P.W = w; P.H = Math.round(w * ar[1] / ar[0]); } P.T = { ...P.T, title: 'مطبخ ألمنيوم مودرن', sub: 'من الصفر للتسليم', price: '٤٥٠٠٠', old: '٥٢٠٠٠', cta: 'اطلب دلوقتي', phone: '01001234567', shop: 'ميكانيزم', addr: 'القاهرة', badge: 'عرض لفترة محدودة', stages: ['القياس', 'التصنيع', 'التركيب', 'التسليم'] } as any;
+    const sl = P.segs.filter(x => x.k === 'slide'), out = document.createElement('canvas'); out.width = P.W * ts.length; out.height = P.H; const o = out.getContext('2d')!, c = document.createElement('canvas'); c.width = P.W; c.height = P.H; const cx = c.getContext('2d')!;
+    ts.forEach((t, i) => { const tt = t < 0 ? P.dur * (-t) : (sl[Math.min(1, sl.length - 1)] ? sl[Math.min(1, sl.length - 1)].s + t : t); frame(cx, P, Math.min(tt, P.dur - .01)); o.drawImage(c, i * P.W, 0); });
+    return out.toDataURL('image/jpeg', .88);
+  },
+};

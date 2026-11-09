@@ -1,22 +1,22 @@
 // مكتبة القوالب: كل قالب = حركة + إطار + انتقالات + شكل كلام + بداية ونهاية + موسيقى، وكل قالب بيشتغل مع ١٢ لون.
 // قوالب فيديو + قوالب صور (بوستر/كاروسيل). أرقام نقية من غير DOM عشان تتختبر في Node.
 
-export type Trans = 'fade' | 'push' | 'up' | 'zoom' | 'wipe' | 'circle' | 'blinds' | 'flash' | 'cube' | 'glitch' | 'diag' | 'doors' | 'cut' | 'whip';
-export type Motion = 'kb' | 'kbOut' | 'punch' | 'drift' | 'static' | 'tilt' | 'float';
+export type Trans = 'fade' | 'push' | 'up' | 'zoom' | 'wipe' | 'circle' | 'blinds' | 'flash' | 'cube' | 'glitch' | 'diag' | 'doors' | 'cut' | 'whip' | 'slice' | 'spin' | 'pixel' | 'leak' | 'swipe' | 'rgb' | 'shutter';
+export type Motion = 'kb' | 'kbOut' | 'punch' | 'drift' | 'static' | 'tilt' | 'float' | 'handheld' | 'dolly' | 'pan';
 export type Frame = 'full' | 'card' | 'polaroid' | 'gold' | 'film' | 'magazine' | 'neon' | 'minimal' | 'split' | 'circle' | 'arch';
 export type TextPos = 'lower' | 'center' | 'top' | 'below' | 'panel' | 'none';
-export type Intro = 'title' | 'logo' | 'split' | 'mag' | 'none';
-export type Outro = 'card' | 'grid' | 'none';
+export type Intro = 'title' | 'logo' | 'split' | 'mag' | 'words' | 'curtain' | 'none';
+export type Outro = 'card' | 'grid' | 'cta' | 'none';
 export type Mood = 'calm' | 'upbeat' | 'luxury' | 'epic' | 'none';
-export type Special = 'ba-wipe' | 'ba-split' | 'journey' | 'timelapse' | 'count' | 'polaroid' | 'grid' | 'carousel' | 'price' | '';
+export type Special = 'ba-wipe' | 'ba-split' | 'journey' | 'timelapse' | 'count' | 'polaroid' | 'grid' | 'carousel' | 'price' | 'kinetic' | 'glass' | 'story' | 'stack' | 'bento' | 'editorial' | 'callout' | 'vhs' | 'duo' | 'tri' | 'sheet' | 'duotone' | '';
 export type Poster = 'collage' | 'ba' | 'journey' | 'catalog' | 'price';
-export type Cat = 'product' | 'ba' | 'journey' | 'offer' | 'catalog' | 'luxury' | 'story' | 'kitchen' | 'image';
+export type Cat = 'product' | 'ba' | 'journey' | 'offer' | 'catalog' | 'luxury' | 'story' | 'kitchen' | 'image' | 'trend';
 
 export interface Pal { id: string; n: string; bg: string; fg: string; ac: string; ac2: string; light?: boolean }
 export interface Style {
   id: string; n: string; d: string; cat: Cat[]; kind: 'video' | 'image'; e: string;
-  group: 1 | 2 | 4; dur: number; td: number; trans: Trans[]; motion: Motion; frame: Frame; text: TextPos; anim: 'pop' | 'slide' | 'type' | 'fade';
-  font: string; pal: string; intro: Intro; outro: Outro; music: Mood; special: Special; poster?: Poster; min?: number;
+  group: 1 | 2 | 3 | 4; dur: number; td: number; trans: Trans[]; motion: Motion; frame: Frame; text: TextPos; anim: 'pop' | 'slide' | 'type' | 'fade';
+  font: string; pal: string; intro: Intro; outro: Outro; music: Mood; special: Special; poster?: Poster; min?: number; fx?: string[];
 }
 
 export const PALS: Pal[] = [
@@ -32,10 +32,18 @@ export const PALS: Pal[] = [
   { id: 'neon', n: 'نيون', bg: '#05010F', fg: '#FFFFFF', ac: '#00F0FF', ac2: '#FF2BD6' },
   { id: 'silver', n: 'فضي', bg: '#111315', fg: '#FFFFFF', ac: '#C9CED6', ac2: '#8E96A3' },
   { id: 'orange', n: 'برتقالي', bg: '#1A0D02', fg: '#FFFFFF', ac: '#FF8A1F', ac2: '#FFC27A' },
+  { id: 'sunset', n: 'غروب', bg: '#1B0B1E', fg: '#FFFFFF', ac: '#FF6B35', ac2: '#FFD166' },
+  { id: 'mint', n: 'نعناع عصري', bg: '#04130E', fg: '#F0FFF8', ac: '#00E5A0', ac2: '#9BFFD9' },
+  { id: 'lavender', n: 'لافندر', bg: '#14102A', fg: '#FFFFFF', ac: '#B388FF', ac2: '#E0CFFF' },
+  { id: 'cream', n: 'كريمي دافي', bg: '#FAF3E6', fg: '#1E1A16', ac: '#C2410C', ac2: '#7A3B12', light: true },
+  { id: 'midnight', n: 'منتصف الليل', bg: '#020617', fg: '#FFFFFF', ac: '#38BDF8', ac2: '#BAE6FD' },
+  { id: 'emerald', n: 'زمردي ملكي', bg: '#06201A', fg: '#FFFFFF', ac: '#D4AF37', ac2: '#34D399' },
+  { id: 'coral', n: 'مرجاني', bg: '#1F0A0A', fg: '#FFFFFF', ac: '#FF7A6B', ac2: '#FFC9C2' },
+  { id: 'mono', n: 'أبيض وأسود', bg: '#0A0A0A', fg: '#FFFFFF', ac: '#FFFFFF', ac2: '#9CA3AF' },
 ];
 
 export const CATS: [Cat | 'all', string][] = [
-  ['all', 'الكل'], ['product', '📦 منتج'], ['ba', '↔️ قبل وبعد'], ['journey', '🧭 رحلة ومراحل'], ['kitchen', '🍳 مطابخ وديكور'],
+  ['all', 'الكل'], ['trend', '🔥 ترند حديث'], ['product', '📦 منتج'], ['ba', '↔️ قبل وبعد'], ['journey', '🧭 رحلة ومراحل'], ['kitchen', '🍳 مطابخ وديكور'],
   ['offer', '🏷️ عروض وأسعار'], ['catalog', '🗂️ كتالوج'], ['luxury', '💎 فخم'], ['story', '⚡ ستوري سريع'], ['image', '🖼️ صور وبوسترات'],
 ];
 
@@ -44,7 +52,32 @@ const S = (id: string, e: string, n: string, d: string, cat: Cat[], o: Partial<S
   font: 'Cairo', pal: 'gold', intro: 'title', outro: 'card', music: 'calm', special: '',
 } as Style, o);
 
+const TR: Cat[] = ['trend'];
+const MODERN: Style[] = [
+  S('kinetic', '⚡', 'كلمات متحركة', 'كلمات ضخمة بتنزل على الصورة بحركة صدمة — شكل تيك توك ترند', [...TR, 'story', 'product'], { special: 'kinetic', dur: 2.1, td: .3, trans: ['slice', 'whip'], motion: 'handheld', pal: 'sunset', font: 'Lalezar', fx: ['grain', 'vig'], music: 'upbeat', intro: 'words', outro: 'cta' }),
+  S('glass', '🫧', 'زجاجي حديث', 'كارت صورة طايف على خلفية ضبابية وبانل زجاجي للكلام', [...TR, 'product', 'luxury'], { special: 'glass', dur: 2.8, trans: ['leak', 'fade'], motion: 'float', pal: 'midnight', fx: ['vig'], intro: 'curtain', outro: 'cta' }),
+  S('story', '📲', 'ستوري إنستجرام', 'شريط تقدم + اسمك + ستيكر كلام وخانة رد — شكل ستوري حقيقي', [...TR, 'story', 'product'], { special: 'story', dur: 2.5, trans: ['swipe'], motion: 'kb', pal: 'gold', intro: 'none', outro: 'cta', music: 'upbeat' }),
+  S('stack', '🃏', 'كروت بتتسحب', 'كروت فوق بعض والكارت بيتسحب بعيد ويظهر اللي بعده', [...TR, 'catalog', 'product'], { special: 'stack', dur: 2.3, td: .3, trans: ['fade'], motion: 'static', pal: 'lavender', fx: ['vig'], intro: 'logo', outro: 'cta' }),
+  S('bento', '🍱', 'بينتو', 'مربعات بأحجام مختلفة بتتبني واحدة واحدة — ستايل آبل', [...TR, 'catalog', 'product', 'kitchen'], { special: 'bento', group: 4, dur: 3.6, trans: ['zoom'], motion: 'static', text: 'none', pal: 'mint', music: 'calm', outro: 'cta' }),
+  S('editorial', '📖', 'مجلة محررين', 'صورة بإطار مزاح + رقم ضخم مفرّغ + كلام أنيق', [...TR, 'luxury', 'kitchen', 'product'], { special: 'editorial', dur: 3, trans: ['shutter'], motion: 'kb', pal: 'cream', font: 'El Messiri', music: 'luxury', outro: 'cta' }),
+  S('callout', '🎯', 'نقطة المميزات', 'دايرة بتنبض على التفصيلة وخط ينده على اسمها', [...TR, 'product', 'kitchen'], { special: 'callout', dur: 2.9, trans: ['zoom', 'fade'], motion: 'kb', pal: 'teal', outro: 'cta' }),
+  S('vhs', '📼', 'فيديو ريترو', 'REC وتاريخ وخطوط كاميرا قديمة — حنين وستايل', [...TR, 'story'], { special: 'vhs', dur: 2.2, trans: ['rgb', 'glitch'], motion: 'handheld', pal: 'mono', fx: ['grain'], music: 'upbeat', intro: 'none', outro: 'cta' }),
+  S('duo', '🔀', 'قطر مزدوج', 'صورتين بينقسموا بقطر مضيء — قبل/بعد أو مقارنة', [...TR, 'ba', 'product'], { special: 'duo', group: 2, dur: 3.2, trans: ['diag', 'slice'], motion: 'kb', pal: 'coral', min: 2, outro: 'cta' }),
+  S('tri', '▥', 'ثلاث شرائح', 'تلات صور شرايط طولية بتدخل من فوق وتحت', [...TR, 'catalog', 'product', 'kitchen'], { special: 'tri', group: 3, dur: 3, trans: ['slice'], motion: 'kb', pal: 'silver', text: 'none', min: 3, outro: 'cta' }),
+  S('sheet', '💳', 'كارت سعر حديث', 'بانل بيطلع من تحت بالاسم والتقييم والسعر وزرار الطلب', [...TR, 'offer', 'product'], { special: 'sheet', dur: 2.7, trans: ['swipe', 'up'], motion: 'kb', pal: 'white', music: 'upbeat', outro: 'cta' }),
+  S('duotone', '🎨', 'ثنائي اللون', 'الصورة بلون البراند وكلمة ضخمة مفرّغة — بوستر عصري', [...TR, 'story', 'product'], { special: 'duotone', dur: 2.2, trans: ['rgb', 'pixel'], motion: 'punch', pal: 'sunset', fx: ['grain'], music: 'upbeat', outro: 'cta' }),
+  S('vlog', '🤳', 'فلوج حيّ', 'كاميرا محمولة بترتعش خفيف وانتقالات سحب وتسريب ضوء', [...TR, 'story', 'journey'], { trans: ['swipe', 'whip'], motion: 'handheld', dur: 1.9, td: .4, text: 'lower', anim: 'slide', pal: 'orange', fx: ['grain', 'leak'], music: 'upbeat', outro: 'cta' }),
+  S('dream', '☁️', 'حالم', 'حركة بطيئة جوه الصورة وتسريب ضوء ناعم — إحساس سينمائي', [...TR, 'luxury', 'journey'], { trans: ['leak'], motion: 'dolly', dur: 3, td: .8, text: 'center', anim: 'fade', pal: 'lavender', fx: ['leak', 'vig'], music: 'calm', outro: 'cta' }),
+  S('pixelpop', '👾', 'بيكسل بوب', 'الصور بتتحول لمربعات وبترجع — شبابي ومختلف', [...TR, 'story'], { trans: ['pixel', 'glitch'], motion: 'punch', dur: 1.5, td: .5, text: 'top', anim: 'pop', pal: 'neon', fx: ['grain'], music: 'upbeat', outro: 'cta' }),
+  S('slicex', '🎬', 'شرائح سينمائية', 'شرائح بتتبادل بسرعة مع شرايط سينما وفينييت', [...TR, 'luxury', 'product'], { trans: ['slice'], motion: 'pan', dur: 2.3, td: .7, text: 'lower', anim: 'fade', pal: 'midnight', fx: ['bars', 'vig'], music: 'epic', outro: 'cta' }),
+  S('spin', '🌪️', 'دوامة', 'الصورة بتلف وتكبر للي بعدها — حماس وحركة', [...TR, 'story', 'offer'], { trans: ['spin', 'zoom'], motion: 'punch', dur: 1.6, td: .5, text: 'top', anim: 'pop', pal: 'coral', music: 'upbeat', outro: 'cta' }),
+  S('luxe2', '🟢', 'ذهب زمردي', 'إطار ذهبي على زمردي غامق وحركة داخلية بطيئة', [...TR, 'luxury', 'kitchen'], { frame: 'gold', trans: ['leak', 'fade'], motion: 'dolly', dur: 3.4, td: 1, text: 'lower', anim: 'fade', pal: 'emerald', font: 'El Messiri', fx: ['vig', 'grain'], music: 'luxury', outro: 'cta' }),
+  S('cleanx', '🤍', 'نظيف عصري', 'إطار أبيض ناعم بدون زحمة وسحب أنيق', [...TR, 'product', 'kitchen', 'catalog'], { frame: 'minimal', text: 'below', trans: ['swipe'], motion: 'kb', pal: 'cream', font: 'Tajawal', outro: 'cta' }),
+  S('cinema', '🎥', 'سينمائي واسع', 'شرايط سينما + حبوب فيلم + تسريب ضوء + حركة داخلية', [...TR, 'luxury', 'story', 'journey'], { trans: ['shutter', 'fade'], motion: 'dolly', dur: 3, td: .8, text: 'lower', anim: 'fade', pal: 'silver', fx: ['bars', 'vig', 'grain', 'leak'], music: 'epic', outro: 'cta' }),
+];
+
 export const STYLES: Style[] = [
+  ...MODERN,
   // ── منتج ──
   S('showcase', '✨', 'عرض المنتج', 'زووم ناعم على تفاصيل المنتج + عنوان أنيق + نهاية بالتليفون', ['product', 'kitchen'], { trans: ['fade', 'zoom'], motion: 'kb' }),
   S('slide', '➡️', 'انزلاق احترافي', 'كل صورة بتزق اللي قبلها — إيقاع ثابت ونضيف', ['product', 'catalog'], { trans: ['push'], motion: 'drift', dur: 2.2, music: 'upbeat' }),

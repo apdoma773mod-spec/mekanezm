@@ -11,7 +11,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const send = (method, params = {}) => new Promise(r => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) });
   const ev = async e => { const r = await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true }); if (r.result.exceptionDetails) return 'EXC ' + (r.result.exceptionDetails.exception?.description || r.result.exceptionDetails.text); return r.result.result.value; };
   await send('Runtime.enable'); await send('Page.navigate', { url: URL_ }); await sleep(9000);
-  await ev(`(()=>{const g=document.getElementById('gt-ov');if(g)g.remove()})()`);
+  await ev(`(()=>{window.alert=()=>{};const g=document.getElementById('gt-ov');if(g)g.remove()})()`);
   await ev(`document.querySelector('[data-go="smart"]').click()`); await sleep(2000);
   console.log('panel2:', await ev(`JSON.stringify({p2:!!document.getElementById('sm_pro2'),fx:document.querySelectorAll('#sm_p2_fx [data-px]').length,tl:document.querySelectorAll('#sm_p2_tl [data-tl]').length})`));
   // فيديو تجريبي ٦ ثواني من canvas
