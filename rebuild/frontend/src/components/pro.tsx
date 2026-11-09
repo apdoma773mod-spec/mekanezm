@@ -652,13 +652,14 @@ export function ProUiCard() {
  * 🔔 شريط التنبيهات الدايم فوق أي شاشة (index.html 2880): بيزق المحتوى لتحت ومايختفيش غير لما الحاجة تتعالج.
  * نفس ترتيب القديم: طلب من الموقع، طلب تجهيز، طلب بالصور، صورة واتساب، فلوس واصلة.
  */
-export function NotifyBar({ waPhotos, sms, web }: { waPhotos: number; sms: number; web?: { orders: number; custom: number; requests: number } }) {
+export function NotifyBar({ waPhotos, sms, web }: { waPhotos: number; sms: number; web?: { orders: number; custom: number; requests: number; subs?: number } }) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
   const L: [string, number, string][] = [];
   if (web?.orders) L.push(['🛒 طلب من الموقع', web.orders, '/weborders']);
   if (web?.custom) L.push(['🛠️ طلب تجهيز', web.custom, '/weborders#cuBody']);
   if (web?.requests) L.push(['📷 طلب بالصور', web.requests, '/weborders#rqBody']);
+  if (web?.subs) L.push(['📣 مشترك جديد', web.subs, '/weborders#subBody']);
   if (waPhotos) L.push(['💬 صورة واتساب', waPhotos, '/transfers']);
   if (sms) L.push(['📲 فلوس واصلة', sms, '/vodafone']);
   const go = (href: string) => {

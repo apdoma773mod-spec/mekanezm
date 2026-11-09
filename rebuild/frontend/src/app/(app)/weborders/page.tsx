@@ -12,7 +12,7 @@ import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { money } from '@/lib/format';
-import { useAllProducts } from '@/lib/trade-queries';
+import { useAllContacts, useAllProducts, useCreateContact } from '@/lib/trade-queries';
 import { usePatchWebCustom, usePatchWebOrder, usePatchWebRequest, useWebCustom, useWebOrders, useWebRequests, type WebCustomRow, type WebOrderRow, type WebRequestRow } from '@/lib/web-queries';
 
 /** 🛒 طلبات الموقع: الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة. */
@@ -369,15 +369,222 @@ function ReplyModal({ r, onClose }: { r: WebRequestRow; onClose: () => void }) {
   );
 }
 
+// ───────────────────────── 📣 مشتركو جديد الواتساب
+/** طلب «اشتراك في جديد الواتساب» من موقع ميكانيزم (مش طلب منتج بالصور) — ليه شاشة وردود لوحده. */
+const isSub = (r: WebRequestRow) => r.note.trimStart().startsWith('📣 اشتراك');
+const topicsOf = (r: WebRequestRow): string[] => {
+  const m = r.note.match(/مهتم بـ:\s*(.+)/);
+  const t = (m?.[1] ?? '').split(/[،,]/).map((x) => x.trim()).filter(Boolean);
+  return t.length ? t : ['كل حاجة'];
+};
+const STOP = 'لو مش عايز توصلك رسايلنا ابعتلنا «إلغاء» وهنشيلك فوراً.';
+
+function WelcomeModal({ r, onClose }: { r: WebRequestRow; onClose: () => void }) {
+  const toast = useToast();
+  const patch = usePatchWebRequest();
+  const topics = topicsOf(r);
+  const [txt, setTxt] = useState(`أهلاً ${r.name} 👋\nشكراً لاشتراكك في جديد ميكانيزم 🎉\nهنبعتلك كل جديد عن: ${topics.join('، ')}.\n${STOP}`);
+  const go = async () => {
+    const wa = r.phone ? waLink(r.phone, txt.trim()) : '';
+    if (!wa) return toast('المشترك مالوش رقم موبايل', 'bad');
+    const win = window.open(wa, '_blank'); // نفتح الواتساب الأول عشان المتصفح مايمنعوش
+    try {
+      await patch.mutateAsync({ id: r.id, reply: 'ترحيب بالاشتراك' });
+    } catch (e) {
+      toast(`الترحيب ماتسجلش: ${errorMessage(e)}`, 'bad');
+    }
+    onClose();
+    if (!win) window.location.href = wa;
+  };
+  return (
+    <Modal title={`👋 رحّب بـ ${r.name}`} onClose={onClose}>
+      <div className="field full">
+        <label>رسالة الترحيب (عدّلها لو عايز)</label>
+        <textarea rows={7} value={txt} onChange={(e) => setTxt(e.target.value)} />
+      </div>
+      <div className="modal-foot">
+        <button type="button" className="primary" disabled={patch.isPending || !txt.trim()} onClick={go}>
+          💬 ابعت الترحيب على الواتساب
+        </button>
+        <button type="button" className="secondary" onClick={onClose}>
+          إلغاء
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** 📤 إعلان لكل المشتركين: رسالة واحدة، والواتساب بيتفتح لكل مشترك بالدور (دوسة واحدة لكل واحد). */
+function BroadcastModal({ subs, onClose }: { subs: WebRequestRow[]; onClose: () => void }) {
+  const toast = useToast();
+  const all = useMemo(() => [...new Set(subs.flatMap(topicsOf))].filter((t) => t !== 'كل حاجة'), [subs]);
+  const [topic, setTopic] = useState('');
+  const [txt, setTxt] = useState('');
+  const [i, setI] = useState(0);
+  const rec = useMemo(() => subs.filter((s) => !topic || topicsOf(s).includes('كل حاجة') || topicsOf(s).includes(topic)), [subs, topic]);
+  const cur = rec[i];
+  const send = () => {
+    if (!cur) return;
+    if (!txt.trim()) return toast('اكتب الإعلان الأول', 'bad');
+    const wa = waLink(cur.phone, `أهلاً ${cur.name} 👋\n${txt.trim()}\n\n${STOP}`);
+    if (!wa) toast(`${cur.name} مالوش رقم صالح — اتخطّيناه`, 'bad');
+    else {
+      const win = window.open(wa, '_blank');
+      if (!win) window.location.href = wa;
+    }
+    setI(i + 1);
+  };
+  return (
+    <Modal title="📤 إعلان لمشتركي الواتساب" onClose={onClose}>
+      <div className="field full">
+        <label>الإعلان</label>
+        <textarea rows={6} value={txt} placeholder="مثلاً: وصلنا مجرى بلي جديد بسعر خاص — تعالى شوفه أو اطلبه من الموقع" onChange={(e) => (setTxt(e.target.value), setI(0))} />
+      </div>
+      {all.length > 0 && (
+        <div className="field full">
+          <label>لمين؟</label>
+          <select value={topic} onChange={(e) => (setTopic(e.target.value), setI(0))}>
+            <option value="">كل المشتركين ({subs.length})</option>
+            {all.map((t) => (
+              <option key={t} value={t}>
+                المهتمين بـ {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+        هيتبعت لـ <b>{rec.length}</b> مشترك. الواتساب بيتفتح لكل واحد برسالته جاهزة — دوس «إرسال» عنده وارجع دوس «التالي».
+      </p>
+      <div className="modal-foot">
+        {cur ? (
+          <button type="button" className="primary" onClick={send}>
+            💬 ابعت لـ {cur.name} ({i + 1} من {rec.length})
+          </button>
+        ) : (
+          <b style={{ color: 'var(--green)' }}>{rec.length ? '✔ خلّصت كل المشتركين' : 'مفيش مشتركين بالاختيار ده'}</b>
+        )}
+        {cur && (
+          <button type="button" className="secondary" onClick={() => setI(i + 1)}>
+            تخطّى
+          </button>
+        )}
+        <button type="button" className="secondary" onClick={onClose}>
+          قفل
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function Subscribers({ rows }: { rows: WebRequestRow[] }) {
+  const toast = useToast();
+  const patch = usePatchWebRequest();
+  const add = useCreateContact();
+  const customers = useAllContacts('CUSTOMER');
+  const [welcome, setWelcome] = useState<WebRequestRow | null>(null);
+  const [bc, setBc] = useState(false);
+  const [showOff, setShowOff] = useState(false);
+  // مشترك واحد لكل رقم (آخر طلب ليه)، والملغي (مقفول) مش بيوصله إعلان
+  const subs = useMemo(() => {
+    const seen = new Set<string>();
+    return rows
+      .filter(isSub)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .filter((r) => {
+        const k = waNum(r.phone) || r.id;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+  }, [rows]);
+  const live = subs.filter((r) => r.status !== 'closed');
+  const L = showOff ? subs : live;
+  const nNew = live.filter((r) => r.status === 'new').length;
+  if (!subs.length) return null;
+  const addContact = async (r: WebRequestRow) => {
+    const phone = waNum(r.phone);
+    if (phone && (customers.data ?? []).some((c) => waNum(c.phone ?? '') === phone)) return toast('العميل ده موجود عندك في العملاء قبل كده');
+    try {
+      await add.mutateAsync({ type: 'CUSTOMER', name: r.name, phone: r.phone, address: '', note: `مشترك في جديد الواتساب — مهتم بـ: ${topicsOf(r).join('، ')}`, openingBalance: 0 });
+      toast('✔ اتضاف في العملاء');
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
+  };
+  return (
+    <div id="subBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        📣 مشتركو جديد الواتساب {nNew > 0 && <span className="badge red">{nNew}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>
+        عملاء طلبوا يوصلهم كل جديد — رحّب بيهم، وابعتلهم الإعلانات. ({live.length} مشترك فعّال)
+      </p>
+      {live.length > 0 && (
+        <button type="button" className="primary" style={{ marginBottom: 10 }} onClick={() => setBc(true)}>
+          📤 ابعت إعلان لكل المشتركين
+        </button>
+      )}
+      {L.map((r) => (
+        <div key={r.id} className="card" style={{ marginBottom: 12, opacity: r.status === 'closed' ? 0.65 : 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div>
+              <b style={{ fontSize: 17 }}>{r.name}</b> — <span dir="ltr">{r.phone}</span>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+            </div>
+            {r.status === 'new' ? <span className="badge red">جديد</span> : r.status === 'replied' ? <span className="badge green">اترحّب بيه</span> : <span className="badge">ملغي</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
+            {topicsOf(r).map((t) => (
+              <span key={t} className="badge">
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="btnrow">
+            {r.status !== 'closed' && (
+              <button type="button" className="primary" onClick={() => setWelcome(r)}>
+                👋 {r.status === 'new' ? 'رحّب بيه' : 'ابعتله تاني'}
+              </button>
+            )}
+            <button type="button" className="secondary" disabled={add.isPending} onClick={() => void addContact(r)}>
+              👤 ضيفه في العملاء
+            </button>
+            {r.status !== 'closed' ? (
+              <button type="button" className="secondary" disabled={patch.isPending} onClick={() => window.confirm(`تلغي اشتراك ${r.name}؟ مش هيوصله إعلانات.`) && patch.mutate({ id: r.id, status: 'closed' }, { onSuccess: () => toast('اتلغى الاشتراك') })}>
+                🚫 ألغي اشتراكه
+              </button>
+            ) : (
+              <button type="button" className="secondary" disabled={patch.isPending} onClick={() => patch.mutate({ id: r.id, status: 'replied' }, { onSuccess: () => toast('رجع مشترك') })}>
+                ↩️ رجّعه مشترك
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {subs.length > live.length && (
+        <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setShowOff(!showOff)}>
+          {showOff ? 'اخفي الملغي' : `اعرض الملغي (${subs.length - live.length})`}
+        </button>
+      )}
+      {welcome && <WelcomeModal r={welcome} onClose={() => setWelcome(null)} />}
+      {bc && <BroadcastModal subs={live} onClose={() => setBc(false)} />}
+    </div>
+  );
+}
+
 function Requests() {
   const toast = useToast();
   const list = useWebRequests();
   const patch = usePatchWebRequest();
   const [all, setAll] = useState(false);
   const [reply, setReply] = useState<WebRequestRow | null>(null);
-  const L = (list.data ?? []).filter((r) => all || r.status === 'new');
-  const n = (list.data ?? []).filter((r) => r.status === 'new').length;
+  // طلبات الصور بس هنا — الاشتراكات ليها قسمها (Subscribers) بردود تناسبها
+  const photos = (list.data ?? []).filter((r) => !isSub(r));
+  const L = photos.filter((r) => all || r.status === 'new');
+  const n = photos.filter((r) => r.status === 'new').length;
   return (
+    <>
     <div id="rqBody">
       <h2 style={{ margin: '22px 0 10px' }}>
         📷 طلبات بالصور {n > 0 && <span className="badge red">{n}</span>}
@@ -432,6 +639,8 @@ function Requests() {
       </button>
       {reply && <ReplyModal r={reply} onClose={() => setReply(null)} />}
     </div>
+    <Subscribers rows={list.data ?? []} />
+    </>
   );
 }
 

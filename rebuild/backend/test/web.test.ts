@@ -67,6 +67,12 @@ describe('photo requests and custom orders', () => {
     expect((await call(admin, 'GET', '/web/counts')).json().requests).toBe(0);
   });
 
+  it('a WhatsApp-news subscription is counted apart from photo requests', async () => {
+    await call(null, 'POST', '/web/public/requests', { name: 'منى', phone: '01012345678', note: '📣 اشتراك في جديد الواتساب\nمهتم بـ: مفصلات' });
+    await call(null, 'POST', '/web/public/requests', { name: 'كريم', phone: '01234567890', note: 'مقبض زي ده' });
+    expect((await call(admin, 'GET', '/web/counts')).json()).toMatchObject({ requests: 1, subs: 1 });
+  });
+
   it('a custom order from the site is listed and can be opened or closed', async () => {
     expect((await call(null, 'POST', '/web/public/custom', { name: 'عمرو', kind: 'wood', summary: 'x' })).statusCode).toBe(400);
     expect((await call(null, 'POST', '/web/public/custom', { name: 'عمرو', phone: '01007778889', kind: 'steel', summary: 'حماية باب ٦٠×٢٠٠', spec: { w: 60, h: 200, q: 2 } })).statusCode).toBe(200);
