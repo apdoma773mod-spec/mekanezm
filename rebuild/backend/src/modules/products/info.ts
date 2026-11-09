@@ -22,10 +22,13 @@ const infoBody = z.object({
   descr: text(2000),
   packs: z.array(pack).max(10).default([]),
   imgs: z.array(z.string().max(500)).max(30).default([]),
+  // اختياريين: الشاشات القديمة مابتبعتهمش ومايتمسحوش لو مجوش
+  shelfQty: z.number().min(0).max(1e9).nullable().optional(),
+  stores: z.array(z.object({ w: z.string().min(1).max(64), s: z.string().trim().max(120).default("") })).max(10).optional(),
 });
 
 const EMPTY = { brand: '', finish: '', size: '', specs: '', loc: '', grp: '', descr: '', packs: [], imgs: [] };
-type Row = { productId: string; brand: string; finish: string; size: string; specs: string; loc: string; grp: string; descr: string; packs: unknown; imgs: unknown };
+type Row = { productId: string; brand: string; finish: string; size: string; specs: string; loc: string; grp: string; descr: string; packs: unknown; imgs: unknown; shelfQty?: Prisma.Decimal | null; stores?: unknown };
 const dto = (r: Row | null | undefined) => ({
   brand: r?.brand ?? '',
   finish: r?.finish ?? '',
@@ -36,6 +39,8 @@ const dto = (r: Row | null | undefined) => ({
   descr: r?.descr ?? '',
   packs: (r?.packs as unknown[]) ?? [],
   imgs: (r?.imgs as unknown[]) ?? [],
+  shelfQty: r?.shelfQty == null ? null : num(r.shelfQty),
+  stores: (r?.stores as { w: string; s: string }[]) ?? [],
 });
 
 /** «شاشة المنتج»: تفاصيل المنتج (mk_product_info القديمة) + كارت المدير + المقاسات والألوان. */
@@ -62,7 +67,18 @@ export function productInfoRoutes(app: FastifyInstance) {
     const { id } = parse(z.object({ id: z.string().min(1).max(64) }), request.params);
     const b = parse(infoBody, request.body);
     if (!(await db.product.findFirst({ where: { id, deletedAt: null }, select: { id: true } }))) throw notFound('الصنف ده مش موجود');
-    const data = { ...b, packs: b.packs as Prisma.InputJsonValue, imgs: b.imgs as Prisma.InputJsonValue };
+    if (b.stores?.length) {
+      const ids = [...new Set(b.stores.map((x) => x.w))];
+      if ((await db.warehouse.count({ where: { id: { in: ids } } })) !== ids.length) throw badRequest('مخزن من المختارين مش موجود — حدّث الشاشة وجرّب تاني');
+    }
+    const { shelfQty, stores, ...rest } = b;
+    const data = {
+      ...rest,
+      packs: b.packs as Prisma.InputJsonValue,
+      imgs: b.imgs as Prisma.InputJsonValue,
+      ...(shelfQty !== undefined ? { shelfQty: shelfQty == null ? null : shelfQty } : {}),
+      ...(stores !== undefined ? { stores: stores as Prisma.InputJsonValue } : {}),
+    };
     const row = await db.productInfo.upsert({ where: { productId: id }, create: { productId: id, ...data }, update: data });
     const actor = actorOf(request);
     await db.$transaction((tx) => writeAudit(tx, { userId: actor.id, action: 'PRODUCT_UPDATE', entity: 'ProductInfo', entityId: id, after: { grp: row.grp, packs: b.packs.length, imgs: b.imgs.length }, ip: actor.ip }));

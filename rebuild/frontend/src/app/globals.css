@@ -977,3 +977,5 @@ svg.i {
   body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"] { margin-inline-start: auto; }
   body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"]::before { display: none; }
 }
+
+.pc-place-ed{display:grid;gap:10px}

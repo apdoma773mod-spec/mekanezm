@@ -47,6 +47,7 @@ import alertsRoutes from './modules/alerts/routes.js';
 import webRoutes from './modules/web/routes.js';
 import webPublicRoutes from './modules/web/public.js';
 import scrapRoutes from './modules/scraps/routes.js';
+import warehouseRoutes from './modules/warehouses/routes.js';
 import videoRoutes from './modules/web/video.js';
 import { useSavedAiKey } from './modules/web/catalog-ai.js';
 import aiRoutes from './modules/ai/routes.js';
@@ -133,6 +134,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(webRoutes, { prefix: '/web' });
       await api.register(webPublicRoutes, { prefix: '/web' });
       await api.register(scrapRoutes, { prefix: '/web/scraps' });
+      await api.register(warehouseRoutes, { prefix: '/warehouses' });
       await api.register(videoRoutes, { prefix: '/web' });
       await api.register(aiRoutes, { prefix: '/ai' });
       await api.register(portalRoutes, { prefix: '/portal' });

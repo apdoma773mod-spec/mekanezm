@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { NO_KEY } from './routes.js';
 import { MAX_B64, MODEL, TYPES } from './read-image.js';
 import { parse } from '../../lib/validate.js';
+import { getFile } from '../../lib/files.js';
 import { AppError } from '../../lib/errors.js';
 
 /**
@@ -87,11 +88,67 @@ const MATCH_SCHEMA: Schema = {
 
 const DESC_SCHEMA: Schema = {
   tool: 'record_description',
-  gemini: { type: 'OBJECT', properties: { description: { type: 'STRING' } }, required: ['description'] },
-  claude: { type: 'object', properties: { description: { type: 'string' } }, required: ['description'] },
+  gemini: {
+    type: 'OBJECT',
+    properties: {
+      description: { type: 'STRING' },
+      specs: { type: 'ARRAY', items: { type: 'OBJECT', properties: { k: { type: 'STRING' }, v: { type: 'STRING' } }, required: ['k', 'v'] } },
+    },
+    required: ['description', 'specs'],
+  },
+  claude: {
+    type: 'object',
+    properties: {
+      description: { type: 'string' },
+      specs: { type: 'array', items: { type: 'object', properties: { k: { type: 'string' }, v: { type: 'string' } }, required: ['k', 'v'] } },
+    },
+    required: ['description', 'specs'],
+  },
 };
 
+/** أرقام عربي/إنجليزي → إنجليزي، عشان نقارن أرقام الوصف بأرقام المعلومات اللي اتبعتت */
+const toLatin = (s: string) => s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+const numsOf = (s: string) => new Set(toLatin(s).match(/\d+(?:[.,]\d+)?/g)?.map((x) => x.replace(',', '.')) ?? []);
+const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu;
+const PRICE = /(جنيه|ج\.م|سعر|EGP|LE\b)/i;
+
+/**
+ * الدقة قبل أي حاجة: أي جملة أو مواصفة فيها رقم مش مذكور في اللي اتبعت (الاسم/المعلومات) بتتشال —
+ * الموديل ممكن «يتخيّل» مقاس أو تحميل أو سنين ضمان، والعميل هيتبني على الكلام ده.
+ */
+export function cleanDescription(out: { description?: unknown; specs?: unknown }, source: string) {
+  const known = numsOf(source);
+  const safe = (t: string) => [...numsOf(t)].every((n) => known.has(n)) && !PRICE.test(t);
+  const sentences = String(out.description ?? '')
+    .replace(EMOJI, '')
+    .replace(/[ \t]+([.!؟?،])/g, '$1')
+    .split(/(?<=[.!؟?۔])\s+|\n+/)
+    .map((x) => x.trim())
+    .filter((x) => x && safe(x));
+  const seen = new Set<string>();
+  const specs: { k: string; v: string }[] = [];
+  for (const s of Array.isArray(out.specs) ? (out.specs as { k?: unknown; v?: unknown }[]) : []) {
+    const k = String(s.k ?? '').replace(EMOJI, '').trim().slice(0, 40);
+    const v = String(s.v ?? '').replace(EMOJI, '').trim().slice(0, 80);
+    if (!k || !v || seen.has(k) || !safe(`${k} ${v}`)) continue;
+    seen.add(k);
+    specs.push({ k, v });
+    if (specs.length >= 8) break;
+  }
+  return { description: sentences.join(' ').slice(0, 900), specs };
+}
+
+const sniff = (b: Buffer): string | undefined =>
+  b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png' : b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' ? 'image/webp' : undefined;
+
 async function fetchImage(url: string): Promise<{ data: string; mt: string } | undefined> {
+  // صورة اتخزنت في السيستم (بلينك كامل أو نسبي): بنقراها من التخزين على طول من غير طلب شبكة
+  const f = /^(?:https?:\/\/[^/]+)?\/api\/v1\/work\/files\/([\w.-]+)$/.exec(url);
+  if (f) {
+    const buf = await getFile(f[1]!).catch(() => null);
+    const mt = buf ? sniff(buf) : undefined;
+    return buf && mt && buf.length < 5_000_000 ? { data: buf.toString('base64'), mt } : undefined;
+  }
   const m = /^data:([^;]+);base64,(.+)$/s.exec(url);
   if (m) return TYPES.includes(m[1]!) && m[2]!.length < MAX_B64 ? { data: m[2]!, mt: m[1]! } : undefined;
   if (!/^https?:\/\//.test(url)) return undefined;
@@ -140,17 +197,30 @@ ${list}`;
     return { seen: String(out.seen ?? ''), matches };
   });
 
-  /** POST /ai/describe-product {name,cat,hint,image_url?,kind?} → {description}. */
+  /**
+   * POST /ai/describe-product {name,cat,hint,image_url?,kind?} → {description, specs:[{k,v}]}.
+   * الوصف 2-4 جمل بالمصري المبسط + مواصفات قصيرة (المقاس/الخامة/اللون…) من اللي مذكور أو باين في الصورة بس.
+   * أي رقم مش في المعلومات المبعوتة بيتشال (cleanDescription).
+   */
   app.post('/describe-product', { preHandler: app.requireAdmin, bodyLimit: 10 * 1024 * 1024 }, async (request) => {
     const b = parse(z.object({ name: z.string().min(1).max(300), cat: z.string().max(200).optional(), hint: z.string().max(2000).optional(), image_url: z.string().max(8_000_000).optional(), kind: z.string().max(200).optional() }), request.body);
     const img = b.image_url ? await fetchImage(b.image_url) : undefined;
-    const prompt = `اكتب وصف تسويقي قصير (٢ لـ ٤ جمل) بالعربي المصري المبسّط لمنتج في محل ${b.kind || 'إكسسوارات ومستلزمات المطابخ وغرف الدريسنج'}.
-الاسم: ${b.name}${b.cat ? `\nالقسم: ${b.cat}` : ''}${b.hint ? `\nمعلومات: ${b.hint}` : ''}
-${img ? 'اعتمد على الصورة المرفقة كمان.' : ''}
-اكتب الفايدة والخامة والاستخدام. ماتألفش مواصفات أو أرقام أو ضمان مش مذكورة. من غير إيموجي ومن غير أسعار.`;
+    const source = [b.name, b.cat, b.hint].filter(Boolean).join('\n');
+    const prompt = `انت بتكتب وصف منتج لمحل ${b.kind || 'إكسسوارات ومستلزمات المطابخ وغرف الدريسنج والنجارة'} في مصر، والوصف هيتعرض للعميل على الموقع وفي الواتساب.
+الاسم: ${b.name}${b.cat ? `\nالقسم: ${b.cat}` : ''}${b.hint ? `\nمعلومات مؤكدة: ${b.hint}` : ''}
+${img ? 'في صورة للمنتج مرفقة: اعتمد عليها في النوع والشكل والخامة واللون الباين بوضوح بس.' : 'مفيش صورة، اعتمد على الاسم والمعلومات بس.'}
+
+description: من ٢ لـ ٤ جمل بالعربي المصري المبسّط: المنتج إيه، بيتعمل منه إيه (لو باين أو مذكور)، وبيتستخدم في إيه. جمل كاملة ومترابطة، من غير حشو ولا مبالغة (مفيش «الأفضل» و«رقم واحد»).
+specs: من ٠ لـ ٨ مواصفات قصيرة، كل واحدة k = اسم المواصفة (المقاس، الخامة، اللون، التشطيب، الماركة…) و v = قيمتها.
+
+قواعد صارمة (الغلط هنا بيضيّع ثقة العميل):
+- ماتكتبش أي رقم أو مقاس أو وزن أو حمولة أو ضمان أو بلد صنع إلا لو مكتوب بحروفه في الاسم أو المعلومات المؤكدة.
+- ماتذكرش ماركة إلا لو مذكورة أو مكتوبة بوضوح على المنتج في الصورة.
+- لو مش متأكد من مواصفة سيبها — مواصفة ناقصة أحسن من مواصفة غلط.
+- من غير إيموجي، ومن غير أسعار أو كلام عن العروض.`;
     const out = await askJson(prompt, DESC_SCHEMA, img);
-    const description = String(out.description ?? '').trim();
-    if (!description) throw new AppError(422, 'BAD_REQUEST', 'ماجاش وصف');
-    return { description };
+    const r = cleanDescription(out, source);
+    if (!r.description) throw new AppError(422, 'BAD_REQUEST', 'مقدرتش أكتب وصف مضمون من البيانات دي — زوّد معلومات (الماركة أو المقاس أو الخامة) وجرّب تاني');
+    return r;
   });
 }

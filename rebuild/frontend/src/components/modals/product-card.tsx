@@ -26,6 +26,8 @@ import { useToast } from '../ui/toast';
 import { useIsAdmin } from '../use-role';
 import { useModal } from './modal-host';
 import { ExtraButtons } from './product-modal';
+import { PlaceCard, PlaceEditor } from '../product-place';
+import { AiDescribeButton, hintOf } from '../ai-describe';
 
 export type ProductCardSpec = { kind: 'productEdit'; id: string } | { kind: 'productDetails'; id: string } | { kind: 'productSend'; id: string } | { kind: 'productVariant'; id: string };
 
@@ -83,7 +85,7 @@ export function ProductCard({ id }: { id: string }) {
       </Modal>
     );
   const p = prod.data;
-  const inf = info.data ?? ({ brand: '', finish: '', size: '', specs: '', loc: '', grp: '', descr: '', packs: [], imgs: [] } as ProductInfo);
+  const inf = info.data ?? ({ brand: '', finish: '', size: '', specs: '', loc: '', grp: '', descr: '', packs: [], imgs: [], shelfQty: null, stores: [] } as ProductInfo);
   const cost = p.cost ?? 0;
   const st = p.qty <= 0 ? <span className="badge red">نفد</span> : p.qty <= p.minQty ? <span className="badge red">قرب يخلص</span> : <span className="badge green">متوفر</span>;
   const S = sibs.data?.items ?? [];
@@ -147,21 +149,18 @@ export function ProductCard({ id }: { id: string }) {
               {kv('هامش الربح', p.price ? `${Math.round(((p.price - cost) / p.price) * 100)}%` : '—')}
               {kv('الرصيد', `${qtyText(p.qty)} ${p.unit}`)}
               {kv('حد التنبيه', p.minQty)}
-              {kv('مكانه في المحل', inf.loc || '—')}
               {kv('آخر شراء', sd ? (sd.lastBuy ? `${money(sd.lastBuy.price)} من ${sd.lastBuy.person || '—'} (${sd.lastBuy.date})` : '—') : '…')}
               {sd && kv('اتباع آخر ٣ شهور', `${qtyText(sd.sold90)} ${p.unit}`)}
               {sd && kv('أكتر عملاء بيشتروه', sd.top.map((t) => `${t.name} (${t.qty})`).join('، ') || '—')}
               {p.barcode ? kv('الباركود', p.barcode) : null}
             </div>
           </div>
-        ) : inf.loc ? (
+        ) : (
           <div className="pc-card">
-            <div className="pc-kv">
-              {kv('مكانه في المحل', inf.loc)}
-              {kv('سعر البيع', <b>{money(p.price)}</b>)}
-            </div>
+            <div className="pc-kv">{kv('سعر البيع', <b>{money(p.price)}</b>)}</div>
           </div>
-        ) : null}
+        )}
+        <PlaceCard inf={inf} qty={p.qty} unit={p.unit} />
         {(S.length > 0 || own) && (
           <div className="pc-card">
             <h3>
@@ -331,7 +330,6 @@ export function ProductDetails({ id }: { id: string }) {
   const ai = useRef(false);
   const [f, setF] = useState<ProductInfo | null>(null);
   const [busy, setBusy] = useState(false);
-  const [aiBusy, setAiBusy] = useState(false);
   const back = () => open({ kind: 'product', id });
   if (!prod || info.isPending)
     return (
@@ -381,7 +379,7 @@ export function ProductDetails({ id }: { id: string }) {
       })
       .filter((k): k is ProductPack => !!k && !!k.u);
     try {
-      await save.mutateAsync({ id, info: { ...v, packs } });
+      await save.mutateAsync({ id, info: { ...v, packs, stores: (v.stores ?? []).filter((x) => x.w).map((x) => ({ w: x.w, s: x.s.trim() })) } });
       ai.current = false;
       toast('✔ اتحفظ');
       back();
@@ -397,7 +395,7 @@ export function ProductDetails({ id }: { id: string }) {
           {inp('brand', 'الماركة', 'مثلاً: ...')}
           {inp('finish', 'التشطيب / اللون', 'نيكل، كروم، أسود مطفي…')}
           {inp('size', 'المقاس', 'مثلاً: 45 سم / 35 مم')}
-          {inp('loc', 'مكانه في المحل', 'رف 3 – دولاب المفصلات')}
+          <PlaceEditor v={v} set={set} qty={prod.qty} unit={prod.unit || 'قطعة'} />
           <div className="field full">
             <label>مجموعة المقاسات والألوان (لو الصنف ده مقاس أو لون من صنف تاني)</label>
             <input list="pceGrps" value={v.grp} placeholder="مثلاً: مجرى بلي تلسكوبي" onChange={(e) => set({ grp: e.target.value })} />
@@ -447,28 +445,15 @@ export function ProductDetails({ id }: { id: string }) {
           <div className="field full">
             <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               الوصف (بيظهر في الكارت ويتبعت مع المنتج)
-              <button
-                type="button"
-                className="secondary"
+              <AiDescribeButton
                 id="pceAi"
-                disabled={aiBusy}
-                style={{ padding: "4px 10px", fontSize: 13, width: "auto" }}
-                onClick={async () => {
-                  setAiBusy(true);
-                  const hint = [v.brand && `الماركة: ${v.brand}`, v.finish && `التشطيب: ${v.finish}`, v.size && `المقاس: ${v.size}`, v.specs].filter(Boolean).join("، ");
-                  try {
-                    const r = await api.post<{ description: string }>("/ai/describe-product", { name: prod.name, cat: prod.category ?? "", hint, image_url: v.imgs[0] ?? "" });
-                    set({ descr: r.description });
-                    toast("✔ الوصف اتكتب — راجعه ودوس «حفظ»");
-                  } catch (e) {
-                    toast(`الوصف ماتكتبش: ${errorMessage(e)}`, "bad");
-                  } finally {
-                    setAiBusy(false);
-                  }
+                build={() => ({ name: prod.name, cat: prod.category ?? '', hint: hintOf({ الماركة: v.brand, التشطيب: v.finish, المقاس: v.size, مواصفات: v.specs }), image_url: v.imgs[0] ?? '' })}
+                onDone={(r) => {
+                  if (v.descr.trim() && v.descr.trim() !== r.description && !window.confirm('تستبدل الوصف الحالي بالجديد؟')) return;
+                  set({ descr: r.description, ...(v.specs.trim() || !r.specs.length ? {} : { specs: r.specs.map((x) => `${x.k}: ${x.v}`).join('\n') }) });
+                  toast('✔ الوصف اتكتب — راجعه ودوس «حفظ»');
                 }}
-              >
-                {aiBusy ? "⏳ بيكتب…" : "✨ اكتب الوصف"}
-              </button>
+              />
             </label>
             <textarea rows={4} value={v.descr} onChange={(e) => set({ descr: e.target.value })} />
           </div>

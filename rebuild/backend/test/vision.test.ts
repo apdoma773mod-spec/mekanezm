@@ -47,7 +47,13 @@ describe('photo search + AI description', () => {
     const d = await withFake({ description: 'مقبض ستانلس متين.' }, () =>
       app.inject({ method: 'POST', url: '/api/v1/ai/describe-product', headers: { cookie: admin }, payload: { name: 'مقبض', cat: 'مقابض', hint: 'الماركة: X' } }),
     );
-    expect(d.json()).toEqual({ description: 'مقبض ستانلس متين.' });
+    expect(d.json()).toEqual({ description: 'مقبض ستانلس متين.', specs: [] });
+
+    // الدقة: أي رقم مش مذكور في بيانات المنتج بيتشال، والمواصفة المكررة كمان
+    const g = await withFake({ description: 'مقبض ستانلس متين. بيستحمل 40 كيلو وعليه ضمان 5 سنين. مناسب للمطابخ.', specs: [{ k: 'الخامة', v: 'ستانلس' }, { k: 'الحمولة', v: '40 كيلو' }, { k: 'الخامة', v: 'حديد' }] }, () =>
+      app.inject({ method: 'POST', url: '/api/v1/ai/describe-product', headers: { cookie: admin }, payload: { name: 'مقبض', cat: 'مقابض', hint: 'الماركة: X' } }),
+    );
+    expect(g.json()).toEqual({ description: 'مقبض ستانلس متين. مناسب للمطابخ.', specs: [{ k: 'الخامة', v: 'ستانلس' }] });
     const f = await app.inject({ method: 'POST', url: '/api/v1/ai/describe-product', headers: { cookie: staff }, payload: { name: 'مقبض' } });
     expect(f.statusCode).toBe(403);
   });

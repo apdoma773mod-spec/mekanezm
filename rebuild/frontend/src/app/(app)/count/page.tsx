@@ -8,7 +8,8 @@ import { useModal } from '@/components/modals/modal-host';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
-import { errorMessage } from '@/lib/api';
+import { api, errorMessage } from '@/lib/api';
+import { serverNowIso, syncServerTime } from '@/lib/server-time';
 import { money, qtyText } from '@/lib/format';
 import { CameraScanner } from '@/components/scan/camera-scanner';
 import { printHtml, reportHtml } from '@/lib/print';
@@ -25,6 +26,8 @@ interface DraftLine {
   cat: string;
   qty: number;
   cost: number;
+  /** وقت العدّ بساعة السيرفر — الجرد بيتحسب على رصيد الوقت ده، فالبيع اللي بعده مايتمسحش */
+  t?: string;
 }
 type Draft = Record<string, DraftLine>;
 
@@ -118,7 +121,10 @@ function CountScreen() {
   const products = useProducts({ q: q || undefined, category: cat || undefined, pageSize: 200 }, show === 'all');
   const save = useCreateCount();
 
-  useEffect(() => setDraft(readDraft()), []);
+  useEffect(() => {
+    setDraft(readDraft());
+    void syncServerTime();
+  }, []);
   useEffect(() => {
     const t = setTimeout(() => setQ(text.trim()), 150);
     return () => clearTimeout(t);
@@ -129,7 +135,7 @@ function CountScreen() {
     writeDraft(next);
   };
   const setCount = (p: Pick<ProductDto, 'id' | 'name' | 'code' | 'category' | 'qty' | 'cost'>, v: string) =>
-    update({ ...draft, [p.id]: { v: toWestern(v), name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0 } });
+    update({ ...draft, [p.id]: { v: toWestern(v), name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0, t: serverNowIso() } });
 
   type Line = { id: string; name: string; code: string; cat: string; qty: number; cost: number };
   let lines: Line[];
@@ -168,7 +174,7 @@ function CountScreen() {
       const p = await lookupProduct(code);
       const cur = draftRef.current[p.id];
       const v = String((Number(cur?.v) || 0) + 1);
-      const next = { ...draftRef.current, [p.id]: { v, name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0 } };
+      const next = { ...draftRef.current, [p.id]: { v, name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0, t: serverNowIso() } };
       draftRef.current = next;
       update(next);
       setHit(p.id);
@@ -200,12 +206,28 @@ function CountScreen() {
   };
 
   const onSave = async () => {
+    // كل صنف بيتحسب على رصيده وقت ما اتعدّ (لو مفيش وقت = مسودة قديمة: بنستخدم الرصيد اللي كان ظاهر وقتها)
     const items = Object.entries(draft)
       .filter(([, l]) => has(l))
-      .map(([productId, l]) => ({ productId, counted: Number(l.v) }));
+      .map(([productId, l]) => ({ productId, counted: Number(l.v), ...(l.t ? { countedAt: l.t } : { baseline: l.qty }) }));
     if (!items.length) return toast('مفيش أصناف اتعدّت', 'bad');
-    if (!window.confirm(`حفظ الجرد لـ ${items.length} صنف؟\nالمخزون هيتظبط على العدد اللي كتبته، وكل فرق هيتسجل في كارت الصنف.`)) return;
+    if (items.some((i) => !Number.isFinite(i.counted) || i.counted < 0)) return toast('فيه عدد مش مظبوط — راجع الأرقام', 'bad');
     try {
+      await syncServerTime();
+      const pv = await api.post<{ lines: { name: string; current: number; before: number; counted: number; diff: number; after: number }[]; negative: { name: string; after: number }[] }>('/counts/preview', { items });
+      const ch = pv.lines.filter((x) => x.diff !== 0);
+      const moved = pv.lines.filter((x) => r2(x.current - x.before) !== 0).length;
+      const msg = [
+        `حفظ الجرد لـ ${items.length} صنف؟`,
+        `• ${ch.length} صنف فيه فرق عن السيستم وقت العد، والباقي مظبوط`,
+        moved ? `• ${moved} صنف اتباع أو اتشترى منه بعد ما اتعدّ — الحركة دي محسوبة ومش هتتمسح` : '',
+        ...ch.slice(0, 8).map((x) => `- ${x.name}: عددت ${x.counted} والسيستم كان ${x.before} (${x.diff > 0 ? '+' : ''}${x.diff}) ← الرصيد بعد الحفظ ${x.after}`),
+        ch.length > 8 ? '...' : '',
+        pv.negative.length ? `⚠️ ${pv.negative.length} صنف هيطلع رصيده بالسالب (بيع أكتر من المعدود) — راجعهم: ${pv.negative.slice(0, 4).map((x) => x.name).join('، ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      if (!window.confirm(msg)) return;
       const c = await save.mutateAsync({ items, note: note.trim() });
       update({});
       setNote('');
@@ -267,7 +289,9 @@ function CountScreen() {
           ) : lines.length ? (
             shownLines.map((p) => {
               const l = draft[p.id];
-              const df = has(l) ? r2(Number(l!.v) - p.qty) : null;
+              const base = has(l) ? l!.qty : p.qty; // رصيد السيستم وقت العد
+              const df = has(l) ? r2(Number(l!.v) - base) : null;
+              const mv = has(l) ? r2(p.qty - base) : 0; // بيع/شراء حصل بعد العد
               return (
                 <div key={p.id} className={`cnt-row${hit === p.id ? ' hit' : ''}`}>
                   <div style={{ minWidth: 0 }}>
@@ -278,7 +302,15 @@ function CountScreen() {
                       {p.cat ? ` • ${p.cat}` : ''}
                     </small>
                   </div>
-                  <div style={{ textAlign: 'center' }}>{qtyText(p.qty)}</div>
+                  <div style={{ textAlign: 'center' }}>
+                    {qtyText(p.qty)}
+                    {mv !== 0 && (
+                      <small style={{ display: 'block', color: '#d97706' }} title="بيع أو شراء حصل بعد ما عدّيته — محسوب في الحفظ">
+                        اتحرك {mv > 0 ? '+' : ''}
+                        {mv} بعد العد
+                      </small>
+                    )}
+                  </div>
                   <input
                     inputMode="decimal"
                     value={l?.v ?? ''}

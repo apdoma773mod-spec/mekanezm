@@ -10,7 +10,8 @@ import { fileToDataUrl } from '@/lib/image';
 import { uploadSiteVideo } from '@/lib/video-upload';
 import { Tile, Tiles } from '@/components/ui/tiles';
 import { fetchSite, saveSite, type SiteData, type SiteDoc } from '@/lib/web-queries';
-import { useProduct } from '@/lib/trade-queries';
+import { useProduct, useProductInfo } from '@/lib/trade-queries';
+import { AiDescribeButton, hintOf } from '../ai-describe';
 import { useModal } from './modal-host';
 import { DIM_FIELDS, dimSig, generateDimImage, hasDims, parseDims, readDimBoxes, type Dims } from '@/lib/dim-auto';
 
@@ -589,6 +590,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const toast = useToast();
   const qc = useQueryClient();
   const prod = useProduct(id ?? null);
+  const sysInfo = useProductInfo(id ?? null).data;
   const [doc, setDoc] = useState<SiteDoc | null>(null);
   const [f, setF] = useState<{
     on: boolean;
@@ -1005,7 +1007,30 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
             <Tile k="desc" icon="📋" title="الوصف والمواصفات" sub={f.sp.filter((x) => x[0].trim()).length ? `${f.sp.filter((x) => x[0].trim()).length} مواصفة` : ''}>
               <div className="sec">
                 <h3>📋 الوصف والمواصفات</h3>
-                <label className="l">وصف قصير (بيظهر في صفحة المنتج)</label>
+                <label className="l" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  وصف قصير (بيظهر في صفحة المنتج)
+                  <AiDescribeButton
+                    id="eAi"
+                    build={() => {
+                      if (!f.name.trim()) return 'اكتب اسم المنتج الأول';
+                      const known = f.sp.filter((x) => x[0].trim() && x[1].trim()).map((x) => `${x[0].trim()}: ${x[1].trim()}`).join('، ');
+                      return {
+                        name: f.name.trim(),
+                        cat: p?.category ?? '',
+                        hint: [hintOf({ الماركة: sysInfo?.brand, التشطيب: sysInfo?.finish, المقاس: sysInfo?.size }), known].filter(Boolean).join('، '),
+                        image_url: f.imgs[0] ?? sysInfo?.imgs?.[0] ?? '',
+                      };
+                    }}
+                    onDone={(r) => {
+                      if (f.txt.trim() && f.txt.trim() !== r.description && !window.confirm('تستبدل الوصف الحالي بالجديد؟')) return;
+                      const have = new Set(f.sp.filter((x) => x[0].trim() && x[1].trim()).map((x) => x[0].trim()));
+                      const kept = f.sp.filter((x) => x[0].trim() && x[1].trim());
+                      const added = r.specs.filter((x) => !have.has(x.k)).map((x): [string, string] => [x.k, x.v]);
+                      set({ txt: r.description, sp: [...kept, ...added].length ? [...kept, ...added] : f.sp });
+                      toast('✔ الوصف والمواصفات اتكتبوا — راجعهم ودوس «حفظ»');
+                    }}
+                  />
+                </label>
                 <textarea id="eTxt" rows={3} value={f.txt} placeholder="مثلاً: مجرى سفلي بقفل هادي، تحميل لحد 35 كيلو، مناسب للمطابخ والدريسنج" onChange={(e) => set({ txt: e.target.value })} />
                 <label className="l">المواصفات</label>
                 <div id="eSpecs">

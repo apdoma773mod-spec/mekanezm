@@ -258,10 +258,23 @@ model ProductInfo {
   /// [{u:"علبة", n:12} | {u:"مسمار", n:0.004, x:250, small:true}]
   packs     Json     @default("[]")
   imgs      Json     @default("[]")
+  /// كام قطعة على الرف في المحل دلوقتي (loc = مكان الرف/العين). null = مش متحدد → كل الرصيد يتعامل إنه في المحل. الباقي (الرصيد − ده) في المخزن.
+  shelfQty  Decimal? @db.Decimal(14, 3)
+  /// أماكن الباقي في المخازن: [{w:"<Warehouse.id>", s:"عين 5 / رف ب"}]
+  stores    Json     @default("[]")
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([grp])
+}
+
+/// 🏬 المخازن (غير المحل): كل مخزن له اسم، والمنتج بيتسجل فيه بمكانه (عين/رف) في ProductInfo.stores.
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  note      String   @default("")
+  sort      Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model StockMove {
