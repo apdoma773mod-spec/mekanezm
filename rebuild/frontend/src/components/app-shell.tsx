@@ -57,6 +57,7 @@ const MAIN: NavItem[] = [
   { href: '/shipping', label: 'الشحن والتوصيل', icon: '🚚' },
   { href: '/returns', label: 'المرتجعات', icon: 'return', adminOnly: true, mobile: true },
   { href: '/contacts', label: 'العملاء والموردين', icon: 'users', adminOnly: true },
+  { href: '/broadcast', label: 'إعلان للعملاء', icon: '📣', adminOnly: true },
   { href: '/debts', label: 'الديون والتذكير', icon: '💰', adminOnly: true },
   { href: '/reorder', label: 'اقتراحات الطلب', icon: '📦', adminOnly: true },
   { href: '/cash', label: 'الخزنة والمصروفات', icon: 'wallet', adminOnly: true },
