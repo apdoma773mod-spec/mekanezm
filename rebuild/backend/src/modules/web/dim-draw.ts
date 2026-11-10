@@ -43,7 +43,9 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
   // the part: every found end point (they sit on its edges), else the Gemini box, else the non-background area
   const ends = withNum.flatMap((s) => (s.line ? [[s.line[0], s.line[1]], [s.line[2], s.line[3]]] : []));
   let pb: [number, number, number, number] = hint && hint[2] - hint[0] > 0.05 && hint[3] - hint[1] > 0.05 ? hint : [0.1, 0.1, 0.9, 0.9];
-  if (ends.length >= 2) pb = [Math.min(...ends.map((e) => e[0]!)), Math.min(...ends.map((e) => e[1]!)), Math.max(...ends.map((e) => e[0]!)), Math.max(...ends.map((e) => e[1]!))];
+  const eb: [number, number, number, number] | null = ends.length >= 2 ? [Math.min(...ends.map((e) => e[0]!)), Math.min(...ends.map((e) => e[1]!)), Math.max(...ends.map((e) => e[0]!)), Math.max(...ends.map((e) => e[1]!))] : null;
+  // مقاس واحد بس (زي الارتفاع) بيدّي خط رفيع مش «مكان القطعة»: ساعتها بنعتمد على مربع القطعة أو حدودها في الصورة
+  if (eb && eb[2] - eb[0] > 0.08 && eb[3] - eb[1] > 0.08) pb = eb;
   else if (!hint) {
     try {
       const t = await sharp(base).trim({ threshold: 28 }).toBuffer({ resolveWithObject: true });
@@ -57,10 +59,13 @@ export async function drawDimensions(photo: Buffer, specs: DimSpec[], _title = '
   const px = { x0: pb[0] * BW, y0: pb[1] * BH, x1: pb[2] * BW, y1: pb[3] * BH };
   const padX = Math.max(60, (px.x1 - px.x0) * 0.3),
     padY = Math.max(60, (px.y1 - px.y0) * 0.3);
-  const cx0 = Math.max(0, Math.floor(px.x0 - padX)),
-    cy0 = Math.max(0, Math.floor(px.y0 - padY)),
-    cx1 = Math.min(BW, Math.ceil(px.x1 + padX)),
-    cy1 = Math.min(BH, Math.ceil(px.y1 + padY));
+  // الصورة بتظهر كاملة زي ما هي (من غير قص): عبده عايز المنتج كله والخلفية بتاعته
+  void padX;
+  void padY;
+  const cx0 = 0,
+    cy0 = 0,
+    cx1 = BW,
+    cy1 = BH;
   const crop = await sharp(base).extract({ left: cx0, top: cy0, width: cx1 - cx0, height: cy1 - cy0 }).toBuffer();
   const sc = Math.min(frame.w / (cx1 - cx0), frame.h / (cy1 - cy0));
   const iw = Math.round((cx1 - cx0) * sc),
