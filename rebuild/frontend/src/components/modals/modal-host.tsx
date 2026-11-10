@@ -30,6 +30,7 @@ import { ContactReportModal } from '../reports-extras';
 import { PurchaseImport } from './purchase-import';
 import { SiteAdmin, SiteProduct } from './site-admin';
 import { DimBulk } from './dim-bulk';
+import { ProductFiles } from './product-files';
 import { PortalLink, PortalNew } from './portal-modals';
 import { PhoneImport } from './phone-import';
 
@@ -60,6 +61,7 @@ export type ModalSpec =
   | { kind: 'siteAdmin'; tab?: 'works' | 'reviews' | 'delivery' | 'contact' | 'seo' }
   | { kind: 'siteProduct'; id?: string }
   | { kind: 'dimBulk' }
+  | { kind: 'productFiles' }
   | { kind: 'portal'; id: string }
   | { kind: 'portalNew' }
   | { kind: 'phoneImport' }
@@ -189,6 +191,9 @@ export function ModalHost({ children }: { children: ReactNode }) {
         break;
       case 'phoneImport':
         content = <PhoneImport onClose={close} />;
+        break;
+      case 'productFiles':
+        content = <ProductFiles />;
         break;
       case 'dimBulk':
         content = <DimBulk />;
