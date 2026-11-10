@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { InvoiceDto, Paginated } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
 import { WebInsights } from '@/components/web-insights';
@@ -13,7 +13,8 @@ import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { money } from '@/lib/format';
 import { useAllContacts, useAllProducts, useCreateContact } from '@/lib/trade-queries';
-import { usePatchWebCustom, usePatchWebOrder, usePatchWebRequest, useWebCustom, useWebOrders, useWebRequests, type WebCustomRow, type WebOrderRow, type WebRequestRow } from '@/lib/web-queries';
+import { PendingReviews } from '@/components/modals/site-admin';
+import { usePatchWebCustom, usePatchWebOrder, usePatchWebRequest, useRemoveWebWait, useWebCounts, useWebCustom, useWebOrders, useWebRequests, useWebWaits, type WebCustomRow, type WebOrderRow, type WebRequestRow } from '@/lib/web-queries';
 
 /** 🛒 طلبات الموقع: الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة. */
 const ETAS = ['النهارده', 'بكره إن شاء الله', 'بعد يومين', 'خلال 3 لـ 5 أيام', 'أول ما المنتج يوصلنا هنكلمك'];
@@ -721,7 +722,74 @@ function Custom() {
   );
 }
 
+// ───────────────────────── ⭐ آراء مستنية موافقتك
+function Reviews() {
+  const counts = useWebCounts();
+  const n = counts.data?.reviews ?? 0;
+  return (
+    <div id="revBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        ⭐ آراء العملاء المستنية {n > 0 && <span className="badge red">{n}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>رأي كتبه عميل على الموقع — اقبله يظهر في «آراء العملاء»، أو ارفضه يتمسح</p>
+      <PendingReviews onChanged={() => void counts.refetch()} />
+    </div>
+  );
+}
+
+// ───────────────────────── 🔔 عملاء مستنيين منتج يتوفر
+function Waiting() {
+  const toast = useToast();
+  const list = useWebWaits();
+  const remove = useRemoveWebWait();
+  const rows = list.data ?? [];
+  return (
+    <div id="waitBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        🔔 مستنيين منتج يتوفر {rows.length > 0 && <span className="badge red">{rows.length}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>عميل ساب رقمه على منتج خالص — أول ما المنتج يتوفر السيستم يبعتله واتساب لوحده ويشيله من هنا</p>
+      {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
+      {rows.length ? (
+        rows.map((w) => (
+          <div key={w.id} className="card" style={{ marginBottom: 10 }}>
+            <b>{w.pname || w.product}</b>
+            <div style={{ marginTop: 4 }}>
+              {w.name ? <>{w.name} — </> : null}
+              <span dir="ltr">{w.phone}</span>
+            </div>
+            {w.at && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(w.at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>}
+            <div className="btnrow" style={{ marginTop: 8 }}>
+              {waLink(w.phone, `أهلاً${w.name ? ' ' + w.name : ''} 👋
+بخصوص ${w.pname || 'المنتج'} اللي كنت مستنيه...`) && (
+                <a className="secondary" target="_blank" rel="noopener" href={waLink(w.phone, `أهلاً${w.name ? ' ' + w.name : ''} 👋
+بخصوص ${w.pname || 'المنتج'} اللي كنت مستنيه...`)} style={{ textDecoration: 'none' }}>
+                  💬 كلّمه واتساب
+                </a>
+              )}
+              <button type="button" className="secondary" disabled={remove.isPending} onClick={() => remove.mutate(w.id, { onSuccess: () => toast('اتشال من القايمة'), onError: (e) => toast(errorMessage(e), 'bad') })}>
+                ✔ شيله
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="card">
+          <div className="empty">مفيش حد مستني منتج</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WebOrdersPage() {
+  // الإشعار بيفتح الصفحة على قسمه بالذات (…/weborders#subBody): ننزل له بعد ما البيانات تيجي
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const ts = [500, 1500, 3000].map((ms) => setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), ms));
+    return () => ts.forEach(clearTimeout);
+  }, []);
   return (
     <AdminOnly>
       <PageHeader title="طلبات الموقع" subtitle="الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة" />
@@ -729,6 +797,8 @@ export default function WebOrdersPage() {
       <OrdersList />
       <Requests />
       <Custom />
+      <Reviews />
+      <Waiting />
     </AdminOnly>
   );
 }

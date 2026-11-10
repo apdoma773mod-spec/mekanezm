@@ -43,7 +43,7 @@ export const useWebCounts = (enabled = true) =>
   useQuery({
     enabled,
     queryKey: ['web', 'counts'],
-    queryFn: ({ signal }) => api.get<{ orders: number; requests: number; subs?: number; custom: number }>('/web/counts', undefined, signal),
+    queryFn: ({ signal }) => api.get<{ orders: number; requests: number; subs?: number; custom: number; reviews?: number; waits?: number }>('/web/counts', undefined, signal),
     refetchInterval: 60_000,
     staleTime: 20_000,
   });
@@ -153,3 +153,25 @@ export async function saveSite(mutate: (d: SiteData) => void): Promise<SiteDoc> 
   }
   throw new Error('في تعديل تاني على الموقع في نفس اللحظة — جرّب تاني');
 }
+
+/** «ابلغني لما يتوفر»: customers who left their number on a product that was out of stock. */
+export interface WebWaitRow {
+  id: string;
+  product: string;
+  pname?: string;
+  name?: string;
+  phone: string;
+  at?: string;
+}
+export const useWebWaits = (enabled = true) =>
+  useQuery({ enabled, queryKey: ['web', 'waits'], queryFn: ({ signal }) => api.get<{ items: WebWaitRow[] }>('/web/notify', undefined, signal).then((r) => r.items), refetchInterval: 60_000 });
+export const useRemoveWebWait = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/web/notify/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['web', 'waits'] });
+      void qc.invalidateQueries({ queryKey: ['web', 'counts'] });
+    },
+  });
+};

@@ -16,6 +16,13 @@ import { Icon, type IconName } from './icon';
 import { ModalHost, useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
 import { PunchCatcher } from './punch-catcher';
+import { installAutoFold } from '@/lib/auto-fold';
+
+/** الشاشات الطويلة (٣ كروت أو أكتر في مكان واحد) بتتلم لعناوين بتفتحها بدوسة — lib/auto-fold.ts */
+function AutoFold() {
+  useEffect(() => installAutoFold(), []);
+  return null;
+}
 
 interface NavItem {
   href: string;
@@ -235,6 +242,7 @@ function Shell({ children }: { children: ReactNode }) {
       </Suspense>
       {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} web={webCounts.data} />}
       <PunchCatcher />
+      <AutoFold />
       <PowerExtras />
       <header className="top">
         <div className="brand">

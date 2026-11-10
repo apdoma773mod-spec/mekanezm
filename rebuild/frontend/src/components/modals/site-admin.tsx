@@ -586,6 +586,39 @@ const ytId = (u: string) => /(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/.exe
  * short text + «＋ مواصفة» rows, video, visible/⭐ switches, the live card «👀 شكله في الموقع», «💾 حفظ ونشر».
  * Without `id` it is «➕ منتج جديد على الموقع»: the stock product is created first (price/cost/qty/unit), then published.
  */
+/** قسم بيتطوي في شاشة منتج الموقع (زي «تفاصيل وصور»): العنوان ومعاه ملخص اللي جواه وهو مقفول، والسيستم بيفتكر مفتوح ولا مقفول. */
+function SiteFold({ k, title, hint, open0 = false, children }: { k: string; title: string; hint: string; open0?: boolean; children: React.ReactNode }) {
+  const [on, setOn] = useState(() => {
+    try {
+      const s = localStorage.getItem(`spFold:${k}`);
+      return s ? s === '1' : open0;
+    } catch {
+      return open0;
+    }
+  });
+  return (
+    <details
+      className="sec sp-fold"
+      open={on || open0}
+      onToggle={(e) => {
+        const o = e.currentTarget.open;
+        setOn(o);
+        try {
+          localStorage.setItem(`spFold:${k}`, o ? '1' : '0');
+        } catch {
+          /* التخزين مقفول: القسم بيشتغل عادي من غير ما يفتكر */
+        }
+      }}
+    >
+      <summary>
+        <span>{title}</span>
+        <small>{hint}</small>
+      </summary>
+      <div className="sp-fold-b">{children}</div>
+    </details>
+  );
+}
+
 export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void }) {
   const toast = useToast();
   const qc = useQueryClient();
@@ -833,8 +866,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
       </div>
       <div className="sb">
         <div>
-          <div className="sec">
-            <h3>📝 البيانات الأساسية</h3>
+          <SiteFold k="base" title="📝 البيانات الأساسية" hint={[f.name.trim(), secName, f.code.trim()].filter(Boolean).join(' · ') || 'فاضي'} open0={isNew || !f.name.trim()}>
             <label className="l">اسم المنتج على الموقع</label>
             <input id="eName" value={f.name} placeholder="مثلاً: مجرى سفلي سوفت كلوز 50 سم" onChange={(e) => set({ name: e.target.value })} />
             <div className="g2">
@@ -879,7 +911,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                 في المخزن: <b>{p!.qty} {p!.unit}</b> — الموقع بيعرض «متوفر» أو «اطلبه» بس، من غير أسعار.
               </p>
             )}
-          </div>
+          </SiteFold>
           <Tiles id="siteEditor" cols={2} defaultOpen={isNew || !f.imgs.length ? "photos" : ""}>
             <Tile k="photos" icon="📷" title="الصور والمقاسات" sub={`${f.imgs.length} صورة`}>
               <div className="sec">
