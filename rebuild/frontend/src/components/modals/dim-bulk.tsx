@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { errorMessage } from '@/lib/api';
-import { dimSig, generateDimImage, hasDims, parseDims } from '@/lib/dim-auto';
+import { dimSig, generateDimImage, hasDims, parseDims, within } from '@/lib/dim-auto';
 import { fetchSite, saveSite, type SiteProduct } from '@/lib/web-queries';
 import { uploadSiteImage } from './site-admin';
 import { useModal } from './modal-host';
@@ -27,6 +27,18 @@ export function DimBulk() {
   const [log, setLog] = useState<{ name: string; ok: boolean; msg?: string }[]>([]);
   const [counts, setCounts] = useState({ todo: -1, total: 0, noDims: 0, noImgs: 0 });
   const stop = useRef(false);
+  const [step, setStep] = useState('');
+  const [secs, setSecs] = useState(0);
+  // عدّاد ثواني للخطوة الحالية: يبيّن إن الشاشة شغالة مش واقفة
+  useEffect(() => {
+    if (state !== 'run') return;
+    const t = setInterval(() => setSecs((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [state]);
+  const at = (m: string) => {
+    setStep(m);
+    setSecs(0);
+  };
 
   const scan = async () => {
     const doc = await fetchSite();
@@ -61,10 +73,12 @@ export function DimBulk() {
         try {
           const dims = parseDims(specRows(p.desc ?? ''), p.dimTxt ?? '');
           const pool = p.imgs.filter((u) => u !== p.dimImg);
-          const blob = await generateDimImage(pool, dims, foot);
-          const url = await uploadSiteImage(new File([blob], 'dim.jpg', { type: 'image/jpeg' }));
+          const blob = await generateDimImage(pool, dims, foot, at);
+          at('⏳ برفع الصورة…');
+          const url = await within(uploadSiteImage(new File([blob], 'dim.jpg', { type: 'image/jpeg' })), 60000, 'رفع الصورة اتأخر — اتأكد من النت');
           const sig = dimSig(dims);
-          await saveSite((d) => {
+          at('⏳ بحفظ على الموقع…');
+          await within(saveSite((d) => {
             const o = d.products.find((x) => x.id === p.id) as Prod | undefined;
             if (!o) return;
             const now = o.imgs.filter((u) => u !== o.dimImg);
@@ -72,7 +86,7 @@ export function DimBulk() {
             o.img = o.imgs[0] ?? '';
             o.dimImg = url;
             o.dimSig = sig;
-          });
+          }), 45000, 'الحفظ على الموقع اتأخر — جرّب تاني');
           setLog((l) => [...l, { name: p.name, ok: true }]);
         } catch (e) {
           setLog((l) => [...l, { name: p.name, ok: false, msg: errorMessage(e) }]);
@@ -113,6 +127,11 @@ export function DimBulk() {
       )}
       {state !== 'idle' && (
         <>
+          {state === 'run' && step && (
+            <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted)' }}>
+              {step} ({secs} ث){secs > 25 ? ' — لسه شغال، الرسم بياخد لحد دقيقة' : ''}
+            </p>
+          )}
           <p style={{ fontWeight: 700 }}>{state === 'run' ? info : `✔ خلص — اتعمل ${okN} من ${log.length}${log.length - okN ? `، فشل ${log.length - okN}` : ''}${counts.noDims ? ` · ${counts.noDims} منتج من غير مقاسات` : ''}`}</p>
           <div style={{ maxHeight: 320, overflow: 'auto', fontSize: 13 }}>
             {log.map((x, i) => (
