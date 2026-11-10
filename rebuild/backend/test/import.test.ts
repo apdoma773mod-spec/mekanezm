@@ -74,4 +74,43 @@ describe('daily Excel import', () => {
     expect(again.json().error.message).toContain('اتستورد قبل كده');
     expect((await call(admin, 'POST', '/daybook-import', { ...body, force: true })).statusCode).toBe(200);
   });
+
+  it('«انستا» / «تحويل» lines stay out of the drawer: the daybook row and the invoice carry the real channel', async () => {
+    const a = await product('فلتر', 100, 20);
+    const r = await call(admin, 'POST', '/daybook-import', {
+      date: '2026-10-20',
+      sig: 'via1',
+      invoices: [
+        // a walk-in bundle: 200 cash + 300 InstaPay
+        { person: '', noContact: true, paid: 500, items: [
+          { productId: a.id, name: 'فلتر', qty: 2, price: 100, pay: 'cash' },
+          { productId: a.id, name: 'فلتر', qty: 3, price: 100, pay: 'cash', via: 'INSTAPAY' },
+        ] },
+        // one customer, everything by transfer
+        { person: 'سمير', paid: 100, items: [{ productId: a.id, name: 'فلتر', qty: 1, price: 100, pay: 'cash', via: 'TRANSFER' }] },
+        // a channel on an unpaid line means nothing
+        { person: 'كريم', paid: 0, items: [{ productId: a.id, name: 'فلتر', qty: 1, price: 100, pay: 'credit', via: 'INSTAPAY' }] },
+      ],
+    });
+    expect(r.statusCode).toBe(200);
+    const inv = await prisma.invoice.findMany({ orderBy: { createdAt: 'asc' } });
+    expect(inv.map((x) => x.payMethod)).toEqual(['INSTAPAY', 'TRANSFER', 'CASH']);
+    expect(inv[0]!.paidSplit).toEqual({ INSTAPAY: 300, CASH: 200 });
+    expect(inv[1]!.paidSplit).toBeNull();
+    const rows = await prisma.daybookEntry.findMany({ orderBy: { createdAt: 'asc' } });
+    expect(rows.map((x) => x.pay)).toEqual(['CASH', 'INSTAPAY', 'TRANSFER', 'CREDIT']);
+  });
+
+  it('a return written in the sheet goes back on its own day (not today), and never in the future', async () => {
+    const a = await product('مجرى', 50, 4);
+    const r = await call(admin, 'POST', '/returns', { kind: 'SALE', productId: a.id, qty: 1, price: 50, person: 'يومية', note: 'مرتجع من يومية Excel', date: '2026-10-20' });
+    expect(r.statusCode).toBe(201);
+    const row = await prisma.return.findFirstOrThrow();
+    expect(row.date.toISOString().slice(0, 10)).toBe('2026-10-20');
+    expect((await call(admin, 'GET', `/products/${a.id}`)).json().product.qty).toBe(5);
+    // without a date it is today, exactly as before
+    const t = await call(admin, 'POST', '/returns', { kind: 'SALE', productId: a.id, qty: 1, price: 50, person: 'يومية' });
+    expect(t.statusCode).toBe(201);
+    expect((await call(admin, 'POST', '/returns', { kind: 'SALE', productId: a.id, qty: 1, price: 50, person: 'يومية', date: '2999-01-01' })).statusCode).toBe(400);
+  });
 });

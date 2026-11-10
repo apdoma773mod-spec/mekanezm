@@ -130,7 +130,8 @@ describe('whatsapp keyword rules', () => {
     expect((await call(staff, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(403);
     expect((await call(admin, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(200);
     expect((await call(admin, 'GET', '/inbox/wa-rules')).json().rules).toMatchObject({ enabled: true });
-    expect((await bridge('GET', '/rules')).json()).toMatchObject({ rules: [{ type: 'استانلس' }] });
+    const read = (await bridge('GET', '/rules')).json() as { rules: { type: string }[] };
+    expect(read.rules.map((r) => r.type)).toEqual(['استانلس', 'إلغاء إعلانات']); // the opt-out word is added for the bridge only
   });
 
   it('refuses an empty rule list (the bridge would then accept everything)', async () => {
