@@ -27,6 +27,7 @@ import { useIsAdmin } from '../use-role';
 import { useModal } from './modal-host';
 import { ExtraButtons } from './product-modal';
 import { PlaceCard, PlaceEditor } from '../product-place';
+import { Fold } from '@/components/ui/fold';
 import { AiDescribeButton, hintOf } from '../ai-describe';
 
 export type ProductCardSpec = { kind: 'productEdit'; id: string } | { kind: 'productDetails'; id: string } | { kind: 'productSend'; id: string } | { kind: 'productVariant'; id: string };
@@ -118,10 +119,7 @@ export function ProductCard({ id }: { id: string }) {
             </div>
           )}
         </div>
-        <div className="pc-card">
-          <h3>
-            🏷️ كارت المنتج <small style={{ color: '#7b8a90', fontWeight: 400 }}>(ده اللي بيتبعت للعميل)</small>
-          </h3>
+        <Fold k="pcv-card" title="🏷️ كارت المنتج" hint={[p.code, p.category, st].filter(Boolean).join(' · ') || 'ده اللي بيتبعت للعميل'} open0>
           <div className="pc-kv">
             {kv('الكود', <b>{p.code || '—'}</b>)}
             {kv('التصنيف', p.category)}
@@ -137,12 +135,9 @@ export function ProductCard({ id }: { id: string }) {
             </p>
           )}
           {inf.specs && <p className="pc-specs">{inf.specs}</p>}
-        </div>
+        </Fold>
         {own ? (
-          <div className="pc-card pc-own">
-            <h3>
-              🔒 بيانات المنتج <small style={{ color: '#7b8a90', fontWeight: 400 }}>(ليك انت بس)</small>
-            </h3>
+          <Fold k="pcv-own" className="pc-own" title="🔒 بيانات المنتج" hint={`بيع ${money(p.price)} · رصيد ${qtyText(p.qty)} ${p.unit}`}>
             <div className="pc-kv">
               {kv('سعر البيع', <b>{money(p.price)}</b>)}
               {kv('سعر الشراء', cost ? <>{money(cost)}{p.costEst ? <> <span className="badge red" title="تقدير لأن سعر الشراء الحقيقي مش معروف">تقديري</span></> : null}</> : <span className="badge red">مش معروف</span>)}
@@ -154,7 +149,7 @@ export function ProductCard({ id }: { id: string }) {
               {sd && kv('أكتر عملاء بيشتروه', sd.top.map((t) => `${t.name} (${t.qty})`).join('، ') || '—')}
               {p.barcode ? kv('الباركود', p.barcode) : null}
             </div>
-          </div>
+          </Fold>
         ) : (
           <div className="pc-card">
             <div className="pc-kv">{kv('سعر البيع', <b>{money(p.price)}</b>)}</div>
@@ -162,10 +157,7 @@ export function ProductCard({ id }: { id: string }) {
         )}
         <PlaceCard inf={inf} qty={p.qty} unit={p.unit} />
         {(S.length > 0 || own) && (
-          <div className="pc-card">
-            <h3>
-              📏 المقاسات والألوان {inf.grp ? <small style={{ color: '#7b8a90', fontWeight: 400 }}>({inf.grp})</small> : null}
-            </h3>
+          <Fold k="pcv-variants" title="📏 المقاسات والألوان" hint={S.length ? `${S.length + 1} مقاسات وألوان${inf.grp ? ` · ${inf.grp}` : ''}` : inf.grp || 'مش مربوط'}>
             {S.length ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {[{ id: p.id, name: p.name, qty: p.qty, size: inf.size, finish: inf.finish, price: p.price }, ...S].map((x) => (
@@ -196,11 +188,10 @@ export function ProductCard({ id }: { id: string }) {
                 </button>
               </div>
             )}
-          </div>
+          </Fold>
         )}
         {inf.packs.length > 0 && (
-          <div className="pc-card">
-            <h3>📦 العبوات</h3>
+          <Fold k="pcv-packs" title="📦 العبوات" hint={`${inf.packs.length} عبوة`}>
             <div className="pc-kv">
               {inf.packs.map((k) =>
                 k.small ? (
@@ -218,7 +209,7 @@ export function ProductCard({ id }: { id: string }) {
                 ),
               )}
             </div>
-          </div>
+          </Fold>
         )}
         {!!reserved.data?.qty && (
           <div id="pcRes" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#fff4e0', fontSize: 13 }}>
