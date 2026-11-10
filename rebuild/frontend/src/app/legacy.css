@@ -266,6 +266,15 @@ aside .navhd{display:none}
 #pcv .pc-own{background:#fffaf0;border-color:#f1dfb5}
 #pcv .pc-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 #pcv .pc-acts button{flex:1 1 140px}
+#pce .pce-sec{border:2px solid #087f8c;border-radius:14px;overflow:hidden}
+#pce .pce-sec>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none}
+#pce .pce-sec>summary::-webkit-details-marker{display:none}
+#pce .pce-sec>summary::after{content:"▾";flex:none;color:#087f8c;font-size:16px;transition:none}
+#pce .pce-sec[open]>summary::after{content:"▴"}
+#pce .pce-sec>summary span{flex:none}
+#pce .pce-sec>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+#pce .pce-sec[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+#pce .pce-sec>.form{padding:12px 14px 14px}
 #pce .pc-imgs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
 #pce .pc-imgs div{position:relative}
 #pce .pc-imgs img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line,#e3e8ea)}
@@ -956,3 +965,69 @@ body main .card .card .card,body .modal .card .card{background:var(--card,#fff);
 /* ---- index.html 1728-1733: زرار المستخدم فوق «👤 الاسم — خروج» ---- */
 #whoBtn{width:auto!important;padding:0 12px;font-size:13px!important;font-weight:700;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
 body.emp #whoBtn{background:#fff4e5!important;color:#8a4b00!important}
+
+/* 🧾 شكل الفاتورة على الشاشة: ورقة فاتورة مرتبة (رأس، بيانات العميل، جدول الأصناف، الإجماليات) */
+.inv-sheet{border:2px solid var(--blue);border-radius:14px;overflow:hidden;background:var(--card);color:var(--text)}
+.inv-sheet.void{opacity:.6}
+.inv-head{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--blue);color:#fff;padding:14px 16px}
+.inv-head>div{display:grid;gap:2px;min-width:0}
+.inv-head b{font-size:19px;font-weight:800}
+.inv-head span{font-size:13px;opacity:.92}
+.inv-head .inv-no{text-align:left;flex:none}
+.inv-head .inv-no b{font-size:17px;letter-spacing:.3px}
+.inv-who{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;padding:12px 16px;background:var(--tint2);border-bottom:1px solid var(--tintb)}
+.inv-who>div{display:grid;gap:1px;min-width:0}
+.inv-who .wide{grid-column:1/-1}
+.inv-who small{font-size:11.5px;color:var(--muted)}
+.inv-who b{font-size:15px;overflow-wrap:anywhere}
+.inv-items{width:100%;border-collapse:collapse;font-size:14px}
+.inv-items th{background:var(--tint);color:var(--blue2);font-size:12.5px;font-weight:800;padding:9px 8px;text-align:center;border-bottom:2px solid var(--blue)}
+.inv-items td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+.inv-items th:first-child,.inv-items td:first-child{text-align:right;white-space:normal;overflow-wrap:anywhere;padding-inline-start:16px;font-weight:700}
+.inv-items th:last-child,.inv-items td:last-child{padding-inline-end:16px;font-weight:800}
+.inv-items tbody tr:nth-child(even){background:#fafcfc}
+.inv-tot{display:grid;gap:2px;padding:10px 16px 12px;font-size:15px}
+.inv-tot>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;font-variant-numeric:tabular-nums}
+.inv-tot .grand{background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;margin:6px -4px;font-size:16px}
+.inv-tot .grand b{font-size:20px}
+.inv-tot .due{color:var(--danger);font-weight:800}
+.inv-tot .clear{color:var(--green)}
+.inv-foot{border-top:1px dashed var(--border);padding:10px 16px;font-size:13px;color:var(--muted);display:grid;gap:3px}
+
+/* 🟦 حواف المربعات: الأربع جهات واضحين وملوّنين في كل الشاشات (مش يمين وشمال بس) */
+.card,.stat,.txl,.txbox,.dbent,#dbBox,.shinv,.mk-tile,.ivrow,.scl,#pcv .pc-card,#pcv .pc-main,#spEd .sec,#dbMoney .mvsum div,.dtsum div,.shsum div,body.mkpro .card,body.mkpro .stat,body.mkpro .txl,body.mkpro .txbox,body.mkpro .dbent,body.mkpro #dbBox,body.mkpro .shinv,body.mkpro .mk-tile,body.mkpro .ivrow,body.mkpro .scl,body.mkpro #pcv .pc-card,body.mkpro #pcv .pc-main,body.mkpro #spEd .sec,body.mkpro #dbMoney .mvsum div,body.mkpro .dtsum div,body.mkpro .shsum div,body.mkpro.mkdark .card,body.mkpro.mkdark .stat,body.mkpro.mkdark .txl,body.mkpro.mkdark .txbox,body.mkpro.mkdark .dbent,body.mkpro.mkdark #dbBox,body.mkpro.mkdark .shinv,body.mkpro.mkdark .mk-tile,body.mkpro.mkdark .ivrow,body.mkpro.mkdark .scl,body.mkpro.mkdark #pcv .pc-card,body.mkpro.mkdark #pcv .pc-main,body.mkpro.mkdark #spEd .sec,body.mkpro.mkdark #dbMoney .mvsum div,body.mkpro.mkdark .dtsum div,body.mkpro.mkdark .shsum div{border:2px solid var(--blue);border-color:color-mix(in srgb,var(--blue) 70%,transparent)}
+.dbg,body.mkpro .dbg,body.mkpro.mkdark .dbg{border:1.5px solid hsl(var(--gh,174) 70% 45%);border-right-width:6px}
+body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
+.inv-items th:first-child{width:44%}.inv-items td:not(:first-child){font-size:13px}
+
+/* سطر المصروف في «فلوس الدرج» بيتداس: يفتح التعديل والمسح */
+#dbMoney .mvl-btn{width:100%;background:none;border:0;border-top:1px solid var(--border);border-radius:0;color:inherit;font:inherit;font-size:14px;text-align:start;cursor:pointer;align-items:center}
+#dbMoney .mvl-btn:active{background:var(--tint2)}
+#dbMoney .mvl-btn small{color:var(--muted);font-size:12px}
+
+/* 🤝 عميل جديد جوه «فلوس دخلت من عميل» + عربون العميل في فاتورة البيع */
+#lcBox .mv-new{display:grid;gap:6px;border:1.5px dashed var(--blue);border-radius:12px;padding:10px 12px;background:var(--tint2)}
+.dep-box{border:1.5px solid var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.8}
+.dep-box button{width:100%;margin-top:6px}
+
+/* 🧾 قايمة الفواتير على الموبايل: كارت ملموم — اسم العميل بلون مميز + الإجمالي، وتحته الرقم والتاريخ والحالة، وآخر سطر الأصناف */
+@media (max-width: 700px) {
+  body.mk-tcards main table.mkTc.mk-icards tr { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 10px; padding: 9px 12px; margin-bottom: 8px; }
+  body.mk-tcards main table.mkTc.mk-icards td { display: inline-flex; flex: none; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 600; }
+  body.mk-tcards main table.mkTc.mk-icards td::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-icards td { background: transparent !important; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-who { order: 1; flex: 1 1 0; min-width: 0; font-size: 16px; font-weight: 800; color: var(--blue2, #075e68); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-total { order: 2; font-size: 16px; font-weight: 800; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-no { order: 3; font-size: 12px; font-weight: 700; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-date { order: 4; font-size: 12px; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-pay { order: 5; margin-inline-start: auto; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-items { order: 6; flex: 1 1 100%; justify-content: flex-start; font-size: 12.5px; font-weight: 500; color: var(--muted, #718087); gap: 4px; }
+  body.mk-tcards main table.mkTc.mk-icards tr::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+}
+
+/* 🟦 الحواف على أي خانة وأي مربع: الخانات (كتابة/اختيار) والزراير الفاتحة والنوافذ وشريط العميل، مش الكروت بس */
+body.mkpro,body.mkpro.mkdark{--ln2:color-mix(in srgb,var(--ac) 60%,transparent)}
+.field input,.field select,.field textarea,.secondary{border-color:color-mix(in srgb,var(--blue) 60%,transparent)}
+body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea,.secondary,.search){border-width:1.5px}
+body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,var(--blue) 70%,transparent)}
+#ctBar{border:1.5px solid color-mix(in srgb,#b9770e 60%,transparent)}
