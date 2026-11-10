@@ -89,7 +89,8 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
     async (api) => {
       api.get('/health', async () => {
         await api.prisma.$queryRaw`SELECT 1`;
-        return { ok: true, time: new Date().toISOString() };
+        // build: يتغيّر مع كل تعديل في الباك إند عشان نعرف النسخة المنشورة فعلًا (/api/health)
+        return { ok: true, build: 'dim-nocrop-2026-11-10', time: new Date().toISOString() };
       });
       await api.register(authRoutes, { prefix: '/auth' });
       await api.register(usersRoutes, { prefix: '/users' });
