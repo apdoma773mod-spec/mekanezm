@@ -101,72 +101,101 @@ export function InvoiceView({ id }: { id: string }) {
           الفاتورة دي ملغية — {r.voidReason} ({formatDateTime(r.voidedAt)})
         </div>
       )}
-      <div className="card" style={{ background: 'var(--tint2)', border: 0, lineHeight: 2 }}>
-        <div>
-          {isSale ? 'العميل' : 'المورد'}: <b>{r.person || (isSale ? 'عميل نقدي' : '—')}</b>
-          {r.phone && (
-            <>
-              {' — '}
-              <span dir="ltr">{r.phone}</span>
-            </>
-          )}
-        </div>
-        {!isSale && (
+      <div className={`inv-sheet${voided ? ' void' : ''}`}>
+        <div className="inv-head">
           <div>
-            التاريخ: <b>{r.date}</b>
+            <b>{settings.data?.store.name || 'ميكانيزم'}</b>
+            <span>{isSale ? 'فاتورة بيع' : 'فاتورة شراء'}{r.online ? ' — 🌐 أونلاين' : ''}</span>
           </div>
-        )}
-        {isSale &&
-          r.items.map((x) => (
-            <div key={x.id}>
-              {x.name} × {qtyText(x.qty)} — {money(x.total)}
+          <div className="inv-no">
+            <b dir="ltr">{r.no}</b>
+            <span>{r.date}</span>
+          </div>
+        </div>
+        <div className="inv-who">
+          <div>
+            <small>{isSale ? 'العميل' : 'المورد'}</small>
+            <b>{r.person || (isSale ? 'عميل نقدي' : '—')}</b>
+          </div>
+          {r.phone && (
+            <div>
+              <small>التليفون</small>
+              <b dir="ltr">{r.phone}</b>
             </div>
-          ))}
-        {r.shipping > 0 && <div>🚚 مصاريف النقل — {money(r.shipping)}</div>}
-        {r.discount > 0 && <div>الخصم — {money(r.discount)}</div>}
-        <div>
-          الإجمالي: <b>{money(r.total)}</b> — المدفوع: <b>{money(r.paid)}</b>
-          {r.remaining > 0 && (
-            <>
-              {' — '}المتبقي: <b style={{ color: 'var(--danger)' }}>{money(r.remaining)}</b>
-            </>
+          )}
+          {r.address && (
+            <div className="wide">
+              <small>العنوان</small>
+              <b>{r.address}</b>
+            </div>
           )}
         </div>
-        {admin && r.profit !== undefined && isSale && (
-          <div style={{ color: 'var(--muted)', fontSize: 13 }}>الربح: {money(r.profit)}</div>
-        )}
-        {r.note && <div style={{ color: 'var(--muted)' }}>البيان: {r.note}</div>}
-        {r.createdBy && (
+        <table className="inv-items">
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th>الكمية</th>
+              <th>السعر</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {r.items.map((x) => (
+              <tr key={x.id}>
+                <td>{x.name}</td>
+                <td>
+                  {qtyText(x.qty)} {x.unit}
+                </td>
+                <td>{money(x.price)}</td>
+                <td>{money(x.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="inv-tot">
+          {(r.shipping > 0 || r.discount > 0) && (
+            <div>
+              <span>إجمالي الأصناف</span>
+              <b>{money(r.subtotal)}</b>
+            </div>
+          )}
+          {r.discount > 0 && (
+            <div>
+              <span>الخصم</span>
+              <b>{money(r.discount)}</b>
+            </div>
+          )}
+          {r.shipping > 0 && (
+            <div>
+              <span>🚚 مصاريف النقل</span>
+              <b>{money(r.shipping)}</b>
+            </div>
+          )}
+          <div className="grand">
+            <span>الإجمالي</span>
+            <b>{money(r.total)}</b>
+          </div>
           <div>
-            سجّلها: <b>{r.createdBy.name}</b>
+            <span>المدفوع</span>
+            <b>{money(r.paid)}</b>
+          </div>
+          <div className={r.remaining > 0 ? 'due' : 'clear'}>
+            <span>المتبقي</span>
+            <b>{money(r.remaining)}</b>
+          </div>
+        </div>
+        {(r.note || r.createdBy || (admin && r.profit !== undefined && isSale)) && (
+          <div className="inv-foot">
+            {r.note && <div>البيان: {r.note}</div>}
+            {r.createdBy && (
+              <div>
+                سجّلها: <b>{r.createdBy.name}</b>
+              </div>
+            )}
+            {admin && r.profit !== undefined && isSale && <div>الربح: {money(r.profit)}</div>}
           </div>
         )}
       </div>
-
-      {!isSale && (
-        <div className="table-wrap" style={{ marginTop: 10 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>الصنف</th>
-                <th>العدد</th>
-                <th>السعر</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.items.map((x) => (
-                <tr key={x.id}>
-                  <td>{x.name}</td>
-                  <td>{qtyText(x.qty)}</td>
-                  <td>{money(x.price)}</td>
-                  <td>{money(x.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
       {admin && !voided && (
         <div className="btnrow" style={{ marginTop: 12 }}>
           <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => open({ kind: 'transaction', type: r.kind, editId: r.id })}>

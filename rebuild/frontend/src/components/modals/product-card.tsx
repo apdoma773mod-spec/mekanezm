@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ProductDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
@@ -320,6 +320,39 @@ const blobB64 = (b: Blob) =>
     r.readAsDataURL(b);
   });
 
+/** قسم بيتطوي جوه «تفاصيل وصور»: العنوان باين دايمًا ومعاه ملخص اللي جواه، والسيستم بيفتكر كل قسم مفتوح ولا مقفول. */
+function Sec({ k, title, hint, open0 = false, children }: { k: string; title: string; hint: string; open0?: boolean; children: ReactNode }) {
+  const [on, setOn] = useState(() => {
+    try {
+      const s = localStorage.getItem(`pceSec:${k}`);
+      return s ? s === '1' : open0;
+    } catch {
+      return open0;
+    }
+  });
+  return (
+    <details
+      className="field full pce-sec"
+      open={on}
+      onToggle={(e) => {
+        const o = e.currentTarget.open;
+        setOn(o);
+        try {
+          localStorage.setItem(`pceSec:${k}`, o ? '1' : '0');
+        } catch {
+          /* التخزين مقفول: القسم بيشتغل عادي من غير ما يفتكر */
+        }
+      }}
+    >
+      <summary>
+        <span>{title}</span>
+        <small>{hint}</small>
+      </summary>
+      <div className="form">{children}</div>
+    </details>
+  );
+}
+
 export function ProductDetails({ id }: { id: string }) {
   const { open } = useModal();
   const toast = useToast();
@@ -392,10 +425,15 @@ export function ProductDetails({ id }: { id: string }) {
     <Modal title={`📝 تفاصيل وصور: ${prod.name}`} onClose={back}>
       <div id="pce">
         <div className="form">
+          <Sec k="base" title="🏷️ الماركة والمقاس" hint={[v.brand, v.finish, v.size].filter(Boolean).join(' · ') || 'فاضي'} open0>
           {inp('brand', 'الماركة', 'مثلاً: ...')}
           {inp('finish', 'التشطيب / اللون', 'نيكل، كروم، أسود مطفي…')}
           {inp('size', 'المقاس', 'مثلاً: 45 سم / 35 مم')}
+          </Sec>
+          <Sec k="place" title="📍 المكان" hint={[v.loc, (v.stores ?? []).length ? `${(v.stores ?? []).length} مخزن` : ''].filter(Boolean).join(' · ') || 'مش متسجل'}>
           <PlaceEditor v={v} set={set} qty={prod.qty} unit={prod.unit || 'قطعة'} />
+          </Sec>
+          <Sec k="packs" title="📦 المجموعة والعبوات" hint={[v.grp, v.packs.length ? `${v.packs.length} عبوة` : ''].filter(Boolean).join(' · ') || 'فاضي'}>
           <div className="field full">
             <label>مجموعة المقاسات والألوان (لو الصنف ده مقاس أو لون من صنف تاني)</label>
             <input list="pceGrps" value={v.grp} placeholder="مثلاً: مجرى بلي تلسكوبي" onChange={(e) => set({ grp: e.target.value })} />
@@ -442,6 +480,8 @@ export function ProductDetails({ id }: { id: string }) {
               {!v.packs.length && <small style={{ color: '#7b8a90', display: 'block', marginTop: 6 }}>بتبيع أو بتشتري بالعلبة أو الكرتونة؟ ضيف عبوة. وبتبيع سايب من صنف متسجل بالكيلو؟ ضيف وحدة أصغر.</small>}
             </div>
           </div>
+          </Sec>
+          <Sec k="text" title="✍️ الوصف والمواصفات" hint={v.descr.trim() || v.specs.trim() ? `${v.descr.trim() ? 'الوصف مكتوب' : 'من غير وصف'}${v.specs.trim() ? ` · ${v.specs.trim().split('\n').length} ميزة` : ''}` : 'فاضي'}>
           <div className="field full">
             <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               الوصف (بيظهر في الكارت ويتبعت مع المنتج)
@@ -461,6 +501,8 @@ export function ProductDetails({ id }: { id: string }) {
             <label>المواصفات (كل ميزة في سطر)</label>
             <textarea rows={4} placeholder={'كاتم صوت\nزاوية فتح 110°\nيستحمل 30 كيلو'} value={v.specs} onChange={(e) => set({ specs: e.target.value })} />
           </div>
+          </Sec>
+          <Sec k="imgs" title="🖼️ الصور" hint={v.imgs.length ? `${v.imgs.length} صورة` : 'مفيش صور'} open0={!v.imgs.length}>
           <div className="field full">
             <label>صور المنتج (أول صورة هي الأساسية)</label>
             <div className="pc-imgs" id="pceImgs">
@@ -500,6 +542,7 @@ export function ProductDetails({ id }: { id: string }) {
             </label>
             <small style={{ display: 'block', color: '#7b8a90', marginTop: 6 }}>الصور بتتحط في فريم المحل والكود لوحدها.</small>
           </div>
+          </Sec>
         </div>
         <div className="modal-foot">
           <button type="button" className="primary" disabled={busy || save.isPending} onClick={() => void go()}>

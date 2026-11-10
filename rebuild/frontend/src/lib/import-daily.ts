@@ -47,13 +47,52 @@ export interface ImpRow {
   hint: string;
   isNew?: boolean;
 }
+/** صف مرتجع في الملف (سعر أو عدد أو إجمالي بالسالب، أو مكتوب عليه «مرتجع»): بيتعرض ويتحسب في إجمالي الملف، ومش بيتسجل فاتورة بيع. */
+export interface ImpRet {
+  prod: string;
+  qty: number;
+  price: number;
+  total: number;
+  cust: string;
+  note: string;
+}
 export interface ImpSheet {
   name: string;
   iso: string;
   rows: ImpRow[];
+  rets: ImpRet[];
 }
 
-export function parseAoa(aoa: unknown[][]): { iso: string; rows: ImpRow[] } | null {
+/** تاريخ من خلية: Date أو نص (يوم/شهر/سنة أو سنة-شهر-يوم) أو رقم تاريخ إكسل. */
+function cellDate(v: unknown, serialOk: boolean): string {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    // المكتبة بترجّع نص الليل ناقص كام ثانية/ساعة (فرق توقيت قديم) فاليوم كان بيطلع «يوم قبل»: بنزوّد ٦ ساعات قبل ما ناخد اليوم
+    const d = new Date(v.getTime() + 6 * 3600e3);
+    return `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+  }
+  if (typeof v === 'number' && serialOk && v > 30000 && v < 70000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5);
+    return `${d.getUTCFullYear()}-${z2(d.getUTCMonth() + 1)}-${z2(d.getUTCDate())}`;
+  }
+  if (typeof v === 'string') {
+    const t = A(v);
+    const a = t.match(/(\d{4})[/\-.](\d{1,2})[/\-.](\d{1,2})/);
+    if (a && +a[2] <= 12 && +a[3] <= 31) return `${a[1]}-${z2(+a[2])}-${z2(+a[3])}`;
+    const m = t.match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4}|\d{2})(?!\d)/);
+    if (m && +m[2] <= 12 && +m[1] <= 31) return `${m[3].length === 2 ? `20${m[3]}` : m[3]}-${z2(+m[2])}-${z2(+m[1])}`;
+  }
+  return '';
+}
+
+/** نص ملصوق من إكسل (صفوف بسطور وأعمدة بـ Tab) → نفس شكل الورقة. */
+export function pasteToAoa(text: string): unknown[][] {
+  return text
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((l) => l.split('\t').map((c) => c.trim()));
+}
+
+export function parseAoa(aoa: unknown[][]): { iso: string; rows: ImpRow[]; rets: ImpRet[] } | null {
   const hn: Record<string, string[]> = {};
   for (const k in HD) hn[k] = HD[k].map((x) => vn(x));
   let hi = -1;
@@ -74,21 +113,15 @@ export function parseAoa(aoa: unknown[][]): { iso: string; rows: ImpRow[] } | nu
   if (hi < 0) return null;
   let iso = '';
   for (let r = 0; r < hi && !iso; r++) {
-    for (const v of aoa[r] || []) {
-      if (v instanceof Date && !Number.isNaN(v.getTime())) {
-        iso = `${v.getFullYear()}-${z2(v.getMonth() + 1)}-${z2(v.getDate())}`;
-        break;
-      }
-      if (typeof v === 'string') {
-        const m = A(v).match(/(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})/);
-        if (m) {
-          iso = `${m[3]}-${z2(+m[2])}-${z2(+m[1])}`;
-          break;
-        }
-      }
+    const row = aoa[r] || [];
+    const labelled = row.some((v) => typeof v === 'string' && /تاريخ/.test(v));
+    for (const v of row) {
+      iso = cellDate(v, labelled);
+      if (iso) break;
     }
   }
   const rows: ImpRow[] = [];
+  const rets: ImpRet[] = [];
   for (let r = hi + 1; r < aoa.length; r++) {
     const a = aoa[r] || [];
     const g = (k: string) => (col[k] == null ? '' : a[col[k]]);
@@ -97,6 +130,13 @@ export function parseAoa(aoa: unknown[][]): { iso: string; rows: ImpRow[] } | nu
     if (!prod || !qty) continue;
     let price = nv(g('price'));
     const total = col.total != null ? nv(g('total')) : 0;
+    const noteCell = String(g('note') ?? '').trim();
+    if (qty < 0 || price < 0 || total < 0 || /مرتجع/.test(prod) || /مرتجع/.test(noteCell)) {
+      const q = Math.abs(qty);
+      const amt = Math.abs(total || qty * price);
+      rets.push({ prod, qty: q, price: +(q ? amt / q : Math.abs(price)).toFixed(4), total: +amt.toFixed(2), cust: String(g('cust') ?? '').trim(), note: noteCell });
+      continue;
+    }
     let mism = false;
     if (total && price && Math.abs(total - qty * price) > 0.01) {
       price = total / qty;
@@ -109,7 +149,7 @@ export function parseAoa(aoa: unknown[][]): { iso: string; rows: ImpRow[] } | nu
     const note = [String(g('note') ?? '').trim(), extra].filter(Boolean).join(' - ');
     rows.push({ prod, qty, price: +price.toFixed(4), mism, pay, note, cust: String(g('cust') ?? '').trim(), pid: '', hint: '' });
   }
-  return { iso, rows };
+  return { iso, rows, rets };
 }
 
 export interface ImpGroup {
