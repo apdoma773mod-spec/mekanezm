@@ -999,3 +999,8 @@ body.emp #whoBtn{background:#fff4e5!important;color:#8a4b00!important}
 .dbg,body.mkpro .dbg,body.mkpro.mkdark .dbg{border:1.5px solid hsl(var(--gh,174) 70% 45%);border-right-width:6px}
 body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
 .inv-items th:first-child{width:44%}.inv-items td:not(:first-child){font-size:13px}
+
+/* سطر المصروف في «فلوس الدرج» بيتداس: يفتح التعديل والمسح */
+#dbMoney .mvl-btn{width:100%;background:none;border:0;border-top:1px solid var(--border);border-radius:0;color:inherit;font:inherit;font-size:14px;text-align:start;cursor:pointer;align-items:center}
+#dbMoney .mvl-btn:active{background:var(--tint2)}
+#dbMoney .mvl-btn small{color:var(--muted);font-size:12px}

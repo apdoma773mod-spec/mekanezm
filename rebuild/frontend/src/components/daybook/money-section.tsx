@@ -1,14 +1,14 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ContactDto, DaybookEntryDto } from '@mk/shared';
+import type { ContactDto, DaybookEntryDto, ExpenseDto } from '@mk/shared';
 import { Portal } from '@/components/ui/portal';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money } from '@/lib/format';
 import { useWaOrders } from '@/lib/inbox-queries';
-import { useContacts, useCreateExpense, useCreatePayment, useDaybookSetPay, useExpenses, usePayments } from '@/lib/trade-queries';
+import { useContacts, useCreateExpense, useCreatePayment, useDaybookSetPay, useDeleteExpense, useExpenses, usePayments, useUpdateExpense } from '@/lib/trade-queries';
 
 /**
  * «💵 فلوس الدرج» تحت اليومية — نفس moneyRender القديمة: مصروف، دفعة لمورد، فلوس دخلت من عميل،
@@ -47,44 +47,74 @@ function Lc({ title, sub, onClose, children }: { title: string; sub: string; onC
 
 const input = { fontSize: 16, padding: 10, border: '1px solid var(--border)', borderRadius: 12, width: '100%' } as const;
 
-function ExpenseCard({ day, onClose }: { day: string; onClose: () => void }) {
+/** مصروف جديد، أو (لو edit موجود) تعديل/مسح مصروف متسجل. same = مصروفات نفس اليوم عشان نمنع التكرار. */
+function ExpenseCard({ day, edit, same, onClose }: { day: string; edit?: ExpenseDto; same: ExpenseDto[]; onClose: () => void }) {
   const toast = useToast();
   const create = useCreateExpense();
-  const [cat, setCat] = useState('نقل وشحن');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
+  const update = useUpdateExpense();
+  const remove = useDeleteExpense();
+  const [cat, setCat] = useState(edit?.category || 'نقل وشحن');
+  const [amount, setAmount] = useState(edit ? String(edit.amount) : '');
+  const [note, setNote] = useState(edit?.note ?? '');
+  const lock = useRef(false); // دوستين ورا بعض على «سجّل» ما يسجلوش المصروف مرتين
+  const busy = create.isPending || update.isPending || remove.isPending;
+  const cats = CATS.some(([k]) => k === cat) ? CATS : [...CATS, [cat, `📌 ${cat}`] as [string, string]];
+  const done = (m: string) => {
+    toast(m);
+    onClose();
+  };
+  const fail = (e: unknown) => {
+    lock.current = false;
+    toast(errorMessage(e), 'bad');
+  };
   const save = () => {
+    if (lock.current || busy) return;
     const a = +amount;
     if (!(a > 0)) return toast('اكتب المبلغ', 'bad');
-    create.mutate(
-      { category: cat || 'أخرى', amount: r2(a), method: 'CASH', company: 'MK', date: day, note },
-      {
-        onSuccess: () => {
-          toast(`✔ اتسجل مصروف ${money(a)}`);
-          onClose();
-        },
-        onError: (e) => toast(errorMessage(e), 'bad'),
-      },
-    );
+    const c = cat || 'أخرى';
+    const n = note.trim();
+    if (edit) {
+      lock.current = true;
+      return update.mutate({ id: edit.id, input: { category: c, amount: r2(a), note: n } }, { onSuccess: () => done('✔ المصروف اتعدّل'), onError: fail });
+    }
+    const dup = same.find((e) => e.category === c && r2(e.amount) === r2(a) && (e.note ?? '').trim() === n);
+    if (dup && !window.confirm(`فيه مصروف زيه بالظبط متسجل في نفس اليوم (${c} — ${money(a)}).\nتسجّله تاني؟`)) return;
+    lock.current = true;
+    create.mutate({ category: c, amount: r2(a), method: 'CASH', company: 'MK', date: day, note: n }, { onSuccess: () => done(`✔ اتسجل مصروف ${money(a)}`), onError: fail });
+  };
+  const del = () => {
+    if (!edit || lock.current || busy) return;
+    if (!window.confirm(`تمسح المصروف ده؟\n${edit.category} — ${money(edit.amount)}\nهيتشال من الخزنة والمصروفات.`)) return;
+    lock.current = true;
+    remove.mutate(edit.id, { onSuccess: () => done('✔ المصروف اتمسح'), onError: fail });
   };
   return (
-    <Lc title="💸 فلوس طلعت من الدرج" sub="مصروف (نقل، أوبر، مشتريات صغيرة…) — بيتسجل في الخزنة والمصروفات" onClose={onClose}>
+    <Lc
+      title={edit ? '✏️ تعديل مصروف' : '💸 فلوس طلعت من الدرج'}
+      sub={edit ? 'عدّل النوع أو المبلغ أو البيان، أو امسحه لو متسجل غلط أو مكرر' : 'مصروف (نقل، أوبر، مشتريات صغيرة…) — بيتسجل في الخزنة والمصروفات'}
+      onClose={onClose}
+    >
       <label>نوعه</label>
       <div className="dbpays">
-        {CATS.map(([k, t]) => (
+        {cats.map(([k, t]) => (
           <button key={k} type="button" className={k === cat ? 'on' : ''} onClick={() => setCat(k)}>
             {t}
           </button>
         ))}
       </div>
       <label>المبلغ</label>
-      <input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0" autoFocus={!edit} value={amount} onChange={(e) => setAmount(e.target.value)} />
       <label>البيان (اختياري)</label>
       <input placeholder="مثلاً: أوبر توصيل لمحمد سعد" style={input} value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="lcf">
-        <button type="button" className="primary" disabled={create.isPending} onClick={save}>
-          ✔ سجّل المصروف
+        <button type="button" className="primary" disabled={busy} onClick={save}>
+          {edit ? '✔ حفظ التعديل' : '✔ سجّل المصروف'}
         </button>
+        {edit && (
+          <button type="button" className="secondary danger" disabled={busy} onClick={del}>
+            🗑️ امسح
+          </button>
+        )}
         <button type="button" className="secondary" onClick={onClose}>
           إلغاء
         </button>
@@ -165,6 +195,7 @@ function PayCard({ kind, onClose }: { kind: 'out' | 'in'; onClose: () => void })
 export function MoneySection({ day, today, cash }: { day: string; today: string; cash: number }) {
   const toast = useToast();
   const [card, setCard] = useState<null | 'exp' | 'out' | 'in'>(null);
+  const [editExp, setEditExp] = useState<ExpenseDto | null>(null);
   const exps = useExpenses({ from: day, to: day, pageSize: 200 });
   const pays = usePayments({ from: day, to: day, pageSize: 200 });
   const { ex, inn, out } = useMemo(() => {
@@ -203,7 +234,15 @@ export function MoneySection({ day, today, cash }: { day: string; today: string;
         </button>
       </div>
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {ex.map((e) => line(e.id, '💸', `${e.category || 'مصروف'}${e.note ? ` — ${e.note}` : ''}`, e.amount, true))}
+        {ex.map((e) => (
+          <button key={e.id} type="button" className="mvl mvl-btn" title="دوس للتعديل أو المسح" onClick={() => setEditExp(e)}>
+            <span>
+              💸 {e.category || 'مصروف'}
+              {e.note ? ` — ${e.note}` : ''} <small>✏️</small>
+            </span>
+            <b style={{ color: 'var(--danger)' }}>− {money(e.amount)}</b>
+          </button>
+        ))}
         {out.map((p) => line(p.id, '↗️', `دفعة لـ ${p.contact.name}`, p.amount, true))}
         {inn.map((p) => line(p.id, '🤝', `تحصيل من ${p.contact.name}`, p.amount, false))}
         {ex.length + out.length + inn.length === 0 && (
@@ -231,7 +270,8 @@ export function MoneySection({ day, today, cash }: { day: string; today: string;
         </div>
       </div>
       <p style={{ color: 'var(--muted)', fontSize: 12, margin: '6px 0 0' }}>الحساب الكامل للدرج (فواتير البيع العادية والمشتريات كمان) في «🔒 تقفيل اليومية».</p>
-      {card === 'exp' && <ExpenseCard day={day} onClose={() => setCard(null)} />}
+      {card === 'exp' && <ExpenseCard day={day} same={ex} onClose={() => setCard(null)} />}
+      {editExp && <ExpenseCard key={editExp.id} day={day} edit={editExp} same={ex} onClose={() => setEditExp(null)} />}
       {(card === 'out' || card === 'in') && <PayCard kind={card} onClose={() => setCard(null)} />}
     </div>
   );
