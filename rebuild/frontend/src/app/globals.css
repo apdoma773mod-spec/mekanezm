@@ -991,3 +991,10 @@ svg.i {
 .mk-fold[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
 .mk-fold>.mk-fold-b{padding:12px 14px 14px}
 #pcv .mk-fold>.mk-fold-b>.pc-kv{margin:0}
+
+/* 🗂️ طي الشاشات الطويلة أوتوماتيك (lib/auto-fold.ts): العنوان باين وجنبه سهم، والباقي بيتخبّى لحد ما تدوس */
+[data-af]>h3:first-child{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;margin-bottom:0;min-height:44px}
+[data-af]>h3:first-child::after{content:"▾";margin-inline-start:auto;flex:none;color:var(--blue,#087f8c);font-size:16px}
+[data-af="1"]>h3:first-child::after{content:"▴"}
+[data-af="1"]>h3:first-child{margin-bottom:8px}
+[data-af="0"]>:not(h3:first-child){display:none!important}
