@@ -266,6 +266,15 @@ aside .navhd{display:none}
 #pcv .pc-own{background:#fffaf0;border-color:#f1dfb5}
 #pcv .pc-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 #pcv .pc-acts button{flex:1 1 140px}
+#pce .pce-sec{border:2px solid #087f8c;border-radius:14px;overflow:hidden}
+#pce .pce-sec>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none}
+#pce .pce-sec>summary::-webkit-details-marker{display:none}
+#pce .pce-sec>summary::after{content:"▾";flex:none;color:#087f8c;font-size:16px;transition:none}
+#pce .pce-sec[open]>summary::after{content:"▴"}
+#pce .pce-sec>summary span{flex:none}
+#pce .pce-sec>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+#pce .pce-sec[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+#pce .pce-sec>.form{padding:12px 14px 14px}
 #pce .pc-imgs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
 #pce .pc-imgs div{position:relative}
 #pce .pc-imgs img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line,#e3e8ea)}
