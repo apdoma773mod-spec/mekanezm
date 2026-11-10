@@ -2,6 +2,7 @@
   "git": {
     "deploymentEnabled": {
       "*": false,
+      "**": false,
       "admin-on-vercel": true
     }
   }
