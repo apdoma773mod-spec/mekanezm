@@ -2,7 +2,7 @@
 // Fixed top bar on every store page: name, search with live suggestions (from the server), cart.
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { norm, productPath, sectionPath, visibleSections } from '@/lib/shop';
 import { ev } from '@/lib/track';
@@ -16,8 +16,9 @@ export function TopBar() {
   const { site, cartCount: n, open } = useShop();
   const cartCount = useMounted() ? n : 0;
   const router = useRouter();
-  const qs = useSearchParams();
-  const [q, setQ] = useState(qs.get('q') ?? '');
+  // The query is read after mount (not with useSearchParams) so the bar is in the server HTML of every page.
+  const [q, setQ] = useState('');
+  useEffect(() => { const v = new URLSearchParams(location.search).get('q'); if (v) setQ(v); }, []);
   const [sug, setSug] = useState<Sug[]>([]);
   const [show, setShow] = useState(false);
   const seq = useRef(0);

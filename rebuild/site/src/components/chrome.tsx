@@ -2,7 +2,7 @@
 // Things that float over every store page: bottom nav, WhatsApp button, "continue order" bar,
 // back-to-top, scroll progress, toast, offline notice, install-app button.
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { bumpVisit } from '@/lib/api';
 import { ev, reportError } from '@/lib/track';
@@ -29,7 +29,6 @@ export function Chrome() {
   const cartCount = mounted ? cc : 0;
   const favN = mounted ? Object.keys(fav).length : 0;
   const path = usePathname();
-  const qs = useSearchParams();
   const y = useScrollY();
   const onProduct = path.startsWith('/p/');
   const [prog, setProg] = useState(0);
@@ -85,7 +84,8 @@ export function Chrome() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, cc > 0]);
   // ?track=REF opens tracking (links from the custom-order page and old shop.html?track=).
-  useEffect(() => { if (qs.has('track')) open({ kind: 'track', ref: qs.get('track') ?? '' }); }, [qs, open]);
+  // Read from the address itself (not useSearchParams) so the bottom nav is in the server HTML.
+  useEffect(() => { const qs = new URLSearchParams(location.search); if (qs.has('track')) open({ kind: 'track', ref: qs.get('track') ?? '' }); }, [path, open]);
 
 
   return (
@@ -100,7 +100,7 @@ export function Chrome() {
           if (h && (onProduct || path.startsWith('/c/'))) e.currentTarget.href = waUrl(site, `السلام عليكم، بسأل عن: ${h}
 ${location.href}`);
         }}>💬 اطلب على الواتساب</a>
-      {!onProduct && <button className={'to-top' + (y > 700 ? ' on' : '')} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} aria-label="لفوق">↑</button>}
+      {!onProduct && <button className={'to-top' + (y > 700 && !atFoot ? ' on' : '')} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} aria-label="لفوق">↑</button>}
       {!onProduct && cartCount > 0 && (
         <button className="go-cart" onClick={() => open({ kind: 'cart' })}><span>🛒 عندك {cartCount} في طلبك</span><span>كمّل الطلب ←</span></button>
       )}

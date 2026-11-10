@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Chrome } from '@/components/chrome';
 import { ShopProvider } from '@/components/shop-provider';
 import { TopBar } from '@/components/topbar';
@@ -18,9 +18,9 @@ export default async function StoreLayout({ children }: { children: ReactNode })
     <ShopProvider site={site}>
       {(vars || wood) && <style>{`${vars ? `:root{${vars}}` : ''}${wood}`}</style>}
       <a className="skip" href="#main">تخطّي للمحتوى</a>
-      <Suspense fallback={<div className="tb" />}><TopBar /></Suspense>
+      <TopBar />
       {children}
-      <Suspense fallback={null}><Chrome /></Suspense>
+      <Chrome />
     </ShopProvider>
   );
 }
