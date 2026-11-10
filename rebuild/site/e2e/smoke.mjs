@@ -19,9 +19,9 @@ const check = async (name, fn) => {
 const must = (ok, what) => { if (!ok) throw new Error(what); };
 const go = async path => { const r = await page.goto(base + path, { waitUntil: 'networkidle' }); must(r && r.ok(), `${path} → ${r?.status()}`); };
 
-await check('home shows products', async () => { await go('/'); must(await page.locator('.prow .card').count() > 0, 'no product cards'); });
+await check('home shows products', async () => { await go('/'); must(await page.locator('.grid .card:has(h3)').count() > 0, 'no product cards'); });
 await check('add to cart opens the order bar', async () => {
-  await page.locator('.prow .card .add').first().click();
+  await page.locator('.grid .card .add').first().click();
   await page.locator('.cstep').first().waitFor({ timeout: 5000 });
 });
 await check('cart opens with shipping choice', async () => {
@@ -32,7 +32,7 @@ await check('cart opens with shipping choice', async () => {
 });
 let pid = '';
 await check('product page', async () => {
-  pid = (await page.locator('.prow .card h3 a').first().getAttribute('href')) || '';
+  pid = (await page.locator('.grid .card h3 a').first().getAttribute('href')) || '';
   await go(pid);
   must(await page.locator('h1').count() === 1, 'no title');
   must(await page.locator('.cmpb').count() === 1, 'no compare button');
