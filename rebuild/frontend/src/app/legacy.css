@@ -1031,3 +1031,12 @@ body.mkpro,body.mkpro.mkdark{--ln2:color-mix(in srgb,var(--ac) 60%,transparent)}
 body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea,.secondary,.search){border-width:1.5px}
 body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,var(--blue) 70%,transparent)}
 #ctBar{border:1.5px solid color-mix(in srgb,#b9770e 60%,transparent)}
+#spEd .sp-fold{padding:0;overflow:hidden;border:2px solid var(--blue,#087f8c)}
+#spEd .sp-fold>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none}
+#spEd .sp-fold>summary::-webkit-details-marker{display:none}
+#spEd .sp-fold>summary::after{content:"▾";flex:none;color:var(--blue,#087f8c);font-size:16px}
+#spEd .sp-fold[open]>summary::after{content:"▴"}
+#spEd .sp-fold>summary span{flex:none}
+#spEd .sp-fold>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+#spEd .sp-fold[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+#spEd .sp-fold>.sp-fold-b{padding:12px 14px 14px}
