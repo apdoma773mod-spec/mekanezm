@@ -1004,3 +1004,8 @@ body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
 #dbMoney .mvl-btn{width:100%;background:none;border:0;border-top:1px solid var(--border);border-radius:0;color:inherit;font:inherit;font-size:14px;text-align:start;cursor:pointer;align-items:center}
 #dbMoney .mvl-btn:active{background:var(--tint2)}
 #dbMoney .mvl-btn small{color:var(--muted);font-size:12px}
+
+/* 🤝 عميل جديد جوه «فلوس دخلت من عميل» + عربون العميل في فاتورة البيع */
+#lcBox .mv-new{display:grid;gap:6px;border:1.5px dashed var(--blue);border-radius:12px;padding:10px 12px;background:var(--tint2)}
+.dep-box{border:1.5px solid var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.8}
+.dep-box button{width:100%;margin-top:6px}
