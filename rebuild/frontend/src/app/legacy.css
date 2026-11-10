@@ -1024,3 +1024,10 @@ body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
   body.mk-tcards main table.mkTc.mk-icards td.c-items { order: 6; flex: 1 1 100%; justify-content: flex-start; font-size: 12.5px; font-weight: 500; color: var(--muted, #718087); gap: 4px; }
   body.mk-tcards main table.mkTc.mk-icards tr::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
 }
+
+/* 🟦 الحواف على أي خانة وأي مربع: الخانات (كتابة/اختيار) والزراير الفاتحة والنوافذ وشريط العميل، مش الكروت بس */
+body.mkpro,body.mkpro.mkdark{--ln2:color-mix(in srgb,var(--ac) 60%,transparent)}
+.field input,.field select,.field textarea,.secondary{border-color:color-mix(in srgb,var(--blue) 60%,transparent)}
+body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea,.secondary,.search){border-width:1.5px}
+body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,var(--blue) 70%,transparent)}
+#ctBar{border:1.5px solid color-mix(in srgb,#b9770e 60%,transparent)}
