@@ -35,6 +35,18 @@ export function Chrome() {
   const [prog, setProg] = useState(0);
   const [offline, setOffline] = useState(false);
   const [inst, setInst] = useState<BIP | null>(null);
+  const [atFoot, setAtFoot] = useState(false);
+
+  // Hide the floating WhatsApp button while the footer is on screen (it would cover the footer's buttons;
+  // the footer has its own WhatsApp link).
+  useEffect(() => {
+    setAtFoot(false);
+    const ft = document.querySelector('footer.ft');
+    if (!ft || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver(es => setAtFoot(es.some(e => e.isIntersecting)), { threshold: 0 });
+    io.observe(ft);
+    return () => io.disconnect();
+  }, [path]);
 
   useEffect(() => {
     const h = document.documentElement, m = h.scrollHeight - innerHeight;
@@ -80,7 +92,7 @@ export function Chrome() {
     <>
       <div className="prog" aria-hidden="true"><i style={{ width: prog + '%' }} /></div>
       {offline && <div className="offline" role="status">⚠️ مفيش إنترنت — بعض الحاجات ممكن ماتشتغلش</div>}
-      <a className="wa-fab mini" style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
+      <a className={'wa-fab mini' + (atFoot ? ' off' : '')} tabIndex={atFoot ? -1 : undefined} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
         target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب من ميكانيزم')}
         onClick={e => {
           // Mention what the customer is looking at (product or section).

@@ -279,6 +279,7 @@ footer.ft { background: var(--dk); color: #fff; margin-top: 30px; padding: 24px 
 .nv i { position: absolute; top: 0; right: 4px; background: #e11d48; color: #fff; border-radius: 10px; font-size: 11px; font-style: normal; padding: 0 5px; }
 .wa-fab { position: fixed; left: 16px; bottom: calc(140px + var(--safe-b)); z-index: 45; display: flex; align-items: center; gap: 8px; background: var(--wa); color: #fff; text-decoration: none; font-weight: 700; font-size: 15px; padding: 12px 18px; border-radius: 30px; box-shadow: 0 4px 14px #0004; transition: .25s; }
 .wa-fab.mini { width: 56px; height: 56px; padding: 0; justify-content: center; font-size: 0; border-radius: 50%; }
+.wa-fab.off { opacity: 0; transform: scale(.7); pointer-events: none; }
 .wa-fab.mini::before { content: '💬'; font-size: 26px; }
 .go-cart { position: fixed; left: 12px; right: 12px; bottom: calc(72px + var(--safe-b)); z-index: 46; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--accent); color: #fff; border: 0; border-radius: 16px; padding: 14px 18px; font-weight: 800; font-size: 16px; box-shadow: 0 8px 24px #0004; }
 .to-top { position: fixed; bottom: calc(212px + var(--safe-b)); left: 14px; width: 42px; height: 42px; border-radius: 50%; border: 0; background: #0f2b3d; color: #fff; font-size: 20px; box-shadow: 0 4px 14px #0004; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 40; }
