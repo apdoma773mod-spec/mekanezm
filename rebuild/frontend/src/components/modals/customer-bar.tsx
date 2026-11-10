@@ -12,7 +12,8 @@ export function CustomerBar({ name, term, balance, contactId }: { name: string; 
       👤 {name}
       {term?.pct ? <> · خصمه <b>{term.pct}%</b></> : null}
       {term?.tier ? ` (${term.tier})` : ''}
-      {balance ? <> · عليه دلوقتي <b>{money(balance)}</b></> : null}
+      {balance > 0 ? <> · عليه دلوقتي <b>{money(balance)}</b></> : null}
+      {balance < 0 ? <> · <span style={{ color: '#159447' }}>ليه رصيد/عربون <b>{money(-balance)}</b></span></> : null}
       {term?.limit ? <> · حد الدين <b>{money(term.limit)}</b>{over ? ' ⛔ عدّى الحد' : ''}</> : null}
       {contactId ? (
         <>

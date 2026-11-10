@@ -676,6 +676,33 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           )}
           {!asQuote && (
             <>
+              {isSale && !invoice && contactNow && contactNow.balance < 0 && total > 0 && (() => {
+                // 🤝 العميل ليه عربون/رصيد من قبل كده: يظهر هنا ويتخصم من المطلوب بدوسة
+                const credit = r2(-contactNow.balance);
+                const use = Math.min(credit, total);
+                const used = paidTouched && Math.abs(toNum(paid) - r2(total - use)) < 0.005;
+                return (
+                  <div className="field full dep-box">
+                    <div>
+                      🤝 <b>{contactNow.name}</b> ليه عربون/رصيد <b>{money(credit)}</b>
+                      {used ? <> — ✔ اتخصم منه {money(use)}، والباقي ده بيتقفل من العربون مش دين عليه.</> : null}
+                    </div>
+                    {!used && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setPaidTouched(true);
+                          setPaid(String(r2(total - use)));
+                          setNote((n) => (/عربون/.test(n) ? n : [n.trim(), `مخصوم عربون سابق ${money(use)}`].filter(Boolean).join(' — ')));
+                        }}
+                      >
+                        اخصم العربون من الفاتورة دي (يدفع {money(r2(total - use))})
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <NumberInput
                 label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
                 value={paidTouched ? paid : total ? String(total) : ''}

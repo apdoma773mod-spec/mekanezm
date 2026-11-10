@@ -144,6 +144,7 @@ const partBox = (key: string, photo: { data: string; mime: string }) =>
     key,
     'Find the main metal hardware product (not the background, logo, text, hands or measuring tape) in this photo. Return JSON only: {"box":[ymin,xmin,ymax,xmax]} with integers 0-1000 tightly around the WHOLE product, nothing cut off.',
     photo,
+    { ms: 18000, kind: 'dim' },
   )
     .then((d) => (Array.isArray(d.box) && d.box.length === 4 && d.box.every((n) => Number.isFinite(n)) ? ([d.box[1]! / 1000, d.box[0]! / 1000, d.box[3]! / 1000, d.box[2]! / 1000] as [number, number, number, number]) : null))
     .catch(() => null);
@@ -166,6 +167,7 @@ Measurements:
 ${kinds.map((k) => `- "${k}" = ${LINE_WORDS[k]}`).join(String.fromCharCode(10))}
 Return JSON only: {"lines":[{"kind":"h","p1":[y,x],"p2":[y,x]}]}`,
     photo,
+    { ms: 18000, kind: 'dim' },
   )
     .then((d) => {
       const out: Record<string, [number, number, number, number]> = {};
@@ -373,7 +375,11 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     const vals: [string, string, string, 'bottom' | 'right' | 'top' | 'left'][] = [['h', p.h, 'الارتفاع', 'right'], ['w', p.w, 'العرض', 'top'], ['l', p.l, 'الطول', 'top'], ['t', p.t, 'التخانة', 'left'], ['bw', p.bw, 'عرض القاعدة', 'bottom'], ['bl', p.bl, 'طول القاعدة', 'bottom'], ['d', p.d, 'العمق', 'left']];
     const want = vals.filter((x) => x[1]);
     // every size has its own box in the editor: an empty box is simply not drawn
-    const [hint, lines] = k ? await Promise.all([partBox(k.key, photo), partLines(k.key, photo, want.map((x) => x[0]))]) : [null, {} as Record<string, [number, number, number, number]>];
+    // الذكاء الاصطناعي هنا «تحسين» مش شرط: لو اتأخر (كان بيجرّب ٦ موديلات × ٤٥ث والشاشة تفضل معلّقة لحد ما السيرفر يقطع)
+    // بنكمّل من غيره بعد ٢٢ ثانية، والخطوط بتترسم على حدود القطعة نفسها بدل ما الصورة ما تطلعش خالص.
+    const cap = <T>(pr: Promise<T>, fb: T) => Promise.race([pr.catch(() => fb), new Promise<T>((ok) => setTimeout(() => ok(fb), 22000))]);
+    const noLines = {} as Record<string, [number, number, number, number]>;
+    const [hint, lines] = k ? await Promise.all([cap(partBox(k.key, photo), null), cap(partLines(k.key, photo, want.map((x) => x[0])), noLines)]) : [null, noLines];
     const specs = want.map(([kind, v, name, slot]) => ({ k: name, v: v + ' سم', slot, line: lines[kind] ?? null }));
     const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), specs, '', hint, p.foot);
     return { data: buf.toString('base64') };
