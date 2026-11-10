@@ -8,6 +8,7 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { putFile } from '../../lib/files.js';
 import { parse } from '../../lib/validate.js';
 import { catalogAiRoutes } from './catalog-ai.js';
+import { kindOfRequest, pingOwner, SUB_PREFIX } from './events.js';
 import { dropLiveCatalog, liveCatalog } from './catalog-live.js';
 
 
@@ -17,7 +18,6 @@ import { dropLiveCatalog, liveCatalog } from './catalog-live.js';
  */
 const SITE_KEY = 'site_content';
 /** The owner's personal number and the two shop numbers (international form, as the bridge wants them). */
-const NOTIFY_DEFAULT = ['201119199659', '201042383986', '201042466087'];
 
 const orderBody = z.object({
   customerName: z.string().trim().min(1).max(120),
@@ -222,23 +222,16 @@ export default async function webRoutes(app: FastifyInstance) {
    */
   async function notifyNewOrder(id: string, b: z.infer<typeof orderBody>) {
     try {
-      const cfg = ((await db.setting.findUnique({ where: { key: 'web_order_notify' } }))?.value ?? {}) as { on?: boolean; to?: string[] };
-      if (cfg.on === false) return;
-      const to = [...new Set((Array.isArray(cfg.to) && cfg.to.length ? cfg.to : NOTIFY_DEFAULT).map((x) => String(x).replace(/\D/g, '')).filter(Boolean))];
       const names = new Map((await db.product.findMany({ where: { code: { in: b.items.map((i) => i.code) } }, select: { code: true, name: true } })).map((p) => [p.code, p.name]));
       const how = { pickup: '🏪 هيستلم من المحل', delivery: '🛵 توصيل', ship: '📦 شحن' } as const;
       const lines = b.items.map((i) => `• ${names.get(i.code) ?? i.code} (كود ${i.code}) × ${i.qty}${i.backorder ? ' — بالحجز' : ''}`);
-      const body = [
-        '🛒 طلب جديد من الموقع',
+      await pingOwner(db, 'order', [
         `رقم الطلب: ${id.slice(0, 8)}`,
         `الاسم: ${b.customerName}`,
         b.phone ? `الموبايل: ${b.phone}` : '',
         ...lines,
         b.ship ? `${how[b.ship.method]}${b.ship.gov ? ' — ' + b.ship.gov : ''}${b.ship.address ? ' — ' + b.ship.address : ''}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
-      for (const t of to) await db.outboundMessage.create({ data: { toPhone: t, body, byName: '🌐 طلب من الموقع' } });
+      ]);
     } catch {
       /* the order is saved either way */
     }
@@ -297,26 +290,31 @@ export default async function webRoutes(app: FastifyInstance) {
     const b = parse(z.object({ name: z.string().trim().min(1).max(120), phone: z.string().trim().max(30).default(''), imgs: z.array(fileUrl).max(8).default([]), note: z.string().trim().max(1500).default('') }), request.body);
     if (!b.imgs.length && !b.note) throw badRequest('ابعت صورة أو اكتب وصف');
     const r = await db.webRequest.create({ data: { name: b.name, phone: b.phone, imgs: b.imgs as Prisma.InputJsonValue, note: b.note } });
+    void pingOwner(db, kindOfRequest(b.note), [`الاسم: ${b.name}`, b.phone ? `الموبايل: ${b.phone}` : '', b.imgs.length ? `📷 ${b.imgs.length} صورة` : '', b.note ? b.note.slice(0, 300) : '']);
     return { id: r.id };
   });
 
   app.post('/public/custom', { config: { rateLimit: { max: 6, timeWindow: '1 minute' } } }, async (request) => {
     const b = parse(z.object({ name: z.string().trim().min(1).max(120), phone: z.string().trim().max(30).default(''), kind: z.enum(['steel', 'bamboo', 'delf']), summary: z.string().trim().max(2000).default(''), note: z.string().trim().max(1500).default(''), img: fileUrl.or(z.literal('')).default(''), spec: z.record(z.unknown()).default({}) }), request.body);
     const r = await db.webCustom.create({ data: { ...b, spec: b.spec as Prisma.InputJsonValue } });
+    void pingOwner(db, 'custom', [`الاسم: ${b.name}`, b.phone ? `الموبايل: ${b.phone}` : '', b.summary ? b.summary.slice(0, 300) : '']);
     return { id: r.id };
   });
 
   // ---- admin: photo requests and custom orders ----
   app.get('/counts', { preHandler: app.requireAdmin }, async () => {
     // «اشتراك في جديد الواتساب» مش طلب منتج بالصور: بيتعدّ لوحده (subs) عشان التنبيه يكون صح
-    const sub = { startsWith: '📣 اشتراك' };
-    const [orders, requests, subs, custom] = await Promise.all([
+    const sub = { startsWith: SUB_PREFIX };
+    const kv = async (key: string) => { const v = (await db.setting.findUnique({ where: { key } }))?.value; return Array.isArray(v) ? v.length : 0; };
+    const [orders, requests, subs, custom, reviews, waits] = await Promise.all([
       db.webOrder.count({ where: { status: 'new' } }),
       db.webRequest.count({ where: { status: 'new', NOT: { note: sub } } }),
       db.webRequest.count({ where: { status: 'new', note: sub } }),
       db.webCustom.count({ where: { status: 'new' } }),
+      kv('web_reviews'),
+      kv('web_notify'),
     ]);
-    return { orders, requests, subs, custom };
+    return { orders, requests, subs, custom, reviews, waits };
   });
 
   app.get('/requests', { preHandler: app.requireAdmin }, async () => ({ items: await db.webRequest.findMany({ orderBy: { createdAt: 'desc' }, take: 200 }) }));

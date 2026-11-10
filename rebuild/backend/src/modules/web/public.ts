@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { notFound } from '../../lib/errors.js';
 import { parse } from '../../lib/validate.js';
 import { actorOf } from '../../lib/actor.js';
+import { pingOwner } from './events.js';
 
 /**
  * The rest of what the public shop page asks the system (the old Supabase RPCs site_stock, track_order, track_custom,
@@ -101,6 +102,7 @@ export default async function webPublicRoutes(app: FastifyInstance) {
     );
     const cur = await getKv<unknown[]>(REVIEWS_KEY, []);
     await putKv(REVIEWS_KEY, [{ id: randomBytes(5).toString('hex'), name: b.name, rating: b.rating, body: b.body, product: b.product ?? '', at: new Date().toISOString() }, ...cur].slice(0, 200));
+    void pingOwner(db, 'review', [`${'⭐'.repeat(b.rating)} من ${b.name}`, b.body ? b.body.slice(0, 300) : '']);
     return { ok: true };
   });
 
@@ -109,6 +111,7 @@ export default async function webPublicRoutes(app: FastifyInstance) {
     const cur = await getKv<{ product: string; phone: string }[]>(NOTIFY_KEY, []);
     if (cur.some((x) => x.product === b.product && tail(x.phone) === tail(b.phone))) return { ok: true };
     await putKv(NOTIFY_KEY, [{ id: randomBytes(5).toString('hex'), ...b, at: new Date().toISOString() }, ...cur].slice(0, 500));
+    void pingOwner(db, 'wait', [`المنتج: ${b.pname || b.product}`, b.name ? `الاسم: ${b.name}` : '', `الموبايل: ${b.phone}`]);
     return { ok: true };
   });
 
@@ -150,6 +153,15 @@ export default async function webPublicRoutes(app: FastifyInstance) {
   });
 
   app.get('/notify', { preHandler: app.requireAdmin }, async () => ({ items: await getKv<unknown[]>(NOTIFY_KEY, []) }));
+
+  /** The owner removes a waiting customer (he was told by phone, or no longer wants it). */
+  app.delete('/notify/:id', { preHandler: app.requireAdmin }, async (request) => {
+    const { id } = parse(z.object({ id: z.string().max(40) }), request.params);
+    const cur = await getKv<{ id: string }[]>(NOTIFY_KEY, []);
+    if (!cur.some((x) => x.id === id)) throw notFound('الطلب ده مش موجود');
+    await putKv(NOTIFY_KEY, cur.filter((x) => x.id !== id));
+    return { ok: true };
+  });
   /** «📊 أداء الموقع»: visits, orders per day, the most ordered items and what people are waiting for. */
   app.get('/insights', { preHandler: app.requireAdmin }, async () => {
     const since = new Date(Date.now() - 30 * 86400_000);
