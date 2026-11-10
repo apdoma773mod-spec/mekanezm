@@ -77,7 +77,25 @@ export function parseDims(specs: [string, string][], typed = ''): Dims {
 export const hasDims = (d: Dims) => !!(d.w || d.h || d.d || d.l || d.t || d.bw || d.bl);
 export const dimSig = (d: Dims) => `${d.w ?? ''}|${d.h ?? ''}|${d.d ?? ''}|${d.l ?? ''}|${d.t ?? ''}|${d.bw ?? ''}|${d.bl ?? ''}`;
 
+/** خطوة ما تخلصش في وقتها بتقف برسالة واضحة بدل ما الشاشة تفضل معلّقة. */
+export const within = <T>(p: Promise<T>, ms: number, msg: string): Promise<T> =>
+  new Promise<T>((ok, bad) => {
+    const t = setTimeout(() => bad(new Error(msg)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        ok(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        bad(e);
+      },
+    );
+  });
+
 const loadImg = (src: string) =>
+  within(loadImg0(src), 20000, 'الصورة اتأخرت في الفتح');
+const loadImg0 = (src: string) =>
   new Promise<HTMLImageElement>((ok, bad) => {
     const i = new Image();
     i.crossOrigin = 'anonymous';
@@ -348,7 +366,7 @@ export async function generateDimImage(imgs0: string[], dims: Dims, foot: string
   bc.height = Math.round(best.height * sc0);
   bc.getContext('2d')!.drawImage(best, 0, 0, bc.width, bc.height);
   const imgData = bc.toDataURL("image/jpeg", 0.85).split(',')[1] ?? '';
-  const r = await api.post<{ data: string }>('/web/catalog/ai/dim-image', { imgData, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', l: dims.l ?? '', t: dims.t ?? '', bw: dims.bw ?? '', bl: dims.bl ?? '', foot });
+  const r = await within(api.post<{ data: string }>('/web/catalog/ai/dim-image', { imgData, w: dims.w ?? '', h: dims.h ?? '', d: dims.d ?? '', l: dims.l ?? '', t: dims.t ?? '', bw: dims.bw ?? '', bl: dims.bl ?? '', foot }), 75000, 'السيرفر اتأخر في رسم المقاسات (أكتر من دقيقة) — جرّب تاني بعد شوية');
   const bin = atob(r.data);
   const u8 = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
