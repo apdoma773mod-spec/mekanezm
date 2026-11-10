@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { PayMethod, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { actorOf, type Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
@@ -37,6 +37,8 @@ const importInput = z.object({
               qty: z.number().gt(0),
               price: z.number().min(0),
               pay: z.enum(['cash', 'credit']).default('cash'),
+              /** paid, but not into the drawer («انستا» / «تحويل» in the sheet's طريقة الدفع column) */
+              via: z.enum(['INSTAPAY', 'TRANSFER']).optional(),
             }),
           )
           .min(1),
@@ -46,6 +48,26 @@ const importInput = z.object({
     .max(300),
 });
 export type DaybookImportInput = z.infer<typeof importInput>;
+
+/**
+ * How the invoice's paid amount divides between the drawer, InstaPay and transfers — from its own lines.
+ * Only when the lines account for the whole paid amount; otherwise it is all cash, as before.
+ */
+function splitOfImport(inv: DaybookImportInput['invoices'][number]): { main: PayMethod; split?: Partial<Record<PayMethod, number>> } {
+  const by: Partial<Record<PayMethod, number>> = {};
+  for (const l of inv.items) {
+    if (l.pay === 'credit') continue;
+    const m: PayMethod = l.via ?? 'CASH';
+    by[m] = (by[m] ?? 0) + l.qty * l.price;
+  }
+  const parts = (Object.entries(by) as [PayMethod, number][]).map(([m, v]) => [m, Math.round(v * 100) / 100] as [PayMethod, number]).filter(([, v]) => v > 0);
+  if (!parts.some(([m]) => m !== 'CASH')) return { main: 'CASH' };
+  parts.sort((a, b) => b[1] - a[1]);
+  const diff = Math.round((inv.paid - parts.reduce((s, [, v]) => s + v, 0)) * 100) / 100;
+  if (Math.abs(diff) > 0.05) return { main: 'CASH' };
+  parts[0]![1] = Math.round((parts[0]![1] + diff) * 100) / 100;
+  return { main: parts[0]![0], ...(parts.length > 1 ? { split: Object.fromEntries(parts) } : {}) };
+}
 
 interface LogRow {
   sig: string;
@@ -67,6 +89,7 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
     const made: { id: string; no: string }[] = [];
     for (const [i, inv] of input.invoices.entries()) {
       try {
+        const { main, split } = splitOfImport(inv);
         const id = await createInvoiceInTx(
           tx,
           {
@@ -80,11 +103,11 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
             shipping: 0,
             discount: 0,
             paid: inv.paid,
-            payMethod: 'CASH',
+            payMethod: main,
             items: inv.items.map((l) => ({ productId: l.productId, name: l.name, qty: l.qty, price: l.price })),
           },
           actor,
-          { source: 'IMPORT', noContact: inv.noContact },
+          { source: 'IMPORT', noContact: inv.noContact, ...(split ? { paidSplit: split } : {}) },
         );
         const row = await tx.invoice.findUniqueOrThrow({ where: { id }, select: { no: true } });
         const who = inv.noContact ? '' : inv.person.trim();
@@ -100,7 +123,7 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
               price: D(l.price),
               owed: D(0),
               person: who,
-              pay: l.pay === 'credit' ? 'CREDIT' : 'CASH',
+              pay: l.pay === 'credit' ? 'CREDIT' : (l.via ?? 'CASH'),
               note: NOTE,
               stockOut: D(l.qty),
               createdById: actor.id,
