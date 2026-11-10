@@ -995,7 +995,7 @@ body.emp #whoBtn{background:#fff4e5!important;color:#8a4b00!important}
 .inv-foot{border-top:1px dashed var(--border);padding:10px 16px;font-size:13px;color:var(--muted);display:grid;gap:3px}
 
 /* 🟦 حواف المربعات: الأربع جهات واضحين وملوّنين في كل الشاشات (مش يمين وشمال بس) */
-.card,.stat,.txl,.txbox,.dbent,#dbBox,.shinv,.mk-tile,.rorow,.ivrow,.prow,#pcv .pc-card,#pcv .pc-main,#spEd .sec,#dbMoney .mvsum div,.dtsum div,.shsum div,body.mkpro .card,body.mkpro .stat,body.mkpro .txl,body.mkpro .txbox,body.mkpro .dbent,body.mkpro #dbBox,body.mkpro .shinv,body.mkpro .mk-tile,body.mkpro .rorow,body.mkpro .ivrow,body.mkpro .prow,body.mkpro #pcv .pc-card,body.mkpro #pcv .pc-main,body.mkpro #spEd .sec,body.mkpro #dbMoney .mvsum div,body.mkpro .dtsum div,body.mkpro .shsum div,body.mkpro.mkdark .card,body.mkpro.mkdark .stat,body.mkpro.mkdark .txl,body.mkpro.mkdark .txbox,body.mkpro.mkdark .dbent,body.mkpro.mkdark #dbBox,body.mkpro.mkdark .shinv,body.mkpro.mkdark .mk-tile,body.mkpro.mkdark .rorow,body.mkpro.mkdark .ivrow,body.mkpro.mkdark .prow,body.mkpro.mkdark #pcv .pc-card,body.mkpro.mkdark #pcv .pc-main,body.mkpro.mkdark #spEd .sec,body.mkpro.mkdark #dbMoney .mvsum div,body.mkpro.mkdark .dtsum div,body.mkpro.mkdark .shsum div{border:2px solid var(--blue);border-color:color-mix(in srgb,var(--blue) 70%,transparent)}
+.card,.stat,.txl,.txbox,.dbent,#dbBox,.shinv,.mk-tile,.ivrow,.scl,#pcv .pc-card,#pcv .pc-main,#spEd .sec,#dbMoney .mvsum div,.dtsum div,.shsum div,body.mkpro .card,body.mkpro .stat,body.mkpro .txl,body.mkpro .txbox,body.mkpro .dbent,body.mkpro #dbBox,body.mkpro .shinv,body.mkpro .mk-tile,body.mkpro .ivrow,body.mkpro .scl,body.mkpro #pcv .pc-card,body.mkpro #pcv .pc-main,body.mkpro #spEd .sec,body.mkpro #dbMoney .mvsum div,body.mkpro .dtsum div,body.mkpro .shsum div,body.mkpro.mkdark .card,body.mkpro.mkdark .stat,body.mkpro.mkdark .txl,body.mkpro.mkdark .txbox,body.mkpro.mkdark .dbent,body.mkpro.mkdark #dbBox,body.mkpro.mkdark .shinv,body.mkpro.mkdark .mk-tile,body.mkpro.mkdark .ivrow,body.mkpro.mkdark .scl,body.mkpro.mkdark #pcv .pc-card,body.mkpro.mkdark #pcv .pc-main,body.mkpro.mkdark #spEd .sec,body.mkpro.mkdark #dbMoney .mvsum div,body.mkpro.mkdark .dtsum div,body.mkpro.mkdark .shsum div{border:2px solid var(--blue);border-color:color-mix(in srgb,var(--blue) 70%,transparent)}
 .dbg,body.mkpro .dbg,body.mkpro.mkdark .dbg{border:1.5px solid hsl(var(--gh,174) 70% 45%);border-right-width:6px}
 body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
 .inv-items th:first-child{width:44%}.inv-items td:not(:first-child){font-size:13px}
@@ -1009,3 +1009,18 @@ body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
 #lcBox .mv-new{display:grid;gap:6px;border:1.5px dashed var(--blue);border-radius:12px;padding:10px 12px;background:var(--tint2)}
 .dep-box{border:1.5px solid var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.8}
 .dep-box button{width:100%;margin-top:6px}
+
+/* 🧾 قايمة الفواتير على الموبايل: كارت ملموم — اسم العميل بلون مميز + الإجمالي، وتحته الرقم والتاريخ والحالة، وآخر سطر الأصناف */
+@media (max-width: 700px) {
+  body.mk-tcards main table.mkTc.mk-icards tr { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 10px; padding: 9px 12px; margin-bottom: 8px; }
+  body.mk-tcards main table.mkTc.mk-icards td { display: inline-flex; flex: none; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 600; }
+  body.mk-tcards main table.mkTc.mk-icards td::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-icards td { background: transparent !important; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-who { order: 1; flex: 1 1 0; min-width: 0; font-size: 16px; font-weight: 800; color: var(--blue2, #075e68); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-total { order: 2; font-size: 16px; font-weight: 800; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-no { order: 3; font-size: 12px; font-weight: 700; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-date { order: 4; font-size: 12px; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-pay { order: 5; margin-inline-start: auto; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-items { order: 6; flex: 1 1 100%; justify-content: flex-start; font-size: 12.5px; font-weight: 500; color: var(--muted, #718087); gap: 4px; }
+  body.mk-tcards main table.mkTc.mk-icards tr::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+}
