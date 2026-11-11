@@ -24,8 +24,9 @@ export default function AdminApp() {
   const [apps, setAppsS] = useState<Record<AK, { id: string; secret: string; has: boolean }>>({ meta: { id: '', secret: '', has: false }, google: { id: '', secret: '', has: false }, tiktok: { id: '', secret: '', has: false } });
   const [cbs, setCbs] = useState<Record<string, string>>({});
   const stok = async () => (await sbRef.current!.auth.getSession()).data.session?.access_token || '';
-  const loadApps = useCallback(async () => { try { const r = await fetch('/api/social/apps-get', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok() }) }); const j = await r.json(); if (!r.ok) return; setCbs(j.cb || {}); setAppsS((o) => { const n = { ...o }; (['meta', 'google', 'tiktok'] as AK[]).forEach((k) => { const a = j.apps?.[k]; n[k] = { id: o[k].id || a?.id || '', secret: o[k].secret, has: !!a?.secret }; /* اللي انت كاتبه ولسه ماتحفظش مايتمسحش لما ترجع للتاب */ }); return n; }); } catch { /* */ } }, []);
-  const saveApps = async () => { const r = await fetch('/api/social/apps-set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok(), apps: Object.fromEntries((['meta', 'google', 'tiktok'] as AK[]).map((k) => [k, { id: apps[k].id, secret: apps[k].secret }])) }) }); const j = await r.json().catch(() => ({})); if (!r.ok) return note('فشل: ' + (j.error || r.status), 4000); note('اتحفظت مفاتيح المنصات ✅'); loadApps(); };
+  const appsLoaded = useRef(false);
+  const loadApps = useCallback(async (force?: boolean) => { if (appsLoaded.current && !force) return; try { const r = await fetch('/api/social/apps-get', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok() }) }); const j = await r.json(); if (!r.ok) return; setCbs(j.cb || {}); setAppsS((o) => { const n = { ...o }; (['meta', 'google', 'tiktok'] as AK[]).forEach((k) => { const a = j.apps?.[k]; n[k] = { id: a?.id || '', secret: '', has: !!a?.secret }; }); appsLoaded.current = true; return n; }); } catch { /* */ } }, []);
+  const saveApps = async () => { const r = await fetch('/api/social/apps-set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok(), apps: Object.fromEntries((['meta', 'google', 'tiktok'] as AK[]).map((k) => [k, { id: apps[k].id, secret: apps[k].secret }])) }) }); const j = await r.json().catch(() => ({})); if (!r.ok) return note('فشل: ' + (j.error || r.status), 4000); note('اتحفظت مفاتيح المنصات ✅'); loadApps(true); };
 
   const load = useCallback(async () => {
     const sb = sbRef.current; if (!sb) return;
@@ -105,8 +106,8 @@ export default function AdminApp() {
             <div key={k} style={{ borderTop: '1px solid var(--ln)', paddingTop: 10, marginTop: 10 }}>
               <b>{t}</b> {apps[k].id ? <span className="chip" style={{ background: '#2fbf6b' }}>متسجّل</span> : <span className="chip" style={{ background: '#666' }}>لسه</span>}
               <div className="row" style={{ marginTop: 6 }}>
-                <div><label className="mu">{a}</label><input dir="ltr" value={apps[k].id} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], id: e.target.value } })} /></div>
-                <div><label className="mu">{b}{apps[k].has ? ' (متسجّل — سيبه فاضي عشان يفضل)' : ''}</label><input dir="ltr" type="password" autoComplete="off" value={apps[k].secret} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], secret: e.target.value } })} /></div>
+                <div><label className="mu">{a}</label><input dir="ltr" name={'mkz-app-id-' + k} autoComplete="off" data-lpignore="true" data-1p-ignore value={apps[k].id} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], id: e.target.value } })} /></div>
+                <div><label className="mu">{b}{apps[k].has ? ' (متسجّل — سيبه فاضي عشان يفضل)' : ''}</label><input dir="ltr" type="text" name={'mkz-app-sec-' + k} autoComplete="off" data-lpignore="true" data-1p-ignore style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties} value={apps[k].secret} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], secret: e.target.value } })} /></div>
               </div>
               {cbs[k] && <div className="mu" style={{ marginTop: 6 }}>رابط الرجوع (Redirect URI): <span className="em" style={{ userSelect: 'all' }}>{cbs[k]}</span> <button style={{ minHeight: 30, padding: '2px 10px' }} onClick={() => { navigator.clipboard.writeText(cbs[k]).then(() => note('اتنسخ')).catch(() => {}); }}>انسخ</button></div>}
             </div>))}

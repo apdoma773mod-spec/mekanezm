@@ -43,6 +43,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ a: string[
           const x = b.apps?.[k]; if (!x) continue;
           const id = String(x.id || '').trim(), secret = String(x.secret || '').trim();
           if (!id) { delete n[k]; continue; }
+          // حماية من الملء التلقائي بتاع المتصفح (إيميل/باسورد في خانة المفتاح): المفتاح مالوش @ ولا مسافات، ومفتاح Meta أرقام بس
+          if (/[@s]/.test(id) || (k === 'meta' && !/^d{5,20}$/.test(id))) return json({ error: 'اللي في خانة ' + (k === 'meta' ? 'فيسبوك' : k === 'google' ? 'يوتيوب' : 'تيك توك') + ' مش مفتاح تطبيق (شكله إيميل أو كلمة اتملت لوحدها) — امسحه واحفظ' }, 400);
           n[k] = { id, secret: secret || apps[k]?.secret || '' };          // السر الفاضي = سيب القديم
         }
         await setApps(n);
