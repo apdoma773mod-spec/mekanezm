@@ -1220,5 +1220,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/claude.a
   if(navigator.onLine&&!/claude\.ai|usercontent|anthropic/.test(location.host))setTimeout(start,1200)}
 // ===== init
 applyT();bFill();rp();rc();dash();sync();go('dash');
+/* 🔗 منتجات السيستم (lib/studio/mkprod.ts) بتضيف المنتج هنا وبتفتح تصميم البوست بيه */
+window.__studio={toast,go,addProd(o){let p=PR.find(x=>(o.code&&(x.code===o.code||x.bar===o.code))||(o.nm&&x.nm===o.nm));if(p)Object.assign(p,o);else{p={id:uid(),...o};PR.unshift(p)}svP();try{rp()}catch(e){}return p},design(p){go('post');pick(p)}};
 });
 }

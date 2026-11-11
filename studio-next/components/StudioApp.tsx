@@ -16,10 +16,12 @@ export default function StudioApp() {
       const { startEngine } = await import('@/lib/montage/engine');
       const { pro } = await import('@/lib/studio/pro');
       const { mountTemplates } = await import('@/lib/templates/ui');
+      const { mountProducts } = await import('@/lib/studio/mkprod');
       if (off || (window as any).__studioStarted) return;
       (window as any).__studioStarted = 1;
       boot(); main(); gate(); startEngine(); pro();
       try { mountTemplates(); } catch (e) { console.warn('templates', e); }
+      try { mountProducts(); } catch (e) { console.warn('mk products', e); }
     })();
     return () => { off = true; };
   }, []);
