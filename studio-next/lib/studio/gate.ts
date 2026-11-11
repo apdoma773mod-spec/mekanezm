@@ -121,7 +121,7 @@ export function gate(){
     if (!bar) { bar = E('div', { id: 'gt-bar' }); document.body.appendChild(bar); }
     const n = s.days_left || 0;
     bar.className = s.status === 'trial' && n <= 2 ? 'warn' : '';
-    bar.innerHTML = (s.status === 'admin' ? '🛠️ أدمن <a href="admin.html">لوحة التحكم</a>' : s.status === 'active' ? '✅ اشتراكك ساري — باقي ' + esc(days(n)) : '🎁 تجربة مجانية — باقي ' + esc(days(n))) + ' <button id="gt-x" title="خروج">⏻</button>';
+    bar.innerHTML = (s.status === 'admin' ? '🛠️ أدمن <a href="/admin">لوحة التحكم</a>' : s.status === 'active' ? '✅ اشتراكك ساري — باقي ' + esc(days(n)) : '🎁 تجربة مجانية — باقي ' + esc(days(n))) + ' <button id="gt-x" title="خروج">⏻</button>';
     $('#gt-x', bar).onclick = signOut;
   }
   async function signOut() { try { await sb.auth.signOut() } catch (e) { } if (bar) { bar.remove(); bar = null } showLogin('in'); }

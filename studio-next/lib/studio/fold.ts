@@ -57,7 +57,7 @@ function foldParent(v, cards) {
     g.addEventListener('click', (e) => {
       const t = e.target.closest('.fz-t'); if (!t) return;
       const was = t.classList.contains('on'); closeAll(g);
-      if (!was) { t.classList.add('on'); t._c.classList.remove('fz-c'); t._c.classList.add('fz-open'); setTimeout(() => { try { t._c.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch { } }, 40); }
+      if (!was) { t.classList.add('on'); t._c.classList.remove('fz-c'); t._c.classList.add('fz-open'); try { t._c.dispatchEvent(new CustomEvent('fzopen', { bubbles: true })); } catch { } setTimeout(() => { try { t._c.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch { } }, 40); }
     });
   }
   cards.forEach((c) => {
@@ -81,7 +81,8 @@ export function mountFold() {
   if (!document.getElementById('fz-css')) { const st = document.createElement('style'); st.id = 'fz-css'; st.textContent = CSS; document.head.appendChild(st); }
   const run = () => { try { document.querySelectorAll('.fz-t').forEach((t) => { const c = t._c; if (!c || !document.body.contains(c) || c.classList.contains('pin') || c.closest('.pin,#evpin') || c.querySelector(KEEP)) { if (c) { c.classList.remove('fz-c'); delete c.dataset.fz; } const g = t.parentElement; t.remove(); if (g && !g.children.length) g.remove(); } }); document.querySelectorAll('section.v').forEach(foldView); } catch (e) { console.warn('fold', e); } };
   run();
-  let t = 0; const mo = new MutationObserver(() => { clearTimeout(t); t = setTimeout(run, 350); });
+  let t = 0; const hasCard = (n) => n.nodeType === 1 && (n.matches('.p,section.v') || !!n.querySelector('.p'));
+  const mo = new MutationObserver((recs) => { if (!recs.some((r) => [...r.addedNodes].some(hasCard))) return; clearTimeout(t); t = setTimeout(run, 350); });
   mo.observe(document.body, { childList: true, subtree: true });
   window.__foldRun = run;
 }

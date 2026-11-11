@@ -1184,7 +1184,7 @@ $('snl').onclick=async()=>{const L=window.__snaps?await window.__snaps():[],E=$(
 const ERL=()=>LS.g('errlog',[]);function logErr(m){try{const L=ERL();L.unshift({t:Date.now(),m:String(m).slice(0,300)});window.__put('errlog',JSON.stringify(L.slice(0,30)))}catch(e){}}
 window.addEventListener('error',e=>logErr(e.message+' @'+(e.lineno||'')));window.addEventListener('unhandledrejection',e=>logErr('promise: '+(e.reason&&e.reason.message||e.reason)));
 $('errshow').onclick=()=>{const L=ERL();$('errbox').value=L.length?L.map(x=>new Date(x.t).toLocaleString('ar-EG')+' — '+x.m).join('\n'):'مفيش أخطاء متسجلة. 👍'};$('errcopy').onclick=()=>copy($('errbox').value||'مفيش أخطاء');$('errclr').onclick=()=>{try{window.__put('errlog','[]')}catch(e){}$('errbox').value='';toast('اتمسح السجل')};
-if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/claude.ai|usercontent|anthropic/.test(location.host))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/claude.ai|usercontent|anthropic/.test(location.host))navigator.serviceWorker.register('/sw.js').catch(()=>{});
 // ===== easy video wizard (drives the montage engine; the preview card moves here)
 {const wc=()=>{$('wcnt').textContent=$('etl').querySelectorAll('[data-i]').length?$('etl').querySelectorAll('[data-i]').length+' ملف جاهز':'لسه ماضفتش ملفات.'};let WS=0;
   $('wsty').innerHTML='';[['تلقائي ⚡',-1],...EPR.map((e,i)=>[e[0],i])].forEach(([n,i])=>{const b=document.createElement('button');b.className='ch'+(i===WS-0&&i===-1?' on':'');b.style.cssText='font-size:16px;padding:10px 18px';b.textContent=n;b.dataset.w=i;$('wsty').appendChild(b)});
@@ -1211,7 +1211,7 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/claude.a
   async function push(keys){if(!sb||!user)return;const m=tsm(),rows=(keys||KEYS).filter(k=>window.__KV.has(k)).map(k=>({k,v:window.__KV.get(k),updated_at:new Date(m[k]||Date.now()).toISOString()}));if(!rows.length)return;const r=await sb.from('studio_kv').upsert(rows.map(x=>({...x,user_id:user.id})),{onConflict:'user_id,k'});if(r.error){console.warn('sync push',r.error);ui('فشل الرفع: '+r.error.message)}else ui('متصل: '+user.email+' — اتزامن '+new Date().toLocaleTimeString('ar-EG'))}
   async function pull(){if(!sb||!user)return;const r=await sb.from('studio_kv').select('k,v,updated_at');if(r.error){ui('فشل التزامن: '+r.error.message);return}const m=tsm(),remote=new Map(r.data.map(x=>[x.k,x])),up=[];let changed=false,snapped=false;
     for(const k of KEYS){const R=remote.get(k),lt=m[k]||0;if(R){const rt=Date.parse(R.updated_at);if(rt>lt+500){if(!snapped){snapped=true;try{window.__snapNow&&await window.__snapNow()}catch(e){}}applying=true;_put(k,R.v);applying=false;m[k]=rt;changed=true}else if(lt>rt+500)up.push(k)}else if(window.__KV.has(k)){if(!m[k])m[k]=Date.now();up.push(k)}}
-    stm(m);if(up.length)await push(up);if(changed){toast('اتحدّثت بياناتك من السحابة');setTimeout(()=>location.reload(),900)}else ui('متصل: '+user.email+' — كل حاجة متزامنة')}
+    stm(m);if(up.length)await push(up);if(changed){try{window.__refreshLocal&&window.__refreshLocal()}catch(e){}toast('اتحدّثت بياناتك من السحابة')}else ui('متصل: '+user.email+' — كل حاجة متزامنة')}
   async function start(){try{await lib();sb=window.supabase.createClient(SB_URL,SB_KEY);const{data}=await sb.auth.getSession();user=data.session?data.session.user:null;sb.auth.onAuthStateChange((ev,ses)=>{const nu=ses?ses.user:null;if((nu&&nu.id)!==(user&&user.id)){user=nu;if(user)pull();else ui('مش متصل.')}});if(user)pull();else ui('مش متصل. سجّل دخول عشان بياناتك تتزامن.')}catch(e){ui('التزامن مش متاح هنا (محتاج نت، وبيشتغل على الرابط الأساسي بس).')}}
   $('sblink').onclick=async()=>{const em=$('sbem').value.trim();if(!em)return toast('اكتب الإيميل');if(!sb)await start();if(!sb)return;const r=await sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}});toast(r.error?'فشل: '+r.error.message:'بعتنالك رابط على الإيميل، افتحه من نفس الجهاز')};
   $('sbgo').onclick=async()=>{if(!sb)await start();if(!sb)return;const r=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});if(r.error)toast('دخول جوجل لسه مش مفعّل: '+r.error.message)};
@@ -1220,6 +1220,12 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!/claude.a
   if(navigator.onLine&&!/claude\.ai|usercontent|anthropic/.test(location.host))setTimeout(start,1200)}
 // ===== init
 applyT();bFill();rp();rc();dash();sync();go('dash');
+/* بيانات السحابة بتتطبق من غير ما الصفحة تعيد تحميل نفسها (كانت بتعمل reload وانت شغال = تهنيج مفاجئ) */
+window.__refreshLocal=()=>{try{PR=LS.g('prods',[]);CAL=LS.g('cal',[]);LIB=LS.g('lib',[]);RUL=LS.g('rules',[]);INB=LS.g('inb',[]);ORD=LS.g('ord',[]);Object.assign(B,LS.g('brand',{}));Object.assign(T,LS.g('theme',{}))}catch(e){}[applyT,bFill,rp,rc,rl,dash].forEach(f=>{try{f()}catch(e){}})};
+/* الأجزاء التقيلة (١٢ تصميم مرسوم + مكتبة التصميمات) بتترسم بس لما أيقونتها تتفتح */
+{const lazy=(fn,id)=>function(){const el=$(id),c=el&&el.closest('.p');if(c&&c.classList.contains('fz-c')){(c._lazy=c._lazy||new Map()).set(fn,arguments);return}return fn.apply(this,arguments)};
+ gal=lazy(gal,'gal');rl=lazy(rl,'lib');
+ document.addEventListener('fzopen',e=>{const c=e.target;if(c&&c._lazy&&c._lazy.size){const L=[...c._lazy];c._lazy.clear();L.forEach(([f,a])=>{try{f.apply(null,a)}catch(x){}})}})}
 /* 🔗 منتجات السيستم (lib/studio/mkprod.ts) بتضيف المنتج هنا وبتفتح تصميم البوست بيه */
 window.__studio={toast,go,addProd(o){let p=PR.find(x=>(o.code&&(x.code===o.code||x.bar===o.code))||(o.nm&&x.nm===o.nm));if(p)Object.assign(p,o);else{p={id:uid(),...o};PR.unshift(p)}svP();try{rp()}catch(e){}return p},design(p){go('post');pick(p)}};
 });
