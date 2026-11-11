@@ -19,6 +19,13 @@ export default function AdminApp() {
   const [gate, setGate] = useState(false), [td, setTd] = useState('7'), [ct, setCt] = useState('');
   const [notes, setNotes] = useState<Record<string, string>>({}), [busy, setBusy] = useState(''), [msg, setMsg] = useState('');
   const note = (m: string, ms = 2600) => { setMsg(m); window.setTimeout(() => setMsg(''), ms); };
+  // 🔗 مفاتيح المنصات (مرة واحدة): بتتحفظ مشفّرة على سيرفر الستوديو، والسر مابيرجعش للشاشة تاني
+  type AK = 'meta' | 'google' | 'tiktok';
+  const [apps, setAppsS] = useState<Record<AK, { id: string; secret: string; has: boolean }>>({ meta: { id: '', secret: '', has: false }, google: { id: '', secret: '', has: false }, tiktok: { id: '', secret: '', has: false } });
+  const [cbs, setCbs] = useState<Record<string, string>>({});
+  const stok = async () => (await sbRef.current!.auth.getSession()).data.session?.access_token || '';
+  const loadApps = useCallback(async () => { try { const r = await fetch('/api/social/apps-get', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok() }) }); const j = await r.json(); if (!r.ok) return; setCbs(j.cb || {}); setAppsS((o) => { const n = { ...o }; (['meta', 'google', 'tiktok'] as AK[]).forEach((k) => { const a = j.apps?.[k]; n[k] = { id: a?.id || '', secret: '', has: !!a?.secret }; }); return n; }); } catch { /* */ } }, []);
+  const saveApps = async () => { const r = await fetch('/api/social/apps-set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tok: await stok(), apps: Object.fromEntries((['meta', 'google', 'tiktok'] as AK[]).map((k) => [k, { id: apps[k].id, secret: apps[k].secret }])) }) }); const j = await r.json().catch(() => ({})); if (!r.ok) return note('فشل: ' + (j.error || r.status), 4000); note('اتحفظت مفاتيح المنصات ✅'); loadApps(); };
 
   const load = useCallback(async () => {
     const sb = sbRef.current; if (!sb) return;
@@ -31,7 +38,8 @@ export default function AdminApp() {
     const me = (await sb.auth.getUser()).data.user; setWho(me?.email || '');
     const c = await fetch(URL_ + '/rest/v1/rpc/studio_public_cfg', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' }, body: '{}' }).then((x) => x.json()).catch(() => ({}));
     setGate(!!c.gate); setTd(String(c.trial_days == null ? 7 : c.trial_days)); setCt(c.contact || '');
-  }, []);
+    loadApps();
+  }, [loadApps]);
 
   useEffect(() => {
     const sb = createClient(URL_, KEY, { auth: { lock: (_n: string, _t: number, fn: () => Promise<unknown>) => fn() } as never });
@@ -89,6 +97,28 @@ export default function AdminApp() {
             <div><label className="mu">رقم واتساب التجديد</label><input dir="ltr" inputMode="tel" placeholder="01xxxxxxxxx" value={ct} onChange={(e) => setCt(e.target.value)} /></div>
           </div>
           <button className="p" style={{ marginTop: 10, width: '100%' }} onClick={save}>حفظ الإعدادات</button>
+        </div>
+        <div className="card">
+          <h2>🔗 مفاتيح المنصات (للنشر على كل المنصات مرة واحدة)</h2>
+          <div className="mu">مرة واحدة بس: بتعمل تطبيق في كل منصة وتحط هنا المفتاح والسر، وتحط «رابط الرجوع» اللي تحت في إعدادات التطبيق هناك. بعدها أي مستخدم في الستوديو يربط حسابه بدوسة. السر بيتحفظ مشفّر ومابيظهرش تاني.</div>
+          {([['meta', '📘📸 فيسبوك + إنستجرام (Meta App)', 'App ID', 'App Secret'], ['google', '▶️ يوتيوب (Google Cloud OAuth)', 'Client ID', 'Client Secret'], ['tiktok', '🎵 تيك توك (TikTok for Developers)', 'Client Key', 'Client Secret']] as [AK, string, string, string][]).map(([k, t, a, b]) => (
+            <div key={k} style={{ borderTop: '1px solid var(--ln)', paddingTop: 10, marginTop: 10 }}>
+              <b>{t}</b> {apps[k].id ? <span className="chip" style={{ background: '#2fbf6b' }}>متسجّل</span> : <span className="chip" style={{ background: '#666' }}>لسه</span>}
+              <div className="row" style={{ marginTop: 6 }}>
+                <div><label className="mu">{a}</label><input dir="ltr" value={apps[k].id} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], id: e.target.value } })} /></div>
+                <div><label className="mu">{b}{apps[k].has ? ' (متسجّل — سيبه فاضي عشان يفضل)' : ''}</label><input dir="ltr" type="password" autoComplete="off" value={apps[k].secret} onChange={(e) => setAppsS({ ...apps, [k]: { ...apps[k], secret: e.target.value } })} /></div>
+              </div>
+              {cbs[k] && <div className="mu" style={{ marginTop: 6 }}>رابط الرجوع (Redirect URI): <span className="em" style={{ userSelect: 'all' }}>{cbs[k]}</span> <button style={{ minHeight: 30, padding: '2px 10px' }} onClick={() => { navigator.clipboard.writeText(cbs[k]).then(() => note('اتنسخ')).catch(() => {}); }}>انسخ</button></div>}
+            </div>))}
+                    <details style={{ marginTop: 10 }}><summary style={{ cursor: 'pointer', fontWeight: 800 }}>📖 إزاي أعمل التطبيقات دي (مرة واحدة، تنفع من الموبايل)</summary>
+            <div className="mu" style={{ lineHeight: 1.9, marginTop: 6 }}>
+              <b>📘📸 فيسبوك + إنستجرام:</b> ادخل developers.facebook.com بحساب الأدمن على صفحة المحل ← My Apps ← Create App ← نوع Business ← من «Add products» ضيف <b>Facebook Login for Business</b> ← في إعداداته حط «رابط الرجوع» اللي فوق في Valid OAuth Redirect URIs ← من App settings ← Basic انسخ App ID و App Secret وحطهم هنا. لازم إنستجرام المحل يكون حساب Business ومربوط بالصفحة. طول ما التطبيق في وضع Development بيشتغل لحسابك انت (وأي حد تضيفه Tester) — ده كفاية لصفحة المحل.<br />
+              <b>▶️ يوتيوب:</b> ادخل console.cloud.google.com ← مشروع جديد ← APIs &amp; Services ← Library ← فعّل <b>YouTube Data API v3</b> ← OAuth consent screen: External، وضيف إيميلك في Test users (أو دوس Publish App) ← Credentials ← Create Credentials ← OAuth client ID ← Web application ← حط «رابط الرجوع» اللي فوق في Authorized redirect URIs ← انسخ Client ID و Client Secret.<br />
+              <b>🎵 تيك توك:</b> ادخل developers.tiktok.com ← Manage apps ← Connect an app ← ضيف منتج <b>Login Kit</b> و <b>Content Posting API</b> ← حط «رابط الرجوع» في Redirect URI ← انسخ Client Key و Client Secret. لحد ما تيك توك يراجع التطبيق، الفيديو بيوصلك <b>مسودة</b> في تيك توك وتنشره بدوسة من الإشعار؛ بعد الموافقة بيتنشر لوحده.<br />
+              بعد الحفظ: افتح الستوديو ← أي فيديو أو بوست ← «📤 انشر في كل مكان» ← «🔗 اربط» جنب كل منصة (مرة واحدة).
+            </div>
+          </details>
+          <button className="p" style={{ marginTop: 10, width: '100%' }} onClick={saveApps}>حفظ مفاتيح المنصات</button>
         </div>
         <div className="card">
           <h2>👥 المشتركين</h2>

@@ -18,11 +18,13 @@ export default function StudioApp() {
       const { mountTemplates } = await import('@/lib/templates/ui');
       const { mountProducts } = await import('@/lib/studio/mkprod');
       const { mountFold } = await import('@/lib/studio/fold');
+      const { mountPublish } = await import('@/lib/studio/publish');
       if (off || (window as any).__studioStarted) return;
       (window as any).__studioStarted = 1;
       boot(); main(); gate(); startEngine(); pro();
       try { mountTemplates(); } catch (e) { console.warn('templates', e); }
       try { mountProducts(); } catch (e) { console.warn('mk products', e); }
+      try { mountPublish(); } catch (e) { console.warn('publish', e); }
       // بعد ما المحرر يخلّص ترتيب الشاشات (الكروت المتثبتة إلخ) نلمّ الكروت في أيقونات
       Promise.resolve((window as any).__ready).then(() => setTimeout(() => { try { mountFold(); } catch (e) { console.warn('fold', e); } }, 1200));
     })();

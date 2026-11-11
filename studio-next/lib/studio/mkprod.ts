@@ -179,6 +179,7 @@ function openCard(p) {
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <button type="button" class="b" data-x="post">🖼️ صمّم بوست</button>
     <button type="button" class="b" data-x="vid">🎬 فيديو مونتاج ذكي</button>
+    <button type="button" class="b" data-x="pub" style="grid-column:1/-1" ${p.imgs.length ? '' : 'disabled'}>📤 انشر صورته على كل المنصات</button>
     <button type="button" class="b o" data-x="imgs" ${p.imgs.length ? '' : 'disabled'}>🖼️ صوره في المونتاج</button>
     <button type="button" class="b o" data-x="save">➕ ضيفه لمنتجات الستوديو</button>
     <button type="button" class="b o" data-x="link">🛒 انسخ لينك الطلب</button>
@@ -203,6 +204,7 @@ function openCard(p) {
     if (x === 'close') return ov.remove();
     if (x === 'capcopy') return copy($('mkpc_cap').value);
     if (x === 'link') return copy(lk);
+    if (x === 'pub') { if (!window.mkPublish) return toast('النشر لسه بيحمّل'); b.disabled = true; const fs = await imgFiles(p, 1); b.disabled = false; if (!fs.length) return toast('مقدرتش أجيب صورة المنتج'); const cc = { fb: cap.fb, ig: cap.ig, tt: cap.tt, yt: cap.fb }; window.mkPublish.open({ blob: fs[0], kind: 'image', caps: cc, title: p.name }); return; }
     if (x === 'wa') { window.open('https://wa.me/?text=' + encodeURIComponent(cap.wa), '_blank'); return; }
     if (x === 'all') return copy([p.name, p.price && 'السعر: ' + p.price + ' جنيه', p.code && 'الكود: ' + p.code, p.category && 'القسم: ' + p.category, p.brand && 'الماركة: ' + p.brand, p.size && 'المقاس: ' + p.size, p.finish && 'التشطيب: ' + p.finish, p.specs, p.descr, p.qty != null && 'المخزون: ' + p.qty, 'اللينك: ' + lk].filter(Boolean).join('\n'));
     if (x === 'qr') { const a = document.createElement('a'); a.href = qr; a.download = 'qr-' + (p.code || 'product') + '.png'; a.click(); return; }
