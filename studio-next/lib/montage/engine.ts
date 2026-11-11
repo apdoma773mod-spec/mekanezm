@@ -4,6 +4,7 @@ import { loudGain, peakOf, findHooks, paceReport, coverCandidates, frameScore, p
 import { bestClips, retention, fillerReport, titleIdeas, platformCaptions, shotList, cleanScript, toSrt, punchWords, beatsOf } from './pro2';
 import { officialLogo } from '../templates/logo';
 import { loadFiles } from '../templates/media';
+import qrcode from 'qrcode-generator';
 export function startEngine(){
 /* ===== 🎬 مونتاج ذكي — فيديو خام من الموبايل → ترجمة كلامك + توضيح المقاسات والأصناف والأسعار + قالب مونتاج → MP4 جاهز للنشر
    ١) الصوت بيتسحب من الفيديو جوه الموبايل (١٦ كيلو مونو) ويتقسم أجزاء ٤٠ ثانية → دالة video-ai على سيرفر ميكانيزم (Gemini) → كلام بتوقيته + أحداث + الإعادات اللي تتشال + الكلمات المهمة
@@ -508,7 +509,7 @@ function draw(t){if(!CV||!CX)return;const [W,H]=[CV.width,CV.height];CX.setTrans
    else if(tr==='rgb'&&d<.28){const p=1-d/.28,off=Math.round(26*p*W/1080);CX.save();CX.globalCompositeOperation='lighter';CX.globalAlpha=.55*p;for(let k=0;k<5;k++){const sy=Math.floor(((k*7919+Math.floor(t*30)*131)%97)/97*H*.9),sh=Math.round(H*.06+((k*31)%7)*H*.012),dx=((k%2)?1:-1)*off*(1+k*.4);try{CX.drawImage(CV,0,sy,W,sh,dx,sy,W,sh)}catch(e){}}CX.globalCompositeOperation='source-over';CX.fillStyle='rgba(0,229,255,'+(.16*p).toFixed(3)+')';CX.fillRect(0,0,off*2,H);CX.fillStyle='rgba(255,0,110,'+(.16*p).toFixed(3)+')';CX.fillRect(W-off*2,0,off*2,H);CX.restore()}}}
  const u=W/1080,F=`"${FONTN()}",Cairo,sans-serif`,acc=COL();CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';
  /* المقدمة والخاتمة بتوقيت الفيديو بعد القص (عشان ماتتشالش مع السكتات) */
- const dur=V.duration||D.dur||0,br=brand(),ot=outT(t),od=outDur(),inOut=S.outro&&od>4&&ot>od-2.2,inIntro=S.intro&&D.title&&ot<2.4;
+ const dur=V.duration||D.dur||0,br=brand(),ot=outT(t),od=outDur(),inOut=S.outro&&od>4&&ot>od-outLen(),inIntro=S.intro&&D.title&&ot<2.4;
  if(O('letter')){CX.fillStyle='#000';CX.fillRect(0,0,W,H*.085);CX.fillRect(0,H*.915,W,H*.085)}
  /* مقدمة: العنوان بعيد عن الراس */
  if(inIntro){const a=1-ease((ot-1.9)/.5);CX.globalAlpha=Math.max(0,a);CX.fillStyle='rgba(0,0,0,.45)';CX.fillRect(0,0,W,H);
@@ -574,7 +575,7 @@ function draw(t){if(!CV||!CX)return;const [W,H]=[CV.width,CV.height];CX.setTrans
  if(O('wm')&&!inOut&&!inIntro){const nm=br.shop||'ميكانيزم';CX.font=`800 ${Math.round(30*u)}px ${F}`;const tw=CX.measureText(nm).width,bw=tw+56*u,top=(O('letter')?H*.085:0)+(O('prog')?22*u:16*u),x=W-bw-18*u;
   CX.globalAlpha=.88;rr(x,top,bw,52*u,26*u);CX.fillStyle='rgba(0,0,0,.45)';CX.fill();CX.beginPath();CX.arc(x+bw-22*u,top+26*u,7*u,0,7);CX.fillStyle=acc;CX.fill();CX.fillStyle='#fff';CX.fillText(nm,x+bw/2-8*u,top+28*u);CX.globalAlpha=1}
  /* الخاتمة */
- if(inOut){const a=ease((ot-(od-2.2))/.4),oy=stackBase()-260*u;CX.globalAlpha=a;rr(W*.08,oy,W*.84,250*u,30*u);CX.fillStyle='rgba(10,10,12,.88)';CX.fill();CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
+ if(inOut){const a=ease((ot-(od-outLen()))/.4),oy=stackBase()-260*u;drawQR(W,H,u,oy,a,acc,F);CX.globalAlpha=a;rr(W*.08,oy,W*.84,250*u,30*u);CX.fillStyle='rgba(10,10,12,.88)';CX.fill();CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
   CX.fillStyle=acc;CX.font=`900 ${Math.round(64*u)}px ${F}`;CX.fillText(br.shop||'ميكانيزم',W/2,oy+70*u);CX.fillStyle='#fff';CX.font=`700 ${Math.round(38*u)}px ${F}`;CX.fillText([br.cta||'اطلب دلوقتي',br.phone?ar(br.phone):''].filter(Boolean).join(' • '),W/2,oy+140*u);if(br.addr){CX.font=`600 ${Math.round(32*u)}px ${F}`;CX.fillText(br.addr,W/2,oy+195*u)}CX.globalAlpha=1}}
 
 /* ---------- ٤) المعاينة ---------- */
@@ -643,7 +644,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cln" ${S.clean!==false?'checked':''}> 🎙️ نضّف صوتي وثبّت علوّه في الفيديو المتصدّر</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
-  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label></div></div>
+  <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_ou" ${S.outro?'checked':''}> اسم المحل وتليفونه في الآخر</label><div style="grid-column:1/-1"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_qro" checked> 📲 كود QR في الآخر (يفتح واتساب المحل أو لينكك)</label><input id="sm_qr" placeholder="لينك الكود (سيبه فاضي = واتساب المحل)" style="width:100%;margin-top:6px" dir="ltr"><div id="sm_qrm" class="mu" style="margin-top:4px;word-break:break-all"></div></div></div></div>
  
  <button class="b" id="sm_go" style="width:100%;min-height:62px;font-size:19px">✨ اعمل المونتاج الذكي</button><div id="sm_pg" class="mu" style="text-align:center;margin:6px 0"></div>
  <div id="sm_res" style="display:none"><div class="p"><h2>٣) المعاينة</h2><canvas id="sm_cv" style="width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block"></canvas>
@@ -1009,6 +1010,22 @@ function oneTap(){Object.assign(S,ONE,{o:{}});saveS();
  const m=$s('sm_onem');if(m)m.textContent='✅ اتظبّط: قالب احترافي، جودة عالية جدًا ١٠٨٠ (تشتغل على الآيفون وويندوز)، تنضيف الصوت، شحذ ووضوح، لمسات ذكية، وكسر الملل. دوس «اعمل المونتاج الذكي».'}
 function piWire(){const b=$s('sm_one');if(b&&!b._w){b._w=1;b.onclick=oneTap}const c=$s('sm_pi');if(c&&!c._w){c._w=1;c.checked=S.pi!==false;c.onchange=()=>{S.pi=c.checked;saveS();if(D&&V){computePI();draw(V.currentTime)}}}}
 const _paintPI=paint;paint=function(){const r=_paintPI.apply(this,arguments);try{piWire()}catch(e){console.warn('pi ui',e)}return r};
+/* ---------- 📲 كارت النهاية بـ QR: اللي بيتفرج يصوّر الشاشة بالموبايل ويفتح واتساب المحل أو اللينك على طول ---------- */
+/* اللينك: اللي انت كاتبه، وإلا واتساب من رقم المحل (01xxxxxxxxx → wa.me/201xxxxxxxxx) */
+function qrText(){if(S.qrOn===false)return '';const t=String(S.qr||'').trim();if(t)return /^(https?:|tel:|mailto:|geo:|whatsapp:)/i.test(t)?t:(/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(t)?'https://'+t:t);
+ const ph=en(brand().phone||'').replace(/\D/g,'');if(!ph)return '';const intl=ph.startsWith('20')?ph:ph.startsWith('0')?'2'+ph:'20'+ph;return 'https://wa.me/'+intl}
+let QRC={t:'',c:null};
+function qrCanvas(t){if(QRC.t===t&&QRC.c)return QRC.c;let q;try{q=qrcode(0,'M');q.addData(unescape(encodeURIComponent(t)),'Byte');q.make()}catch(e){try{q=qrcode(0,'L');q.addData(unescape(encodeURIComponent(t)),'Byte');q.make()}catch(e2){QRC={t,c:null};return null}}
+ const n=q.getModuleCount(),m=4,px=8,c=document.createElement('canvas');c.width=c.height=(n+m*2)*px;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.fillStyle='#000';
+ for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))x.fillRect((k+m)*px,(r+m)*px,px,px);QRC={t,c};return c}
+const outLen=()=>qrText()?4:2.2;   // مع QR النهاية بتطول عشان يلحق يصوّرها
+function drawQR(W,H,u,oy,a,acc,F){const t=qrText();if(!t)return;const c=qrCanvas(t);if(!c)return;let sz=Math.min(W*.42,330*u);const top=Math.max(H*.1,oy-sz-90*u);sz=Math.min(sz,oy-100*u-top);if(sz<140*u)return;
+ const x=W/2-sz/2,y=oy-sz-100*u,pad=16*u;CX.save();CX.globalAlpha=a;CX.shadowColor='rgba(0,0,0,.5)';CX.shadowBlur=30*u;rr(x-pad,y-pad,sz+2*pad,sz+2*pad,24*u);CX.fillStyle='#fff';CX.fill();CX.shadowBlur=0;CX.lineWidth=5*u;CX.strokeStyle=acc;CX.stroke();
+ CX.imageSmoothingEnabled=false;CX.drawImage(c,x,y,sz,sz);CX.imageSmoothingEnabled=true;
+ CX.font=`800 ${Math.round(30*u)}px ${F}`;CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';const lb=/wa\.me|whatsapp/i.test(t)?'📷 صوّر الكود وكلّمنا واتساب':'📷 صوّر الكود';const tw=CX.measureText(lb).width+40*u;rr(W/2-tw/2,y+sz+pad+8*u,tw,48*u,24*u);CX.fillStyle=acc;CX.fill();CX.fillStyle='#111';CX.fillText(lb,W/2,y+sz+pad+33*u);CX.restore()}
+function qrWire(){const i=$s('sm_qr');if(!i||i._w)return;i._w=1;i.value=S.qr||'';const st=()=>{const m=$s('sm_qrm');if(m){const t=qrText();m.textContent=t?'✔ الكود هيفتح: '+t:(S.qrOn===false?'الكود مقفول':'⚠️ مفيش لينك ولا رقم تليفون للمحل — اكتب لينك أو رقم واتساب')}};
+ i.oninput=()=>{S.qr=i.value;saveS();st();if(D&&V)draw(V.currentTime)};const c=$s('sm_qro');if(c){c.checked=S.qrOn!==false;c.onchange=()=>{S.qrOn=c.checked;saveS();st();if(D&&V)draw(V.currentTime)}}st()}
+const _paintQR=paint;paint=function(){const r=_paintQR.apply(this,arguments);try{qrWire()}catch(e){console.warn('qr ui',e)}return r};
 /* ---------- ✨ لمسات ذكية: شارات وأرقام متحركة بتطلع من كلامك (من غير ما تعتمد على السيرفر) وبتبعد عن وشك ---------- */
 let FXL=[];
 const FXB=[[/ضمان|مضمون/,'warranty','ضمان',null],[/اصلي|اوريجينال|براند|مستورد|جوده|جودة/,'original','جودة أصلية',null],[/توصيل|شحن/,'shipping','توصيل',null],[/تركيب|تثبيت|يتركب/,'tools','تركيب',null],
@@ -1622,7 +1639,7 @@ function stkPrev(){const root=$s('v-smart'),cv=$s('sm_cv');if(!root||!cv)return;
   if(card){const h=card.querySelector('h2');if(h)h.textContent='٣) التصدير والأدوات'}}
  const show=()=>{const w=$s('sm_stk');if(!w){clearInterval(window.__stkT);return}w.classList.toggle('on',!!(D&&V&&CV))};show();clearInterval(window.__stkT);window.__stkT=setInterval(show,500)}
 const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI();pro2UI();stkPrev()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
-window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null,IML:typeof IML!=='undefined'?IML:null,PIL:typeof PIL!=='undefined'?PIL:null,IMC:typeof IMC!=='undefined'?IMC:null,IMAI:typeof IMAI!=='undefined'?IMAI:null}),_test:{oneTap,computePI,imApply:ms=>{imApply(ms);IMAI.sig=imSig();computeImg()},imMatch,computeImg,addImgFiles,build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
+window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null,IML:typeof IML!=='undefined'?IML:null,PIL:typeof PIL!=='undefined'?PIL:null,IMC:typeof IMC!=='undefined'?IMC:null,IMAI:typeof IMAI!=='undefined'?IMAI:null}),_test:{qrText,oneTap,computePI,imApply:ms=>{imApply(ms);IMAI.sig=imSig();computeImg()},imMatch,computeImg,addImgFiles,build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
  animList:()=>animList(),setDsl:m=>{D.dsl=Object.assign(D.dsl||{},m||{})},
