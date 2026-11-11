@@ -77,6 +77,35 @@ interface LogRow {
   tot: number;
 }
 
+type ImpInvoice = DaybookImportInput['invoices'][number];
+const norm = (t: string) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/**
+ * 🧾 اللي اتسجّل في اليومية قبل الاستيراد ماينفعش يتسجّل تاني: كل سطر في الملف بيتقارن بسطور اليومية الموجودة في نفس اليوم
+ * (نفس الصنف + نفس الكمية + نفس السعر، وماتختلفش العميل لو الاتنين مكتوبين). كل سطر موجود بيتطابق مع سطر واحد بس —
+ * لو السطر اتكرر في الملف مرتين (بيعتين فعلًا) والمسجّل مرة واحدة، المرة التانية بتتسجّل.
+ * بيرجّع لكل فاتورة مصفوفة: true = السطر ده متسجّل قبل كده.
+ */
+export async function matchExisting(db: Pick<PrismaClient, 'daybookEntry'>, date: string, invoices: ImpInvoice[]): Promise<boolean[][]> {
+  const rows = await db.daybookEntry.findMany({ where: { day: dayToDate(date), kind: 'ITEM' }, select: { productId: true, name: true, qty: true, price: true, person: true } });
+  const pool = rows.map((r) => ({ pid: r.productId, name: norm(r.name), qty: Number(r.qty), price: Number(r.price), person: norm(r.person), used: false }));
+  return invoices.map((inv) => {
+    const who = inv.noContact ? '' : norm(inv.person);
+    return inv.items.map((l) => {
+      const hit = pool.find(
+        (e) =>
+          !e.used &&
+          ((l.productId && e.pid === l.productId) || e.name === norm(l.name)) &&
+          Math.abs(e.qty - l.qty) < 0.0005 &&
+          Math.abs(e.price - l.price) < 0.005 &&
+          !(who && e.person && who !== e.person),
+      );
+      if (hit) hit.used = true;
+      return !!hit;
+    });
+  });
+}
+
 export async function importDay(db: PrismaClient, input: DaybookImportInput, actor: Actor) {
   const logRow = await db.setting.findUnique({ where: { key: LOG_KEY } });
   const log: LogRow[] = Array.isArray(logRow?.value) ? (logRow!.value as unknown as LogRow[]) : [];
@@ -85,9 +114,23 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
     throw badRequest(`الملف ده اتستورد قبل كده (${seen.at.slice(0, 16).replace('T', ' ')} — ${seen.n} فاتورة).`);
   }
 
+  // what is already recorded for this day is left alone (see matchExisting)
+  const dup = await matchExisting(db, input.date, input.invoices);
+  const skipped: { name: string; qty: number; price: number }[] = [];
+  const todo = input.invoices
+    .map((inv, i) => {
+      const keep = inv.items.filter((_, k) => !dup[i]![k]);
+      inv.items.forEach((l, k) => dup[i]![k] && skipped.push({ name: l.name, qty: l.qty, price: l.price }));
+      if (keep.length === inv.items.length) return inv;
+      // part of the invoice was already there: the paid amount follows the lines that are really imported
+      const paid = Math.min(inv.paid, Math.round(keep.filter((l) => l.pay !== 'credit').reduce((a, l) => a + l.qty * l.price, 0) * 100) / 100);
+      return { ...inv, items: keep, paid };
+    })
+    .filter((inv) => inv.items.length > 0);
+
   const out = await withTx(db, async (tx) => {
     const made: { id: string; no: string }[] = [];
-    for (const [i, inv] of input.invoices.entries()) {
+    for (const [i, inv] of todo.entries()) {
       try {
         const { main, split } = splitOfImport(inv);
         const id = await createInvoiceInTx(
@@ -142,12 +185,12 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
     return made;
   });
 
-  if (input.sig) {
-    const tot = input.invoices.reduce((a, v) => a + v.items.reduce((b, l) => b + l.qty * l.price, 0), 0);
+  if (input.sig && out.length) {
+    const tot = todo.reduce((a, v) => a + v.items.reduce((b, l) => b + l.qty * l.price, 0), 0);
     const next = [{ sig: input.sig, at: new Date().toISOString(), iso: input.date, n: out.length, tot }, ...log].slice(0, 200);
     await db.setting.upsert({ where: { key: LOG_KEY }, create: { key: LOG_KEY, value: next as object }, update: { value: next as object } });
   }
-  return out;
+  return { made: out, skipped };
 }
 
 export async function daybookImportRoutes(app: FastifyInstance) {
@@ -163,7 +206,15 @@ export async function daybookImportRoutes(app: FastifyInstance) {
 
   app.post('/', async (request) => {
     const input = parse(importInput, request.body);
-    return { invoices: await importDay(app.prisma, input, actorOf(request)) };
+    const r = await importDay(app.prisma, input, actorOf(request));
+    // «skipped»: lines that were already in the daybook for that day (older screens just ignore it)
+    return { invoices: r.made, skipped: r.skipped };
+  });
+
+  /** Which lines of the file are already recorded for that day? (the screen shows them before the owner confirms) */
+  app.post('/check', async (request) => {
+    const input = parse(importInput, request.body);
+    return { dup: await matchExisting(app.prisma, input.date, input.invoices) };
   });
 }
 

@@ -172,7 +172,9 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const [rows, setRows] = useState<ImpRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [done, setDone] = useState<{ nos: string[]; total: number; date: string; skipped: number } | null>(null);
+  const [done, setDone] = useState<{ nos: string[]; total: number; date: string; skipped: number; already: number } | null>(null);
+  // أسطر الملف اللي متسجّلة في اليومية قبل كده في اليوم ده (نفس الصنف والكمية والسعر) — مش هتتسجل تاني
+  const [dup, setDup] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts', { type: 'CUSTOMER' })])
@@ -207,6 +209,39 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const G: ImpGroup[] = useMemo(() => groupRows(rows, mode), [rows, mode]);
   const upd = (i: number, patch: Partial<ImpRow>) => setRows((R) => R.map((r, k) => (k === i ? { ...r, ...patch } : r)));
   const setGroup = (gi: number, patch: Partial<ImpRow>) => setRows((R) => R.map((r, k) => (G[gi]?.idx.includes(k) ? { ...r, ...patch } : r)));
+
+  useEffect(() => {
+    const ok = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.pid || r.isNew);
+    if (!ok.length || !iso) {
+      setDup({});
+      return;
+    }
+    let dead = false;
+    const t = setTimeout(() => {
+      // سطر سطر (كل سطر فاتورة لوحده): المطابقة على الصنف والكمية والسعر والعميل، مش على شكل تجميع الفواتير
+      const invoices = ok.map(({ r }) => {
+        const p = r.pid ? byId.get(r.pid) : undefined;
+        const nm = (r.cust || '').trim();
+        return { person: nm || 'يومية', noContact: !nm, paid: 0, note: '', items: [{ productId: p?.id, name: p?.name ?? r.prod, qty: r.qty, price: r.price, pay: r.pay }] };
+      });
+      api
+        .post<{ dup: boolean[][] }>('/daybook-import/check', { date: iso, invoices })
+        .then((res) => {
+          if (dead) return;
+          const m: Record<number, boolean> = {};
+          res.dup.forEach((d, k) => {
+            if (d[0]) m[ok[k]!.i] = true;
+          });
+          setDup(m);
+        })
+        .catch(() => !dead && setDup({}));
+    }, 400);
+    return () => {
+      dead = true;
+      clearTimeout(t);
+    };
+  }, [rows, iso, byId]);
+  const already = rows.filter((_, i) => dup[i]).length;
 
   const tot = rows.reduce((s, r) => s + r.qty * r.price, 0);
   const rets = sheets[cur].rets;
@@ -251,11 +286,11 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
           }),
         };
       });
-      const res = await api.post<{ invoices: { no: string }[] }>('/daybook-import', { date, sig, force: !!seenMsg, invoices });
+      const res = await api.post<{ invoices: { no: string }[]; skipped?: unknown[] }>('/daybook-import', { date, sig, force: !!seenMsg, invoices });
       invalidateTrade(qc);
       void qc.invalidateQueries({ queryKey: ['daybook'] });
       setBusy(false);
-      setDone({ nos: res.invoices.map((x) => x.no), total: ok.reduce((s, r) => s + r.qty * r.price, 0), date, skipped });
+      setDone({ nos: res.invoices.map((x) => x.no), total: ok.filter((_, k) => !dup[rows.indexOf(ok[k]!)]).reduce((s, r) => s + r.qty * r.price, 0), date, skipped, already: res.skipped?.length ?? already });
     } catch (e) {
       setBusy(false);
       window.alert(`الاستيراد اتلغى — مفيش ولا فاتورة اتسجلت.\n\n${errorMessage(e)}`);
@@ -264,6 +299,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
 
   const status = (i: number) => {
     const r = rows[i];
+    if (dup[i]) return <span style={{ color: '#159447', fontWeight: 700 }}>✅ متسجل قبل كده في اليومية — مش هيتسجل تاني</span>;
     if (r.pid) return <span style={{ color: '#159447' }}>✓ متطابق</span>;
     if (r.isNew)
       return (
@@ -303,6 +339,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
           <div style={{ color: 'var(--muted)', fontSize: 13, overflowWrap: 'anywhere' }}>أرقام الفواتير: {done.nos.join('، ')}</div>
           <div>المخزون اتخصم، والصفوف ظهرت في «📒 يومية المحل».</div>
           {done.skipped > 0 && <div style={{ color: '#c0392b' }}>⚠️ {done.skipped} صنف مش متطابق اتخطّى وما اتسجلش.</div>}
+          {done.already > 0 && <div style={{ color: '#159447' }}>✅ {done.already} سطر كانوا متسجلين في اليومية قبل الاستيراد — ما اتكرروش.</div>}
           {rets.length > 0 && (
             <div style={{ color: '#b9770e' }}>
               ⚠️ فيه {rets.length} صف مرتجع بـ {money(retTot)} في الملف ما اتسجلش — سجّله من شاشة «المرتجعات»:

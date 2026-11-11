@@ -382,6 +382,8 @@ model InvoiceItem {
   /// Cost per unit when the line was saved: product cost for a sale, the purchase price for a purchase.
   unitCost  Decimal  @db.Decimal(14, 2)
   position  Int
+  /// «لحساب مين»: the end customer this line is for (an engineer's invoice split per his clients). "" = not said.
+  forName   String   @default("")
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   product   Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
 
