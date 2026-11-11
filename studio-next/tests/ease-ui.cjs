@@ -30,6 +30,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log('qr set:', await ev(`(()=>{const i=document.getElementById('sm_qr');i.value='mekanizm.example/shop';i.oninput();return window.mkzSmart._test.qrText()+' | '+document.getElementById('sm_qrm').textContent})()`));
   const fr = await ev(`(()=>{window.mkzSmart.draw(31.2);return document.getElementById('sm_cv').toDataURL('image/png')})()`);
   if (typeof fr === 'string' && fr.startsWith('data:')) { require('fs').writeFileSync(require('path').join(process.argv[3] || '.', 'qr-end.png'), Buffer.from(fr.split(',')[1], 'base64')); console.log('qr frame saved'); } else console.log('qr frame:', fr);
+  // المخرج الذكي: نتيجة محقونة (نفس شكل رد video-plus)
+  console.log('director:', await ev(`(()=>{const T=window.mkzSmart._test;T.dirSet({hook:{seg:2,text:'درجك بيخبط؟',why:'سؤال عن مشكلة'},hookB:{text:'٣ ثواني والدرج يقفل لوحده',why:'رقم'},cuts:[{i:3,why:'تكرار'},{i:5,why:'حشو'}],structure:{problem:0,solution:2,proof:-1,cta:-1},tips:['مفيش نداء في الآخر'],titles:['الدرج اللي مابيخبطش'],score:72});const el=document.getElementById('sm_dir');return el.innerText.replace(/\\s+/g,' ').slice(0,220)})()`));
+  console.log('dir cut:', await ev(`(()=>{document.querySelector('[data-dc="1"]').click();document.getElementById('dr_cut').click();const s=window.mkzSmart.state().D.seg;return JSON.stringify(s.map(g=>!!g.cut))})()`));
+  console.log('dir hook:', await ev(`(()=>{document.getElementById('dr_hk').click();return JSON.stringify(window.mkzSmart.state().S.hook)})()`));
+  console.log('dir cta:', await ev(`(()=>{document.getElementById('dr_cta').click();return String(window.mkzSmart.state().S.o.cta)})()`));
+  // كابشن بلغتين
+  console.log('en:', await ev(`(()=>{const T=window.mkzSmart._test,c=document.getElementById('sm_tr');window.mkzSmart.state().S.tr=true;c.checked=true;const m={};window.mkzSmart.state().D.seg.forEach((g,i)=>m[i]='This is the silent drawer, line '+i);T.setEn(m);return 'ok'})()`));
+  const fe = await ev(`(()=>{window.mkzSmart.draw(8.2);return document.getElementById('sm_cv').toDataURL('image/jpeg',.8)})()`);
+  if (typeof fe === 'string' && fe.startsWith('data:')) { require('fs').writeFileSync(require('path').join(process.argv[3] || '.', 'en-cap.jpg'), Buffer.from(fe.split(',')[1], 'base64')); console.log('en frame saved'); } else console.log('en frame:', fe);
   console.log('errors:', errs.length, errs.slice(0, 5));
   ws.close(); chrome.kill(); process.exit(0);
 })();
