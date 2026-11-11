@@ -78,6 +78,7 @@ export function toInvoiceDto(i: InvoiceWithRels, admin: boolean): InvoiceDto {
       qty: num(it.qty),
       price: num(it.price),
       total: num(it.total),
+      forName: it.forName,
       ...(admin ? { unitCost: num(it.unitCost) } : {}),
     })),
   };
@@ -88,6 +89,7 @@ interface PreparedLine {
   qty: Prisma.Decimal;
   price: Prisma.Decimal;
   total: Prisma.Decimal;
+  forName?: string;
 }
 
 interface Totals {
@@ -156,7 +158,7 @@ async function prepareLines(
     }
     const qty = roundQty(it.qty);
     const price = money(it.price);
-    out.push({ product, qty, price, total: money(qty.times(price)) });
+    out.push({ product, qty, price, total: money(qty.times(price)), forName: it.forName });
   }
   return out;
 }
@@ -188,6 +190,7 @@ async function writeLines(
         total: l.total,
         unitCost: sale ? l.product.cost : l.price,
         position,
+        forName: l.forName ?? '',
       },
     });
     if (!skipStock) {
@@ -420,6 +423,13 @@ export class InvoicesService {
       }
 
       const lines = await prepareLines(tx, before.kind, input.company, input.items, actor);
+      // شاشة قديمة ما بتبعتش «لحساب»: نحتفظ باللي كان مكتوب على نفس الصنف بدل ما يتمسح.
+      const priorFor = before.items.filter((it) => it.forName);
+      for (const l of lines) {
+        if (l.forName !== undefined) continue;
+        const i = priorFor.findIndex((it) => it.productId === l.product.id);
+        if (i >= 0) l.forName = priorFor.splice(i, 1)[0]!.forName;
+      }
       const kept = new Set(lines.map((l) => l.product.id));
       const dropped = before.items.filter((it) => it.productId && !kept.has(it.productId)).map((it) => it.productId!);
       await assertNotSoldSince(tx, before, dropped);

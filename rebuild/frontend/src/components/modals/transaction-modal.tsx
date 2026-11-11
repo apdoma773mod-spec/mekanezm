@@ -47,6 +47,8 @@ interface Line {
   /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
   un?: number;
   unLabel?: string;
+  /** «لحساب»: الزبون اللي البند ده بتاعه (فاتورة مهندس/مقاول مقسومة على زباينه). */
+  forName?: string;
 }
 
 const r4 = (n: number) => Math.round(n * 10000) / 10000;
@@ -137,9 +139,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           available: null,
           qty: String(it.qty),
           price: String(it.price),
+          forName: 'forName' in it ? it.forName : undefined,
         }))
       : (preset?.lines ?? []).map((it) => ({ key: newKey(), productId: it.productId, name: it.name, unit: 'قطعة', available: null, qty: String(it.qty), price: String(it.price) })),
   );
+  /** آخر «لحساب» اتكتب: البنود الجديدة بتاخده تلقائي. */
+  const [lastFor, setLastFor] = useState('');
+  const [bulkFor, setBulkFor] = useState('');
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [person, setPerson] = useState(src?.person ?? presetPerson ?? preset?.person ?? '');
@@ -204,7 +210,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
 
   const addProduct = (p: ProductDto) => {
     setLines((ls) => {
-      const ex = ls.find((l) => l.productId === p.id);
+      const ex = ls.find((l) => l.productId === p.id && (l.forName ?? '') === lastFor);
       if (ex) return ls.map((l) => (l === ex ? { ...l, qty: String(toNum(l.qty) + 1) } : l));
       return [
         ...ls,
@@ -215,6 +221,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           unit: p.unit,
           available: p.qty,
           qty: '1',
+          forName: lastFor,
           price: String(isSale ? (cterm?.t.pct ? Math.round(p.price * (1 - cterm.t.pct / 100) * 100) / 100 : p.price) : (p.cost ?? 0)),
         },
       ];
@@ -226,7 +233,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const addUnregistered = () => {
     const name = search.trim();
     if (!name) return;
-    setLines((ls) => [...ls, { key: newKey(), name, unit: 'قطعة', available: 0, qty: '1', price: '0' }]);
+    setLines((ls) => [...ls, { key: newKey(), name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor }]);
     setSearch('');
     searchRef.current?.focus();
   };
@@ -342,7 +349,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       shipping: toNum(shipping),
       paid: paidValue,
       ...(isSale ? { online, onlineFrom: online ? onlineFrom : '' } : {}),
-      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
+      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)), ...(isSale ? { forName: (l.forName ?? '').trim() } : {}) })),
     };
     try {
       const saved = invoice
@@ -482,6 +489,27 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           </div>
 
           <div className="field full">
+            {isSale && !asQuote && lines.length > 0 && (
+              <div className="txfor" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, marginBottom: 8 }}>
+                <small>👥 الفاتورة دي لعدّة زباين؟ اكتب اسم الزبون على كل بند («لحساب»)، وبعد الحفظ تطلع لكل زبون صفحة لوحده.</small>
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <input list="mk-for" placeholder="اسم زبون — يتطبق على البنود اللي من غير اسم" value={bulkFor} onChange={(e) => setBulkFor(e.target.value)} style={{ flex: 1, padding: 10, border: '1px solid var(--border)', borderRadius: 10 }} />
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={!bulkFor.trim()}
+                    onClick={() => {
+                      const v = bulkFor.trim();
+                      setLines((ls) => ls.map((l) => ((l.forName ?? '').trim() ? l : { ...l, forName: v })));
+                      setLastFor(v);
+                      setBulkFor('');
+                    }}
+                  >
+                    علّم
+                  </button>
+                </div>
+              </div>
+            )}
             {lines.map((l) => {
               const lineTotal = r2(toNum(l.qty) * toNum(l.price));
               return (
@@ -527,6 +555,21 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       المتاح: {qtyText(l.available)} {l.unit}
                       {!l.productId && ' — صنف غير مسجل، هيتسجل مع الفاتورة'}
                     </small>
+                  )}
+                  {isSale && !asQuote && (
+                    <div style={{ marginTop: 6 }}>
+                      <small>👤 لحساب (اسم الزبون — اختياري)</small>
+                      <input
+                        list="mk-for"
+                        value={l.forName ?? ''}
+                        onChange={(e) => {
+                          setLine(l.key, { forName: e.target.value });
+                          setLastFor(e.target.value.trim());
+                        }}
+                        placeholder="مثال: مدام سلوى"
+                        style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
+                      />
+                    </div>
                   )}
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, flexWrap: 'wrap' }}>
                     <div>
@@ -621,6 +664,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           {cterm || limit || (isSale && contactNow) ? (
             <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
           ) : null}
+          <datalist id="mk-for">{[...new Set(lines.map((l) => (l.forName ?? '').trim()).filter(Boolean))].map((n) => <option key={n} value={n} />)}</datalist>
           <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
           <Input
             label={isSale ? 'تليفون العميل' : 'تليفون المورد'}

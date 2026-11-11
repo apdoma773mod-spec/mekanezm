@@ -1040,3 +1040,6 @@ body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,va
 #spEd .sp-fold>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
 #spEd .sp-fold[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
 #spEd .sp-fold>.sp-fold-b{padding:12px 14px 14px}
+.inv-items .inv-for td{background:var(--tint);text-align:right;font-weight:800;color:var(--blue2)}
+.inv-items .inv-for-sub td{font-weight:700;border-bottom:2px solid var(--blue);text-align:center}
+.inv-items .inv-for-sub td:first-child{text-align:right}

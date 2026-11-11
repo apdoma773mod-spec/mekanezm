@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { errorMessage } from '@/lib/api';
 import type { InvoiceDto, SettingsMap } from '@mk/shared';
 import { formatDateTime, money, qtyText } from '@/lib/format';
 import { htmlToPdf, shareOrSave } from '@/lib/pdf';
-import { dimOf, invoiceA4Html, invoiceLabelHtml, prepSheetHtml, printHtml } from '@/lib/print';
+import { dimOf, forLabel, invoiceA4Html, invoiceFors, invoiceLabelHtml, prepSheetHtml, printHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
 import { useShipments } from '@/lib/phase4-queries';
@@ -46,6 +46,7 @@ export function InvoiceView({ id }: { id: string }) {
   }
 
   const r = inv.data;
+  const fors = invoiceFors(r);
   const isSale = r.kind === 'SALE';
   const voided = r.status === 'VOID';
   const waNum = (ph: string) => {
@@ -140,16 +141,38 @@ export function InvoiceView({ id }: { id: string }) {
             </tr>
           </thead>
           <tbody>
-            {r.items.map((x) => (
-              <tr key={x.id}>
-                <td>{x.name}</td>
-                <td>
-                  {qtyText(x.qty)} {x.unit}
-                </td>
-                <td>{money(x.price)}</td>
-                <td>{money(x.total)}</td>
-              </tr>
-            ))}
+            {(fors.some(Boolean) ? fors : ['\u0000all']).map((n) => {
+              const part = fors.some(Boolean) ? r.items.filter((x) => (x.forName || '').trim() === n) : r.items;
+              return (
+                <Fragment key={n}>
+                  {fors.some(Boolean) && (
+                    <tr className="inv-for">
+                      <td colSpan={4}>
+                        <b>👤 لحساب: {forLabel(n)}</b>
+                      </td>
+                    </tr>
+                  )}
+                  {part.map((x) => (
+                    <tr key={x.id}>
+                      <td>{x.name}</td>
+                      <td>
+                        {qtyText(x.qty)} {x.unit}
+                      </td>
+                      <td>{money(x.price)}</td>
+                      <td>{money(x.total)}</td>
+                    </tr>
+                  ))}
+                  {fors.some(Boolean) && (
+                    <tr className="inv-for-sub">
+                      <td colSpan={3}>إجمالي {forLabel(n)}</td>
+                      <td>
+                        <b>{money(part.reduce((a, x) => a + x.total, 0))}</b>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
         <div className="inv-tot">
@@ -283,8 +306,67 @@ export function InvoiceView({ id }: { id: string }) {
           🖨️ طباعة ورق التجهيز (من غير أسعار)
         </button>
       </div>
+      {isSale && fors.some(Boolean) && <SplitBox inv={r} fors={fors} settings={settings.data} />}
       {isSale && <PdfBox inv={r} settings={settings.data} wa={r.phone ? waNum(r.phone) : ''} />}
     </Modal>
+  );
+}
+
+/** 👥 فاتورة مقسومة على زباين: كشف مفصّل للعميل الأساسي + صفحة (PDF) لكل زبون لوحده. */
+function SplitBox({ inv, fors, settings }: { inv: InvoiceDto; fors: string[]; settings: SettingsMap | undefined }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState<string | null>(null);
+  const share = async (key: string, html: string, file: string, title: string) => {
+    setBusy(key);
+    try {
+      const res = await htmlToPdf(html);
+      if (typeof res === 'object' && 'blob' in res) {
+        const out = await shareOrSave(res.blob, file, title);
+        if (out === 'saved') toast('الملف اتحفظ على الجهاز — افتحه وابعته من الواتساب');
+      } else toast('ما قدرتش أجهّز الملف — جرّب الطباعة', 'bad');
+    } catch {
+      toast('ما قدرتش أجهّز الملف — جرّب الطباعة', 'bad');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const untitled = fors.includes('') && fors.some(Boolean);
+  return (
+    <div id="splitBox" style={{ marginTop: 14, border: '1px solid var(--border)', borderRadius: 14, padding: 12 }}>
+      <b>👥 الفاتورة مقسومة على {fors.filter(Boolean).length} زبون</b>
+      {untitled && <p style={{ color: 'var(--muted)', fontSize: 13, margin: '6px 0 0' }}>فيه بنود من غير اسم — بتظهر تحت «بدون اسم». عدّل الفاتورة لو عايز تحط لها اسم.</p>}
+      <div className="btnrow" style={{ marginTop: 10 }}>
+        <button type="button" className="primary" style={{ flex: 1 }} disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { group: true }))}>
+          📑 كشف مفصّل (طباعة)
+        </button>
+        <button type="button" className="secondary" disabled={!settings || busy !== null} onClick={() => settings && void share('all', invoiceA4Html(inv, settings, { group: true }), `كشف-${inv.no}.pdf`, `كشف مفصّل ${inv.no}`)}>
+          {busy === 'all' ? '⏳' : 'PDF'}
+        </button>
+      </div>
+      <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+        {fors.map((n) => (
+          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <span>
+              👤 <b>{forLabel(n)}</b> — {money(inv.items.filter((x) => (x.forName || '').trim() === n).reduce((a, x) => a + x.total, 0))}
+            </span>
+            <span style={{ display: 'flex', gap: 6 }}>
+              <button type="button" className="secondary" style={{ padding: '4px 10px' }} disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { only: n }))}>
+                🖨️
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                style={{ padding: '4px 10px' }}
+                disabled={!settings || busy !== null}
+                onClick={() => settings && void share(n || '-', invoiceA4Html(inv, settings, { only: n }), `${forLabel(n)}-${inv.no}.pdf`, `${forLabel(n)} — ${inv.no}`)}
+              >
+                {busy === (n || '-') ? '⏳' : 'PDF / واتساب'}
+              </button>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

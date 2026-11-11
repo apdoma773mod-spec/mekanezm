@@ -10,6 +10,8 @@ export const invoiceItemInput = z
     name: z.string().trim().max(200).default(''),
     qty: positiveQty,
     price: moneySchema,
+    /** «لحساب»: اسم الزبون اللي البند ده بتاعه (اختياري). Left out = unchanged on edit. */
+    forName: z.string().trim().max(120).optional(),
   })
   .refine((v) => v.productId || v.name, { message: 'اختار صنف أو اكتب اسمه', path: ['name'] });
 export type InvoiceItemInput = z.infer<typeof invoiceItemInput>;
@@ -77,6 +79,8 @@ export interface InvoiceItemDto {
   qty: number;
   price: number;
   total: number;
+  /** «لحساب»: the end customer this line is for ("" = not said). */
+  forName: string;
   /** Only present for admins. */
   unitCost?: number;
 }

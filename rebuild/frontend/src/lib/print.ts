@@ -32,8 +32,26 @@ const FONT_LINKS = `<link rel="preconnect" href="https://fonts.googleapis.com"><
 
 const KIND_TITLE = { SALE: 'فاتورة بيع', PURCHASE: 'فاتورة شراء' } as const;
 
-/** The old system's A4 invoice (invoiceHTML), same layout and colors. */
-export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
+/** الزباين اللي على بنود الفاتورة («لحساب») بترتيب ظهورهم، و«بدون اسم» («») في الآخر. */
+export function invoiceFors(inv: InvoiceDto): string[] {
+  const names: string[] = [];
+  for (const it of inv.items) {
+    const n = (it.forName || '').trim();
+    if (!names.includes(n)) names.push(n);
+  }
+  return [...names.filter(Boolean), ...(names.includes('') ? [''] : [])];
+}
+export const forLabel = (n: string) => n || 'بدون اسم';
+
+/**
+ * The old system's A4 invoice (invoiceHTML), same layout and colors.
+ * فاتورة A4. `group` = كشف مفصّل: البنود مقسومة أقسام باسم كل زبون وإجمالي كل قسم.
+ * `only` = صفحة زبون واحد: بنوده وإجماليه بس (من غير المدفوع والمتبقي).
+ */
+export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap, opt: { group?: boolean; only?: string } = {}): string {
+  const only = opt.only;
+  const items = only === undefined ? inv.items : inv.items.filter((x) => (x.forName || '').trim() === only);
+  const partTotal = items.reduce((a, x) => a + x.total, 0);
   const T = s.theme;
   const H = T.invSync ? T.primary : T.invHeader;
   const A = T.invSync ? T.accent : T.invAccent;
@@ -57,13 +75,18 @@ export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
     : `<div style="position:relative;background:${H};color:${HT};padding:34px 44px;display:flex;justify-content:space-between;align-items:center">
    <div><div style="font-size:38px;font-weight:800">${shop}</div><div style="margin-top:8px;font-size:15px;opacity:.9">${addr}</div>${ph ? `<div style="margin-top:4px;font-size:15px;opacity:.9">تليفون: <span dir="ltr">${ph}</span></div>` : ''}</div>
    <div style="text-align:left"><div style="font-size:30px;font-weight:800;color:${A}">${KIND_TITLE[inv.kind]}</div></div></div>`;
-  const rows = inv.items
-    .map(
-      (x) => `<tr style="border-bottom:1px solid #e4eaed"><td style="padding:14px 12px"><b>${esc(x.name)}</b></td><td style="padding:14px 12px;text-align:center">${qtyText(x.qty)} ${esc(x.unit)}</td><td style="padding:14px 12px;text-align:center">${money(x.price)}</td><td style="padding:14px 12px;text-align:center;font-weight:700">${money(x.total)}</td></tr>`,
-    )
-    .join('');
+  const rowOf = (x: InvoiceDto['items'][number]) => `<tr style="border-bottom:1px solid #e4eaed"><td style="padding:14px 12px"><b>${esc(x.name)}</b></td><td style="padding:14px 12px;text-align:center">${qtyText(x.qty)} ${esc(x.unit)}</td><td style="padding:14px 12px;text-align:center">${money(x.price)}</td><td style="padding:14px 12px;text-align:center;font-weight:700">${money(x.total)}</td></tr>`;
+  const rows =
+    opt.group && only === undefined
+      ? invoiceFors(inv)
+          .map((n) => {
+            const part = inv.items.filter((x) => (x.forName || '').trim() === n);
+            return `<tr style="background:${tint}"><td colspan="4" style="padding:12px;font-weight:800;color:${H};font-size:17px">👤 لحساب: ${esc(forLabel(n))}</td></tr>${part.map(rowOf).join('')}<tr style="border-bottom:2px solid ${H}"><td colspan="3" style="padding:10px 12px;font-weight:700">إجمالي ${esc(forLabel(n))}</td><td style="padding:10px 12px;text-align:center;font-weight:800">${money(part.reduce((a, x) => a + x.total, 0))}</td></tr>`;
+          })
+          .join('')
+      : items.map(rowOf).join('');
   const extras =
-    inv.shipping || inv.discount
+    only === undefined && (inv.shipping || inv.discount)
       ? `<div style="display:flex;justify-content:flex-start;margin-top:20px"><div style="width:320px;font-size:17px;line-height:2.1;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>إجمالي الأصناف</span><b>${money(inv.subtotal)}</b></div>${inv.discount ? `<div style="display:flex;justify-content:space-between"><span>الخصم</span><b>${money(inv.discount)}</b></div>` : ''}${inv.shipping ? `<div style="display:flex;justify-content:space-between"><span>مصاريف النقل</span><b>${money(inv.shipping)}</b></div>` : ''}</div></div>`
       : '';
   const footer = esc(s.store.invoiceFooter) || `شكراً لتعاملكم معنا — ${shop}`;
@@ -74,16 +97,16 @@ export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
  <div style="position:relative;height:6px;background:${A}"></div>
  <div style="position:relative;padding:30px 44px">
   <div style="display:flex;justify-content:space-between;gap:20px">
-   <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">${isSale ? 'بيانات العميل' : 'بيانات المورد'}</div><div>الاسم: <b>${esc(inv.person || (isSale ? 'عميل نقدي' : '—'))}</b></div>${inv.phone ? `<div>التليفون: <b dir="ltr">${esc(inv.phone)}</b></div>` : ''}${inv.address ? `<div>العنوان: <b>${esc(inv.address)}</b></div>` : ''}</div>
+   <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">${isSale ? 'بيانات العميل' : 'بيانات المورد'}</div>${only !== undefined ? `<div>الاسم: <b>${esc(forLabel(only))}</b></div>${inv.person ? `<div>عن طريق: <b>${esc(inv.person)}</b></div>` : ''}` : `<div>الاسم: <b>${esc(inv.person || (isSale ? 'عميل نقدي' : '—'))}</b></div>`}${inv.phone && only === undefined ? `<div>التليفون: <b dir="ltr">${esc(inv.phone)}</b></div>` : ''}${inv.address && only === undefined ? `<div>العنوان: <b>${esc(inv.address)}</b></div>` : ''}</div>
    <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(inv.no)}</b></div><div>التاريخ: <b>${esc(arDate(inv.date))}</b></div><div style="height:42px;margin-top:4px">${code128Svg(inv.no, 42).replace('<svg ', '<svg style="width:100%;height:42px" ')}</div></div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:16px">
    <thead><tr style="background:${H};color:${HT}"><th style="padding:12px;text-align:right;border-radius:0 10px 0 0">البيان</th><th style="padding:12px;text-align:center">الكمية</th><th style="padding:12px;text-align:center">سعر الوحدة</th><th style="padding:12px;text-align:center;border-radius:10px 0 0 0">الإجمالي</th></tr></thead>
    <tbody>${rows}</tbody></table>
   ${extras}
-  <div style="display:flex;justify-content:flex-start;margin-top:${extras ? 10 : 26}px"><div style="width:320px;background:${H};color:${HT};border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;font-size:20px"><span>الإجمالي المطلوب</span><b style="font-size:24px">${money(inv.total)}</b></div></div>
-  <div style="display:flex;justify-content:flex-start;margin-top:12px"><div style="width:320px;font-size:17px;line-height:2.3;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>المدفوع</span><b>${money(inv.paid)}</b></div><div style="display:flex;justify-content:space-between;color:${inv.remaining > 0 ? '#c0392b' : '#159447'}"><span>المتبقي</span><b>${money(inv.remaining)}</b></div></div></div>
-  ${inv.note ? `<div style="margin-top:18px;color:#596a70">ملاحظات: ${esc(inv.note)}</div>` : ''}
+  <div style="display:flex;justify-content:flex-start;margin-top:${extras ? 10 : 26}px"><div style="width:320px;background:${H};color:${HT};border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;font-size:20px"><span>${only !== undefined ? `إجمالي حساب ${esc(forLabel(only))}` : 'الإجمالي المطلوب'}</span><b style="font-size:24px">${money(only !== undefined ? partTotal : inv.total)}</b></div></div>
+  ${only !== undefined ? '' : `<div style="display:flex;justify-content:flex-start;margin-top:12px"><div style="width:320px;font-size:17px;line-height:2.3;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>المدفوع</span><b>${money(inv.paid)}</b></div><div style="display:flex;justify-content:space-between;color:${inv.remaining > 0 ? '#c0392b' : '#159447'}"><span>المتبقي</span><b>${money(inv.remaining)}</b></div></div></div>`}
+  ${inv.note && only === undefined ? `<div style="margin-top:18px;color:#596a70">ملاحظات: ${esc(inv.note)}</div>` : ''}
  </div>
  <div style="position:absolute;bottom:0;right:0;left:0;text-align:center;padding:20px;border-top:1px solid #e4eaed;color:#718087;font-size:14px">${footer}</div></div>
 </body></html>`;
