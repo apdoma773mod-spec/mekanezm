@@ -178,8 +178,9 @@ function openCard(p) {
    <div style="font-weight:800;margin:12px 0 6px">⚡ اعمل بيه إيه؟</div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <button type="button" class="b" data-x="post">🖼️ صمّم بوست</button>
-    <button type="button" class="b" data-x="vid">🎬 فيديو مونتاج ذكي</button>
+    <button type="button" class="b" data-x="tvid" ${p.imgs.length ? '' : 'disabled'}>🎬 اعمله فيديو (اختار قالب)</button>
     <button type="button" class="b" data-x="pub" style="grid-column:1/-1" ${p.imgs.length ? '' : 'disabled'}>📤 انشر صورته على كل المنصات</button>
+    <button type="button" class="b o" data-x="vid">🎙️ مونتاج لفيديو صوّرته</button>
     <button type="button" class="b o" data-x="imgs" ${p.imgs.length ? '' : 'disabled'}>🖼️ صوره في المونتاج</button>
     <button type="button" class="b o" data-x="save">➕ ضيفه لمنتجات الستوديو</button>
     <button type="button" class="b o" data-x="link">🛒 انسخ لينك الطلب</button>
@@ -210,6 +211,13 @@ function openCard(p) {
     if (x === 'qr') { const a = document.createElement('a'); a.href = qr; a.download = 'qr-' + (p.code || 'product') + '.png'; a.click(); return; }
     if (x === 'save') { if (S.addProd) { S.addProd(toStudio(p)); toast('✅ اتضاف لمنتجات الستوديو'); } return; }
     if (x === 'post') { if (!S.addProd || !S.design) return toast('الستوديو لسه بيحمّل'); const sp = S.addProd(toStudio(p)); ov.remove(); S.design(sp); return; }
+    if (x === 'tvid') {
+      const T = (window as any).__tplProduct; if (!T) return toast('القوالب لسه بتحمّل');
+      b.disabled = true; const t0 = b.textContent; b.textContent = '⏳ بجهّز صور المنتج…';
+      try { const fs = await imgFiles(p, 12); if (!fs.length) throw new Error('مقدرتش أجيب صور المنتج'); const bi = brandInfo(); ov.remove(); await T({ files: fs, title: p.name, sub: [p.size, p.finish, p.brand].filter(Boolean).join(' • ') || (p.category || ''), price: p.price ? String(p.price) : '', phone: bi.phone, addr: bi.addr.slice(0, 60) }); toast('✅ صور المنتج واسمه وسعره جاهزين — اختار القالب'); }
+      catch (er) { toast(String((er as any).message || er)); b.disabled = false; b.textContent = t0; }
+      return;
+    }
     if (x === 'vid' || x === 'imgs') {
       const M = window.mkzSmart; if (!M || !M.useProduct) return toast('المونتاج لسه بيحمّل');
       b.disabled = true; const t0 = b.textContent; b.textContent = '⏳';

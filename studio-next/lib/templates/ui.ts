@@ -246,6 +246,7 @@ async function exportVideo() {
     $('tp_res').innerHTML = `<div class="p"><h2>✅ الفيديو جاهز (${arN((blob.size / 1048576).toFixed(1))} ميجا • ${arN(P.dur.toFixed(0))} ث)</h2><video src="${url}" controls playsinline></video>
       <button type="button" class="b" id="tp_sh" style="width:100%;min-height:54px">📤 شارك / احفظ في الصور</button><a class="b o" style="width:100%" download="${esc(file.name)}" href="${url}">⬇️ تنزيل</a>${ext !== 'mp4' ? '<p class="mu">⚠️ المتصفح ده طلّعه WebM — لو المنصة رفضته صدّره من الآيفون أو كروم أحدث.</p>' : ''}</div>`;
     $('tp_sh').onclick = () => share([file]); msg.textContent = '';
+    { const w: any = window, sh = $('tp_sh'); if (w.mkPublish && sh) { const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'b'; pb.style.cssText = 'width:100%;min-height:56px;font-size:18px;margin-bottom:6px'; pb.textContent = '📤 انشر في كل المنصات مرة واحدة'; sh.before(pb); const cap = [S.T.title, S.T.sub, S.T.price ? '💰 ' + S.T.price + ' جنيه' : '', (S.T.cta || 'اطلب دلوقتي') + (S.T.phone ? ' 📞 ' + S.T.phone : ''), S.T.addr ? '📍 ' + S.T.addr : '', '#ميكانيزم'].filter(Boolean).join(String.fromCharCode(10)); pb.onclick = () => w.mkPublish.open({ blob: file, kind: 'video', caps: { fb: cap, ig: cap, yt: cap, tt: cap }, title: S.T.title || '' }); } }
   } catch (e: any) { msg.textContent = '❌ التصدير وقف: ' + (e && e.message || e); }
   finally { BUSY = false; btn.disabled = false; btn.textContent = '🎬 صدّر الفيديو MP4'; try { ac?.close(); } catch { } startLoop('tp_big', .5); }
 }
@@ -309,6 +310,19 @@ function mountNow() {
     else { stopPlay(); cancelAnimationFrame(RAF); ITEMS.forEach(it => { try { it.vel && it.vel.pause(); } catch { } }); }
   });
 }
+
+/** من كارت المنتج: بيفتح القوالب بصور المنتج واسمه وسعره جاهزين، ويقف عند «اختار القالب». */
+if (typeof window !== 'undefined') (window as any).__tplProduct = async (o: { files: File[]; title: string; sub?: string; price?: string; phone?: string; addr?: string }) => {
+  const b = document.querySelector('#rail [data-go="tpl"]') as any; if (!b) throw new Error('القوالب لسه بتحمّل');
+  b.click(); await new Promise(r => setTimeout(r, 250));
+  for (let i = 0; i < 40 && BUSY; i++) await new Promise(r => setTimeout(r, 250));
+  ITEMS.forEach(freeItem); ITEMS = []; clearCaches(); STEP = 1; paintSteps(); paintItems();
+  await addFiles(o.files);
+  if (!ITEMS.length) throw new Error('مقدرتش أجهّز صور المنتج');
+  S.T.title = o.title || ''; S.T.sub = o.sub || ''; S.T.price = o.price || ''; S.T.old = '';
+  if (o.phone && !S.T.phone) S.T.phone = o.phone; if (o.addr && !S.T.addr) S.T.addr = o.addr;
+  save(); goStep(2);
+};
 
 /** خطّاف اختبار: بيرسم أي قالب عند وقت معيّن ويرجّع صورة (للتأكد من الشكل في الاختبارات). */
 if (typeof window !== 'undefined') (window as any).__tplTest = {
