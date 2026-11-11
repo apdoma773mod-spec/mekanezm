@@ -29,18 +29,32 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-let refreshing: Promise<boolean> | null = null;
+/** ok = new session; invalid = the session is really gone (401/403); down = the server hiccuped (5xx / no network) — NOT a reason to log out. */
+type Refreshed = 'ok' | 'invalid' | 'down';
+let refreshing: Promise<Refreshed> | null = null;
 
 /** One refresh at a time per tab; parallel 401s wait for the same attempt. */
-function refreshSession(): Promise<boolean> {
+function refreshSession(): Promise<Refreshed> {
   refreshing ??= fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'same-origin' })
-    .then((r) => r.ok)
-    .catch(() => false)
+    .then((r): Refreshed => (r.ok ? 'ok' : r.status === 401 || r.status === 403 ? 'invalid' : 'down'))
+    .catch((): Refreshed => 'down')
     .finally(() => {
       refreshing = null;
     });
   return refreshing;
 }
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * When the session is really gone we do NOT reload the page to /login (that threw away whatever was being typed):
+ * the app shows a small login box on top of the screen (components/relogin.tsx) and the request continues after it.
+ * No box registered (login page, tests) → the old behaviour.
+ */
+let reloginHandler: (() => Promise<boolean>) | null = null;
+export const setReloginHandler = (fn: (() => Promise<boolean>) | null) => {
+  reloginHandler = fn;
+};
 
 function buildUrl(path: string, query?: Query): string {
   const params = new URLSearchParams();
@@ -76,21 +90,37 @@ async function request<T>(method: string, path: string, opts: RequestOptions = {
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
 
-  let res: Response;
-  try {
-    res = await send();
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    throw new ApiClientError(0, 'INTERNAL_ERROR', 'مفيش اتصال بالسيرفر، اتأكد من النت');
+  // reads are safe to repeat: a server hiccup (5xx) or a dropped connection gets 2 more tries before the user sees an error
+  const tries = method === 'GET' ? [600, 1500] : [];
+  let res: Response | null = null;
+  for (let i = 0; ; i++) {
+    try {
+      res = await send();
+      if (res.status < 500 || i >= tries.length) break;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') throw err;
+      if (i >= tries.length) throw new ApiClientError(0, 'INTERNAL_ERROR', 'مفيش اتصال بالسيرفر، اتأكد من النت — اللي كتبته لسه قدامك');
+    }
+    await sleep(tries[i]!);
   }
 
   if (res.status === 401 && !path.startsWith('/auth/')) {
-    // A failed refresh may just mean another tab rotated the token first: retry once either way.
-    await refreshSession();
+    // A failed refresh may just mean another tab rotated the token first. A server hiccup during the refresh is not a logout.
+    let st = await refreshSession();
+    for (const wait of [1000, 2500, 5000]) {
+      if (st !== 'down') break;
+      await sleep(wait);
+      st = await refreshSession();
+    }
+    if (st === 'down') throw new ApiClientError(503, 'INTERNAL_ERROR', 'السيرفر مش بيرد دلوقتي — اللي كتبته لسه قدامك، جرّب تاني بعد لحظة');
     res = await send();
     if (res.status === 401) {
-      redirectToLogin();
-      throw await toError(res);
+      const back = reloginHandler ? await reloginHandler() : false;
+      if (back) res = await send();
+      if (res.status === 401) {
+        if (!reloginHandler) redirectToLogin();
+        throw await toError(res);
+      }
     }
   }
 

@@ -17,6 +17,7 @@ import { ModalHost, useModal } from './modals/modal-host';
 import { ErrorBox, Loading } from './ui/states';
 import { PunchCatcher } from './punch-catcher';
 import { installAutoFold } from '@/lib/auto-fold';
+import { Relogin } from './relogin';
 
 /** الشاشات الطويلة (٣ كروت أو أكتر في مكان واحد) بتتلم لعناوين بتفتحها بدوسة — lib/auto-fold.ts */
 function AutoFold() {
@@ -243,6 +244,7 @@ function Shell({ children }: { children: ReactNode }) {
       {admin && <NotifyBar waPhotos={counts.data?.waPhotos ?? 0} sms={counts.data?.sms ?? 0} web={webCounts.data} />}
       <PunchCatcher />
       <AutoFold />
+      <Relogin />
       <PowerExtras />
       <header className="top">
         <div className="brand">
