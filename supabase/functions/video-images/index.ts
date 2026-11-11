@@ -8,7 +8,7 @@ const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 const MODELS = [Deno.env.get("VIDEO_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-pro-latest"].filter((m, i, a) => m && a.indexOf(m) === i) as string[];
 const GONE = /no longer available|not found|is not supported|deprecated|unknown model|404/i;
-const MAX_IMG = 30, MAX_B64_EACH = 900_000, MAX_B64_ALL = 14_000_000, MAX_SEG = 400;
+const MAX_IMG = 30, MAX_B64_EACH = 900_000, MAX_B64_ALL = 14_000_000, MAX_SEG = 800;
 
 const SCHEMA = {
   type: "OBJECT",

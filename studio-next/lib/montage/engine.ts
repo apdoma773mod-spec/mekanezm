@@ -3,6 +3,7 @@
 import { loudGain, peakOf, findHooks, paceReport, coverCandidates, frameScore, preflight } from './pro';
 import { bestClips, retention, fillerReport, titleIdeas, platformCaptions, shotList, cleanScript, toSrt, punchWords, beatsOf } from './pro2';
 import { officialLogo } from '../templates/logo';
+import { loadFiles } from '../templates/media';
 export function startEngine(){
 /* ===== 🎬 مونتاج ذكي — فيديو خام من الموبايل → ترجمة كلامك + توضيح المقاسات والأصناف والأسعار + قالب مونتاج → MP4 جاهز للنشر
    ١) الصوت بيتسحب من الفيديو جوه الموبايل (١٦ كيلو مونو) ويتقسم أجزاء ٤٠ ثانية → دالة video-ai على سيرفر ميكانيزم (Gemini) → كلام بتوقيته + أحداث + الإعادات اللي تتشال + الكلمات المهمة
@@ -496,6 +497,7 @@ function draw(t){if(!CV||!CX)return;const [W,H]=[CV.width,CV.height];CX.setTrans
  else{const sb=stab(f,t);CX.drawImage(V,sb[0],sb[1],sb[2],sb[3])}
  applyLook(t,W,H);
  const BR=brActive(t);if(BR)drawBroll(BR,t,W,H);else BRC.forEach(c=>{if(c.v&&!c.v.paused)c.v.pause()});
+ if(!BR&&typeof IML!=='undefined'){const IB=imActive(t);if(IB)drawImg(IB,t,W,H)}
  drawFinish(t,W,H);
  drawFrame(W,H,W/1080);drawLogo(W,H,W/1080);musHook();musDuck(t);
  if(O('trans')==='flash'){const d=lastCut(t);if(d!=null&&d<.16){CX.fillStyle=`rgba(255,255,255,${(.55*(1-d/.16)).toFixed(3)})`;CX.fillRect(0,0,W,H)}}
@@ -626,6 +628,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
  <p class="mu" style="margin:0 0 8px;text-align:center">نسخة المونتاج: <b>٤ نوفمبر ٢٠٢٦ — ل</b> (مشاهد عدد/مسطرة + إدراج + موسيقى)</p>
  <div class="p"><h2>🎵 موسيقى خلفية ولوجو (اختياري)</h2><p class="mu" style="margin:0 0 6px">الموسيقى بتوطى لوحدها وانت بتتكلم وتعلى في السكوت، وبتتسجل في الفيديو المتصدّر. اللوجو بيتحفظ مرة واحدة ويظهر فوق على الشمال في كل فيديو.</p><div style="display:flex;gap:6px"><label class="b o" style="flex:1;cursor:pointer">🎵 اختار موسيقى<input type="file" id="sm_mf" accept="audio/*,.mp3,.m4a,.aac,.wav" style="display:none"></label><label class="b o" style="flex:1;cursor:pointer">🏷️ ارفع اللوجو<input type="file" id="sm_lg" accept="image/*" style="display:none"></label></div><label class="mu" style="display:flex;gap:8px;align-items:center;margin-top:6px">علو الموسيقى<input type="range" id="sm_mv" min="5" max="80" value="30" style="flex:1"></label><div id="sm_mi" class="mu"></div><div id="sm_lgi" class="mu"></div><div id="sm_lgc" style="display:none;margin-top:8px"><label class="mu" style="display:flex;gap:8px;align-items:center">حجم اللوجو<input type="range" id="sm_lgs" min="60" max="420" value="170" style="flex:1"><b id="sm_lgsv"></b></label><div class="r2" style="margin-top:6px"><label class="mu">مكان اللوجو<select id="sm_lgp"><option value="tl">فوق شمال</option><option value="tr">فوق يمين</option><option value="tc">فوق في النص</option></select></label><label class="mu">الشفافية<input type="range" id="sm_lgo" min="30" max="100" value="95"></label></div></div></div>
  <div class="p"><h2>🎞️ فيديوهات الإدراج (اختياري)</h2><p class="mu" style="margin:0 0 6px">ارفع الفيديوهات اللي عايزها تظهر تحت وانت بتتكلم. كل ما تقول «هيظهرلكم فيديو تحت» أو «هتشوفوا» أو «يظهر»، بيظهر الفيديو اللي بعده بالترتيب في نص الشاشة تحت وشك، ويرجع لوحده. (بيشتغل في «اعمله هنا على الموبايل» مش في الخلفية).</p><label class="b o" style="width:100%;cursor:pointer">➕ ضيف فيديو إدراج<input type="file" id="sm_bf" accept="video/*" multiple style="display:none"></label><div id="sm_bi" class="mu"></div></div>
+ <div class="p"><h2>🖼️ صور الإدراج الذكي (اختياري)</h2><p class="mu" style="margin:0 0 6px">ارفع ١٠ لـ ٢٠ صورة (صور الآيفون HEIC عادي). السيستم بيفهم كل صورة وبيظهرها في اللحظة اللي بتتكلم فيها عن حاجة ليها علاقة بيها (مثلًا صورة الموقع لما تقول العنوان). بيشتغل في «اعمله هنا على الموبايل» مش في الخلفية.</p><label class="b o" style="width:100%;cursor:pointer">➕ ضيف صور<input type="file" id="sm_if" accept="image/*,.heic,.heif" multiple style="display:none"></label><div id="sm_ii" class="mu"></div><div class="r2" style="margin-top:8px"><label>شكل الصورة<select id="sm_ist"><option value="auto">كارت تحت الوش (تلقائي)</option><option value="full">ملء الشاشة</option></select></label></div><button type="button" class="b o" id="sm_imb" style="width:100%;margin-top:6px">🧠 طابق الصور بالكلام تاني</button></div>
  <div class="p"><h2>🎨 الشكل: لون + خط + إطار</h2><div id="sm_modes" style="display:flex;gap:6px;flex-wrap:wrap"></div><div id="sm_sty" style="margin-top:8px"></div><div id="sm_cu" style="display:none;margin-top:8px"></div><div class="mu" style="margin:10px 0 4px">كل البصمات قدامك — دوس على اللي عاجبك:</div><div id="sm_gal" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div><button type="button" class="b o" id="sm_rer" style="width:100%;margin-top:8px">🎲 بصمة عشوائية جديدة</button><p class="mu" style="margin:6px 0 0">«تنويع تلقائي» بيغيّر البصمة مع كل فيديو ومابيكررش آخر ٦. «عادي» و«هادي خالص» ثابتين. «مخصص» تختار أي لون مع أي خط.</p></div>
  <div class="p"><h2>٢) طريقة المونتاج</h2><div id="sm_tp" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
   <details style="margin-top:10px" ${Object.keys(S.o).length?'open':''}><summary style="cursor:pointer;font-weight:800;padding:6px 0">⚙️ تخصيص (غيّر أي حاجة في القالب)</summary><div id="sm_op" style="margin-top:6px"></div></details>
@@ -647,6 +650,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <div class="p"><h2>✍️ الكلام (دوس على الوقت تروح له، عدّل الكلمة لو غلط، و✂️ = الجملة دي هتتشال)</h2><input id="sm_ti" placeholder="عنوان الفيديو" style="width:100%;margin-bottom:8px"><div id="sm_cap" style="max-height:45vh;overflow:auto"></div></div>
   <div class="p"><h2>🧾 اللي اتطبّق على الفيديو ده</h2><div id="sm_ap" style="line-height:1.9"></div><button type="button" class="b o" id="sm_rp" style="width:100%;margin-top:8px">📋 انسخ تقرير الفيديو وابعته لـ Claude</button></div>
  <div class="p"><h2>🎞️ أماكن فيديوهات الإدراج</h2><div id="sm_bl"></div></div>
+  <div class="p"><h2>🖼️ أماكن الصور</h2><div id="sm_il"></div></div>
   <div class="p"><h2>📐 التوضيحات اللي هتظهر</h2><div id="sm_ev"></div></div></div>
  <div id="sm_out"></div>
  <div class="p" id="sm_jobsbox"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0">☁️ فيديوهاتي (في الخلفية)</h2><button type="button" class="b o" id="sm_rf" style="flex:none;padding:8px 14px">🔄 تحديث</button></div><small id="sm_rt" class="mu"></small><div id="sm_jobs" class="mu" style="margin-top:8px">⏳</div></div>`;
@@ -895,6 +899,96 @@ function renderBR(){const el=$s('sm_bl');if(!el)return;
   if(e.target.id==='sm_bad'){if(!BRC.length)return say('ارفع فيديو الإدراج الأول');const i=BRM.length%BRC.length;BRM.push({s:+(V.currentTime||0).toFixed(2),i});computeBroll();renderBR();draw(V.currentTime)}}}
 const _build0=build;build=function(){const r=_build0.apply(this,arguments);try{computeBroll()}catch(e){console.warn('broll',e)}return r};
 const _renderLists0=renderLists;renderLists=function(){const r=_renderLists0.apply(this,arguments);try{renderBR()}catch(e){}return r};
+/* ---------- 🖼️ إدراج صور ذكي: ترفع ١٠-٢٠ صورة والمونتاج يحط كل صورة في اللحظة اللي بتتكلم فيها عن حاجة ليها علاقة بيها (نفس فكرة فيديوهات الإدراج) ---------- */
+let IMC=[],IML=[],IMM=[],IMX=new Set(),IMSK={},IMW=[],IMAI={sig:'',busy:0,err:'',n:0},BIGSIG='',_imRe=0;   // IMC: الصور المرفوعة، IML: أماكن الظهور، IMM: اللي حطيتها بإيدك، IMX: اللي شلتها، IMSK: اللي ملقتش لها مكان
+const IM_MAX=30,IM_RX=/^image\/|\.(jpe?g|png|webp|gif|bmp|avif|heic|heif|hif|tiff?)$/i;
+async function addImgFiles(files){const el=$s('sm_ii');const all=[...files],list=all.filter(f=>IM_RX.test(f.type||'')||IM_RX.test(f.name||'')||!f.type);
+ const room=IM_MAX-IMC.length;if(room<=0)return say('وصلت أقصى عدد صور ('+IM_MAX+') — شيل شوية الأول');
+ const take=list.slice(0,room),bad=all.length-list.length;let errs=[];
+ if(el)el.textContent='⏳ بحضّر الصور (0/'+take.length+')…';
+ try{const r=await loadFiles(take,(d,n)=>{const e=$s('sm_ii');if(e)e.textContent='⏳ بحضّر الصور ('+d+'/'+n+')…'});errs=r.errors||[];
+  r.items.filter(x=>x.kind==='img').forEach(it=>IMC.push({id:it.id,name:it.name,src:it.src,w:it.w,h:it.h,thumb:it.thumb,fx:it.fx,fy:it.fy,date:it.date,seg:null,phrase:'',conf:0,kind:'',desc:'',cap:'',ai:0}))}
+ catch(e){errs.push(String(e&&e.message||e))}
+ if(list.length>room)errs.push('اتضاف '+room+' صورة بس (الحد الأقصى '+IM_MAX+')');if(bad)errs.push(bad+' ملف مش صورة اتتجاهل');
+ IMAI.sig='';paintImIn();if(errs.length)say(errs.slice(0,3).join(' — '));
+ if(D&&D.seg&&D.seg.length){computeImg();renderIM();try{draw(V.currentTime)}catch(e){}imMatch()}}
+function paintImIn(){const el=$s('sm_ii');if(!el)return;
+ const st=!IMC.length?'':!D?'ℹ️ هتتطابق بالكلام أول ما تعمل المونتاج.':IMAI.busy?'🧠 بفهم الصور وبطابقها بكلامك…':IMAI.err?'⚠️ الذكاء ماقدرش يطابق ('+BR_ESC(IMAI.err)+') — وزّعتهم تلقائي على طول الفيديو، وتقدر تحركهم بإيدك.':IMAI.sig?'✔ الذكاء طابق '+IMAI.n+' صورة بالكلام.':'';
+ el.innerHTML=(IMC.length?IMC.map((c,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-top:4px"><img src="${c.thumb}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex:none"><span style="flex:1;font-size:13px">${i+1}. ${BR_ESC(c.desc||c.name)}</span><button type="button" class="b o" data-imd="${i}" style="flex:none;padding:4px 10px">✕</button></div>`).join(''):'')+(st?`<div style="margin-top:6px">${st}</div>`:'')}
+function imJpg(c){const k=Math.min(1,576/Math.max(c.w,c.h)),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(c.w*k));cv.height=Math.max(1,Math.round(c.h*k));cv.getContext('2d').drawImage(c.src,0,0,cv.width,cv.height);const u=cv.toDataURL('image/jpeg',.66);cv.width=cv.height=0;return u.split(',')[1]||''}
+const imSegs=()=>(D&&D.seg||[]).map((g,i)=>({i,s:g.s,e:g.e,t:g.t,cut:g.cut})).filter(g=>!(O('takes')&&g.cut));
+const imSig=()=>IMC.map(c=>c.id).join(',')+'|'+(D?(D._imk||(D._imk=Math.random().toString(36).slice(2)))+':'+(D.seg||[]).length:'');
+async function imMatch(force){if(!IMC.length||!D||!D.seg||!D.seg.length||IMAI.busy)return;const sig=imSig();if(!force&&IMAI.sig===sig)return;
+ IMAI.busy=1;IMAI.err='';paintImIn();IMC.forEach(c=>{c.ai=0});
+ try{const tok=await token(),segs=imSegs();if(!segs.length)throw new Error('مفيش كلام');
+  const images=IMC.map((c,i)=>({i,jpg:c.jpg||(c.jpg=imJpg(c))}));
+  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),125000);let r;
+  try{r=await fetch(MK_URL+'/functions/v1/video-images',{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok,apikey:MK_KEY},body:JSON.stringify({images,segs:segs.map(g=>({i:g.i,s:+g.s.toFixed(2),e:+g.e.toFixed(2),t:g.t})),title:D.title||'',products:prods().map(p=>p.nm).filter(Boolean)})})}
+  catch(e){throw new Error(e&&e.name==='AbortError'?'السيرفر اتأخر':'النت مقطوع')}finally{clearTimeout(to)}
+  const j=await r.json().catch(()=>({}));if(!r.ok||!Array.isArray(j.matches))throw new Error(j.error||('السيرفر '+r.status));
+  imApply(j.matches);IMAI.sig=sig}
+ catch(e){IMAI.err=String(e&&e.message||e).slice(0,140);IMAI.sig=sig}
+ IMAI.busy=0;paintImIn();computeImg();renderIM();try{if(V&&CV)draw(V.currentTime)}catch(e){}}
+function imApply(ms){let n=0;ms.forEach(m=>{const c=IMC[m.i];if(!c)return;c.seg=m.seg;c.phrase=m.phrase||'';c.conf=+m.conf||0;c.kind=m.kind||'';c.desc=m.desc||c.desc;c.cap=m.caption||'';c.ai=1;n++});IMAI.n=n}
+const imWords=()=>{const W=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W.push({w:norm(w),s:c.s+d*i/n,e:c.s+d*(i+1)/n}))});return W};
+const imEq=(a,b)=>a&&b&&(a===b||(a.length>2&&b.length>2&&(a.includes(b)||b.includes(a))));
+function imAnchor(c){if(c.seg==null||c.seg<0)return null;const g=D.seg[c.seg];if(!g||(O('takes')&&g.cut))return null;let t=g.s;
+ if(c.phrase){const pw=norm(c.phrase).split(/\s+/).filter(Boolean);if(pw.length){const W=IMW.filter(x=>x.e>g.s-.1&&x.s<g.e+.1);for(let i=0;i<W.length;i++)if(imEq(W[i].w,pw[0])){t=W[i].s;break}}}
+ return Math.max(0,t-.15)}
+function computeImg(){IML=[];IMSK={};if(!IMC.length||!D||!D.seg||!CAP.length)return;const dur=D.dur||(V&&V.duration)||0;IMW=imWords();const A=[],fb=[];
+ IMC.forEach(c=>{if(IMX.has(c.id))return;const man=IMM.find(m=>m.id===c.id);
+  if(man){A.push({c,t:man.s,man});return}
+  if(c.ai){if(c.conf>=.3){const t=imAnchor(c);if(t!=null)A.push({c,t});else IMSK[c.id]='الجملة المناسبة اتشالت من الفيديو'}else IMSK[c.id]='مفيش كلام في الفيديو ليه علاقة بالصورة دي';return}
+  fb.push(c)});
+ /* لو الذكاء مارجعش (مفيش نت/سيرفر واقع): نوزّع على طول الفيديو بالترتيب */
+ if(fb.length){const used=A.map(a=>a.t);fb.forEach((c,k)=>{const want=dur*(k+1)/(fb.length+1);const cp=CAP.filter(x=>x.e<dur-2&&used.every(u=>Math.abs(u-x.s)>4)).sort((a,b)=>Math.abs(a.s-want)-Math.abs(b.s-want))[0]||CAP[Math.min(CAP.length-1,Math.floor(CAP.length*(k+1)/(fb.length+1)))];if(cp){used.push(cp.s);A.push({c,t:cp.s,fb:1})}})}
+ A.sort((a,b)=>a.t-b.t);let cur=0;
+ A.forEach((a,k)=>{const g=a.c.seg>=0&&D.seg[a.c.seg];let len=a.man?3:Math.min(4.2,Math.max(2.4,(g?g.e-g.s:2)+.8)),s=Math.max(a.t,cur);const nx=A[k+1];if(nx&&!a.man&&nx.t-.15-s>=1.6)len=Math.min(len,nx.t-.15-s);
+  for(let q=0;q<4;q++){const gp=inGap(s);if(gp)s=gp[1];const b=BRL.find(x=>s<x.e&&s+len>x.s);if(b&&b.s<=s+.3)s=b.e+.15;else break}
+  let e=Math.min(s+len,dur||1e9);const b2=BRL.find(x=>s<x.e&&e>x.s);if(b2)e=Math.min(e,b2.s-.1);const ng=GAPS.find(x=>x[0]>s);if(ng)e=Math.min(e,ng[0]);
+  if(e-s<1.4){IMSK[a.c.id]='مفيش مكان فاضي عندها (فيديو إدراج أو قص)';return}
+  if(!a.man&&s-a.t>7){IMSK[a.c.id]='مكانها مشغول بحاجة تانية';return}
+  IML.push({s,e,c:a.c,man:a.man,fb:a.fb});cur=e+.15});
+ IML.sort((a,b)=>a.s-b.s)}
+const imActive=t=>IML.find(x=>t>=x.s&&t<x.e)||null;
+/* رسم صورة جوه مستطيل: cover (بتملاه بالقص على نقطة التركيز) أو contain (كاملة) */
+function imFit(c,x,y,w,h,mode,z){const im=c.src,iw=c.w,ih=c.h;if(!im||!iw||!ih)return;let k=mode==='cover'?Math.max(w/iw,h/ih):Math.min(w/iw,h/ih);k*=z;const dw=iw*k,dh=ih*k;let dx=x+(w-dw)/2,dy=y+(h-dh)/2;
+ if(mode==='cover'){dx=Math.min(x,Math.max(x+w-dw,x+w/2-(c.fx==null?.5:c.fx)*dw));dy=Math.min(y,Math.max(y+h-dh,y+h/2-(c.fy==null?.5:c.fy)*dh))}
+ try{CX.drawImage(im,dx,dy,dw,dh)}catch(e){}}
+function drawImg(b,t,W,H){const c=b.c;if(!c||!c.src)return;const u=W/1080,acc=COL(),pin=ease((t-b.s)/.35),pout=1-ease((t-b.e+.3)/.3),p=Math.min(pin,pout);if(p<=0)return;
+ const prog=Math.min(1,Math.max(0,(t-b.s)/Math.max(.1,b.e-b.s))),z=1+.06*prog,gm=(S.imst==='full')?null:brGeom(t),F=`"${FONTN()}",Cairo,sans-serif`;
+ CX.save();CX.globalAlpha=p;let cx,cy,cw,ch;
+ if(!gm){/* ملء الشاشة: خلفية مغبّشة + الصورة (بتملا الشاشة لو قريبة من شكلها، وإلا كاملة في النص) */
+  CX.save();if('filter' in CX)CX.filter='blur(26px)';CX.globalAlpha=p*.9;imFit(c,-W*.05,-H*.05,W*1.1,H*1.1,'cover',1);if('filter' in CX)CX.filter='none';CX.restore();
+  const ra=(c.w/c.h)/(W/H),near=Math.max(ra,1/ra)<1.45;CX.save();imFit(c,0,0,W,H,near?'cover':'contain',z);CX.restore();cx=0;cy=0;cw=W;ch=H}
+ else{const sl=(1-pin)*(H-gm.y)*.3+(1-pout)*(H-gm.y)*.2,sc=.96+.04*p,r=34*u;CX.translate(gm.x+gm.w/2,gm.y+gm.h/2+sl);CX.scale(sc,sc);const x=-gm.w/2,y=-gm.h/2;
+  CX.save();CX.shadowColor='rgba(0,0,0,.55)';CX.shadowBlur=40*u;CX.shadowOffsetY=10*u;rr(x,y,gm.w,gm.h,r);CX.fillStyle='#000';CX.fill();CX.restore();
+  CX.save();rr(x,y,gm.w,gm.h,r);CX.clip();if('filter' in CX)CX.filter='blur(20px)';imFit(c,x-gm.w*.05,y-gm.h*.05,gm.w*1.1,gm.h*1.1,'cover',1);if('filter' in CX)CX.filter='none';imFit(c,x,y,gm.w,gm.h,'contain',z);CX.fillStyle=acc;CX.fillRect(x,y+gm.h-8*u,gm.w*prog,8*u);CX.restore();
+  rr(x,y,gm.w,gm.h,r);CX.lineWidth=6*u;CX.strokeStyle=acc;CX.stroke();cx=x;cy=y;cw=gm.w;ch=gm.h}
+ /* كلمة صغيرة على الصورة (اسم الصنف) */
+ if(c.cap){const sz=Math.round(40*u*Math.min(1.2,S.size));CX.font=`800 ${sz}px ${F}`;CX.direction='rtl';CX.textAlign='center';CX.textBaseline='middle';const tw=CX.measureText(c.cap).width+44*u,py=cy+ch-(gm?46*u:H*.2),px=cx+cw/2;rr(px-tw/2,py-sz*.8,tw,sz*1.6,sz*.8);CX.fillStyle='rgba(0,0,0,.62)';CX.fill();CX.fillStyle=acc;CX.fillText(c.cap,px,py+2*u)}
+ CX.restore();CX.globalAlpha=1}
+function renderIM(){const el=$s('sm_il');if(!el)return;
+ if(!IMC.length){el.innerHTML='<p class="mu">ارفع صور من «🖼️ صور الإدراج الذكي» وهتظهر هنا أماكنها.</p>';return}
+ el.innerHTML=IMC.map((c,i)=>{const b=IML.find(x=>x.c===c),rm=IMX.has(c.id);
+  const st=rm?'⛔ مشيلاها':b?`✔ عند ${fmt(b.s)} (${(b.e-b.s).toFixed(1)}ث)${b.man?' — بإيدك':b.fb?' — توزيع تلقائي':c.phrase?' — «'+BR_ESC(c.phrase)+'»':''}`:('⚠️ '+(IMSK[c.id]||'مش متحطة'));
+  return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><img src="${c.thumb}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex:none"><span style="flex:1;font-size:13px;line-height:1.5">${i+1}. ${BR_ESC(c.desc||c.name)}<br><small class="mu">${st}</small></span>${b?`<button type="button" class="b o" data-ims="${b.s}" style="flex:none;padding:6px 8px">${fmt(b.s)}</button>`:''}<button type="button" class="b o" data-imh="${c.id}" style="flex:none;padding:6px 8px" title="حطها هنا">📍</button><button type="button" class="b o" data-imx="${c.id}" style="flex:none;padding:6px 8px">${rm?'↩️':'✕'}</button></div>`}).join('')+
+ `<p class="mu" style="margin:0">📍 = حط الصورة عند المشهد الحالي، ✕ = شيلها من الفيديو (من غير ما تمسحها).</p>`;
+ el.onclick=e=>{const s=e.target.closest('[data-ims]');if(s){V.currentTime=+s.dataset.ims;draw(V.currentTime);return}
+  const h=e.target.closest('[data-imh]');if(h){IMX.delete(h.dataset.imh);IMM=IMM.filter(m=>m.id!==h.dataset.imh);IMM.push({id:h.dataset.imh,s:+(V.currentTime||0).toFixed(2)});computeImg();renderIM();draw(V.currentTime);return}
+  const x=e.target.closest('[data-imx]');if(x){const id=x.dataset.imx;if(IMX.has(id))IMX.delete(id);else{IMX.add(id);IMM=IMM.filter(m=>m.id!==id)}computeImg();renderIM();draw(V.currentTime)}}}
+function imWire(){const f=$s('sm_if');if(!f||f._w)return;f._w=1;
+ f.onchange=e=>{if(e.target.files&&e.target.files.length)addImgFiles([...e.target.files])};f.onclick=e=>{e.target.value=''};
+ const ii=$s('sm_ii');if(ii)ii.onclick=e=>{const b=e.target.closest('[data-imd]');if(!b)return;const c=IMC.splice(+b.dataset.imd,1)[0];if(c){try{c.src.close&&c.src.close()}catch(x){}IMM=IMM.filter(m=>m.id!==c.id);IMX.delete(c.id)}IMAI.sig='';paintImIn();if(D){computeImg();renderIM();try{draw(V.currentTime)}catch(x){}imMatch()}};
+ const st=$s('sm_ist');if(st){st.value=S.imst||'auto';st.onchange=()=>{S.imst=st.value;saveS();if(D&&V)draw(V.currentTime)}}
+ const mb=$s('sm_imb');if(mb)mb.onclick=()=>{if(!IMC.length)return say('ارفع صور الأول');if(!D)return say('اعمل المونتاج الأول وبعدين طابق');imMatch(true)};
+ paintImIn()}
+const _paintIm=paint;paint=function(){const r=_paintIm.apply(this,arguments);try{imWire()}catch(e){console.warn('imgs',e)}return r};
+const _buildIm=build;build=function(){const r=_buildIm.apply(this,arguments);
+ try{computeImg();const sg=IML.map(x=>x.s.toFixed(1)+'-'+x.e.toFixed(1)).join(',')+'|'+BRL.map(x=>x.s.toFixed(1)+'-'+x.e.toFixed(1)).join(',');
+  if(sg!==BIGSIG&&!_imRe){BIGSIG=sg;_imRe=1;try{_buildIm.apply(this,arguments)}finally{_imRe=0}}
+  if(IMC.length&&D&&D.seg&&D.seg.length&&IMAI.sig!==imSig()&&!IMAI.busy)setTimeout(()=>imMatch(),0)}catch(e){console.warn('img',e)}return r};
+const _renderListsIm=renderLists;renderLists=function(){const r=_renderListsIm.apply(this,arguments);try{renderIM()}catch(e){}return r};
 /* ---------- ✨ لمسات ذكية: شارات وأرقام متحركة بتطلع من كلامك (من غير ما تعتمد على السيرفر) وبتبعد عن وشك ---------- */
 let FXL=[];
 const FXB=[[/ضمان|مضمون/,'warranty','ضمان',null],[/اصلي|اوريجينال|براند|مستورد|جوده|جودة/,'original','جودة أصلية',null],[/توصيل|شحن/,'shipping','توصيل',null],[/تركيب|تثبيت|يتركب/,'tools','تركيب',null],
@@ -1096,7 +1190,7 @@ function buildCount(){CNT=[];if(S.fx===false||!CAP.length)return;
  {const W2=[];CAP.forEach(c=>{const n=c.w.length,d=Math.max(.2,c.e-c.s);c.w.forEach((w,i)=>W2.push({raw:w,n:cnStrip(w),s:c.s+d*i/n,e:c.s+d*(i+1)/n}))});
   buildRange(W2).forEach(r=>{const s0=Math.max(.3,r.ts-.1),end=Math.min(r.te+2.4,s0+6.5);const ov=CNT.find(c=>s0<c.e+.4&&end>c.s-.4);if(ov&&ov.s<s0&&s0-ov.s>2.5&&(!ov.m||s0>ov.xt+1.3))ov.e=Math.min(ov.e,s0-.1);if(!ov||ov.e<=s0)CNT.push({s:s0,e:end,rg:1,a:r.a,b:r.b,unit:r.unit||'',xt:s0+.9,n:0,m:0,kind:'range',name:'',raw:'',table:false})});CNT.sort((x,y)=>x.s-y.s)}
  /* فيديو الإدراج أهم: المشهد يخلص قبله، أو يتشال لو هيتغطى من أوله */
- if(typeof BRL!=='undefined'&&BRL&&BRL.length)CNT=CNT.map(c=>{const b=BRL.find(x=>c.s<x.e&&c.e>x.s);if(!b)return c;if(b.s>c.s+2.8){c.e=Math.min(c.e,b.s-.15);return c}return null}).filter(Boolean);
+ {const OV=(typeof BRL!=='undefined'&&BRL||[]).concat(typeof IML!=='undefined'&&IML||[]);if(OV.length)CNT=CNT.map(c=>{const b=OV.find(x=>c.s<x.e&&c.e>x.s);if(!b)return c;if(b.s>c.s+2.8){c.e=Math.min(c.e,b.s-.15);return c}return null}).filter(Boolean)}
  /* المشهد بياخد مكان أي لمسة تانية في نفس الوقت */
  if(CNT.length){FXL=FXL.filter(f=>!CNT.some(c=>f.s<c.e+.2&&f.e>c.s-.2));FX2=FX2.filter(f=>f.k==='hook'||!CNT.some(c=>f.s<c.e+.2&&f.e>c.s-.2));STEPS=STEPS.filter(x=>!CNT.some(c=>x.s<c.e&&x.e>c.s))}}
 function drawCount(t,W,H,u,F,acc){const c=CNT.find(x=>t>=x.s&&t<x.e);if(!c||S.fx===false)return;
@@ -1145,6 +1239,7 @@ function appliedList(){const L=[],t0=x=>fmt(x);
  if(!BRC.length)L.push('⚠️ مفيش فيديو إدراج مرفوع (ارفعه من «🎞️ فيديوهات الإدراج» قبل ما تضغط الزرار)');
  else if(!BRL.length)L.push('⚠️ فيديو الإدراج مرفوع بس ما لقيتش مكان مناسب ليه — دوس «➕ ضيف الإدراج هنا» في قايمة الإدراج');
  else BRL.forEach(b=>L.push('🎞️ فيديو إدراج عند '+t0(b.s)+' لحد '+t0(b.e)));
+ if(IMC.length){if(!IML.length)L.push('⚠️ صور الإدراج مرفوعة ('+IMC.length+') بس ما اتحطش منها حاجة'+(IMAI.err?' — الذكاء: '+IMAI.err:''));else IML.forEach(b=>L.push('🖼️ صورة «'+(b.c.desc||b.c.name)+'» عند '+t0(b.s)+' لحد '+t0(b.e)+(b.fb?' (توزيع تلقائي)':'')))}
  if(MU.buf)L.push('🎵 موسيقى: '+MU.name);if(MU.logo)L.push('🏷️ لوجو المحل');return L}
 function renderApplied(){const el=$s('sm_ap');if(!el)return;const L=appliedList(),sc=L.filter(x=>!x.startsWith('⚠️')).length;
  el.innerHTML=(L.length?L.map(x=>'<div>'+BR_ESC(x)+'</div>').join(''):'')+(sc<=1?'<div style="margin-top:6px;color:#e0a030">⚠️ مفيش لحظات ذكية كتير اتلقت في الكلام ده. الكلام اللي اتفرّغ موجود في «✍️ الكلام» تحت — ولو شايف إن فيه مشهد المفروض يطلع، دوس «📋 انسخ تقرير» وابعته لـ Claude.</div>':'')}
@@ -1354,11 +1449,13 @@ const TILES=[
  ['📚 فيديوهاتي (متخزنة','📚','فيديوهاتي',()=>'المتخزنة',1,'pre'],
  ['🎵 موسيقى','🎵','موسيقى ولوجو',()=>MU.buf?(MU.name||'موسيقى').slice(0,14):'مفيش',0,'pre'],
  ['🎞️ فيديوهات الإدراج','🎞️','الإدراج',()=>BRC.length?BRC.length+' فيديو':'مفيش',0,'pre'],
+ ['🖼️ صور الإدراج','🖼️','صور الإدراج',()=>IMC.length?IMC.length+' صورة':'مفيش',0,'pre'],
  ['🎨 الشكل','🎨','الشكل',()=>'لون وخط وإطار',0,'pre'],
  ['🪝 الهوكات','🪝','الهوكات',()=>S.hook?'متطبّق':HK.length+' هوك',0,'pre'],['٢) طريقة المونتاج','🛠️','الطريقة',()=>(TPL[S.tpl]&&TPL[S.tpl].n||'').replace(/^\S+\s*/,'').slice(0,14)||'اختار',0,'pre'],
  ['✍️ الكلام','✍️','الكلام',()=>D&&D.seg?D.seg.length+' جملة':'',0,'res'],
  ['🧾 اللي اتطبّق','🧾','المتطبّق',()=>'',0,'res'],
  ['🎞️ أماكن فيديوهات','📍','أماكن الإدراج',()=>BRL&&BRL.length?BRL.length+' مكان':'مفيش',0,'res'],
+ ['🖼️ أماكن الصور','🖼️','أماكن الصور',()=>IML&&IML.length?IML.length+' مكان':'مفيش',0,'res'],
  ['📐 التوضيحات','📐','التوضيحات',()=>D&&D.ev?D.ev.filter(e=>e.on).length+' توضيح':'',0,'res']];
 function tileify(){const root=$s('v-smart');if(!root||root.querySelector('.tl-g'))return;
  if(!document.getElementById('tl-css')){const st=document.createElement('style');st.id='tl-css';st.textContent=TILE_CSS;document.head.appendChild(st)}
@@ -1504,7 +1601,7 @@ function stkPrev(){const root=$s('v-smart'),cv=$s('sm_cv');if(!root||!cv)return;
   if(card){const h=card.querySelector('h2');if(h)h.textContent='٣) التصدير والأدوات'}}
  const show=()=>{const w=$s('sm_stk');if(!w){clearInterval(window.__stkT);return}w.classList.toggle('on',!!(D&&V&&CV))};show();clearInterval(window.__stkT);window.__stkT=setInterval(show,500)}
 const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI();pro2UI();stkPrev()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
-window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null}),_test:{build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
+window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null,IML:typeof IML!=='undefined'?IML:null,IMC:typeof IMC!=='undefined'?IMC:null,IMAI:typeof IMAI!=='undefined'?IMAI:null}),_test:{imApply:ms=>{imApply(ms);IMAI.sig=imSig();computeImg()},imMatch,computeImg,addImgFiles,build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
  animList:()=>animList(),setDsl:m=>{D.dsl=Object.assign(D.dsl||{},m||{})},
