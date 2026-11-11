@@ -27,7 +27,7 @@ export function gate(){
     #gt-ov .tabs{display:flex;gap:8px;margin:6px 0 4px}#gt-ov .tabs button{margin:0;min-height:42px;font-size:15px}
     #gt-ov .msg{margin-top:10px;font-size:14px;line-height:1.7;min-height:20px}#gt-ov .msg.bad{color:#ff8a80}#gt-ov .msg.ok{color:#7be3a0}
     #gt-ov a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px;padding:14px;border-radius:14px;background:#1f7a3d;color:#fff;font:800 17px Cairo,sans-serif}
-    #gt-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);inset-inline-end:8px;z-index:99990;display:flex;gap:6px;align-items:center;background:#17171c;color:#f3efe6;border:1px solid #34343e;border-radius:999px;padding:5px 12px;font:700 12px Cairo,sans-serif;box-shadow:0 6px 20px #0008}
+    #gt-bar{position:relative;z-index:1;margin:6px 8px 0 auto;width:max-content;max-width:calc(100% - 16px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#17171c;color:#f3efe6;border:1px solid #34343e;border-radius:999px;padding:5px 12px;font:700 12px Cairo,sans-serif;box-shadow:0 6px 20px #0008}
     #gt-bar.warn{border-color:#e0a030;color:#ffd68a}#gt-bar a,#gt-bar button{color:inherit;background:none;border:0;font:inherit;cursor:pointer;text-decoration:underline;padding:2px 4px}`);
   document.head.appendChild(css);
 
@@ -118,7 +118,7 @@ export function gate(){
     $('#gt-re').onclick = () => check(true); $('#gt-out').onclick = signOut;
   }
   function paintBar(s) {
-    if (!bar) { bar = E('div', { id: 'gt-bar' }); document.body.appendChild(bar); }
+    if (!bar) { bar = E('div', { id: 'gt-bar' }); document.body.prepend(bar); } /* في أول الصفحة مش طايرة فوقها: ماتغطيش علامة ✕ بتاعة أي شاشة */
     const n = s.days_left || 0;
     bar.className = s.status === 'trial' && n <= 2 ? 'warn' : '';
     bar.innerHTML = (s.status === 'admin' ? '🛠️ أدمن <a href="/admin">لوحة التحكم</a>' : s.status === 'active' ? '✅ اشتراكك ساري — باقي ' + esc(days(n)) : '🎁 تجربة مجانية — باقي ' + esc(days(n))) + ' <button id="gt-x" title="خروج">⏻</button>';
