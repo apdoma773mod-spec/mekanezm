@@ -267,6 +267,7 @@ function xf(t){const [W,H]=[CV.width,CV.height],vw=V.videoWidth,vh=V.videoHeight
  if(mo==='soft'){if(ze)z+=.06*pulse(ze);else{const c=CAP.find(x=>t>=x.s&&t<x.e);if(c&&O('cap')==='karaoke')z+=.03*(1-ease((t-c.s)/.5))}}
  else if(mo==='punch'){z+=shotIdx(t)%2?.1:0;if(ze)z+=.05*pulse(ze)}
  else if(mo==='ken'){const [a,b]=shotSpan(t);z+=.02+.08*Math.max(0,Math.min(1,(t-a)/Math.max(1,b-a)))}
+ if(mo!=='none'&&typeof PIL!=='undefined'){const pi=PIL.find(x=>t>=x.s&&t<x.s+.55);if(pi)z+=.065*(1-ease((t-pi.s)/.55))}
  if(mo!=='none'){const st=STK.find(x=>t>=x.s&&t<x.e);if(st)z+=.045*ease((t-st.s)/.25)*(1-ease((t-st.e+.3)/.3))}
  const _fz=S.fx!==false&&mo!=='ken'?FXL.find(x=>t>=x.s&&t<x.s+.45):null;if(_fz)z+=.055*(1-ease((t-_fz.s)/.45));
  if(O('trans')==='zoom'){const d=lastCut(t);if(d!=null)z+=.09*(1-ease(d/.25))}
@@ -622,6 +623,7 @@ function paintOpts(){const el=$s('sm_op');if(!el)return;
 function changed(){LK.t=-9;if(D&&V){build();renderLists();draw(V.currentTime);updBar()}}
 function paint(){const el=$s('v-smart');if(!el)return;
  el.innerHTML=`<h1>🎬 مونتاج ذكي</h1><p class="mu">ارفع الفيديو اللي صورته — السيستم بيسمع كلامك، يشيل السكتات والإعادات، يكتب الكلام على الفيديو من غير ما يغطي وشك، ويظهر المقاسات والأصناف والأسعار والخطوات وقت ما تقولها، ويظبط الألوان. اختار الطريقة وبعدين «صدّر» أو «اعمله في الخلفية».</p>
+ <div class="p" style="border:2px solid #F6DC8A"><button type="button" class="b" id="sm_one" style="width:100%;min-height:56px;font-size:18px">🪄 ظبّط كل حاجة لأفضل جودة (ضغطة واحدة)</button><div id="sm_onem" class="mu" style="margin-top:6px">مش عايز تفكر في الإعدادات؟ دوس هنا واختار الفيديو، والباقي علينا.</div></div>
  <div id="sm_auth"></div>
  <div class="p"><h2>١) الفيديو</h2><label class="b" style="width:100%;cursor:pointer">📹 اختار الفيديو<input type="file" id="sm_f" accept="video/*" style="display:none"></label><div id="sm_fi" class="mu"></div></div>
  <div class="p"><h2>📚 فيديوهاتي (متخزنة على الجهاز ده)</h2><div id="sm_lib"></div><p class="mu" style="margin:6px 0 0">بتفضل بعد ما تقفل الصفحة، بس على الموبايل ده وبالمتصفح ده بس (مش على موبايل تاني). آخر ١٥ فيديو.</p></div>
@@ -637,7 +639,7 @@ function paint(){const el=$s('v-smart');if(!el)return;
   <label>حجم الكلام<input type="range" id="sm_sz" min="0.7" max="1.5" step="0.05" value="${S.size}"></label>
   <label>المقاس<select id="sm_as"><option value="916" ${S.aspect==='916'?'selected':''}>طولي ٩:١٦ (تيك توك/ريلز)</option><option value="orig" ${S.aspect==='orig'?'selected':''}>زي الفيديو الأصلي</option></select></label>
   <label>الجودة<select id="sm_q"><option value="1440" ${S.q==1440?'selected':''}>فائقة 1440 (أنقى — أبطأ وأتقل)</option><option value="1080" ${S.q==1080?'selected':''}>عالية جدًا 1080</option><option value="720" ${S.q==720?'selected':''}>متوسطة 720 (أسرع وأخف)</option></select></label>
-  <label>نعومة الحركة<select id="sm_fps"><option value="30" ${S.fps!=60?'selected':''}>٣٠ إطار (عادي)</option><option value="60" ${S.fps==60?'selected':''}>٦٠ إطار (لو صوّرته ٦٠)</option></select></label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cr" ${S.clar!==false?'checked':''}> ✨ وضوح وعمق للصورة</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqs" ${S.sharp!==false?'checked':''}> 🔪 شحذ احترافي للتفاصيل</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqd" ${S.dn!==false?'checked':''}> 🧼 تقليل الضوضاء (المشاهد الثابتة)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqa" ${S.auto!==false?'checked':''}> 🎨 ضبط النور واللون تلقائي</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqb" ${S.stab?'checked':''}> 📐 تثبيت اهتزاز الكاميرا (بيقص ٨٪)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqg" ${S.gate!==false?'checked':''}> 🔇 بوابة ضوضاء (تهدّي الورشة وقت السكوت)</label><div style="grid-column:1/-1;display:flex;gap:6px"><button type="button" class="b o" id="sm_bps" style="flex:1;min-height:44px">💾 احفظ بصمة المحل</button><button type="button" class="b o" id="sm_bpa" style="flex:1;min-height:44px">🏷️ طبّق البصمة</button></div>
+  <label>نعومة الحركة<select id="sm_fps"><option value="30" ${S.fps!=60?'selected':''}>٣٠ إطار (عادي)</option><option value="60" ${S.fps==60?'selected':''}>٦٠ إطار (لو صوّرته ٦٠)</option></select></label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cr" ${S.clar!==false?'checked':''}> ✨ وضوح وعمق للصورة</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqs" ${S.sharp!==false?'checked':''}> 🔪 شحذ احترافي للتفاصيل</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqd" ${S.dn!==false?'checked':''}> 🧼 تقليل الضوضاء (المشاهد الثابتة)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqa" ${S.auto!==false?'checked':''}> 🎨 ضبط النور واللون تلقائي</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqb" ${S.stab?'checked':''}> 📐 تثبيت اهتزاز الكاميرا (بيقص ٨٪)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_hqg" ${S.gate!==false?'checked':''}> 🔇 بوابة ضوضاء (تهدّي الورشة وقت السكوت)</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_pi" checked> 🔔 كسر الملل (نبضة زووم لو الشاشة واقفة)</label><div style="grid-column:1/-1;display:flex;gap:6px"><button type="button" class="b o" id="sm_bps" style="flex:1;min-height:44px">💾 احفظ بصمة المحل</button><button type="button" class="b o" id="sm_bpa" style="flex:1;min-height:44px">🏷️ طبّق البصمة</button></div>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_cln" ${S.clean!==false?'checked':''}> 🎙️ نضّف صوتي وثبّت علوّه في الفيديو المتصدّر</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_fx" ${S.fx!==false?'checked':''}> ✨ لمسات ذكية (شارات وأرقام متحركة من كلامك)</label>
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sm_in" ${S.intro?'checked':''}> عنوان في الأول</label>
@@ -989,6 +991,24 @@ const _buildIm=build;build=function(){const r=_buildIm.apply(this,arguments);
   if(sg!==BIGSIG&&!_imRe){BIGSIG=sg;_imRe=1;try{_buildIm.apply(this,arguments)}finally{_imRe=0}}
   if(IMC.length&&D&&D.seg&&D.seg.length&&IMAI.sig!==imSig()&&!IMAI.busy)setTimeout(()=>imMatch(),0)}catch(e){console.warn('img',e)}return r};
 const _renderListsIm=renderLists;renderLists=function(){const r=_renderListsIm.apply(this,arguments);try{renderIM()}catch(e){}return r};
+/* ---------- 🔔 كسر الملل التلقائي: لو فيه أكتر من ~٥ ثواني من غير أي حاجة بتتحرك على الشاشة (كارت/ملصق/إدراج/قطع) بيعمل نبضة زووم خفيفة مع بداية جملة — الفيديو مايبقاش «واقف» ---------- */
+let PIL=[];
+function computePI(){PIL=[];if(!D||!CAP.length||S.pi===false||O('motion')==='none')return;const dur=D.dur||(V&&V.duration)||0;if(dur<8)return;
+ const A=[0,dur];GAPS.forEach(g=>A.push(g[1]));CUTT.forEach(t=>A.push(t));EV.forEach(e=>{if(e.on)A.push(e.s,e.e||e.s+2)});STK.forEach(x=>A.push(x.s));(FXL||[]).forEach(f=>A.push(f.s));
+ if(typeof BRL!=='undefined')BRL.forEach(b=>A.push(b.s,b.e));if(typeof IML!=='undefined')IML.forEach(b=>A.push(b.s,b.e));if(CTA)A.push(CTA.s);
+ A.sort((a,b)=>a-b);const GAP_MIN=5,STEP=4.2;
+ for(let i=0;i<A.length-1;i++){let a=A[i],b=A[i+1];if(b-a<GAP_MIN)continue;let t=a+STEP;
+  while(t<b-1.6){const c=CAP.filter(x=>x.s>=t-1&&x.s<=t+1&&!inGap(x.s)).sort((m,n)=>Math.abs(m.s-t)-Math.abs(n.s-t))[0];const at=c?c.s:t;if(!inGap(at)&&(!PIL.length||at-PIL[PIL.length-1].s>3.2))PIL.push({s:at});t=at+STEP}}}
+const _buildPI=build;build=function(){const r=_buildPI.apply(this,arguments);try{computePI()}catch(e){console.warn('pi',e)}return r};
+/* ---------- 🪄 ضغطة واحدة: يظبط كل حاجة على أفضل جودة تشتغل على أي جهاز (آيفون وويندوز) ---------- */
+const ONE={tpl:'pro',o:{},q:1080,fps:30,clar:true,sharp:true,dn:true,auto:true,stab:false,gate:true,clean:true,fx:true,smart:true,pi:true,intro:true,outro:true};
+function oneTap(){Object.assign(S,ONE,{o:{}});saveS();
+ const V2={sm_ft:'font',sm_cl:'color',sm_sz:'size',sm_as:'aspect',sm_q:'q',sm_fps:'fps'},C2={sm_cr:'clar',sm_hqs:'sharp',sm_hqd:'dn',sm_hqa:'auto',sm_hqb:'stab',sm_hqg:'gate',sm_in:'intro',sm_ou:'outro',sm_cln:'clean',sm_fx:'fx',sm_pi:'pi'};
+ Object.keys(V2).forEach(i=>{const e=$s(i);if(e&&S[V2[i]]!==undefined)e.value=S[V2[i]]});Object.keys(C2).forEach(i=>{const e=$s(i);if(e)e.checked=!!S[C2[i]]});
+ try{paintTpl();paintOpts()}catch(e){}if(D&&V){try{setupCanvas();LAY.clear();changed()}catch(e){}}
+ const m=$s('sm_onem');if(m)m.textContent='✅ اتظبّط: قالب احترافي، جودة عالية جدًا ١٠٨٠ (تشتغل على الآيفون وويندوز)، تنضيف الصوت، شحذ ووضوح، لمسات ذكية، وكسر الملل. دوس «اعمل المونتاج الذكي».'}
+function piWire(){const b=$s('sm_one');if(b&&!b._w){b._w=1;b.onclick=oneTap}const c=$s('sm_pi');if(c&&!c._w){c._w=1;c.checked=S.pi!==false;c.onchange=()=>{S.pi=c.checked;saveS();if(D&&V){computePI();draw(V.currentTime)}}}}
+const _paintPI=paint;paint=function(){const r=_paintPI.apply(this,arguments);try{piWire()}catch(e){console.warn('pi ui',e)}return r};
 /* ---------- ✨ لمسات ذكية: شارات وأرقام متحركة بتطلع من كلامك (من غير ما تعتمد على السيرفر) وبتبعد عن وشك ---------- */
 let FXL=[];
 const FXB=[[/ضمان|مضمون/,'warranty','ضمان',null],[/اصلي|اوريجينال|براند|مستورد|جوده|جودة/,'original','جودة أصلية',null],[/توصيل|شحن/,'shipping','توصيل',null],[/تركيب|تثبيت|يتركب/,'tools','تركيب',null],
@@ -1240,6 +1260,7 @@ function appliedList(){const L=[],t0=x=>fmt(x);
  else if(!BRL.length)L.push('⚠️ فيديو الإدراج مرفوع بس ما لقيتش مكان مناسب ليه — دوس «➕ ضيف الإدراج هنا» في قايمة الإدراج');
  else BRL.forEach(b=>L.push('🎞️ فيديو إدراج عند '+t0(b.s)+' لحد '+t0(b.e)));
  if(IMC.length){if(!IML.length)L.push('⚠️ صور الإدراج مرفوعة ('+IMC.length+') بس ما اتحطش منها حاجة'+(IMAI.err?' — الذكاء: '+IMAI.err:''));else IML.forEach(b=>L.push('🖼️ صورة «'+(b.c.desc||b.c.name)+'» عند '+t0(b.s)+' لحد '+t0(b.e)+(b.fb?' (توزيع تلقائي)':'')))}
+ if(PIL.length)L.push('🔔 '+PIL.length+' نبضة كسر ملل (أماكن الشاشة فيها واقفة)');
  if(MU.buf)L.push('🎵 موسيقى: '+MU.name);if(MU.logo)L.push('🏷️ لوجو المحل');return L}
 function renderApplied(){const el=$s('sm_ap');if(!el)return;const L=appliedList(),sc=L.filter(x=>!x.startsWith('⚠️')).length;
  el.innerHTML=(L.length?L.map(x=>'<div>'+BR_ESC(x)+'</div>').join(''):'')+(sc<=1?'<div style="margin-top:6px;color:#e0a030">⚠️ مفيش لحظات ذكية كتير اتلقت في الكلام ده. الكلام اللي اتفرّغ موجود في «✍️ الكلام» تحت — ولو شايف إن فيه مشهد المفروض يطلع، دوس «📋 انسخ تقرير» وابعته لـ Claude.</div>':'')}
@@ -1601,7 +1622,7 @@ function stkPrev(){const root=$s('v-smart'),cv=$s('sm_cv');if(!root||!cv)return;
   if(card){const h=card.querySelector('h2');if(h)h.textContent='٣) التصدير والأدوات'}}
  const show=()=>{const w=$s('sm_stk');if(!w){clearInterval(window.__stkT);return}w.classList.toggle('on',!!(D&&V&&CV))};show();clearInterval(window.__stkT);window.__stkT=setInterval(show,500)}
 const _paint1=paint;paint=function(){const r=_paint1.apply(this,arguments);try{hkUI();tileify();brPosUI();proUI();pro2UI();stkPrev()}catch(e){console.warn('tiles',e)}return r};const _sc1=setupCanvas;setupCanvas=function(){const r=_sc1.apply(this,arguments);try{brDragWire()}catch(e){}return r};
-window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null,IML:typeof IML!=='undefined'?IML:null,IMC:typeof IMC!=='undefined'?IMC:null,IMAI:typeof IMAI!=='undefined'?IMAI:null}),_test:{imApply:ms=>{imApply(ms);IMAI.sig=imSig();computeImg()},imMatch,computeImg,addImgFiles,build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
+window.mkzSmart={draw:t=>draw(t),state:()=>({S,D,CAP,EV,GAPS,STK,CTA,FXL,FX2,STEPS,CNT,V,BRL:typeof BRL!=='undefined'?BRL:null,IML:typeof IML!=='undefined'?IML:null,PIL:typeof PIL!=='undefined'?PIL:null,IMC:typeof IMC!=='undefined'?IMC:null,IMAI:typeof IMAI!=='undefined'?IMAI:null}),_test:{oneTap,computePI,imApply:ms=>{imApply(ms);IMAI.sig=imSig();computeImg()},imMatch,computeImg,addImgFiles,build,showScore,copyChapters,scoreVideo,wav64,splitPoints,mergeAI,headAt,setD:d=>{D=d},setV:v=>{V=v},setS:x=>{Object.assign(S,x);if(!TPL[S.tpl])S.tpl='pro';if(!S.o||typeof S.o!=='object')S.o={}},setup:setupCanvas,exportVid,
  /* العامل السحابي: بيدوّر على مكان الشخص في الفريمات قبل الرسم (لو الاختيار شغال) */
  /* أوقات الأصوات في الفيديو النهائي: «بوب» مع الكروت والملصقات و«ووش» مع عناوين الأقسام والنداء */
  animList:()=>animList(),setDsl:m=>{D.dsl=Object.assign(D.dsl||{},m||{})},
