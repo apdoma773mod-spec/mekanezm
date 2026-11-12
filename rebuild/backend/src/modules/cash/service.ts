@@ -10,6 +10,7 @@ import {
 import { isAdmin, type Actor } from '../../lib/actor.js';
 import { dateToDay, dayRange, todayYmd } from '../../lib/dates.js';
 import { ZERO, money, num, sum } from '../../lib/money.js';
+import { tbl } from '../../lib/db-schema.js';
 
 const KIND_LABEL = { SALE: 'بيع', PURCHASE: 'شراء' } as const;
 
@@ -151,7 +152,7 @@ export class CashService {
       this.prisma.product.count({ where: { deletedAt: null } }),
       isAdmin(actor)
         ? this.prisma.$queryRaw<{ v: Prisma.Decimal | null }[]>`
-            SELECT sum(qty * cost) AS v FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0`
+            SELECT sum(qty * cost) AS v FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty > 0`
         : Promise.resolve(null),
       this.prisma.invoice.aggregate({ where: { kind: 'SALE', status: 'ACTIVE' }, _sum: { total: true } }),
       this.prisma.invoice.aggregate({ where: { kind: 'PURCHASE', status: 'ACTIVE' }, _sum: { total: true } }),
@@ -161,7 +162,7 @@ export class CashService {
       this.prisma.contact.aggregate({ where: { type: 'CUSTOMER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
       this.balance(),
       this.prisma.product.count({ where: { deletedAt: null, qty: { lte: 0 } } }),
-      this.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`,
+      this.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`,
       this.prisma.contact.aggregate({ where: { type: 'SUPPLIER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
     ]);
     const n = (d: Prisma.Decimal | null | undefined) => num(d ?? ZERO);
@@ -193,7 +194,7 @@ export class CashService {
       this.prisma.invoice.aggregate({ where: { kind: 'PURCHASE', status: 'ACTIVE', date }, _count: true, _sum: { total: true } }),
       this.summary({ from: day, to: day }),
       this.prisma.expense.aggregate({ where: { deletedAt: null, date }, _sum: { amount: true } }),
-      this.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM "Product" WHERE "deletedAt" IS NULL AND qty <= "minQty"`,
+      this.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty <= "minQty"`,
       this.prisma.contact.aggregate({ where: { type: 'CUSTOMER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
       this.prisma.contact.aggregate({ where: { type: 'SUPPLIER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }),
       isAdmin(actor)

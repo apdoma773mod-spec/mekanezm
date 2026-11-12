@@ -19,6 +19,7 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { D, money, num, qty as roundQty } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
+import { tbl } from '../../lib/db-schema.js';
 
 export function toProductDto(p: Product, admin: boolean): ProductDto {
   return {
@@ -86,7 +87,7 @@ export class ProductsService {
     if (query.stock === 'low') {
       // Prisma can't compare two columns, so the "at or under its own alert level" ids come from SQL.
       const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
+        SELECT id FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
       lowIds = rows.map((r) => r.id);
     }
     // Like the old search: every typed word must appear in the name, code, barcode or category.

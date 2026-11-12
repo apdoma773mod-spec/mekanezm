@@ -3,6 +3,7 @@ import type { ReportCell, ReportHeadline, ReportId, ReportPeriods, ReportResult,
 import { addDays, dateToDay, dayRange, dayToDate, todayYmd } from '../../lib/dates.js';
 import { num } from '../../lib/money.js';
 import { CashService } from '../cash/service.js';
+import { tbl } from '../../lib/db-schema.js';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : 0);
@@ -153,7 +154,7 @@ export class ReportsService {
   private async lastSales() {
     const rows = await this.prisma.$queryRaw<{ productId: string; last: Date }[]>`
       SELECT ii."productId", MAX(i."date") AS last
-      FROM "InvoiceItem" ii JOIN "Invoice" i ON i.id = ii."invoiceId"
+      FROM ${tbl('InvoiceItem')} ii JOIN ${tbl('Invoice')} i ON i.id = ii."invoiceId"
       WHERE i.kind = 'SALE' AND i.status = 'ACTIVE' AND ii."productId" IS NOT NULL
       GROUP BY ii."productId"`;
     return new Map(rows.map((x) => [x.productId, dateToDay(x.last)]));

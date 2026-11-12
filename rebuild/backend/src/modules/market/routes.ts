@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { actorOf } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
+import { tbl } from '../../lib/db-schema.js';
 
 /**
  * 💹 أسعار السوق ومقارنة الشراء (mk_settings.market_prices القديمة): لكل صنف أسعار الموردين اللي بيكتبها المدير،
@@ -27,12 +28,12 @@ export default async function marketRoutes(app: FastifyInstance) {
     // last purchase price per product and supplier, and the very last purchase of each product
     const perSupplier = await db.$queryRaw<BuyRow[]>`
       SELECT DISTINCT ON (ii."productId", i.person) ii."productId" AS pid, i.person AS supplier, ii.price, i.date
-      FROM "InvoiceItem" ii JOIN "Invoice" i ON i.id = ii."invoiceId"
+      FROM ${tbl('InvoiceItem')} ii JOIN ${tbl('Invoice')} i ON i.id = ii."invoiceId"
       WHERE i.kind = 'PURCHASE' AND i.status = 'ACTIVE' AND ii."productId" IS NOT NULL AND ii.price > 0
       ORDER BY ii."productId", i.person, i.date DESC, i."createdAt" DESC`;
     const last = await db.$queryRaw<BuyRow[]>`
       SELECT DISTINCT ON (ii."productId") ii."productId" AS pid, i.person AS supplier, ii.price, i.date
-      FROM "InvoiceItem" ii JOIN "Invoice" i ON i.id = ii."invoiceId"
+      FROM ${tbl('InvoiceItem')} ii JOIN ${tbl('Invoice')} i ON i.id = ii."invoiceId"
       WHERE i.kind = 'PURCHASE' AND i.status = 'ACTIVE' AND ii."productId" IS NOT NULL AND ii.price > 0
       ORDER BY ii."productId", i.date DESC, i."createdAt" DESC`;
     const row = (r: BuyRow) => ({ pid: r.pid, s: r.supplier.trim(), p: Number(r.price), at: r.date.toISOString().slice(0, 10) });
