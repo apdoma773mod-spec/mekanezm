@@ -146,6 +146,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   /** آخر «لحساب» اتكتب: البنود الجديدة بتاخده تلقائي. */
   const [lastFor, setLastFor] = useState('');
   const [bulkFor, setBulkFor] = useState('');
+  const [showFor, setShowFor] = useState(() => !!src?.items.some((it) => 'forName' in it && it.forName));
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [person, setPerson] = useState(src?.person ?? presetPerson ?? preset?.person ?? '');
@@ -169,6 +170,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
+  /** البند المفتوح دلوقتي (الباقي ملموم سطر واحد)، والصف المتعلّم في نتايج البحث. */
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [hl, setHl] = useState(0);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const qtyEls = useRef<Record<string, HTMLInputElement | null>>({});
+  const priceEls = useRef<Record<string, HTMLInputElement | null>>({});
+  const cardEls = useRef<Record<string, HTMLDivElement | null>>({});
+  const linesRef = useRef<Line[]>([]);
   const scanRef = useRef<string | null>(null);
   const qc = useQueryClient();
 
@@ -208,14 +217,34 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
   const remaining = Math.max(0, r2(total - paidValue));
 
-  const addProduct = (p: ProductDto) => {
+  linesRef.current = lines;
+  useEffect(() => {
+    if (!openKey) return;
+    cardEls.current[openKey]?.scrollIntoView({ block: 'nearest' });
+    if (focusKey === openKey) {
+      qtyEls.current[openKey]?.focus();
+      setFocusKey(null);
+    }
+  }, [openKey, focusKey]);
+  /** Enter جوّه خانة مش المفروض يحفظ الفاتورة بالغلط. */
+  const noSubmit = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') e.preventDefault();
+  };
+
+  /** `edit` = اختيار باليد: البند يتفتح تحت البحث والمؤشر يروح على العدد. من غيره (سكانر/كاميرا) المؤشر يفضل في البحث للمسحة اللي بعدها. */
+  const addProduct = (p: ProductDto, edit = false) => {
+    const key = newKey();
+    const same = (l: Line) => l.productId === p.id && (l.forName ?? '') === lastFor;
+    const target = linesRef.current.find(same)?.key ?? key;
+    setOpenKey(target);
+    if (edit) setFocusKey(target);
     setLines((ls) => {
-      const ex = ls.find((l) => l.productId === p.id && (l.forName ?? '') === lastFor);
+      const ex = ls.find(same);
       if (ex) return ls.map((l) => (l === ex ? { ...l, qty: String(toNum(l.qty) + 1) } : l));
       return [
         ...ls,
         {
-          key: newKey(),
+          key,
           productId: p.id,
           name: p.name,
           unit: p.unit,
@@ -227,21 +256,30 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       ];
     });
     setSearch('');
-    searchRef.current?.focus();
+    if (!edit) searchRef.current?.focus();
   };
 
   const addUnregistered = () => {
     const name = search.trim();
     if (!name) return;
-    setLines((ls) => [...ls, { key: newKey(), name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor }]);
+    const key = newKey();
+    setLines((ls) => [...ls, { key, name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor }]);
+    setOpenKey(key);
+    setFocusKey(key);
     setSearch('');
-    searchRef.current?.focus();
   };
 
   addRef.current = addProduct;
 
   /** A barcode scanner types the code and presses Enter: add the exact match straight away. */
   const onSearchKey = async (e: KeyboardEvent<HTMLInputElement>) => {
+    const list = results.data?.items ?? [];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!list.length) return;
+      e.preventDefault();
+      setHl((h) => (e.key === 'ArrowDown' ? Math.min(list.length - 1, h + 1) : Math.max(0, h - 1)));
+      return;
+    }
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const code = search.trim();
@@ -249,8 +287,15 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     try {
       addProduct(await lookupProduct(code));
     } catch {
-      const first = results.data?.items[0];
-      if (first) addProduct(first);
+      // Enter سريع قبل ما القايمة تتحدّث: القايمة اللي ظاهرة بتاعة كلمة قديمة — نجيب نتيجة الكلمة المكتوبة فعلاً بدل ما نضيف صنف غلط
+      const fresh = debounced.trim() === code && !results.isPlaceholderData && !results.isFetching;
+      const pick = fresh
+        ? (list[hl] ?? list[0])
+        : await api
+            .get<{ items: ProductDto[] }>('/products', { q: code, pageSize: 15 })
+            .then((r) => r.items[0])
+            .catch(() => undefined);
+      if (pick) addProduct(pick, true);
     }
   };
 
@@ -443,7 +488,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               }}
             />
           )}
-          <div className="field full">
+          <div className="field full txtop">
             <label htmlFor="txSearch">ابحث عن الصنف واختاره</label>
             <div className="txsrow">
             <input
@@ -454,7 +499,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               name="mk-noauto-item"
               placeholder="اكتب اسم الصنف أو كوده أو الباركود..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setHl(0);
+              }}
               onKeyDown={onSearchKey}
               data-scan="own"
             />
@@ -470,8 +518,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                 {results.isPending ? (
                   <div style={{ color: '#888' }}>⏳</div>
                 ) : results.data?.items.length ? (
-                  results.data.items.map((p) => (
-                    <div key={p.id} onClick={() => addProduct(p)}>
+                  results.data.items.map((p, i) => (
+                    <div key={p.id} className={i === hl ? 'hl' : undefined} onClick={() => addProduct(p, true)}>
                       {p.name}{' '}
                       <small style={{ color: '#7a8a8f' }}>
                         ({qtyText(p.qty)} {p.unit})
@@ -488,12 +536,24 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             )}
           </div>
 
-          <div className="field full">
-            {isSale && !asQuote && lines.length > 0 && (
+          <div className="field full" id="txLines">
+            {lines.length > 0 && (
+              <div className="txbar">
+                <span>
+                  🧾 <b>{lines.length}</b> صنف
+                </span>
+                {isSale && !asQuote && (
+                  <button type="button" className={showFor ? 'primary' : 'secondary'} onClick={() => setShowFor((v) => !v)}>
+                    👥 تقسيم على زباين
+                  </button>
+                )}
+              </div>
+            )}
+            {isSale && !asQuote && showFor && lines.length > 0 && (
               <div className="txfor" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, marginBottom: 8 }}>
-                <small>👥 الفاتورة دي لعدّة زباين؟ اكتب اسم الزبون على كل بند («لحساب»)، وبعد الحفظ تطلع لكل زبون صفحة لوحده.</small>
+                <small>اكتب اسم الزبون على كل بند («لحساب»)، وبعد الحفظ تطلع لكل زبون صفحة لوحده.</small>
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                  <input list="mk-for" placeholder="اسم زبون — يتطبق على البنود اللي من غير اسم" value={bulkFor} onChange={(e) => setBulkFor(e.target.value)} style={{ flex: 1, padding: 10, border: '1px solid var(--border)', borderRadius: 10 }} />
+                  <input list="mk-for" placeholder="اسم زبون — يتطبق على البنود اللي من غير اسم" value={bulkFor} onChange={(e) => setBulkFor(e.target.value)} onKeyDown={noSubmit} style={{ flex: 1, minWidth: 0, padding: 10, border: '1px solid var(--border)', borderRadius: 10 }} />
                   <button
                     type="button"
                     className="secondary"
@@ -510,12 +570,48 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                 </div>
               </div>
             )}
-            {lines.map((l) => {
+            {[...lines].reverse().map((l) => {
               const lineTotal = r2(toNum(l.qty) * toNum(l.price));
+              const who = (l.forName ?? '').trim();
+              if (l.key !== openKey) {
+                // سطر ملموم: الاسم والكمية × السعر والإجمالي — دوسة تفتحه
+                return (
+                  <div key={l.key} className={`txl txc${isSale && toNum(l.price) === 0 ? ' warn' : ''}`} onClick={() => setOpenKey(l.key)}>
+                    <div className="txc-n">
+                      <b>{l.name}</b>
+                      <small>
+                        {toNum(l.qty)} {l.unLabel || l.unit} × {money(toNum(l.price))}
+                        {who ? ` — 👤 ${who}` : ''}
+                      </small>
+                    </div>
+                    <b className="txc-t">{money(lineTotal)}</b>
+                    <button
+                      type="button"
+                      className="secondary danger txc-x"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLines((ls) => ls.filter((x) => x.key !== l.key));
+                      }}
+                      aria-label="شيل الصنف"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              }
               return (
-                <div key={l.key} className="txl">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                    <b>{l.name}</b>
+                <div
+                  key={l.key}
+                  className="txl txo"
+                  ref={(el) => {
+                    cardEls.current[l.key] = el;
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                    <b style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setOpenKey(null)}>
+                      {l.name}
+                    </b>
+                    <b style={{ whiteSpace: 'nowrap', color: 'var(--blue)' }}>{money(lineTotal)}</b>
                     <button
                       type="button"
                       className="secondary danger"
@@ -525,6 +621,64 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                     >
                       ✕
                     </button>
+                  </div>
+                  {l.available !== null && (
+                    <small style={{ color: '#7a8a8f' }}>
+                      المتاح: {qtyText(l.available)} {l.unit}
+                      {!l.productId && ' — صنف غير مسجل، هيتسجل مع الفاتورة'}
+                    </small>
+                  )}
+                  <div className="txrow">
+                    <div>
+                      <small>العدد</small>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button type="button" className="secondary step" onClick={() => step(l, -1)}>
+                          −
+                        </button>
+                        <input
+                          ref={(el) => {
+                            qtyEls.current[l.key] = el;
+                          }}
+                          inputMode="decimal"
+                          enterKeyHint="next"
+                          dir="ltr"
+                          value={l.qty}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setLine(l.key, { qty: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            e.preventDefault();
+                            priceEls.current[l.key]?.focus();
+                          }}
+                          style={{ width: 64, textAlign: 'center', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
+                        />
+                        <button type="button" className="secondary step" onClick={() => step(l, 1)}>
+                          ＋
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 90 }}>
+                      <small>{isSale ? 'سعر البيع' : 'سعر الشراء'}</small>
+                      <input
+                        ref={(el) => {
+                          priceEls.current[l.key] = el;
+                        }}
+                        inputMode="decimal"
+                        enterKeyHint="done"
+                        dir="ltr"
+                        value={l.price}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setLine(l.key, { price: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          // Enter على السعر = خلّصت البند: يتلمّ وترجع لخانة البحث تكتب اللي بعده
+                          e.preventDefault();
+                          setOpenKey(null);
+                          searchRef.current?.focus();
+                        }}
+                        style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
+                      />
+                    </div>
                   </div>
                   {l.productId && (infos[l.productId]?.packs.length ?? 0) > 0 && (
                     <div style={{ marginTop: 6 }}>
@@ -550,13 +704,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       {l.unLabel && <small style={{ display: 'block', color: '#087f8c', fontWeight: 700 }}>({toNum(l.qty)} {l.unLabel})</small>}
                     </div>
                   )}
-                  {l.available !== null && (
-                    <small style={{ color: '#7a8a8f' }}>
-                      المتاح: {qtyText(l.available)} {l.unit}
-                      {!l.productId && ' — صنف غير مسجل، هيتسجل مع الفاتورة'}
-                    </small>
-                  )}
-                  {isSale && !asQuote && (
+                  {isSale && !asQuote && showFor && (
                     <div style={{ marginTop: 6 }}>
                       <small>👤 لحساب (اسم الزبون — اختياري)</small>
                       <input
@@ -566,45 +714,22 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                           setLine(l.key, { forName: e.target.value });
                           setLastFor(e.target.value.trim());
                         }}
+                        onKeyDown={noSubmit}
                         placeholder="مثال: مدام سلوى"
                         style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
                       />
                     </div>
                   )}
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, flexWrap: 'wrap' }}>
-                    <div>
-                      <small>العدد</small>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button type="button" className="secondary step" onClick={() => step(l, -1)}>
-                          −
-                        </button>
-                        <input
-                          inputMode="decimal"
-                          dir="ltr"
-                          value={l.qty}
-                          onChange={(e) => setLine(l.key, { qty: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
-                          style={{ width: 64, textAlign: 'center', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
-                        />
-                        <button type="button" className="secondary step" onClick={() => step(l, 1)}>
-                          ＋
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 90 }}>
-                      <small>{isSale ? 'سعر البيع' : 'سعر الشراء'}</small>
-                      <input
-                        inputMode="decimal"
-                        dir="ltr"
-                        value={l.price}
-                        onChange={(e) => setLine(l.key, { price: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
-                        style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
-                      />
-                    </div>
-                    <div>
-                      <small>الإجمالي</small>
-                      <div style={{ fontWeight: 700, padding: '10px 0' }}>{money(lineTotal)}</div>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className="primary txdone"
+                    onClick={() => {
+                      setOpenKey(null);
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    ✓ تمام — الصنف اللي بعده
+                  </button>
                 </div>
               );
             })}
@@ -771,7 +896,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           />
           <FormError message={errors._} />
         </div>
-        <div className="modal-foot">
+        <div className="modal-foot txfoot">
+          <div className="txfoot-t">
+            <span>{lines.length} صنف</span>
+            <b>{money(total)}</b>
+          </div>
           <button className="primary" disabled={busy}>
             {busy ? '⏳ بيحفظ…' : asQuote ? 'حفظ عرض السعر' : 'حفظ العملية'}
           </button>
