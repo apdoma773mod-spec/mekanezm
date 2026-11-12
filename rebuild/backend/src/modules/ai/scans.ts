@@ -12,7 +12,7 @@ import { getFile, putFile, removeFile } from '../../lib/files.js';
  */
 
 const KEY = 'ai_scans';
-const TRANSIENT = /high demand|overload|unavailable|503|502|500|429|quota|rate.?limit|try again|temporar|timeout|timed out|fetch|network|load failed|internal|deadline|ECONN|abort/i;
+const TRANSIENT = /^busy:|^quota:|high demand|overload|unavailable|503|502|500|429|quota|rate.?limit|try again|temporar|timeout|timed out|fetch|network|load failed|internal|deadline|ECONN|abort/i;
 const BACK = [1, 2, 4, 8, 15, 30, 30, 60, 60, 120, 180, 240]; // دقايق بين كل محاولة والتانية
 const MAX_PAGES = 8;
 
@@ -130,7 +130,7 @@ async function callFnQ(image: string, part?: { i: number; n: number }, text = ''
     try {
       return await callFn(image, part, text);
     } catch (e) {
-      if (k >= 2 || !TRANSIENT.test(String((e as Error).message)) || /^quota:/.test(String((e as Error).message))) throw e;
+      if (k >= 2 || !TRANSIENT.test(String((e as Error).message)) || /^(quota|busy):/.test(String((e as Error).message))) throw e;
       await new Promise((r) => setTimeout(r, k ? 8000 : 3000));
     }
   }
@@ -254,7 +254,7 @@ async function tick(store: Store, log: FastifyInstance['log'], only?: string) {
       } catch (e) {
         const m = String((e as Error)?.message || e) || 'حصل خطأ';
         if (TRANSIENT.test(m) && job.attempts <= BACK.length)
-          await store.patch(job.id, { status: 'pending', error: m.replace(/^quota:\s*/, ''), nextAt: new Date(Date.now() + BACK[Math.max(0, job.attempts - 1)]! * 60000).toISOString() });
+          await store.patch(job.id, { status: 'pending', error: m.replace(/^(quota|busy):\s*/, ''), nextAt: new Date(Date.now() + BACK[Math.max(0, job.attempts - 1)]! * 60000).toISOString() });
         else await store.patch(job.id, { status: 'failed', error: m, deep: false });
       }
     }
