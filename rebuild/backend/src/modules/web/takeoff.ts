@@ -16,7 +16,8 @@ import { geminiKey } from './catalog-ai.js';
  *   → { model: Model, doubt: string[], reads: number }
  */
 
-const MODELS = [...new Set([process.env.TAKEOFF_MODEL, 'gemini-flash-latest', 'gemini-3-flash-preview', 'gemini-2.5-flash'].filter(Boolean))] as string[];
+// نفس ترتيب موديلات القراءة الشغالة في باقي السيستم (catalog-ai.ts)
+const MODELS = [...new Set([process.env.TAKEOFF_MODEL, 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-flash-latest'].filter(Boolean))] as string[];
 const DAY_KEY = 'takeoff_day';
 const DAILY_MAX = Math.max(1, Number(process.env.TAKEOFF_DAILY_MAX) || 150);
 const MIME = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/;
@@ -95,11 +96,13 @@ async function ask(key: string, parts: unknown[], deadline: number): Promise<Mod
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json', maxOutputTokens: 16000 } }),
-        signal: AbortSignal.timeout(left),
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json', maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'low' } } }),
+        // مهلة لكل محاولة (مش كل الوقت الباقي) عشان موديل واحد بطيء ما ياكلش فرصة اللي بعده
+        signal: AbortSignal.timeout(Math.min(left, 26_000)),
       });
       const body = (await r.json().catch(() => ({}))) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
       if (!r.ok) {
+        console.warn('[takeoff]', model, r.status, JSON.stringify(body).slice(0, 300));
         if ([400, 404, 429, 500, 503].includes(r.status)) continue; // model closed / busy → next one
         return null;
       }
@@ -108,8 +111,8 @@ async function ask(key: string, parts: unknown[], deadline: number): Promise<Mod
       if (!j) continue;
       const m = JSON.parse(j) as Model;
       if (m && typeof m === 'object') return m;
-    } catch {
-      /* timeout or bad JSON → next model if there is time */
+    } catch (e) {
+      console.warn('[takeoff]', model, (e as Error)?.name, String((e as Error)?.message).slice(0, 200)); // timeout or bad JSON → next model if there is time
     }
   }
   return null;
