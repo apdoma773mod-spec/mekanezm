@@ -82,6 +82,24 @@ async function generateCode(tx: Prisma.TransactionClient): Promise<string> {
 export class ProductsService {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** Products whose saved supplier names (Setting `invoice_aliases`: {supplier: {their text: product id}}) contain every typed word. */
+  private async aliasHits(words: string[]): Promise<string[]> {
+    const al = ((await this.prisma.setting.findUnique({ where: { key: 'invoice_aliases' } }).catch(() => null))?.value ?? {}) as Record<string, Record<string, string>>;
+    const norm = (t: string) => t.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ');
+    const W = words.map(norm);
+    const ids = new Set<string>();
+    for (const m of Object.values(al && typeof al === 'object' ? al : {}))
+      for (const [text, id] of Object.entries(m && typeof m === 'object' ? m : {})) {
+        if (text.startsWith('#')) {
+          if (W.length === 1 && norm(text.slice(1)) === W[0]) ids.add(id); // the supplier's code typed exactly
+          continue;
+        }
+        const t = norm(text);
+        if (W.every((w) => t.includes(w))) ids.add(id);
+      }
+    return [...ids].slice(0, 200);
+  }
+
   async list(query: ListProductsQuery, actor: Actor): Promise<Paginated<ProductDto>> {
     let lowIds: string[] | undefined;
     if (query.stock === 'low') {
@@ -92,6 +110,8 @@ export class ProductsService {
     }
     // Like the old search: every typed word must appear in the name, code, barcode or category.
     const words = (query.q ?? '').trim().split(/\s+/).filter(Boolean);
+    // 🔁 أسماء الموردين: الصنف اللي اتطابق مرة مع اسم المورد (مراجعة فاتورة الشراء) بيطلع بالاسمين في البحث
+    const aliasIds = words.length ? await this.aliasHits(words) : [];
     const where: Prisma.ProductWhereInput = {
       deletedAt: null,
       ...(query.category ? { category: query.category } : {}),
@@ -100,14 +120,19 @@ export class ProductsService {
       ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
       ...(words.length
         ? {
-            AND: words.map((w) => ({
-              OR: [
-                ...arContains('name', w),
-                { code: { startsWith: w.toUpperCase() } },
-                { barcode: w },
-                { category: { contains: w, mode: 'insensitive' as const } },
-              ],
-            })),
+            OR: [
+              {
+                AND: words.map((w) => ({
+                  OR: [
+                    ...arContains('name', w),
+                    { code: { startsWith: w.toUpperCase() } },
+                    { barcode: w },
+                    { category: { contains: w, mode: 'insensitive' as const } },
+                  ],
+                })),
+              },
+              ...(aliasIds.length ? [{ id: { in: aliasIds } }] : []),
+            ],
           }
         : {}),
     };
