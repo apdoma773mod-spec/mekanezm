@@ -85,6 +85,8 @@ const uniq = (a: (string | undefined)[]) => a.filter((m, i) => m && a.indexOf(m)
 const STRONG_LIST = uniq([env("INVOICE_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest", "gemini-2.5-pro"]);
 const FAST_LIST = uniq([env("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
 const GONE = /no longer available|not found|is not supported|deprecated|unknown model/i;
+// كل موديل ليه حصة مجانية لوحده: لو حصة موديل خلصت أو زحمة، نجرّب اللي بعده بدل ما نقف
+const BUSY = /quota|exceeded|rate.?limit|resource.?exhausted|overloaded|high demand|unavailable|try again/i;
 const INV_STRONG = STRONG_LIST[0];
 type Inv = { items?: { text?: string; qty?: number; price?: number; total?: number }[]; row_count?: number; grand_total?: number; discount?: number; [k: string]: unknown };
 function invCheck(d: Inv) {
@@ -97,7 +99,7 @@ function invCheck(d: Inv) {
   return { n: it.length, rows, sum, grand_total: gt, discount: disc, rows_ok: rowsOk, total_ok: totalOk, ok: it.length > 0 && rowsOk && totalOk };
 }
 const invScore = (c: ReturnType<typeof invCheck>) => c.n * 10 + (c.total_ok ? 25 : 0) + (c.rows_ok ? 15 : 0);
-async function geminiInv(key: string, image: string, mt: string, model: string, timeoutMs: number, hint: string): Promise<{ ok: true; d: Inv } | { ok: false; status: number; error: string }> {
+async function geminiInv(key: string, image: string, mt: string, model: string, timeoutMs: number, hint: string, text = ""): Promise<{ ok: true; d: Inv } | { ok: false; status: number; error: string }> {
   let r: Response;
   try {
     r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -105,7 +107,7 @@ async function geminiInv(key: string, image: string, mt: string, model: string, 
       signal: AbortSignal.timeout(timeoutMs),
       headers: { "x-goog-api-key": key, "content-type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") + (hint ? "\n" + hint : "") }, { inline_data: { mime_type: mt, data: image } }] }],
+        contents: [{ parts: [{ text: PROMPT.replace("باستخدام الأداة record_invoice", "كـ JSON") + (hint ? "\n" + hint : "") + (text ? "\n\nده النص المستخرج من ملف الـPDF نفسه (الأرقام والأسماء فيه دقيقة 100%، اعتمد عليه في الأرقام وصحّح بيه القراءة، والصورة للترتيب والأعمدة):\n" + text.slice(0, 60000) : "") }, { inline_data: { mime_type: mt, data: image } }] }],
         generationConfig: { responseMimeType: "application/json", responseSchema: GSCHEMA, temperature: 0, maxOutputTokens: 32768 },
       }),
     });
@@ -118,7 +120,7 @@ async function geminiInv(key: string, image: string, mt: string, model: string, 
   const txt = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
   try { return { ok: true, d: JSON.parse(txt) }; } catch { return { ok: false, status: 422, error: body?.candidates?.[0]?.finishReason === "MAX_TOKENS" ? "الفاتورة طويلة قوي — اتقطعت" : "ماقدرتش أقرا الفاتورة" }; }
 }
-async function viaGemini(key: string, image: string, mt: string, part?: { i: number; n: number }) {
+async function viaGemini(key: string, image: string, mt: string, part?: { i: number; n: number }, text = "") {
   const t0 = Date.now(), left = () => 118000 - (Date.now() - t0);
   const partHint = part && part.n > 1 ? `دي شريحة رقم ${part.i} من ${part.n} من صورة فاتورة طويلة (الشرايح متداخلة شوية). اكتب كل صفوف الأصناف الظاهرة في الشريحة دي بس — حتى أول وآخر صف لو مقروءين. row_count = عدد الصفوف في الشريحة دي. grand_total بس لو الإجمالي النهائي ظاهر في الشريحة دي.` : "";
   let best: { d: Inv; c: ReturnType<typeof invCheck>; model: string } | null = null, lastErr = { status: 502, error: "ماقدرتش أقرا الفاتورة" }, passes = 0;
@@ -126,14 +128,16 @@ async function viaGemini(key: string, image: string, mt: string, part?: { i: num
   const tryTier = async (list: string[], ms: number, hint: string) => {
     for (const m of list) {
       if (left() < 12000) break;
-      const r = await geminiInv(key, image, mt, m, Math.min(ms, left()), hint);
+      const r = await geminiInv(key, image, mt, m, Math.min(ms, left()), hint, text);
       passes++;
       if (!r.ok && (GONE.test(r.error) || r.status === 404)) { lastErr = { status: 502, error: "موديل جوجل اتقفل: " + m }; continue; }
+      if (!r.ok && BUSY.test(r.error)) { lastErr = r; continue; }
       return { r, m };
     }
     return null;
   };
-  const tiers: [string[], number][] = [[STRONG_LIST, 70000], [FAST_LIST, 45000]];
+  // ملف PDF فيه نص: الأرقام جاهزة، فالموديل السريع كفاية وبيخلص في ثواني. صورة: الأقوى الأول.
+  const tiers: [string[], number][] = text ? [[FAST_LIST, 45000], [STRONG_LIST, 60000]] : [[STRONG_LIST, 70000], [FAST_LIST, 45000]];
   for (let ti = 0; ti < tiers.length; ti++) {
     const got = await tryTier(tiers[ti][0], tiers[ti][1], partHint);
     if (!got) continue;
@@ -150,7 +154,7 @@ async function viaGemini(key: string, image: string, mt: string, part?: { i: num
       break;
     }
   }
-  if (!best) return json({ error: lastErr.error }, lastErr.status);
+  if (!best) return json({ error: /quota|exceeded|resource.?exhausted/i.test(lastErr.error) ? "quota: حصة جوجل المجانية للقراءة خلصت دلوقتي — هيعيد المحاولة لوحده" : lastErr.error }, lastErr.status);
   return json({ ...best.d, _check: { ...best.c, model: best.model, passes } });
 }
 

@@ -101,32 +101,36 @@ const img = async (id: string, name: string) => {
 async function dropFiles(s: Pick<Scan, 'id' | 'pages' | 'strips'>) {
   for (let i = 1; i <= (s.pages || 0); i++) {
     await removeFile(file(s.id, `p${i}.jpg`)).catch(() => undefined);
+    await removeFile(file(s.id, `p${i}.txt`)).catch(() => undefined);
     for (let j = 1; j <= (s.strips?.[i - 1] ?? 0); j++) await removeFile(file(s.id, `p${i}s${j}.jpg`)).catch(() => undefined);
   }
 }
-async function savePage(id: string, i: number, p: { full?: unknown; strips?: unknown[] }): Promise<number> {
+async function savePage(id: string, i: number, p: { full?: unknown; strips?: unknown[]; text?: unknown }): Promise<number> {
   await putFile(file(id, `p${i}.jpg`), Buffer.from(b64(p.full), 'base64'), 'image/jpeg');
+  const t = typeof p.text === 'string' ? p.text.trim().slice(0, 60000) : '';
+  if (t.length >= 20) await putFile(file(id, `p${i}.txt`), Buffer.from(t, 'utf8'), 'text/plain; charset=utf-8');
   const S = (Array.isArray(p.strips) ? p.strips : []).map(b64).filter(Boolean).slice(0, 4);
   for (let j = 0; j < S.length; j++) await putFile(file(id, `p${i}s${j + 1}.jpg`), Buffer.from(S[j]!, 'base64'), 'image/jpeg');
   return S.length;
 }
 const LATER = '9999-01-01T00:00:00.000Z';
+const pageText = async (id: string, page: number) => ((await getFile(file(id, `p${page}.txt`)).catch(() => null))?.toString('utf8') ?? '').trim();
 
-async function callFn(image: string, part?: { i: number; n: number }): Promise<Read> {
+async function callFn(image: string, part?: { i: number; n: number }, text = ''): Promise<Read> {
   const r = await Promise.race([
-    readInvoiceImage(image, 'image/jpeg', part),
+    readInvoiceImage(image, 'image/jpeg', part, text),
     new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout: الخدمة متأخرة في الرد')), 125000)),
   ]);
   if (r.status >= 400 || typeof r.body.error === 'string') throw new Error(String(r.body.error || `خطأ ${r.status}`));
   return r.body as unknown as Read;
 }
 // quick retries on the spot when the service is busy (instead of waiting minutes in the queue)
-async function callFnQ(image: string, part?: { i: number; n: number }): Promise<Read> {
+async function callFnQ(image: string, part?: { i: number; n: number }, text = ''): Promise<Read> {
   for (let k = 0; ; k++) {
     try {
-      return await callFn(image, part);
+      return await callFn(image, part, text);
     } catch (e) {
-      if (k >= 2 || !TRANSIENT.test(String((e as Error).message))) throw e;
+      if (k >= 2 || !TRANSIENT.test(String((e as Error).message)) || /^quota:/.test(String((e as Error).message))) throw e;
       await new Promise((r) => setTimeout(r, k ? 8000 : 3000));
     }
   }
@@ -136,6 +140,9 @@ async function callFnQ(image: string, part?: { i: number; n: number }): Promise<
 async function readPage(s: Scan, page: number, force: boolean): Promise<Read> {
   let full: Read | null = null;
   let err: unknown = null;
+  // ملف PDF: النص المستخرج من الصفحة بيتبعت مع الصورة، فالقراءة دقيقة من أول مرة ومش محتاجة شرايح
+  const text = await pageText(s.id, page);
+  if (text) return callFnQ(await img(s.id, `p${page}.jpg`), undefined, text);
   if (!force) {
     try {
       full = await callFnQ(await img(s.id, `p${page}.jpg`));
@@ -247,7 +254,7 @@ async function tick(store: Store, log: FastifyInstance['log'], only?: string) {
       } catch (e) {
         const m = String((e as Error)?.message || e) || 'حصل خطأ';
         if (TRANSIENT.test(m) && job.attempts <= BACK.length)
-          await store.patch(job.id, { status: 'pending', error: m, nextAt: new Date(Date.now() + BACK[Math.max(0, job.attempts - 1)]! * 60000).toISOString() });
+          await store.patch(job.id, { status: 'pending', error: m.replace(/^quota:\s*/, ''), nextAt: new Date(Date.now() + BACK[Math.max(0, job.attempts - 1)]! * 60000).toISOString() });
         else await store.patch(job.id, { status: 'failed', error: m, deep: false });
       }
     }
@@ -281,7 +288,7 @@ export async function scanRoutes(app: FastifyInstance) {
 
   /** {pages: [{full, strips?: [..]}], supplier?} — base64 JPEGs prepared on the phone. */
   app.post('/', { bodyLimit: 60 * 1024 * 1024 }, async (request, reply) => {
-    const body = (request.body ?? {}) as { pages?: { full?: unknown; strips?: unknown[] }[]; supplier?: unknown };
+    const body = (request.body ?? {}) as { pages?: { full?: unknown; strips?: unknown[]; text?: unknown }[]; supplier?: unknown };
     const pages = (Array.isArray(body.pages) ? body.pages : []).filter((p) => b64(p?.full)).slice(0, MAX_PAGES);
     if (!pages.length) return reply.code(400).send({ error: { code: 'BAD_INPUT', message: 'الملف فاضي' } });
     const expect = Math.min(MAX_PAGES, Math.max(pages.length, Math.round(Number((body as { expect?: unknown }).expect) || 0)));
@@ -317,7 +324,7 @@ export async function scanRoutes(app: FastifyInstance) {
   /** The next page of a page-by-page upload; the read starts with the last one. */
   app.post('/:id/pages', { bodyLimit: 20 * 1024 * 1024 }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const p = (request.body ?? {}) as { full?: unknown; strips?: unknown[] };
+    const p = (request.body ?? {}) as { full?: unknown; strips?: unknown[]; text?: unknown };
     if (!b64(p.full)) return reply.code(400).send({ error: { code: 'BAD_INPUT', message: 'الصفحة فاضية' } });
     const cur = (await store.all()).find((x) => x.id === id);
     if (!cur || !cur.expect || cur.pages >= cur.expect) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'الفاتورة دي مش مستنية صفحات — ارفع الملف تاني' } });
