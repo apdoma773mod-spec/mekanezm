@@ -1,7 +1,11 @@
 // «ارفع رسمتك → حصر الإكسسوارات».
 // The drawing is READ by AI (backend, /web/public/takeoff) into a plain description of the units: doors, drawers,
-// shelves, rails… The COUNTING is done here with fixed trade rules, so the same drawing always gives the same list
-// and every number shows where it came from. To change a rule, change RULES below — nothing else.
+// shelves, partitions, rails… The COUNTING is done here with fixed trade rules, so the same drawing always gives the
+// same list and every number shows where it came from. To change a rule, change RULES below — nothing else.
+//
+// Modern board work (ready-faced boards, no paint): nothing may be nailed through the face, so every panel-to-panel
+// joint is held from inside with assembly angles (زاوية تجميع), and the base frame is fixed from underneath with
+// 3×3 «بلدي» angles. Both are counted joint by joint from the real size of the unit — never a flat number.
 import { hingesFor } from './custom-draw';
 
 /* ------------------------------------------------------------------ rules (the shop's trade defaults) */
@@ -11,34 +15,49 @@ export const RULES = {
   slideClearance: 5,
   /** When the drawing gives no depth. */
   slideDefault: { base: 50, drawer_unit: 50, island: 50, wardrobe: 45, tall: 50, other: 45 } as Record<string, number>,
-  /** Shelf supports (تكاية رف) per movable shelf; wide shelves get a middle pair. */
-  shelfPins: 4, shelfPinsWide: 6, wideShelf: 90,
-  /** Assembly angles (زاوية تجميع): carcass corners, then per fixed shelf / upright divider. */
-  joinCarcass: 8, joinPerFixed: 4, joinPerDivider: 4,
+  depthDefault: { base: 56, drawer_unit: 56, island: 56, wardrobe: 58, tall: 56, wall: 32, open: 40, other: 50 } as Record<string, number>,
+  /** Shelf supports (تكاية رف) per movable shelf. */
+  shelfPins: 4,
+  /** A movable shelf with a clear span over this (cm) is fixed with assembly angles instead of pins, so it does not sag. */
+  longShelf: 90,
+  /** Assembly angles along ONE joint (a panel edge meeting another panel), by the depth of the joint. */
+  joinPerJoint: (d: number) => (d <= 35 ? 2 : d <= 62 ? 3 : 4),
   /** Wall units: hanging brackets (تعليقة) per unit, rail = total width. */
   hangPerUnit: 2,
   /** Legs under floor units standing on legs. */
   legs: (w: number) => (w <= 90 ? 4 : w <= 150 ? 6 : 8),
-  /** Base (قاعدة) reinforcement with 3×3 «بلدي» angles: wide ones at the 4 corners, narrow ones on every cross support. */
-  baseWide: 4, baseNarrowPerSupport: 2, baseSupportEvery: 80,
+  /**
+   * Base (قاعدة) under a wardrobe: a frame with cross pieces, held with 3×3 «بلدي» angles — ONE kind per job
+   * (wide or narrow, the craftsman's habit). Angles: 4 at the frame corners, 4 on every cross piece (2 each end),
+   * and the frame is fixed to the cabinet bottom all round (one angle every `fixEvery` cm on the front and on the back, plus the two ends).
+   */
+  baseCorners: 4, basePerCross: 4, baseCrossEvery: 60, baseFixEvery: 60, baseFixEnds: 2,
   /** Hanging rail: 2 end supports, a middle support for long rails. */
   railMiddleOver: 100,
   /** Sliding doors overlap each other by this much (cm). */
   slideOverlap: 5,
+  /** Leaves for a sliding wardrobe by its width, when the drawing does not say. */
+  slidingLeaves: (w: number) => (!w || w <= 180 ? 2 : w <= 280 ? 3 : 4),
   /** Door height assumed when the drawing shows none (cm). */
   doorH: { base: 70, wall: 70, tall: 200, wardrobe: 220, drawer_unit: 70, open: 70, island: 70, other: 70 } as Record<string, number>,
+  /** Below this the AI's «hinged or sliding?» answer is shown to the craftsman as a question. */
+  doorSure: 0.75,
 };
 
 /* ------------------------------------------------------------------ the model the AI returns */
 export type DoorKind = 'hinged' | 'sliding' | 'lift_up' | 'flap_down' | 'folding';
-export type TDoor = { kind: DoorKind; material: 'wood' | 'glass' | 'alu_frame' | 'mirror'; count: number; h: number; w: number };
+export type TDoor = { kind: DoorKind; material: 'wood' | 'glass' | 'alu_frame' | 'mirror'; count: number; h: number; w: number; /** how sure the AI is of `kind` (0–1) */ sure: number };
 export type TUnit = {
   id: string; name: string; type: 'base' | 'wall' | 'tall' | 'wardrobe' | 'drawer_unit' | 'open' | 'island' | 'other';
   count: number; w: number; h: number; d: number; mount: 'floor' | 'wall'; plinth: boolean; legs: boolean; corner: boolean;
-  doors: TDoor[]; drawers: { count: number; inner: boolean }[]; shelvesAdj: number; shelvesFixed: number; dividers: number;
+  doors: TDoor[]; drawers: { count: number; inner: boolean }[]; shelvesAdj: number; shelvesFixed: number;
+  /** Upright partitions inside the unit. `dividersKnown` = the drawing shows the inside (or the craftsman set it). */
+  dividers: number; dividersKnown: boolean;
   rails: number[]; pullouts: { kind: string; count: number }[]; handles: 'handle' | 'gola' | 'push' | 'unknown'; note: string; confidence: number;
 };
-export type TModel = { kind: string; summary: string; quality: 'clear' | 'partial' | 'poor'; units: TUnit[]; questions: string[]; assumptions: string[] };
+/** One thing the AI pointed at on the drawing: page index, what it is, the unit it belongs to, and its box (fractions 0–1: x0,y0,x1,y1). */
+export type TMark = { p: number; k: 'drawer' | 'door' | 'sliding' | 'flap'; u: number; box: [number, number, number, number] };
+export type TModel = { kind: string; summary: string; quality: 'clear' | 'partial' | 'poor'; units: TUnit[]; marks: TMark[]; questions: string[]; assumptions: string[] };
 
 const int = (v: unknown, max = 500) => { const n = Math.round(Number(v)); return isFinite(n) && n > 0 ? Math.min(n, max) : 0; };
 const cm = (v: unknown) => { const n = Number(v); return isFinite(n) && n > 0 ? Math.min(Math.round(n * 10) / 10, 2000) : 0; };
@@ -46,12 +65,14 @@ const oneOf = <T extends string>(v: unknown, list: readonly T[], def: T): T => (
 const strs = (v: unknown) => (Array.isArray(v) ? v.map(x => String(x ?? '').trim()).filter(Boolean).slice(0, 12) : []);
 type Raw = Record<string, unknown>;
 const arr = (v: unknown) => (Array.isArray(v) ? (v as Raw[]).filter(x => x && typeof x === 'object') : []);
+const unit01 = (v: unknown, def: number) => { const n = Number(v); return v != null && isFinite(n) ? Math.max(0, Math.min(1, n)) : def; };
 
 /** Whatever the AI sent → a safe model (wrong types and silly numbers never reach the counting). */
 export function normalize(raw: unknown): TModel {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Raw;
   const units = arr(r.units).slice(0, 80).map((u, i): TUnit => {
     const type = oneOf(u.type, ['base', 'wall', 'tall', 'wardrobe', 'drawer_unit', 'open', 'island', 'other'] as const, 'other');
+    const dv = Number(u.dividers);
     return {
       id: 'u' + i, name: String(u.name ?? '').trim().slice(0, 60) || `وحدة ${i + 1}`, type,
       count: Math.max(1, int(u.count, 60)), w: cm(u.w), h: cm(u.h), d: cm(u.d),
@@ -60,21 +81,33 @@ export function normalize(raw: unknown): TModel {
       doors: arr(u.doors).map(d => ({
         kind: oneOf(d.kind, ['hinged', 'sliding', 'lift_up', 'flap_down', 'folding'] as const, 'hinged'),
         material: oneOf(d.material, ['wood', 'glass', 'alu_frame', 'mirror'] as const, 'wood'),
-        count: int(d.count, 40), h: cm(d.h), w: cm(d.w),
+        count: int(d.count, 40), h: cm(d.h), w: cm(d.w), sure: unit01(d.sure, 0.8),
       })).filter(d => d.count > 0),
-      drawers: arr(u.drawers).map(d => ({ count: int(d.count, 40), inner: !!d.inner })).filter(d => d.count > 0),
-      shelvesAdj: int(u.shelves_adjustable ?? u.shelvesAdj, 60), shelvesFixed: int(u.shelves_fixed ?? u.shelvesFixed, 60), dividers: int(u.dividers, 30),
+      drawers: arr(u.drawers).map(d => ({ count: int(d.count, 60), inner: !!d.inner })).filter(d => d.count > 0),
+      shelvesAdj: int(u.shelves_adjustable ?? u.shelvesAdj, 60), shelvesFixed: int(u.shelves_fixed ?? u.shelvesFixed, 60),
+      // −1 (or nothing) = the drawing does not show the inside; 0 with dividers_seen = really none.
+      dividers: isFinite(dv) && dv > 0 ? Math.min(Math.round(dv), 30) : 0,
+      dividersKnown: u.dividersKnown === true || u.dividers_seen === true || (isFinite(dv) && dv > 0),
       rails: (Array.isArray(u.rails) ? u.rails : []).map(x => cm(typeof x === 'object' && x ? (x as Raw).len : x)).slice(0, 20),
       pullouts: arr(u.pullouts).map(p => ({ kind: String(p.kind ?? '').trim(), count: Math.max(1, int(p.count, 20)) })).filter(p => p.kind in PULLOUTS),
       handles: oneOf(u.handles, ['handle', 'gola', 'push', 'unknown'] as const, 'unknown'),
       note: String(u.note ?? '').trim().slice(0, 200),
-      confidence: Math.max(0, Math.min(1, Number(u.confidence) || 0.5)),
+      confidence: unit01(u.confidence, 0.5),
     };
   });
+  const marks = arr(r.marks).slice(0, 400).map((m): TMark | null => {
+    const b = Array.isArray(m.box) ? m.box.map(Number) : [];
+    if (b.length !== 4 || b.some(x => !isFinite(x))) return null;
+    // The AI answers [ymin, xmin, ymax, xmax] on a 0–1000 grid; a model saved in this browser already holds fractions [x0, y0, x1, y1].
+    const frac = b.every(x => x >= 0 && x <= 1);
+    const [x0, y0, x1, y1] = frac ? b : [b[1], b[0], b[3], b[2]].map(x => Math.max(0, Math.min(1, x / 1000)));
+    if (x1 - x0 < 0.004 || y1 - y0 < 0.004) return null;
+    return { p: int(m.p ?? m.page, 20), k: oneOf(m.k ?? m.kind, ['drawer', 'door', 'sliding', 'flap'] as const, 'door'), u: int(m.u ?? m.unit, 80), box: [x0, y0, x1, y1] };
+  }).filter((m): m is TMark => !!m);
   return {
     kind: String(r.kind ?? 'other'), summary: String(r.summary ?? '').trim().slice(0, 300),
     quality: oneOf(r.quality, ['clear', 'partial', 'poor'] as const, 'partial'),
-    units, questions: strs(r.questions), assumptions: strs(r.assumptions),
+    units, marks, questions: strs(r.questions), assumptions: strs(r.assumptions),
   };
 }
 
@@ -130,15 +163,61 @@ export const doorHeight = (u: TUnit, d: TDoor) => {
 };
 /** Width of each sliding leaf so they cover the opening with the usual overlap. */
 export const slidingLeafW = (w: number, n: number) => (w && n ? Math.round(((w + RULES.slideOverlap * (n - 1)) / n) * 10) / 10 : 0);
-export const baseSupports = (u: TUnit) => Math.max(u.dividers, u.w ? Math.floor((u.w - 1) / RULES.baseSupportEvery) : 0);
 /** Does this unit sit on a wooden base that takes the 3×3 angles? */
 export const hasBase = (u: TUnit, kind: string) => u.mount === 'floor' && !u.legs && (u.plinth || u.type === 'wardrobe' || (kind !== 'kitchen' && u.type === 'tall'));
 export const hasLegs = (u: TUnit, kind: string) => u.mount === 'floor' && !hasBase(u, kind) && (u.legs || (kind === 'kitchen' && (u.type === 'base' || u.type === 'tall' || u.type === 'drawer_unit' || u.type === 'island')));
 
+const leaves = (u: TUnit, kinds: DoorKind[]) => u.doors.reduce((n, d) => n + (kinds.includes(d.kind) ? d.count : 0), 0);
+/**
+ * Upright partitions inside the unit. When the drawing shows only closed doors, they are worked out from the doors:
+ * hinged leaves close in pairs on a partition, every sliding leaf covers one bay, and no bay is wider than ~1.2 m.
+ */
+export function partitions(u: TUnit): { n: number; guessed: boolean } {
+  if (u.dividersKnown) return { n: u.dividers, guessed: false };
+  if (!(u.type === 'wardrobe' || u.type === 'tall' || u.type === 'open' || u.type === 'other') || (u.w && u.w <= 100)) return { n: 0, guessed: false };
+  const hinged = leaves(u, ['hinged', 'folding']), sliding = leaves(u, ['sliding']);
+  const byDoors = sliding ? sliding - 1 : hinged ? Math.ceil(hinged / 2) - 1 : 0;
+  const byWidth = u.w ? Math.ceil(u.w / 120) - 1 : 0;
+  const n = Math.max(0, byDoors, byWidth);
+  return { n, guessed: n > 0 };
+}
+/** Clear width of one bay between partitions (cm). */
+export const baySpan = (u: TUnit) => (u.w ? Math.round((u.w / (partitions(u).n + 1)) * 10) / 10 : 0);
+/** Movable shelves too long to sit on pins: they are fixed with assembly angles. */
+export const longShelves = (u: TUnit) => (baySpan(u) > RULES.longShelf ? u.shelvesAdj : 0);
+/** Cross pieces of the base frame: under every partition, and never further apart than `baseCrossEvery`. */
+export const baseCross = (u: TUnit) => Math.max(partitions(u).n, u.w ? Math.ceil(u.w / RULES.baseCrossEvery) - 1 : 0);
+export function baseAngles(u: TUnit) {
+  const cross = baseCross(u), fix = (u.w ? Math.ceil(u.w / RULES.baseFixEvery) : 1) * 2 + RULES.baseFixEnds;
+  return { cross, corners: RULES.baseCorners, onCross: cross * RULES.basePerCross, fix, total: RULES.baseCorners + cross * RULES.basePerCross + fix };
+}
+/** Assembly angles for one unit: every panel-to-panel joint × angles along that joint. */
+export function joinAngles(u: TUnit) {
+  const d = u.d || RULES.depthDefault[u.type] || 50, per = RULES.joinPerJoint(d), part = partitions(u), long = longShelves(u);
+  const joints = { sides: 4, parts: part.n * 2, fixed: u.shelvesFixed * 2, long: long * 2 };
+  return { d, per, part, long, joints, total: (joints.sides + joints.parts + joints.fixed + joints.long) * per, depthGuessed: !u.d };
+}
+
+/** Switch a unit's doors between hinged and sliding (one tap in the result), keeping what the drawing gave. */
+export function switchDoors(u: TUnit, kind: 'hinged' | 'sliding'): TUnit {
+  const others = u.doors.filter(d => d.kind !== 'hinged' && d.kind !== 'sliding' && d.kind !== 'folding');
+  const cur = u.doors.filter(d => d.kind === 'hinged' || d.kind === 'sliding' || d.kind === 'folding');
+  const h = cur.find(d => d.h)?.h ?? 0, material = cur[0]?.material ?? 'wood', n0 = cur.reduce((n, d) => n + d.count, 0);
+  const count = kind === 'sliding'
+    ? (n0 >= 2 && n0 <= 4 && (!u.w || u.w / n0 >= 55) ? n0 : RULES.slidingLeaves(u.w))
+    : (u.w ? Math.max(1, Math.round(u.w / 50)) : Math.max(2, n0 * 2));
+  return { ...u, doors: [{ kind, material, count: kind === 'hinged' && count > 1 && count % 2 ? count + 1 : count, h, w: 0, sure: 1 }, ...others] };
+}
+/** The unit's main doors, when they are plain hinged or sliding leaves (what the one-tap switch works on). */
+export const mainDoorKind = (u: TUnit): 'hinged' | 'sliding' | null => {
+  const d = u.doors.find(x => x.kind === 'hinged' || x.kind === 'sliding');
+  return d ? (d.kind as 'hinged' | 'sliding') : null;
+};
+
 const m1 = (cmLen: number) => Math.round(cmLen) / 100; // cm → m, 2 decimals
 
 /**
- * The hardware list for a model. `doubt` = totals the two AI reads disagreed on (from the backend):
+ * The hardware list for a model. `doubt` = totals the AI's own cross-check disagreed on (from the backend):
  * hinged, sliding, flaps, drawers, shelves, rails, units.
  */
 export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
@@ -158,20 +237,22 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
   for (const u of model.units) {
     const c = u.count;
     let handleN = 0, pushN = 0;
+    const span = baySpan(u);
 
     /* ---- doors */
     for (const d of u.doors) {
       const n = d.count * c;
+      const unsure = d.sure < RULES.doorSure;
       if (d.kind === 'sliding') {
-        const leaf = slidingLeafW(u.w, d.count);
+        const leaf = slidingLeafW(u.w, d.count), lh = d.h || (u.h ? Math.max(20, u.h - (hasBase(u, model.kind) ? 10 : 0)) : 0);
         put(`sliding-${d.count}`, 'doors', `طقم جرار دولاب ${d.count} ضلفة`, 'طقم', /جرار|سحاب|sliding/i, c,
           `${u.name}: ${d.count} ضلفة جرار${u.w ? ` — سكة ${u.w} سم` : ''}${x(u)}`, u,
-          { doubt: D.has('sliding') || !u.w, not: /درج|مجر/, tip: leaf ? `عرض كل ضلفة ≈ ${leaf} سم (ركوب ${RULES.slideOverlap} سم بين الضلف) — راجع مقاسات الطقم قبل التقطيع.` : 'اكتب عرض الدولاب عشان نحسب عرض كل ضلفة.' });
-        put('sliding-handle', 'doors', 'مقبض دفن لضلف الجرار', 'قطعة', /دفن|مقبض.*جرار|جرار.*مقبض/i, n, `${u.name}: ${d.count} ضلفة جرار${x(u)}`, u, { doubt: D.has('sliding') });
+          { doubt: D.has('sliding') || !u.w || unsure, not: /درج|مجر/, tip: leaf ? `مقاس كل ضلفة ≈ ${leaf}${lh ? ` × ${lh}` : ''} سم (ركوب ${RULES.slideOverlap} سم بين الضلف). الطقم بيتحدد بعدد الضلف (${d.count})، طول السكة (${u.w} سم)، ووزن الضلفة — راجع مقاسات الطقم قبل التقطيع.` : 'اكتب عرض الدولاب عشان نحسب مقاس كل ضلفة وطول السكة.' });
+        put('sliding-handle', 'doors', 'مقبض دفن لضلف الجرار', 'قطعة', /دفن|مقبض.*جرار|جرار.*مقبض/i, n, `${u.name}: ${d.count} ضلفة جرار${x(u)}`, u, { doubt: D.has('sliding') || unsure });
         continue;
       }
       if (d.kind === 'lift_up') {
-        put('lift', 'doors', 'دراع قلاب / باكم (طقم للضلفة)', 'طقم', /قلاب|باكم|أفنتوس|افنتوس|aventos|lift|بيستون|piston/i, n, `${u.name}: ${d.count} ضلفة قلاب${x(u)}`, u,
+        put('lift', 'doors', 'دراع قلاب / باكم (طقم للضلفة)', 'طقم', /قلاب|أفنتوس|افنتوس|aventos|lift|بيستون|piston/i, n, `${u.name}: ${d.count} ضلفة قلاب${x(u)}`, u,
           { doubt: D.has('flaps'), tip: 'نوع الدراع بيتحدد بوزن ومقاس الضلفة — استخدم حاسبة الدراعات القلاب.' });
         put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', HINGE, 2 * n, `${u.name}: ${d.count} ضلفة قلاب × 2 مفصلة (لو الدراع باكم عادي)${x(u)}`, u, { doubt: D.has('flaps'), not: NOT_PLAIN_HINGE });
         if (u.handles === 'push') pushN += n; else handleN += n;
@@ -186,7 +267,7 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
       // hinged / folding
       const { h, guessed } = doorHeight(u, d);
       const per = hingesFor(h);
-      const dd = D.has('hinged') || guessed;
+      const dd = D.has('hinged') || guessed || unsure;
       const why = `${u.name}: ${d.count} ضلفة × ${per} مفصلة (طول ${h} سم${guessed ? ' تقديري' : ''})${x(u)}`;
       if (d.material === 'glass') put('hinge-glass', 'doors', 'مفصلات زجاج', 'مفصلة', /مفصل.*(زجاج|قزاز)|(زجاج|قزاز).*مفصل/i, per * n, why, u, { doubt: dd });
       else if (d.material === 'alu_frame') put('hinge-alu', 'doors', 'مفصلات ضلف ألمنيوم', 'مفصلة', /مفصل.*(ألمنيوم|الومنيوم|المونيوم)|(ألمنيوم|الومنيوم|المونيوم).*مفصل/i, per * n, why, u, { doubt: dd });
@@ -215,10 +296,8 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
     }
 
     /* ---- inside */
-    if (u.shelvesAdj) {
-      const per = u.w > RULES.wideShelf && !u.dividers ? RULES.shelfPinsWide : RULES.shelfPins;
-      put('shelf-pin', 'inside', 'تكاية رف', 'قطعة', /تكاي|تكّاي|حامل رف|shelf.*(pin|support)/i, u.shelvesAdj * per * c, `${u.name}: ${u.shelvesAdj} رف متحرك × ${per}${x(u)}`, u, { doubt: D.has('shelves') });
-    }
+    const long = longShelves(u), pinned = u.shelvesAdj - long;
+    if (pinned > 0) put('shelf-pin', 'inside', 'تكاية رف', 'قطعة', /تكاي|تكّاي|حامل رف|shelf.*(pin|support)/i, pinned * RULES.shelfPins * c, `${u.name}: ${pinned} رف متحرك × ${RULES.shelfPins}${x(u)}`, u, { doubt: D.has('shelves') });
     const rails = u.rails.filter(r => r >= 0);
     if (rails.length) {
       const total = rails.reduce((s, r) => s + r, 0) * c;
@@ -230,10 +309,16 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
       put('rail-mid', 'inside', 'حامل ماسورة وسط', 'قطعة', /حامل.*وسط|وسط.*ماسور|center.*support/i, mid * c, `${u.name}: ${mid} ماسورة أطول من ${RULES.railMiddleOver} سم${x(u)}`, u, { doubt: D.has('rails') });
     }
 
-    /* ---- build */
-    const joins = RULES.joinCarcass + u.shelvesFixed * RULES.joinPerFixed + u.dividers * RULES.joinPerDivider;
-    put('join', 'build', 'زاوية تجميع', 'قطعة', /زاوي.*تجميع|تجميع|minifix|مينيفكس/i, joins * c,
-      `${u.name}: ${RULES.joinCarcass} للصندوق${u.shelvesFixed ? ` + ${u.shelvesFixed} رف ثابت × ${RULES.joinPerFixed}` : ''}${u.dividers ? ` + ${u.dividers} قاطوع × ${RULES.joinPerDivider}` : ''}${x(u)}`, u, { doubt: D.has('shelves') });
+    /* ---- build: every joint held from inside */
+    const J = joinAngles(u);
+    put('join', 'build', 'زاوية تجميع', 'قطعة', /زاوي.*تجميع|تجميع|minifix|مينيفكس/i, J.total * c,
+      `${u.name}: ${[
+        'الجنبين مع السقف والقاعدة 4 وصلات',
+        J.joints.parts ? `${J.part.n} قاطوع${J.part.guessed ? ' (محسوب من الضلف)' : ''} × 2 وصلة` : '',
+        J.joints.fixed ? `${u.shelvesFixed} رف ثابت × 2 وصلة` : '',
+        J.joints.long ? `${J.long} رف طويل (${span} سم) × 2 وصلة` : '',
+      ].filter(Boolean).join(' + ')} — كل وصلة ${J.per} زوايا (عمق ${J.d} سم${J.depthGuessed ? ' تقديري' : ''})${x(u)}`, u,
+      { doubt: D.has('shelves') || J.part.guessed || J.depthGuessed, tip: 'الخشب الجاهز مابيتسمّرش من الوش: كل وصلة بين لوحين بتتمسك من جوّه بزوايا تجميع على طول العمق. لو عدد القواطيع أو الأرفف الثابتة مختلف عدّله في الوحدة والرقم يتحسب تاني.' });
     if (u.mount === 'wall') {
       put('hang', 'build', 'تعليقة دولاب', 'قطعة', /تعليق[ةه]|علاق[ةه] دولاب|hanger|suspension/i, RULES.hangPerUnit * c, `${u.name}: ${RULES.hangPerUnit} للوحدة${x(u)}`, u, { not: /ماسور|بنطلون|كرافت/ });
       if (u.w) put('hang-rail', 'build', 'شريحة تعليق على الحيطة', 'متر', /شريح[ةه].*تعليق|سكة تعليق|rail.*hang/i, m1(wSpan), `${u.name}: عرض ${u.w} سم${x(u)}`, u);
@@ -243,10 +328,10 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
       put('leg', 'build', 'رجل دولاب أرضي', 'قطعة', /رجل|رجول|أرجل|leg/i, n * c, `${u.name}: ${n} رجل (عرض ${u.w || '؟'} سم)${x(u)}`, u, { doubt: !u.w });
     }
     if (hasBase(u, model.kind)) {
-      const sup = baseSupports(u);
-      put('base-wide', 'build', 'زاوية بلدي 3×3 عريضة (تقوية القاعدة)', 'قطعة', /زاوي.*بلدي.*عريض|زاوي.*عريض|زاوي[ةه] 3/i, RULES.baseWide * c, `${u.name}: ${RULES.baseWide} في أركان القاعدة${x(u)}`, u, { not: /تجميع|ضيق/ });
-      put('base-narrow', 'build', 'زاوية بلدي 3×3 ضيقة (عوارض القاعدة)', 'قطعة', /زاوي.*بلدي.*ضيق|زاوي.*ضيق/i, sup * RULES.baseNarrowPerSupport * c,
-        `${u.name}: ${sup} عارضة × ${RULES.baseNarrowPerSupport}${u.w ? ` (عرض ${u.w} سم)` : ''}${x(u)}`, u, { doubt: !u.w && !u.dividers, not: /تجميع|عريض/ });
+      const B = baseAngles(u);
+      put('base-angle', 'build', 'زاوية بلدي 3×3 للقاعدة (عريضة أو ضيقة)', 'قطعة', /زاوي.*بلدي|زاوي[ةه].*3\s*[×x*في]+\s*3|زاوي[ةه] (عريض|ضيق)/i, B.total * c,
+        `${u.name}: ${B.corners} أركان البرواز + ${B.cross} قاطوع × ${RULES.basePerCross} + ${B.fix} تثبيت البرواز في قاعدة الدولاب${u.w ? ` (عرض ${u.w} سم)` : ''}${x(u)}`, u,
+        { doubt: !u.w, not: /تجميع/, tip: 'نوع واحد للشغلانة: عريضة أو ضيقة حسب شغلك — اختار من «شوف الأنواع». العدد = أركان البرواز + 4 لكل قاطوع في القاعدة + تثبيت البرواز من تحت.' });
     }
 
     /* ---- ready-made accessories */
@@ -262,6 +347,23 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
 const HINGE = /مفصل|ساميت|samet|اتاش|هيتش|hettich|نص ركب|ركب[هة] كامل|عدل[هة]/i;
 /** A plain cabinet hinge is none of these special ones. */
 const NOT_PLAIN_HINGE = /زجاج|قزاز|ألمنيوم|الومنيوم|المونيوم|بلاند|كورنر|ركن|أكورديون|اكورديون|باب|دلف/;
+
+/**
+ * Where the AI's own pointing disagrees with its numbers: it drew N boxes on the drawers / doors of a unit but wrote
+ * a different count. Keyed by unit id: [written, pointed at].
+ */
+export function markMismatch(model: TModel): Record<string, { drawers?: [number, number]; doors?: [number, number] }> {
+  const out: Record<string, { drawers?: [number, number]; doors?: [number, number] }> = {};
+  model.units.forEach((u, i) => {
+    const ms = model.marks.filter(m => m.u === i);
+    if (!ms.length || u.count > 1) return;
+    const dr = ms.filter(m => m.k === 'drawer').length, drN = u.drawers.reduce((n, d) => n + d.count, 0);
+    const dm = ms.filter(m => m.k !== 'drawer').length, doN = u.doors.reduce((n, d) => n + d.count, 0);
+    if (dr && dr !== drN) (out[u.id] ??= {}).drawers = [drN, dr];
+    if (dm && dm !== doN) (out[u.id] ??= {}).doors = [doN, dm];
+  });
+  return out;
+}
 
 /* ------------------------------------------------------------------ matching to the shop's products */
 const digits = (s: string) => s.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));

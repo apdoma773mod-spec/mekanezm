@@ -1165,3 +1165,23 @@ footer.ft { margin-bottom: -150px; padding-bottom: calc(150px + env(safe-area-in
 .tk-edit .tk-step input { flex: 1; width: auto; }
 @media (max-width: 360px) { .tk-lh { grid-template-columns: 44px 1fr auto; } .tk-line .kim { width: 44px; height: 44px; } .tk-step { width: 104px; } .tk-step button { width: 32px; } .tk-step input { width: 40px; } }
 @media print { .tk-act, .tk-act2, .tk-more, .tk-sample, .tk-edit, .bc, .ft, .tb { display: none !important; } .tk-line, .tk-unit, .tk-sum { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; } }
+
+.tk-ask { display: grid; gap: 6px; }
+.tk-ask small { color: #7a4b00; font-size: 13px; }
+.tk-seg { display: flex; gap: 6px; }
+.tk-seg button { flex: 1; padding: 10px 6px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: inherit; font: 800 14.5px Cairo, Tahoma, sans-serif; }
+.tk-seg button.on { border-color: var(--accent); background: var(--accent); color: var(--on-acc, #fff); }
+.tk-kind { display: grid; gap: 6px; margin-top: 10px; font-size: 13px; }
+.tk-pages { margin-top: 12px; border-radius: 16px; background: var(--card); box-shadow: var(--sh); padding: 4px 10px 10px; }
+.tk-pages summary { padding: 10px 2px; font-weight: 800; font-size: 15px; }
+.tk-leg { margin: 0 0 8px; font-size: 12.5px; color: var(--mut); line-height: 2; }
+.tk-leg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-inline: 8px 3px; vertical-align: middle; border: 2px solid; }
+.tk-page { position: relative; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; direction: ltr; }
+.tk-page img { display: block; width: 100%; height: auto; }
+.tk-mark { position: absolute; border: 2px solid; border-radius: 3px; box-sizing: border-box; pointer-events: none; }
+.tk-mark b { position: absolute; top: -1px; left: -1px; min-width: 15px; padding: 0 3px; font: 800 10px/14px Arial, sans-serif; color: #fff; text-align: center; border-radius: 0 0 4px 0; }
+.k-drawer { border-color: #e8590c; background: #e8590c22; } .tk-mark.k-drawer b { background: #e8590c; }
+.k-door { border-color: #1971c2; background: #1971c21c; } .tk-mark.k-door b { background: #1971c2; }
+.k-sliding { border-color: #2f9e44; background: #2f9e441c; } .tk-mark.k-sliding b { background: #2f9e44; }
+.k-flap { border-color: #9c36b5; background: #9c36b51c; } .tk-mark.k-flap b { background: #9c36b5; }
+@media print { .tk-seg, .tk-kind { display: none !important; } }

@@ -216,8 +216,8 @@ export async function intake(files: File[], onStep?: (s: string) => void): Promi
         else if (/^(heic|heif)$/.test(e) && f.size < 2_600_000) raw.push({ mt: 'image/' + e, blob: f, name: f.name });
         else warn(`مقدرناش نفتح الصورة «${f.name}» على الجهاز ده — خد لها سكرين شوت وارفعه.`);
       } else if (e === 'pdf' || f.type === 'application/pdf') {
-        if (f.size < 2_600_000 && files.length === 1) raw.push({ mt: 'application/pdf', blob: f, name: f.name });
-        else pics.push(...await pdfPages(await f.arrayBuffer(), f.name, MAX_PARTS, warn));
+        // Always as pictures: the result marks every drawer and door on the page the craftsman uploaded.
+        pics.push(...await pdfPages(await f.arrayBuffer(), f.name, MAX_PARTS, warn));
       } else if (e === 'xlsx' || e === 'xlsm') {
         texts.push(`جدول Excel «${f.name}»:\n` + tableText(await parseXlsx(await f.arrayBuffer())));
       } else if (e === 'csv' || e === 'tsv' || e === 'txt') {
@@ -254,7 +254,8 @@ export async function intake(files: File[], onStep?: (s: string) => void): Promi
   const rawKeep = raw.slice(0, MAX_PARTS), picKeep = pics.slice(0, MAX_PARTS - rawKeep.length);
   const parts: Part[] = [], thumbs: string[] = [];
   let left = B64_BUDGET;
-  for (const r of rawKeep) { const data = await toB64(r.blob); left -= data.length; parts.push({ mt: r.mt, data, name: r.name }); }
+  // `thumbs` lines up with `parts` (same index = same page), '' where the browser could not draw the file.
+  for (const r of rawKeep) { const data = await toB64(r.blob); left -= data.length; parts.push({ mt: r.mt, data, name: r.name }); thumbs.push(''); }
   for (let i = 0; i < picKeep.length; i++) {
     onStep?.(`بنجهّز الصور (${i + 1} من ${picKeep.length})…`);
     const share = Math.floor((left / (picKeep.length - i)) * 0.75); // base64 chars → bytes
@@ -262,7 +263,7 @@ export async function intake(files: File[], onStep?: (s: string) => void): Promi
     const data = await toB64(blob);
     left -= data.length;
     parts.push({ mt: 'image/jpeg', data, name: picKeep[i].name });
-    try { thumbs.push(picKeep[i].draw(360).toDataURL('image/jpeg', 0.6)); } catch { /* preview only */ }
+    try { thumbs.push(picKeep[i].draw(760).toDataURL('image/jpeg', 0.6)); } catch { thumbs.push(''); }
   }
   let text = texts.join('\n\n');
   if (text.length > MAX_TEXT) { text = text.slice(0, MAX_TEXT); warn('الجدول/النص طويل — قرينا أول جزء منه بس.'); }

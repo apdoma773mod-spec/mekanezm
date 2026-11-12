@@ -1,7 +1,7 @@
 // A front view of one unit from the takeoff, with the hardware where it goes and the sizes the craftsman
 // needs for drilling and cutting (hinge positions, sliding leaf width, slide length). Plain SVG text.
 import { hingesFor } from './custom-draw';
-import { RULES, doorHeight, hasBase, hasLegs, slideLen, slidingLeafW, type TUnit } from './takeoff';
+import { RULES, baseAngles, doorHeight, hasBase, hasLegs, joinAngles, partitions, slideLen, slidingLeafW, type TUnit } from './takeoff';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const F = 'font-family="Cairo,Segoe UI,Tahoma,Arial,sans-serif"';
@@ -51,6 +51,12 @@ export function drawUnit(u: TUnit, kind: string, picked: Picked = {}): { svg: st
     notes.push(`${drawers} درج — مجر ${sl.len} سم${sl.guessed ? ' (العمق مش مكتوب)' : ''}${picked['slide-' + sl.len] ? `: ${picked['slide-' + sl.len]}` : ''}`);
   }
 
+  // Upright partitions (drawn, or worked out from the doors).
+  const part = partitions(u);
+  for (let i = 1; i <= Math.min(part.n, 12); i++) {
+    const px = x0 + (w * i) / (part.n + 1);
+    s += `<line x1="${px}" y1="${y0 + 3}" x2="${px}" y2="${y0 + bodyH - 3}" stroke="${edge}" stroke-width="${part.guessed ? 1.2 : 2}" ${part.guessed ? 'stroke-dasharray="7 4"' : ''} opacity=".7"/>`;
+  }
   // Shelves and rails show through as dashed lines.
   const shelves = u.shelvesAdj + u.shelvesFixed;
   for (let i = 1; i <= Math.min(shelves, 10); i++) {
@@ -97,7 +103,9 @@ export function drawUnit(u: TUnit, kind: string, picked: Picked = {}): { svg: st
   if (inner) { const sl = slideLen(u); notes.push(`${inner} درج داخلي — مجر ${sl.len} سم${picked['slide-' + sl.len] ? `: ${picked['slide-' + sl.len]}` : ''}`); }
   if (shelves) notes.push(`${shelves} رف${u.shelvesAdj ? ` (${u.shelvesAdj} متحرك على تكايات)` : ''}`);
   if (u.rails.length) notes.push(`${u.rails.length} ماسورة تعليق${u.rails.every(r => r > 0) ? `: ${u.rails.join(' + ')} سم` : ''}`);
-  if (hasBase(u, kind)) notes.push(`قاعدة: ${RULES.baseWide} زاوية بلدي 3×3 عريضة في الأركان + ضيقة على العوارض`);
+  const J = joinAngles(u);
+  notes.push(`تجميع: ${J.total} زاوية — ${J.joints.sides + J.joints.parts + J.joints.fixed + J.joints.long} وصلة × ${J.per}${J.part.n ? ` (${J.part.n} قاطوع${J.part.guessed ? ' محسوب من الضلف' : ''})` : ''}`);
+  if (hasBase(u, kind)) { const B = baseAngles(u); notes.push(`القاعدة: ${B.total} زاوية بلدي 3×3 — ${B.corners} أركان + ${B.cross} قاطوع × ${RULES.basePerCross} + ${B.fix} تثبيت`); }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" direction="ltr" style="direction:ltr;width:100%;height:auto"><rect width="${VW}" height="${VH}" fill="#fff"/><rect x="1.5" y="1.5" width="${VW - 3}" height="${VH - 3}" rx="10" fill="none" stroke="#d9a73a" stroke-width="1.6"/><text x="${VW / 2}" y="20" text-anchor="middle" font-size="12.5" font-weight="800" fill="${gold}" ${F}>MEKANEZM — ${esc(u.name)}${u.count > 1 ? ` (× ${u.count})` : ''}</text>${s}</svg>`;
   return { svg, notes };
