@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
@@ -46,4 +46,17 @@ export async function getFile(name: string): Promise<Buffer | null> {
     return r.ok ? Buffer.from(await r.arrayBuffer()) : null;
   }
   return readFile(path.join(LOCAL, name)).catch(() => null);
+}
+
+/** Deletes a stored file; a missing one is fine. */
+export async function removeFile(name: string): Promise<void> {
+  if (inDb()) {
+    await prisma().storedFile.deleteMany({ where: { name } });
+    return;
+  }
+  if (remote()) {
+    await fetch(`${url()}/storage/v1/object/${bucket()}/${name}`, { method: 'DELETE', headers: { authorization: `Bearer ${key()}`, apikey: key() } }).catch(() => undefined);
+    return;
+  }
+  await rm(path.join(LOCAL, name), { force: true }).catch(() => undefined);
 }

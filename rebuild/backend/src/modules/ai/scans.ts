@@ -1,10 +1,9 @@
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { currentUser } from '../../plugins/auth.js';
 import { readInvoiceImage } from './routes.js';
+import { getFile, putFile, removeFile } from '../../lib/files.js';
 
 /**
  * «📥 فواتير للمراجعة» — the old background queue of supplier-invoice photos (mk_scans + scan worker), now on the server:
@@ -13,7 +12,6 @@ import { readInvoiceImage } from './routes.js';
  */
 
 const KEY = 'ai_scans';
-const DIR = path.resolve(process.cwd(), 'uploads', 'scans');
 const TRANSIENT = /high demand|overload|unavailable|503|502|500|429|quota|rate.?limit|try again|temporar|timeout|timed out|fetch|network|load failed|internal|deadline|ECONN|abort/i;
 const BACK = [1, 2, 4, 8, 15, 30, 30, 60, 60, 120, 180, 240]; // دقايق بين كل محاولة والتانية
 const MAX_PAGES = 8;
@@ -34,6 +32,8 @@ export interface Scan {
   pages: number;
   strips: number[];
   deep?: boolean;
+  /** Pages still being uploaded one by one (each upload request stays under Vercel's 4.5 MB): the read starts when they're all in. */
+  expect?: number;
   result: Read | null;
   error: string;
 }
@@ -91,8 +91,26 @@ export function chk(items: Item[], c: { grand_total?: number; discount?: number;
 }
 const scoreC = (c: Check) => c.n * 10 + (c.total_ok ? 25 : 0) + (c.rows_ok ? 15 : 0);
 
-const file = (id: string, name: string) => path.join(DIR, id.replace(/[^a-z0-9-]/gi, ''), name);
-const img = (id: string, name: string) => fs.readFile(file(id, name)).then((b) => b.toString('base64'));
+// صفحات الفاتورة بتتحفظ في مخزن الملفات العادي (على فيركل = جدول StoredFile، لأن الهارد هناك للقراية بس)
+const file = (id: string, name: string) => `scan-${id.replace(/[^a-z0-9-]/gi, '')}-${name}`;
+const img = async (id: string, name: string) => {
+  const b = await getFile(file(id, name));
+  if (!b) throw new Error('صفحة الفاتورة مش موجودة على السيرفر — ارفعها تاني');
+  return b.toString('base64');
+};
+async function dropFiles(s: Pick<Scan, 'id' | 'pages' | 'strips'>) {
+  for (let i = 1; i <= (s.pages || 0); i++) {
+    await removeFile(file(s.id, `p${i}.jpg`)).catch(() => undefined);
+    for (let j = 1; j <= (s.strips?.[i - 1] ?? 0); j++) await removeFile(file(s.id, `p${i}s${j}.jpg`)).catch(() => undefined);
+  }
+}
+async function savePage(id: string, i: number, p: { full?: unknown; strips?: unknown[] }): Promise<number> {
+  await putFile(file(id, `p${i}.jpg`), Buffer.from(b64(p.full), 'base64'), 'image/jpeg');
+  const S = (Array.isArray(p.strips) ? p.strips : []).map(b64).filter(Boolean).slice(0, 4);
+  for (let j = 0; j < S.length; j++) await putFile(file(id, `p${i}s${j + 1}.jpg`), Buffer.from(S[j]!, 'base64'), 'image/jpeg');
+  return S.length;
+}
+const LATER = '9999-01-01T00:00:00.000Z';
 
 async function callFn(image: string, part?: { i: number; n: number }): Promise<Read> {
   const r = await Promise.race([
@@ -184,7 +202,7 @@ class Store {
       const L = await this.all();
       const out = fn(L);
       const keep = L.slice(0, 60);
-      for (const gone of L.slice(60)) await fs.rm(path.join(DIR, gone.id), { recursive: true, force: true }).catch(() => undefined);
+      for (const gone of L.slice(60)) await dropFiles(gone);
       await this.db.setting.upsert({ where: { key: KEY }, create: { key: KEY, value: keep as never }, update: { value: keep as never } });
       return out;
     });
@@ -201,18 +219,22 @@ class Store {
 }
 
 let busy = false;
-async function tick(store: Store, log: FastifyInstance['log']) {
+/** `only` = read this one job now (Vercel: inside the request, since nothing runs after the reply). */
+async function tick(store: Store, log: FastifyInstance['log'], only?: string) {
   if (busy || (!process.env.GEMINI_API_KEY && !process.env.ANTHROPIC_API_KEY)) return;
   busy = true;
   try {
-    for (let n = 0; n < 3; n++) {
+    for (let n = 0; n < (only ? 1 : 3); n++) {
       const now = Date.now();
       const job = await store.mutate((L) => {
         // a read that hung (server restarted mid-read) goes back to waiting after 5 minutes
         L.forEach((s) => {
           if (s.status === 'working' && now - Date.parse(s.updatedAt) > 300000) s.status = 'pending';
+          // a page-by-page upload that never finished
+          if (s.status === 'pending' && s.expect && s.expect > s.pages && now - Date.parse(s.updatedAt) > 1800000)
+            Object.assign(s, { status: 'failed', error: `الرفع ماكملش (${s.pages} من ${s.expect} صفحات) — ارفع الملف تاني`, expect: undefined });
         });
-        const s = L.filter((x) => x.status === 'pending' && Date.parse(x.nextAt) <= now).pop();
+        const s = L.filter((x) => x.status === 'pending' && Date.parse(x.nextAt) <= now && (!only || x.id === only)).pop();
         if (s) Object.assign(s, { status: 'working', attempts: s.attempts + 1, updatedAt: new Date().toISOString() });
         return s ? { ...s } : null;
       });
@@ -241,6 +263,12 @@ const b64 = (s: unknown) => (typeof s === 'string' ? s.replace(/^data:[^,]+,/, '
 export async function scanRoutes(app: FastifyInstance) {
   const store = new Store(app.prisma);
   const kick = () => void tick(store, app.log);
+  /** On Vercel nothing runs after the reply, so the read happens inside the request (the function allows 300 s); elsewhere the timer does it. */
+  const runNow = async (id: string): Promise<Scan | null> => {
+    if (process.env.VERCEL) await tick(store, app.log, id);
+    else kick();
+    return (await store.all()).find((x) => x.id === id) ?? null;
+  };
   if (!process.env.VITEST) {
     const t = setInterval(kick, 40000);
     t.unref();
@@ -256,14 +284,14 @@ export async function scanRoutes(app: FastifyInstance) {
     const body = (request.body ?? {}) as { pages?: { full?: unknown; strips?: unknown[] }[]; supplier?: unknown };
     const pages = (Array.isArray(body.pages) ? body.pages : []).filter((p) => b64(p?.full)).slice(0, MAX_PAGES);
     if (!pages.length) return reply.code(400).send({ error: { code: 'BAD_INPUT', message: 'الملف فاضي' } });
+    const expect = Math.min(MAX_PAGES, Math.max(pages.length, Math.round(Number((body as { expect?: unknown }).expect) || 0)));
     const id = randomUUID();
-    await fs.mkdir(path.join(DIR, id), { recursive: true });
     const strips: number[] = [];
-    for (let i = 0; i < pages.length; i++) {
-      await fs.writeFile(file(id, `p${i + 1}.jpg`), Buffer.from(b64(pages[i]!.full), 'base64'));
-      const S = (Array.isArray(pages[i]!.strips) ? pages[i]!.strips! : []).map(b64).filter(Boolean).slice(0, 4);
-      for (let j = 0; j < S.length; j++) await fs.writeFile(file(id, `p${i + 1}s${j + 1}.jpg`), Buffer.from(S[j]!, 'base64'));
-      strips.push(S.length);
+    try {
+      for (let i = 0; i < pages.length; i++) strips.push(await savePage(id, i + 1, pages[i]!));
+    } catch (e) {
+      request.log.error({ err: e }, 'scan upload');
+      return reply.code(500).send({ error: { code: 'SCAN_SAVE', message: 'السيرفر ماقدرش يحفظ صفحات الفاتورة — جرّب تاني بعد لحظة' } });
     }
     const now = new Date().toISOString();
     const s: Scan = {
@@ -277,27 +305,53 @@ export async function scanRoutes(app: FastifyInstance) {
       updatedAt: now,
       pages: pages.length,
       strips,
+      ...(expect > pages.length ? { expect, nextAt: LATER } : {}),
       result: null,
       error: '',
     };
     await store.mutate((L) => L.unshift(s));
-    kick();
-    return s;
+    if (expect > pages.length) return s;
+    return runNow(id);
+  });
+
+  /** The next page of a page-by-page upload; the read starts with the last one. */
+  app.post('/:id/pages', { bodyLimit: 20 * 1024 * 1024 }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const p = (request.body ?? {}) as { full?: unknown; strips?: unknown[] };
+    if (!b64(p.full)) return reply.code(400).send({ error: { code: 'BAD_INPUT', message: 'الصفحة فاضية' } });
+    const cur = (await store.all()).find((x) => x.id === id);
+    if (!cur || !cur.expect || cur.pages >= cur.expect) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'الفاتورة دي مش مستنية صفحات — ارفع الملف تاني' } });
+    let n: number;
+    try {
+      n = await savePage(id, cur.pages + 1, p);
+    } catch (e) {
+      request.log.error({ err: e }, 'scan upload');
+      return reply.code(500).send({ error: { code: 'SCAN_SAVE', message: 'السيرفر ماقدرش يحفظ صفحة الفاتورة — جرّب تاني بعد لحظة' } });
+    }
+    const s = await store.mutate((L) => {
+      const x = L.find((y) => y.id === id);
+      if (!x) return null;
+      x.pages += 1;
+      x.strips = [...(x.strips ?? []), n];
+      if (x.pages >= (x.expect ?? 0)) Object.assign(x, { expect: undefined, nextAt: new Date().toISOString() });
+      x.updatedAt = new Date().toISOString();
+      return { ...x };
+    });
+    if (!s) return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'الفاتورة اتمسحت' } });
+    return s.expect ? s : runNow(id);
   });
 
   app.post('/:id/retry', async (request) => {
     const { id } = request.params as { id: string };
-    const s = await store.patch(id, { status: 'pending', attempts: 0, error: '', nextAt: new Date().toISOString() });
-    kick();
-    return { scan: s };
+    await store.patch(id, { status: 'pending', attempts: 0, error: '', nextAt: new Date().toISOString() });
+    return { scan: await runNow(id) };
   });
 
   /** 🔍 «اقرا تاني بدقة أعلى»: strips right away for every page. */
   app.post('/:id/deep', async (request) => {
     const { id } = request.params as { id: string };
-    const s = await store.patch(id, { status: 'pending', attempts: 0, error: '', deep: true, nextAt: new Date().toISOString() });
-    kick();
-    return { scan: s };
+    await store.patch(id, { status: 'pending', attempts: 0, error: '', deep: true, nextAt: new Date().toISOString() });
+    return { scan: await runNow(id) };
   });
 
   /** Turned into a purchase invoice: keep the record (with the invoice number), drop the photos. */
@@ -309,19 +363,22 @@ export async function scanRoutes(app: FastifyInstance) {
       if (x) Object.assign(x, { status: 'used', result: { ...(x.result ?? { items: [] }), ...(pno ? { pno } : {}) }, updatedAt: new Date().toISOString() });
       return x ? { ...x } : null;
     });
-    await fs.rm(path.join(DIR, id.replace(/[^a-z0-9-]/gi, '')), { recursive: true, force: true }).catch(() => undefined);
+    if (s) await dropFiles(s);
     return { scan: s };
   });
 
   app.delete('/:id', async (request) => {
     const { id } = request.params as { id: string };
-    await store.mutate((L) => {
+    const gone = await store.mutate((L) => {
       const i = L.findIndex((x) => x.id === id);
-      if (i >= 0) L.splice(i, 1);
+      return i >= 0 ? L.splice(i, 1)[0] : undefined;
     });
-    await fs.rm(path.join(DIR, id.replace(/[^a-z0-9-]/gi, '')), { recursive: true, force: true }).catch(() => undefined);
+    if (gone) await dropFiles(gone);
     return { ok: true };
   });
 }
+
+/** ⏰ cron (Vercel): retries the reads that are waiting (Google was busy). */
+export const scanTick = (db: PrismaClient, log: FastifyInstance['log']) => tick(new Store(db), log);
 
 export const _test = { readAll, tick: (db: PrismaClient, log: FastifyInstance['log']) => tick(new Store(db), log) };

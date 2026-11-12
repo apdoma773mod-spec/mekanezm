@@ -90,7 +90,7 @@ export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap, opt: { group?: bo
   const header = logo
     ? `<div style="position:relative;height:10px;background:${H}"></div>
   <div style="position:relative;background:#fff;padding:26px 44px 22px;display:flex;justify-content:space-between;align-items:center;gap:24px">
-   <div>${logoImg}${tags.length ? `<div style="width:${LW}px;margin-top:12px;padding-top:10px;border-top:2px solid ${A};display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:${H};letter-spacing:.2px">${tags.map((t) => `<span>${esc(t)}</span>`).join(`<span style="color:${A}">◆</span>`)}</div>` : ''}</div>
+   <div>${logoImg}${tags.length ? `<div style="width:${LW}px;margin-top:12px;padding-top:10px;border-top:2px solid ${A};display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:${H}">${tags.map((t) => `<span>${esc(t)}</span>`).join(`<span style="color:${A}">◆</span>`)}</div>` : ''}</div>
    <div style="text-align:center;border:2px solid ${H};border-radius:16px;padding:14px 26px;min-width:190px"><div style="font-size:30px;font-weight:800;color:${H};line-height:1.3;white-space:nowrap">${KIND_TITLE[inv.kind]}</div><div style="margin-top:4px;font-size:12px;font-weight:700;letter-spacing:5px;color:${A}" dir="ltr">${isSale ? 'INVOICE' : 'PURCHASE'}</div><div style="margin-top:8px;padding-top:8px;border-top:1px solid #e4eaed;font-size:17px;font-weight:800" dir="ltr">${esc(inv.no)}</div></div>
   </div>
   <div style="position:relative;background:${H};color:${HT};padding:${contact ? '10px 44px' : '0'};min-height:8px;font-size:14px;font-weight:700;text-align:center;line-height:1.7">${contact}</div>`

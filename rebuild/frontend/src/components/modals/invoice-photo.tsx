@@ -478,8 +478,15 @@ export function InvoicePhotoButtons({
     mutationFn: async (files: File[]) => {
       setBusy('⏳ بجهّز الفاتورة…');
       const pages = await preparePages(files);
-      setBusy(pages.length > 1 ? `⏳ برفع ${pages.length} صفحات…` : '⏳ برفع الصورة…');
-      return api.post<Scan>('/ai/scans', { pages, supplier: supplier?.trim() ?? '' });
+      // صفحة في كل طلب: السيرفر (فيركل) بيرفض أي طلب أكبر من 4.5 ميجا، وملف PDF بكذا صفحة بيعدّيها بسهولة
+      const n = pages.length;
+      setBusy(n > 1 ? `⏳ برفع صفحة 1 من ${n}…` : '⏳ برفع الفاتورة وقراءتها…');
+      let s = await api.post<Scan>('/ai/scans', { pages: [pages[0]], expect: n, supplier: supplier?.trim() ?? '' });
+      for (let i = 1; i < n; i++) {
+        setBusy(i === n - 1 ? `⏳ برفع آخر صفحة (${n} من ${n}) وقراءة الفاتورة…` : `⏳ برفع صفحة ${i + 1} من ${n}…`);
+        s = await api.post<Scan>(`/ai/scans/${s.id}/pages`, pages[i]);
+      }
+      return s;
     },
     onSuccess: (s) => {
       setBusy('');
