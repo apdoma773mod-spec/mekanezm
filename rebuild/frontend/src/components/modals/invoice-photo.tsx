@@ -86,17 +86,38 @@ const isPdf = (f: File) => /pdf/i.test(f.type || '') || /\.pdf$/i.test(f.name ||
 interface PdfJs {
   GlobalWorkerOptions: { workerSrc: string };
   getDocument: (o: { data: ArrayBuffer }) => {
-    promise: Promise<{ numPages: number; getPage: (i: number) => Promise<{ getViewport: (o: { scale: number }) => { width: number; height: number }; render: (o: unknown) => { promise: Promise<void> } }> }>;
+    promise: Promise<{ numPages: number; getPage: (i: number) => Promise<{ getViewport: (o: { scale: number }) => { width: number; height: number }; render: (o: unknown) => { promise: Promise<void> }; getTextContent: () => Promise<{ items: { str?: string; transform?: number[] }[] }> }> }>;
   };
 }
 
-async function pdfCanvases(file: File): Promise<HTMLCanvasElement[]> {
+/** نص الصفحة من الـPDF نفسه، سطر سطر (من فوق لتحت): الأرقام فيه مظبوطة 100% بدل ما تتقري من صورة. */
+async function pageTextOf(pg: { getTextContent: () => Promise<{ items: { str?: string; transform?: number[] }[] }> }): Promise<string> {
+  try {
+    const { items } = await pg.getTextContent();
+    const rows = new Map<number, { x: number; s: string }[]>();
+    for (const it of items) {
+      const str = (it.str ?? '').trim();
+      if (!str || !it.transform) continue;
+      const y = Math.round(it.transform[5]! / 3);
+      if (!rows.has(y)) rows.set(y, []);
+      rows.get(y)!.push({ x: it.transform[4]!, s: str });
+    }
+    return [...rows.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([, r]) => r.sort((a, b) => b.x - a.x).map((c) => c.s).join(' | '))
+      .join('\n');
+  } catch {
+    return '';
+  }
+}
+
+async function pdfCanvases(file: File): Promise<{ c: HTMLCanvasElement; text: string }[]> {
   const w = window as unknown as { pdfjsLib?: PdfJs };
   await loadJs('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => !!w.pdfjsLib);
   const lib = w.pdfjsLib!;
   lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
-  const out: HTMLCanvasElement[] = [];
+  const out: { c: HTMLCanvasElement; text: string }[] = [];
   for (let i = 1; i <= Math.min(pdf.numPages, 6); i++) {
     const pg = await pdf.getPage(i);
     const v1 = pg.getViewport({ scale: 1 });
@@ -108,15 +129,16 @@ async function pdfCanvases(file: File): Promise<HTMLCanvasElement[]> {
     g.fillStyle = '#fff';
     g.fillRect(0, 0, c.width, c.height);
     await pg.render({ canvasContext: g, viewport: v }).promise;
-    out.push(c);
+    out.push({ c, text: await pageTextOf(pg) });
   }
   return out;
 }
 
 export async function preparePages(files: File[]) {
-  const pages: { full: string; strips: string[] }[] = [];
+  const pages: { full: string; strips: string[]; text?: string }[] = [];
   for (const f of files) {
-    if (isPdf(f)) for (const c of await pdfCanvases(f)) pages.push(pageOf(c));
+    // PDF فيه نص: النص بيتبعت مع الصفحة ومن غير شرايح (مش محتاجينها)؛ PDF متصوّر (مفيش نص) بيتعامل زي الصورة
+    if (isPdf(f)) for (const { c, text } of await pdfCanvases(f)) pages.push(text.length >= 20 ? { full: cut(c, 1600), strips: [], text } : pageOf(c));
     else {
       const url = URL.createObjectURL(f);
       try {

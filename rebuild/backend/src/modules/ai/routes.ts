@@ -6,11 +6,11 @@ import visionRoutes from './vision.js';
 export const NO_KEY = 'قراءة الصور محتاجة مفتاح Gemini (مجاني): افتح «📖 الكتالوج» ← خانة مفتاح Gemini والزقه هناك مرة واحدة';
 
 /** One supplier-invoice read (the old parse-invoice): Gemini strong→fast with self-check, else Claude. */
-export async function readInvoiceImage(image: string, mt: string, part?: { i: number; n: number }): Promise<{ status: number; body: Record<string, unknown> }> {
+export async function readInvoiceImage(image: string, mt: string, part?: { i: number; n: number }, text = ''): Promise<{ status: number; body: Record<string, unknown> }> {
   const gkey = process.env.GEMINI_API_KEY;
   const key = process.env.ANTHROPIC_API_KEY;
   if (!gkey && !key) return json({ error: NO_KEY }, 503);
-  if (gkey) return viaGemini(gkey, image, mt, part && part.n > 1 ? part : undefined);
+  if (gkey) return viaGemini(gkey, image, mt, part && part.n > 1 ? part : undefined, text);
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key!, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
