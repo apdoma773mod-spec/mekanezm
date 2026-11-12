@@ -254,3 +254,21 @@ export async function uploadScrapImage(blob: Blob): Promise<string> {
   if (!j?.url) throw new Error('upload');
   return j.url as string;
 }
+
+/** «ارفع رسمتك»: the AI's description of the units in the uploaded files (the counting happens in lib/takeoff.ts). */
+export async function readDrawing(body: { files: { mt: string; data: string; name: string }[]; text: string; note: string }): Promise<{ ok: boolean; model: unknown; doubt: string[]; message: string }> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 75_000);
+  try {
+    const r = await fetch('/mkapi/web/public/takeoff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+    const j = await r.json().catch(() => null);
+    if (r.ok && j?.model) return { ok: true, model: j.model, doubt: Array.isArray(j.doubt) ? j.doubt.map(String) : [], message: '' };
+    const message = r.status === 413 ? 'الملفات كبيرة — ارفع صفحات أقل أو صور أصغر'
+      : r.status === 429 ? 'طلبات كتير ورا بعض — استنى دقيقة وجرّب تاني'
+      : r.status === 404 ? 'الخدمة لسه بتتجهّز — ابعت الرسمة على الواتساب دلوقتي'
+      : j?.error?.message || j?.message || 'مقدرناش نقرا الملف — جرّب تاني';
+    return { ok: false, model: null, doubt: [], message };
+  } catch (e) {
+    return { ok: false, model: null, doubt: [], message: (e as Error).name === 'AbortError' ? 'القراءة أخدت وقت طويل — جرّب بصفحات أقل أو صورة أوضح' : 'النت قطع — جرّب تاني' };
+  } finally { clearTimeout(t); }
+}

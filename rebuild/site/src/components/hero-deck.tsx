@@ -126,6 +126,7 @@ export function Services({ waCatalog }: { waCatalog?: string }) {
   const { open } = useShop();
   const hasCat = useCatalog();
   const T = ([
+    { ic: '📐', t: 'ارفع رسمتك', s: 'نحصرلك الإكسسوار', href: '/takeoff', main: true },
     { ic: '♻️', t: 'فضلة', s: 'سوق فضلة النجارين', href: '/scraps', main: true },
     { ic: '🛠️', t: 'تجهيز بمقاسك', s: 'استانلس وبامبو', href: '/custom', main: true },
     { ic: '📖', t: 'الكتالوج', s: 'قلّب واطبع', href: '/catalog', main: true, needsCatalog: true },

@@ -31,6 +31,8 @@ export function Chrome() {
   const path = usePathname();
   const y = useScrollY();
   const onProduct = path.startsWith('/p/');
+  // Pages full of +/− controls down the left side: the floating buttons would sit on top of them.
+  const noFab = path.startsWith('/takeoff');
   const [prog, setProg] = useState(0);
   const [offline, setOffline] = useState(false);
   const [inst, setInst] = useState<BIP | null>(null);
@@ -92,7 +94,7 @@ export function Chrome() {
     <>
       <div className="prog" aria-hidden="true"><i style={{ width: prog + '%' }} /></div>
       {offline && <div className="offline" role="status">⚠️ مفيش إنترنت — بعض الحاجات ممكن ماتشتغلش</div>}
-      <a className={'wa-fab mini' + (atFoot ? ' off' : '')} tabIndex={atFoot ? -1 : undefined} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
+      <a className={'wa-fab mini' + (atFoot || noFab ? ' off' : '')} tabIndex={atFoot || noFab ? -1 : undefined} style={onProduct ? { bottom: 'calc(84px + var(--safe-b))' } : undefined} aria-label="كلّمنا على الواتساب"
         target="_blank" rel="noopener" href={waUrl(site, 'السلام عليكم، عايز أطلب من ميكانيزم')}
         onClick={e => {
           // Mention what the customer is looking at (product or section).
@@ -100,7 +102,7 @@ export function Chrome() {
           if (h && (onProduct || path.startsWith('/c/'))) e.currentTarget.href = waUrl(site, `السلام عليكم، بسأل عن: ${h}
 ${location.href}`);
         }}>💬 اطلب على الواتساب</a>
-      {!onProduct && <button className={'to-top' + (y > 700 && !atFoot ? ' on' : '')} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} aria-label="لفوق">↑</button>}
+      {!onProduct && <button className={'to-top' + (y > 700 && !atFoot && !noFab ? ' on' : '')} onClick={() => scrollTo({ top: 0, behavior: 'smooth' })} aria-label="لفوق">↑</button>}
       {!onProduct && cartCount > 0 && (
         <button className="go-cart" onClick={() => open({ kind: 'cart' })}><span>🛒 عندك {cartCount} في طلبك</span><span>كمّل الطلب ←</span></button>
       )}
