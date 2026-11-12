@@ -102,10 +102,15 @@ async function pageTextOf(pg: { getTextContent: () => Promise<{ items: { str?: s
       if (!rows.has(y)) rows.set(y, []);
       rows.get(y)!.push({ x: it.transform[4]!, s: str });
     }
-    return [...rows.entries()]
+    const text = [...rows.entries()]
       .sort((a, b) => b[0] - a[0])
       .map(([, r]) => r.sort((a, b) => b.x - a.x).map((c) => c.s).join(' | '))
       .join('\n');
+    // بعض برامج الفواتير (زي برنامج الحسابات اللي بيطبع «إذن التسليم») بتخزّن العربي حرف حرف في الـPDF: النص ده بيطلع مفكوك ويلخبط القراءة.
+    // لو أغلب الكلمات العربي حرف واحد، نرمي النص ونقرا الصفحة كصورة.
+    const ar = text.split(/[\s|]+/).filter((w) => /[؀-ۿﹰ-﻿]/.test(w));
+    if (ar.length && ar.filter((w) => w.length === 1).length / ar.length > 0.3) return '';
+    return text;
   } catch {
     return '';
   }
