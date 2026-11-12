@@ -96,9 +96,9 @@ async function ask(key: string, parts: unknown[], deadline: number): Promise<Mod
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json', maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'low' } } }),
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.1, responseMimeType: 'application/json', maxOutputTokens: 16000, thinkingConfig: { thinkingLevel: 'minimal' } } }),
         // مهلة لكل محاولة (مش كل الوقت الباقي) عشان موديل واحد بطيء ما ياكلش فرصة اللي بعده
-        signal: AbortSignal.timeout(Math.min(left, 26_000)),
+        signal: AbortSignal.timeout(Math.min(left, 45_000)),
       });
       const body = (await r.json().catch(() => ({}))) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
       if (!r.ok) {
@@ -146,7 +146,7 @@ export async function takeoffRoutes(app: FastifyInstance) {
     if (b.text.trim()) parts.push({ text: 'نص مستخرج من الملفات (جداول / DXF / نصوص):\n' + b.text });
     for (const f of b.files) parts.push({ inline_data: { mime_type: f.mt, data: f.data } });
 
-    const deadline = Date.now() + 50_000; // the function itself is capped at 60 s
+    const deadline = Date.now() + 95_000; // the function allows 300 s (vercel.json); the site waits ~2 min
     const reads = (await Promise.all([ask(key, parts, deadline), ask(key, parts, deadline)])).filter((m): m is Model => !!m && Array.isArray(m.units));
     if (!reads.length) throw badRequest('مقدرناش نقرا الملف دلوقتي — جرّب تاني أو ابعته على الواتساب');
 
