@@ -1087,3 +1087,10 @@ body .field input[type=checkbox]{border-radius:4px}
 .splitbox .sp-row button{width:46px;height:44px;min-height:44px!important;padding:0!important;font-size:19px;border-radius:10px}
 .splitbox .sp-foot{display:block;margin-top:8px;text-align:center}
 .splitbox .sp-each{width:100%;margin-top:8px;padding:12px 8px!important;font-size:15px}
+
+/* 📥 استيراد فاتورة المورد: سطر واحد ملموم بدل أربع أزرار وشرح فوق خانة البحث */
+.ivhead{display:flex;align-items:center;gap:10px;width:100%;max-width:100%;box-sizing:border-box;overflow:hidden;padding:10px 14px!important;min-height:52px;text-align:right;background:var(--tint2,#eef6f7)!important;color:var(--text,#18343a)!important;border:1.5px solid var(--border)!important;border-radius:12px}
+.ivhead.on{border-color:var(--blue)!important}
+.ivhead .ivh-t{font-weight:800;white-space:nowrap;flex:none}
+.ivhead .ivh-s{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.ivhead .ivh-a{color:var(--muted)}

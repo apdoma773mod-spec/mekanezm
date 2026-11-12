@@ -285,7 +285,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     const code = search.trim();
     if (!code) return;
     try {
-      addProduct(await lookupProduct(code));
+      const hit = await lookupProduct(code);
+      if (!hit) throw new Error("not found");
+      addProduct(hit);
     } catch {
       // Enter سريع قبل ما القايمة تتحدّث: القايمة اللي ظاهرة بتاعة كلمة قديمة — نجيب نتيجة الكلمة المكتوبة فعلاً بدل ما نضيف صنف غلط
       const fresh = debounced.trim() === code && !results.isPlaceholderData && !results.isFetching;
