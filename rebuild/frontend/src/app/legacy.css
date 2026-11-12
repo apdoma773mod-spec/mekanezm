@@ -1043,3 +1043,47 @@ body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,va
 .inv-items .inv-for td{background:var(--tint);text-align:right;font-weight:800;color:var(--blue2)}
 .inv-items .inv-for-sub td{font-weight:700;border-bottom:2px solid var(--blue);text-align:center}
 .inv-items .inv-for-sub td:first-child{text-align:right}
+
+/* ===== فاتورة سريعة: البحث ثابت فوق، البنود ملمومة تحته (الجديد أول واحد)، والإجمالي + الحفظ ثابتين تحت ===== */
+.modal .txtop{position:sticky;top:0;z-index:6;background:#fff;padding:10px 0 8px;margin-top:-10px;box-shadow:0 6px 8px -8px #0003}
+.modal .txfoot{position:sticky;bottom:-20px;z-index:6;background:#fff;padding:10px 0 22px;margin-bottom:-10px;margin-top:10px;border-top:1px solid var(--border);align-items:center}
+body.mkpro.mkdark .modal .txtop,body.mkpro.mkdark .modal .txfoot{background:var(--g2)}
+.txfoot .txfoot-t{display:flex;flex-direction:column;line-height:1.25;margin-inline-end:auto;order:-1}
+.txfoot .txfoot-t span{font-size:12.5px;color:var(--muted)}
+.txfoot .txfoot-t b{font-size:21px;font-variant-numeric:tabular-nums}
+.txbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;color:var(--muted);font-size:14px}
+.txbar button{padding:4px 12px!important;min-height:36px!important;border-radius:99px;font-size:13.5px}
+.txl{scroll-margin:150px 0 110px}
+.txl.txc{display:flex;align-items:center;gap:10px;padding:8px 10px!important;margin-bottom:6px;cursor:pointer}
+.txl.txc .txc-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.txl.txc .txc-n b{font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.txl.txc .txc-n small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.txl.txc .txc-t{white-space:nowrap;font-variant-numeric:tabular-nums}
+.txl.txc .txc-x{padding:0!important;width:36px;min-height:36px!important;flex:none;border-radius:10px}
+.txl.txc.warn{border-color:var(--danger,#c0392b)!important}
+.txl.txc.warn .txc-n small{color:var(--danger,#c0392b);font-weight:700}
+.txl.txo{border:2px solid var(--blue)!important;box-shadow:0 4px 14px #0001}
+.txl .txrow{display:flex;gap:10px;align-items:flex-end;margin-top:8px;flex-wrap:wrap}
+.txl .txdone{width:100%;margin-top:10px}
+/* زرار الاختيار (radio/checkbox) جوّه .field كان بياخد شكل خانة الكتابة (عرض كامل + إطار) فيبقى مربع كبير والكلام يطلع بره */
+body .field input[type=radio],body .field input[type=checkbox],body.mkpro .field input[type=radio],body.mkpro .field input[type=checkbox],body.mkpro.mkdark .field input[type=radio],body.mkpro.mkdark .field input[type=checkbox]{width:22px!important;height:22px!important;min-width:22px;min-height:0!important;flex:none!important;padding:0!important;margin:0!important;border:0!important;background:none!important;box-shadow:none!important;border-radius:50%}
+body .field input[type=checkbox]{border-radius:4px}
+.delopt{display:grid!important;grid-template-columns:1fr;gap:8px}
+.delopt label{display:flex!important;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-size:15px;line-height:1.4;min-width:0}
+@media(min-width:700px){.delopt{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* 👥 صندوق «الفاتورة مقسومة على زباين»: صفوف متساوية — الاسم والمبلغ يمين، زرارين ثابتين شمال */
+.splitbox{margin-top:14px;border:1.5px solid var(--border);border-radius:14px;padding:12px}
+.splitbox .sp-h{display:flex;flex-direction:column;gap:2px}.splitbox .sp-h b{font-size:16px}.splitbox .sp-h small,.splitbox .sp-foot,.splitbox .sp-note{color:var(--muted);font-size:12.5px}
+.splitbox .sp-note{margin:6px 0 0}
+.splitbox .sp-all{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.splitbox .sp-all button{padding:10px 6px!important;font-size:14.5px;white-space:nowrap;min-width:0}
+.splitbox .sp-list{margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.splitbox .sp-row{display:grid;grid-template-columns:minmax(0,1fr) 46px 46px;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)}
+.splitbox .sp-row:last-child{border-bottom:0}
+.splitbox .sp-who{min-width:0;display:flex;flex-direction:column;gap:1px}
+.splitbox .sp-who b{font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.splitbox .sp-who small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}.splitbox .sp-who small span{color:var(--blue);font-weight:700}
+.splitbox .sp-row button{width:46px;height:44px;min-height:44px!important;padding:0!important;font-size:19px;border-radius:10px}
+.splitbox .sp-foot{display:block;margin-top:8px;text-align:center}
+.splitbox .sp-each{width:100%;margin-top:8px;padding:12px 8px!important;font-size:15px}

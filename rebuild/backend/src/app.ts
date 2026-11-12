@@ -46,6 +46,7 @@ import analyticsRoutes from './modules/analytics/routes.js';
 import alertsRoutes from './modules/alerts/routes.js';
 import webRoutes from './modules/web/routes.js';
 import webPublicRoutes from './modules/web/public.js';
+import { takeoffRoutes } from './modules/web/takeoff.js';
 import scrapRoutes from './modules/scraps/routes.js';
 import warehouseRoutes from './modules/warehouses/routes.js';
 import broadcastRoutes from './modules/broadcast/routes.js';
@@ -135,6 +136,7 @@ export async function buildApp({ config, prisma }: BuildOptions): Promise<Fastif
       await api.register(alertsRoutes, { prefix: '/alerts' });
       await api.register(webRoutes, { prefix: '/web' });
       await api.register(webPublicRoutes, { prefix: '/web' });
+      await api.register(takeoffRoutes, { prefix: '/web' });
       await api.register(scrapRoutes, { prefix: '/web/scraps' });
       await api.register(warehouseRoutes, { prefix: '/warehouses' });
       await api.register(broadcastRoutes, { prefix: '/broadcast' });
