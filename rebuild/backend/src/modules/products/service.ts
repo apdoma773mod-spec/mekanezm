@@ -82,6 +82,27 @@ async function generateCode(tx: Prisma.TransactionClient): Promise<string> {
 export class ProductsService {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** {product id: names suppliers use for it} from Setting `invoice_aliases` (one read per search). */
+  private async akaMap(): Promise<Map<string, string[]>> {
+    const al = ((await this.prisma.setting.findUnique({ where: { key: 'invoice_aliases' } }).catch(() => null))?.value ?? {}) as Record<string, Record<string, string>>;
+    const out = new Map<string, string[]>();
+    for (const m of Object.values(al && typeof al === 'object' ? al : {}))
+      for (const [text, id] of Object.entries(m && typeof m === 'object' ? m : {})) {
+        if (text.startsWith('#') || typeof id !== 'string') continue;
+        const L = out.get(id) ?? [];
+        if (!L.includes(text) && L.length < 3) L.push(text);
+        out.set(id, L);
+      }
+    return out;
+  }
+  private withAka(list: ProductDto[], aka: Map<string, string[]>, ourName = (p: ProductDto) => p.name): ProductDto[] {
+    const n = (t: string) => t.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+    return list.map((p) => {
+      const a = (aka.get(p.id) ?? []).filter((t) => n(t) !== n(ourName(p)));
+      return a.length ? { ...p, aka: a } : p;
+    });
+  }
+
   /** Products whose saved supplier names (Setting `invoice_aliases`: {supplier: {their text: product id}}) contain every typed word. */
   private async aliasHits(words: string[]): Promise<string[]> {
     const al = ((await this.prisma.setting.findUnique({ where: { key: 'invoice_aliases' } }).catch(() => null))?.value ?? {}) as Record<string, Record<string, string>>;
@@ -154,7 +175,7 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     const admin = isAdmin(actor);
-    return { items: rows.map((p) => toProductDto(p, admin)), total, page: query.page, pageSize: query.pageSize };
+    return { items: this.withAka(rows.map((p) => toProductDto(p, admin)), await this.akaMap()), total, page: query.page, pageSize: query.pageSize };
   }
 
   async categories(): Promise<string[]> {
@@ -322,7 +343,7 @@ export class ProductsService {
       orderBy: { name: 'asc' },
     });
     const keep = query.stock === 'low' ? rows.filter((p) => p.qty.gt(0) && p.qty.lte(p.minQty)) : rows;
-    return keep.map((p) => toProductDto(p, admin));
+    return this.withAka(keep.map((p) => toProductDto(p, admin)), await this.akaMap());
   }
 
   /** 💰 بضاعة قديمة: أصناف ليها سعر بيع ومن غير سعر شراء. */

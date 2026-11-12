@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { money } from '@/lib/format';
 import { vn } from '@/lib/import-daily';
 import { useAllProducts, useMarketPrices } from '@/lib/trade-queries';
+import { Aka, akaHay } from './ui/aka';
 
 /** 🔎 استعلام عن سعر صنف (priceLookup القديمة): سعر الشراء والبيع والمكسب والمتاح وآخر شراء، للمدير. */
 export function PriceLookupCard() {
@@ -15,7 +16,7 @@ export function PriceLookupCard() {
   const L = useMemo(() => {
     const w = vn(q).split(' ').filter(Boolean);
     if (!w.length) return [];
-    return (products ?? []).filter((p) => w.every((x) => vn(`${p.name} ${p.code || ''}`).includes(x))).slice(0, 8);
+    return (products ?? []).filter((p) => w.every((x) => vn(akaHay(p)).includes(x))).slice(0, 8);
   }, [q, products]);
   return (
     <div id="plCard" className="card own" style={{ marginTop: 14 }}>
@@ -35,6 +36,7 @@ export function PriceLookupCard() {
                 <div style={{ minWidth: 160, flex: 1 }}>
                   <b>{p.name}</b>
                   {p.code ? <small style={{ color: 'var(--muted)' }}> كود {p.code}</small> : null}
+                  <Aka p={p} />
                   <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>{lb ? `آخر شراء: ${money(lb.p)} من ${lb.s || '—'} يوم ${lb.at}` : 'مفيش فواتير شراء للصنف ده لسه'}</div>
                 </div>
                 <div className="pp">

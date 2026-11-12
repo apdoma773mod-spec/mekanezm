@@ -1094,3 +1094,6 @@ body .field input[type=checkbox]{border-radius:4px}
 .ivhead .ivh-t{font-weight:800;white-space:nowrap;flex:none}
 .ivhead .ivh-s{flex:1;min-width:0;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
 .ivhead .ivh-a{color:var(--muted)}
+
+/* 🔁 اسم الصنف عند المورد تحت اسمنا في نتايج البحث: باهت ومتظلّل، واسمنا هو الأساسي */
+.mk-aka{display:block;width:fit-content;max-width:100%;margin-top:3px;padding:1px 8px;border-radius:6px;background:color-mix(in srgb,var(--muted,#7a8a8f) 12%,transparent);color:var(--muted,#7a8a8f);font-size:12px;font-weight:500;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

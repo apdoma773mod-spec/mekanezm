@@ -26,6 +26,7 @@ import { Modal } from '../ui/modal';
 import { Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { Aka, akaHay } from '../ui/aka';
 
 export type ProductToolSpec =
   | { kind: 'bulkPrice' }
@@ -43,7 +44,7 @@ const num = (v: unknown) => {
 };
 const words = (s: string) => vn(s).split(' ').filter(Boolean);
 const matches = (p: ProductDto, w: string[]) => {
-  const hay = vn(`${p.name} ${p.code}`);
+  const hay = vn(akaHay(p));
   return w.every((x) => hay.includes(x));
 };
 
@@ -392,6 +393,7 @@ function Labels({ all: preAll }: { all?: boolean }) {
                   }}
                 >
                   {p.name}
+                  <Aka p={p} />
                 </div>
               ))}
             </div>
@@ -492,6 +494,7 @@ function LinkBarcode({ code }: { code: string }) {
           L.map((p) => (
             <div key={p.id} className="prow" style={{ padding: 11, borderBottom: '1px solid var(--border)' }} onClick={() => void link(p)}>
               <b>{p.name}</b>{' '}
+              <Aka p={p} />
               <small style={{ color: 'var(--muted)' }}>
                 {p.code}
                 {p.barcode ? ` • عنده باركود ${p.barcode}` : ''}
@@ -821,6 +824,7 @@ function PickProduct({ label, value, onPick }: { label: string; value: ProductDt
           {list.map((p) => (
             <div key={p.id} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 10, marginTop: 6, cursor: 'pointer' }} onClick={() => onPick(p)}>
               <b>{p.name}</b> <small style={{ color: 'var(--muted)' }}>رصيد {qtyText(p.qty)} {p.unit}</small>
+              <Aka p={p} />
             </div>
           ))}
         </>

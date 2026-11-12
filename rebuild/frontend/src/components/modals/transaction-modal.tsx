@@ -33,6 +33,7 @@ import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 import { SCAN_EVENT, scanTargets } from '../scan/scan-bus';
 import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
+import { Aka } from '../ui/aka';
 
 interface Line {
   key: string;
@@ -526,6 +527,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       <small style={{ color: '#7a8a8f' }}>
                         ({qtyText(p.qty)} {p.unit})
                       </small>
+                      <Aka p={p} />
                     </div>
                   ))
                 ) : (

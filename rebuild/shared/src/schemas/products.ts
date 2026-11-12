@@ -77,6 +77,8 @@ export interface ProductDto {
   minQty: number;
   company: (typeof COMPANIES)[number];
   note: string;
+  /** الأسماء اللي الموردين بيكتبوها للصنف ده في فواتيرهم (بتتحفظ من مراجعة فاتورة الشراء). في نتايج البحث بس. */
+  aka?: string[];
   createdAt: string;
   updatedAt: string;
 }
