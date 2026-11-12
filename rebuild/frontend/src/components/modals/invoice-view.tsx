@@ -332,40 +332,48 @@ function SplitBox({ inv, fors, settings }: { inv: InvoiceDto; fors: string[]; se
   };
   const untitled = fors.includes('') && fors.some(Boolean);
   return (
-    <div id="splitBox" style={{ marginTop: 14, border: '1px solid var(--border)', borderRadius: 14, padding: 12 }}>
-      <b>👥 الفاتورة مقسومة على {fors.filter(Boolean).length} زبون</b>
-      {untitled && <p style={{ color: 'var(--muted)', fontSize: 13, margin: '6px 0 0' }}>فيه بنود من غير اسم — بتظهر تحت «بدون اسم». عدّل الفاتورة لو عايز تحط لها اسم.</p>}
-      <div className="btnrow" style={{ marginTop: 10 }}>
-        <button type="button" className="primary" style={{ flex: 1 }} disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { group: true }))}>
-          📑 كشف مفصّل (طباعة)
+    <div id="splitBox" className="splitbox">
+      <div className="sp-h">
+        <b>👥 الفاتورة مقسومة على {fors.filter(Boolean).length} زبون</b>
+        <small>كشف واحد للكل، أو صفحة لكل زبون لوحده</small>
+      </div>
+      {untitled && <p className="sp-note">فيه بنود من غير اسم — بتظهر تحت «بدون اسم». عدّل الفاتورة لو عايز تحط لها اسم.</p>}
+      <div className="sp-all">
+        <button type="button" className="primary" disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { group: true }))}>
+          🖨️ طباعة الكشف
         </button>
         <button type="button" className="secondary" disabled={!settings || busy !== null} onClick={() => settings && void share('all', invoiceA4Html(inv, settings, { group: true }), `كشف-${inv.no}.pdf`, `كشف مفصّل ${inv.no}`)}>
-          {busy === 'all' ? '⏳' : 'PDF'}
+          {busy === 'all' ? '⏳ بيجهّز…' : '📤 إرسال الكشف'}
         </button>
       </div>
-      <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-        {fors.map((n) => (
-          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <span>
-              👤 <b>{forLabel(n)}</b> — {money(inv.items.filter((x) => (x.forName || '').trim() === n).reduce((a, x) => a + x.total, 0))}
-            </span>
-            <span style={{ display: 'flex', gap: 6 }}>
-              <button type="button" className="secondary" style={{ padding: '4px 10px' }} disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { only: n }))}>
+      <div className="sp-list">
+        {fors.map((n) => {
+          const part = inv.items.filter((x) => (x.forName || '').trim() === n);
+          return (
+            <div key={n} className="sp-row">
+              <div className="sp-who">
+                <b>{forLabel(n)}</b>
+                <small>
+                  {part.length} صنف — <span>{money(part.reduce((a, x) => a + x.total, 0))}</span>
+                </small>
+              </div>
+              <button type="button" className="secondary" aria-label={`طباعة صفحة ${forLabel(n)}`} disabled={!settings} onClick={() => settings && printHtml(invoiceA4Html(inv, settings, { only: n }))}>
                 🖨️
               </button>
               <button
                 type="button"
                 className="secondary"
-                style={{ padding: '4px 10px' }}
+                aria-label={`إرسال صفحة ${forLabel(n)} PDF`}
                 disabled={!settings || busy !== null}
                 onClick={() => settings && void share(n || '-', invoiceA4Html(inv, settings, { only: n }), `${forLabel(n)}-${inv.no}.pdf`, `${forLabel(n)} — ${inv.no}`)}
               >
-                {busy === (n || '-') ? '⏳' : 'PDF / واتساب'}
+                {busy === (n || '-') ? '⏳' : '📤'}
               </button>
-            </span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
+      <small className="sp-foot">🖨️ طباعة — 📤 إرسال PDF (واتساب أو حفظ)</small>
     </div>
   );
 }
