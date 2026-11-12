@@ -3,8 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-// Reading a drawing (web/public/takeoff) takes the AI up to ~50 s.
-export const maxDuration = 60;
+// Reading a drawing (web/public/takeoff): the backend allows itself up to 95 s.
+export const maxDuration = 150;
 
 const ALLOWED = /^(?:web\/public\/(?:takeoff|orders|requests|custom|media|track|track-custom|reviews|notify-me|visit)|web\/scraps|web\/scraps\/(?:mine|want|read-tape)|web\/scraps\/[0-9a-zA-Z_-]+\/(?:contact|done|renew|report))$/;
 const ALLOWED_GET = /^web\/public\/(stock|reviews|site|catalog-latest(?:\/print)?)$/;

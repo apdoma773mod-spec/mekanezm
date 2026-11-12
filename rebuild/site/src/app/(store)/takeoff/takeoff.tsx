@@ -58,7 +58,7 @@ export function Takeoff({ products, wa }: { products: Prod[]; wa: string }) {
       const { intake } = await import('@/lib/takeoff-files');
       const inx = await intake(files, setBusy);
       if (!inx.parts.length && inx.text.trim().length < 10) { setErr(inx.warnings[0] || 'مقدرناش نقرا الملف — ارفع صورة أو PDF للرسمة.'); return; }
-      setBusy('بنقرا الرسمة ونعدّ القطع… (لحد دقيقة)');
+      setBusy('بنقرا الرسمة ونعدّ القطع… (دقيقة أو اتنين)');
       const r = await readDrawing({ files: inx.parts, text: inx.text, note: note.trim() });
       if (!r.ok) { setErr(r.message); return; }
       const model = normalize(r.model);

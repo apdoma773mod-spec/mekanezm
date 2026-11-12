@@ -258,7 +258,7 @@ export async function uploadScrapImage(blob: Blob): Promise<string> {
 /** «ارفع رسمتك»: the AI's description of the units in the uploaded files (the counting happens in lib/takeoff.ts). */
 export async function readDrawing(body: { files: { mt: string; data: string; name: string }[]; text: string; note: string }): Promise<{ ok: boolean; model: unknown; doubt: string[]; message: string }> {
   const ctl = new AbortController();
-  const t = setTimeout(() => ctl.abort(), 75_000);
+  const t = setTimeout(() => ctl.abort(), 130_000);
   try {
     const r = await fetch('/mkapi/web/public/takeoff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
     const j = await r.json().catch(() => null);

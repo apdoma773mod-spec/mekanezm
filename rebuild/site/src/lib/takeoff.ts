@@ -173,13 +173,13 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
       if (d.kind === 'lift_up') {
         put('lift', 'doors', 'دراع قلاب / باكم (طقم للضلفة)', 'طقم', /قلاب|باكم|أفنتوس|افنتوس|aventos|lift|بيستون|piston/i, n, `${u.name}: ${d.count} ضلفة قلاب${x(u)}`, u,
           { doubt: D.has('flaps'), tip: 'نوع الدراع بيتحدد بوزن ومقاس الضلفة — استخدم حاسبة الدراعات القلاب.' });
-        put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', /مفصل/i, 2 * n, `${u.name}: ${d.count} ضلفة قلاب × 2 مفصلة (لو الدراع باكم عادي)${x(u)}`, u, { doubt: D.has('flaps'), not: NOT_PLAIN_HINGE });
+        put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', HINGE, 2 * n, `${u.name}: ${d.count} ضلفة قلاب × 2 مفصلة (لو الدراع باكم عادي)${x(u)}`, u, { doubt: D.has('flaps'), not: NOT_PLAIN_HINGE });
         if (u.handles === 'push') pushN += n; else handleN += n;
         continue;
       }
       if (d.kind === 'flap_down') {
         put('flap-stay', 'doors', 'دراع قلاب لتحت (ستاي)', 'قطعة', /قلاب.*تحت|ستاي|stay|flap/i, n, `${u.name}: ${d.count} ضلفة قلاب لتحت${x(u)}`, u, { doubt: D.has('flaps') });
-        put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', /مفصل/i, 2 * n, `${u.name}: ${d.count} ضلفة قلاب لتحت × 2 مفصلة${x(u)}`, u, { doubt: D.has('flaps'), not: NOT_PLAIN_HINGE });
+        put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', HINGE, 2 * n, `${u.name}: ${d.count} ضلفة قلاب لتحت × 2 مفصلة${x(u)}`, u, { doubt: D.has('flaps'), not: NOT_PLAIN_HINGE });
         if (u.handles === 'push') pushN += n; else handleN += n;
         continue;
       }
@@ -191,7 +191,7 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
       if (d.material === 'glass') put('hinge-glass', 'doors', 'مفصلات زجاج', 'مفصلة', /مفصل.*(زجاج|قزاز)|(زجاج|قزاز).*مفصل/i, per * n, why, u, { doubt: dd });
       else if (d.material === 'alu_frame') put('hinge-alu', 'doors', 'مفصلات ضلف ألمنيوم', 'مفصلة', /مفصل.*(ألمنيوم|الومنيوم|المونيوم)|(ألمنيوم|الومنيوم|المونيوم).*مفصل/i, per * n, why, u, { doubt: dd });
       else if (u.corner) put('hinge-corner', 'doors', 'مفصلات ركنة (بلاند / 165°)', 'مفصلة', /بلاند|blind|165|ركن.*مفصل|مفصل.*(ركن|كورنر)/i, per * n, why, u, { doubt: true, tip: 'نوع مفصلة الركنة بيفرق حسب تصميم الركنة (عمياء ولا ضلفتين مكسورين) — أكّد مع المحل.' });
-      else put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', /مفصل/i, per * n, why, u, { doubt: dd, not: NOT_PLAIN_HINGE });
+      else put('hinge', 'doors', 'مفصلات ضلف', 'مفصلة', HINGE, per * n, why, u, { doubt: dd, not: NOT_PLAIN_HINGE });
       if (d.kind === 'folding') put('fold-hinge', 'doors', 'مفصلات أكورديون بين الضلف', 'مفصلة', /أكورديون|اكورديون|bifold|fold/i, per * Math.floor(d.count / 2) * c, `${u.name}: ${Math.floor(d.count / 2)} وصلة × ${per}${x(u)}`, u, { doubt: true });
       if (u.handles === 'push') pushN += n; else handleN += n;
     }
@@ -258,6 +258,8 @@ export function takeoff(model: TModel, doubt: string[] = []): TLine[] {
   const order: Group[] = ['doors', 'drawers', 'inside', 'build', 'ready'];
   return [...L.values()].map(l => ({ ...l, qty: l.unit === 'متر' ? Math.round(l.qty * 100) / 100 : Math.round(l.qty) })).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
 }
+/** Cabinet hinges as the shop names them: by the word, by brand (ساميت، اتاش), or by overlay (عدلة، نص ركبة، ركبة كاملة). */
+const HINGE = /مفصل|ساميت|samet|اتاش|هيتش|hettich|نص ركب|ركب[هة] كامل|عدل[هة]/i;
 /** A plain cabinet hinge is none of these special ones. */
 const NOT_PLAIN_HINGE = /زجاج|قزاز|ألمنيوم|الومنيوم|المونيوم|بلاند|كورنر|ركن|أكورديون|اكورديون|باب|دلف/;
 
@@ -270,7 +272,9 @@ export function candidates<P extends { name: string; tags: string[]; top?: boole
     const t = `${p.name} ${p.tags.join(' ')}`;
     return line.match.test(t) && !(line.not && line.not.test(p.name));
   });
-  const score = (p: P) => (ok(p) ? 2 : 0) + (size && new RegExp(`(^|\\D)${size}(\\D|$)`).test(digits(p.name)) ? 1 : 0) + (p.top ? 0.5 : 0);
+  const score = (p: P) => (ok(p) ? 2 : 0) + (size && new RegExp(`(^|\\D)${size}(\\D|$)`).test(digits(p.name)) ? 1 : 0) + (p.top ? 0.5 : 0)
+    // Plain doors sit over the cabinet side: the full-overlay hinge («عدلة») is the usual one.
+    + (line.k === 'hinge' && /عدل[هة]/.test(p.name) ? 1 : 0);
   return hit.map(p => [p, score(p)] as const).sort((a, b) => b[1] - a[1]).slice(0, max).map(x => x[0]);
 }
 
