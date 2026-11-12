@@ -90,7 +90,7 @@ function flatJSON(j: unknown): Record<string, unknown>[] {
 }
 
 export function PurchaseImport() {
-  const { close } = useModal();
+  const { close, open } = useModal();
   const toast = useToast();
   const qc = useQueryClient();
   const { co } = useCompany();
@@ -279,7 +279,7 @@ export function PurchaseImport() {
 
   return (
     <Portal>
-      <div id="mkPvImp" style={{ position: 'fixed', inset: 0, zIndex: 56, background: 'var(--bg,#f5f7f8)', color: 'var(--text,#18343a)', overflow: 'auto', direction: 'rtl', padding: '12px 14px 90px' }}>
+      <div id="mkPvImp" style={{ position: 'fixed', inset: 0, zIndex: 56, background: 'var(--bg,#f5f7f8)', color: 'var(--text,#18343a)', overflow: 'auto', direction: 'rtl', padding: 'calc(12px + env(safe-area-inset-top, 0px)) 14px 90px' }}>
         {step === 'start' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -293,13 +293,18 @@ export function PurchaseImport() {
               <br />
               <b>1) ملف</b> من الأبلكيشن القديم: Excel أو CSV أو JSON.
               <br />
-              <b>2) صور</b> فواتير ورقية: بتتقري بالذكاء الاصطناعي وتلاقيها في «قراءة الفواتير بالصورة».
+              <b>2) صور</b> فواتير ورقية: بتتقري بالذكاء الاصطناعي جوه شاشة فاتورة الشراء (الزرار اللي تحت بيفتحهالك).
             </div>
             <button type="button" className="primary" style={bt(true)} onClick={() => pick('.xlsx,.xls,.xlsm,.csv,.json,.txt', (f) => void readFile(f))}>
               📄 اختار ملف (Excel / CSV / JSON)
             </button>
-            <button type="button" className="secondary" style={bt(false)} onClick={() => toast('قراءة صور الفواتير بالذكاء الاصطناعي لسه محتاجة مفتاح الخدمة على السيرفر الجديد', 'bad')}>
-              🖼️ ارفع صور فواتير (قراءة OCR)
+            <button type="button" className="secondary" style={bt(false)} onClick={() => {
+                // قراءة الصور شغّالة جوه شاشة فاتورة الشراء (📷 صوّر / 🖼️ من الصور): بنفتحهالك على طول
+                close();
+                setTimeout(() => open({ kind: 'transaction', type: 'PURCHASE' }), 150);
+                toast('📷 دوس «صوّر الفاتورة» أو «من الصور» — بتتقري وتتحط بنودها في الفاتورة');
+              }}>
+              🖼️ ارفع صور فواتير (قراءة بالذكاء الاصطناعي)
             </button>
           </>
         )}

@@ -13,6 +13,7 @@ export interface WebOrderRow {
   customerName: string;
   phone: string;
   items: WebOrderItem[];
+  ship?: { method: 'pickup' | 'delivery' | 'ship'; gov: string; area: string; address: string } | null;
   status: 'new' | 'done' | 'cancelled';
   eta: string;
   invoiceNo: string | null;
@@ -37,6 +38,58 @@ export const useWebOrderCount = (enabled = true) =>
     refetchInterval: 60_000,
     staleTime: 20_000,
   });
+
+export const useWebCounts = (enabled = true) =>
+  useQuery({
+    enabled,
+    queryKey: ['web', 'counts'],
+    queryFn: ({ signal }) => api.get<{ orders: number; requests: number; subs?: number; custom: number; reviews?: number; waits?: number }>('/web/counts', undefined, signal),
+    refetchInterval: 60_000,
+    staleTime: 20_000,
+  });
+
+export interface WebRequestRow {
+  id: string;
+  name: string;
+  phone: string;
+  imgs: string[];
+  note: string;
+  status: 'new' | 'replied' | 'closed';
+  reply: string;
+  repliedBy: string;
+  createdAt: string;
+}
+export const useWebRequests = (enabled = true) =>
+  useQuery({ enabled, queryKey: ['web', 'requests'], queryFn: ({ signal }) => api.get<{ items: WebRequestRow[] }>('/web/requests', undefined, signal).then((r) => r.items), refetchInterval: 60_000 });
+export const usePatchWebRequest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...b }: { id: string; status?: WebRequestRow['status']; reply?: string }) => api.patch<{ request: WebRequestRow }>(`/web/requests/${id}`, b).then((r) => r.request),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['web'] }),
+  });
+};
+
+export interface WebCustomRow {
+  id: string;
+  name: string;
+  phone: string;
+  kind: 'steel' | 'bamboo' | 'delf';
+  summary: string;
+  note: string;
+  img: string;
+  spec: Record<string, unknown>;
+  status: 'new' | 'opened' | 'closed' | 'cancelled';
+  createdAt: string;
+}
+export const useWebCustom = (enabled = true) =>
+  useQuery({ enabled, queryKey: ['web', 'custom'], queryFn: ({ signal }) => api.get<{ items: WebCustomRow[] }>('/web/custom', undefined, signal).then((r) => r.items), refetchInterval: 60_000 });
+export const usePatchWebCustom = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: WebCustomRow['status'] }) => api.patch<{ custom: WebCustomRow }>(`/web/custom/${id}`, { status }).then((r) => r.custom),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['web'] }),
+  });
+};
 
 export const usePatchWebOrder = () => {
   const qc = useQueryClient();
@@ -100,3 +153,25 @@ export async function saveSite(mutate: (d: SiteData) => void): Promise<SiteDoc> 
   }
   throw new Error('في تعديل تاني على الموقع في نفس اللحظة — جرّب تاني');
 }
+
+/** «ابلغني لما يتوفر»: customers who left their number on a product that was out of stock. */
+export interface WebWaitRow {
+  id: string;
+  product: string;
+  pname?: string;
+  name?: string;
+  phone: string;
+  at?: string;
+}
+export const useWebWaits = (enabled = true) =>
+  useQuery({ enabled, queryKey: ['web', 'waits'], queryFn: ({ signal }) => api.get<{ items: WebWaitRow[] }>('/web/notify', undefined, signal).then((r) => r.items), refetchInterval: 60_000 });
+export const useRemoveWebWait = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: boolean }>(`/web/notify/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['web', 'waits'] });
+      void qc.invalidateQueries({ queryKey: ['web', 'counts'] });
+    },
+  });
+};

@@ -1,3 +1,4 @@
+import { onlineShipmentMessage } from '../alerts/auto.js';
 import type { Prisma, PrismaClient, Shipment } from '@prisma/client';
 import {
   SHIP_CLOSED,
@@ -171,6 +172,7 @@ export class ShippingService {
       });
       return row;
     });
+    if (s.status !== before.status) void onlineShipmentMessage(this.prisma, { status: s.status, phone: s.phone, name: s.name, tracking: s.tracking, carrier: s.carrier, invoiceId: s.invoiceId });
     return toDto(s);
   }
 

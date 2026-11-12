@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { forbidden } from '../../lib/errors.js';
+import { handleScrapMessage } from '../scraps/service.js';
+import { BC_PREFIX, OPTOUT_RULE, getOptout, isOptoutText, nextBroadcast, setOptout } from '../broadcast/lib.js';
 
 /**
  * 🔌 الجسر اللي على جهاز المحل (واتساب + الطابعة). بيكلّم السيستم بسر واحد في الهيدر x-bridge-secret،
@@ -11,7 +13,7 @@ const CLAIM_TIMEOUT_MS = 10 * 60 * 1000;
 const MAX_PHOTO_CHARS = 2_500_000;
 const PHOTO = /^data:image\/(jpeg|png|webp);base64,/;
 
-function checkBridge(app: FastifyInstance, request: FastifyRequest) {
+export function checkBridge(app: FastifyInstance, request: FastifyRequest) {
   const secret = app.config.BRIDGE_SECRET;
   if (!secret) throw forbidden('الجسر مش متفعّل (BRIDGE_SECRET)');
   if (String(request.headers['x-bridge-secret'] ?? '') !== secret) throw forbidden('السر غلط');
@@ -21,18 +23,41 @@ const last10 = (p: string) => p.replace(/\D/g, '').slice(-10);
 
 export async function bridgeRoutes(app: FastifyInstance) {
   const db = app.prisma;
+  /** أرقام «بتتجاهل دايمًا» (زرار 🚫 في صور الواتساب): حتى لو الجسر لسه ماخدش القواعد الجديدة، السيستم مابيستقبلش منهم */
+  const blocked = async (phone: string) => {
+    const d = last10(phone);
+    if (d.length < 10) return false;
+    const r = (await db.setting.findUnique({ where: { key: 'wa_rules' } }))?.value as { blockPhones?: string[] } | null;
+    return (r?.blockPhones ?? []).some((x) => last10(String(x)) === d);
+  };
   app.addHook('preHandler', async (request) => {
     checkBridge(app, request);
   });
+  /** لو الرقم ده وصله إعلان في آخر ٤٥ يوم: يتحط في قايمة «مش عايز إعلانات» ويتقفل اشتراكه ويوصله تأكيد. */
+  const optOutIfAdded = async (phone: string) => {
+    const k = last10(phone);
+    if (k.length < 10) return false;
+    const got = await db.outboundMessage.findFirst({ where: { byName: { startsWith: BC_PREFIX }, toPhone: { endsWith: k }, createdAt: { gt: new Date(Date.now() - 45 * 864e5) } }, select: { id: true } });
+    const sub = await db.webRequest.findFirst({ where: { phone: { endsWith: k }, note: { startsWith: '📣 اشتراك' }, status: { not: 'closed' } }, select: { id: true } });
+    if (!got && !sub) return false;
+    await setOptout(db, [...(await getOptout(db)), k]);
+    await db.webRequest.updateMany({ where: { phone: { endsWith: k }, note: { startsWith: '📣 اشتراك' }, status: { not: 'closed' } }, data: { status: 'closed' } });
+    await db.outboundMessage.updateMany({ where: { byName: { startsWith: BC_PREFIX }, status: 'queued', claimedAt: null, toPhone: { endsWith: k } }, data: { status: 'failed', err: 'العميل طلب إلغاء الإعلانات', doneAt: new Date() } });
+    await db.outboundMessage.create({ data: { toPhone: `0${k}`, body: 'تمام ✅ شيلناك من رسايل الإعلانات. لو حبيت ترجع كلمنا في أي وقت 🌸', byName: '📣 إلغاء إعلانات' } });
+    return true;
+  };
 
   // ── صندوق الصادر: رسايل واتساب وأوامر طباعة
   app.post('/out/claim', async () => {
     const stale = new Date(Date.now() - CLAIM_TIMEOUT_MS);
-    const rows = await db.outboundMessage.findMany({
-      where: { status: 'queued', OR: [{ claimedAt: null }, { claimedAt: { lt: stale } }] },
+    const normal = await db.outboundMessage.findMany({
+      where: { status: 'queued', byName: { not: { startsWith: BC_PREFIX } }, OR: [{ claimedAt: null }, { claimedAt: { lt: stale } }] },
       orderBy: { createdAt: 'asc' },
       take: 3,
     });
+    // الإعلانات بتخرج واحدة واحدة بفاصل زمني وحد يومي (lib.ts) — التنبيهات والطباعة مش بتستنى
+    const ad = await nextBroadcast(db);
+    const rows = ad ? [...normal, ad] : normal;
     if (!rows.length) return [];
     await db.outboundMessage.updateMany({ where: { id: { in: rows.map((r) => r.id) } }, data: { claimedAt: new Date() } });
     return rows.map((r) => ({ id: r.id, to_phone: r.toPhone, body: r.body, by_name: r.byName }));
@@ -57,9 +82,17 @@ export async function bridgeRoutes(app: FastifyInstance) {
         body: z.string().min(1).max(4000),
       })
       .parse(request.body);
+    // the site's single «إرسال الطلب» button also opens WhatsApp with the same order (رقم الطلب: xxxxxxxx): it is already in «طلبات الموقع», so keep it out of the new WhatsApp orders
+    if (await blocked(b.phone)) return { id: 'blocked' };
+    // «إلغاء» لوحدها من حد وصله إعلان قريب = بيطلب نشيله من الإعلانات (مش طلب)
+    if (isOptoutText(b.body) && (await optOutIfAdded(b.phone))) return { id: 'optout' };
+    // «فضلة …» from a craftsman: listed in سوق الفضلة (or one short question asked), not a customer order
+    if (await handleScrapMessage(db, { phone: b.phone, name: b.name, text: b.body })) return { id: 'scrap' };
+    const ref = /رقم الطلب:\s*([a-z0-9]{8})/i.exec(b.body)?.[1]?.toLowerCase();
+    const dup = ref ? !!(await db.webOrder.findFirst({ where: { id: { startsWith: ref } }, select: { id: true } })) : false;
     try {
       const row = await db.waOrder.create({
-        data: { msgId: b.msgId || null, phone: b.phone, customerName: b.name, body: b.body },
+        data: { msgId: b.msgId || null, phone: b.phone, customerName: b.name, body: b.body, ...(dup ? { status: 'ignored' } : {}) },
       });
       return { id: row.id };
     } catch (e) {
@@ -79,8 +112,10 @@ export async function bridgeRoutes(app: FastifyInstance) {
         img: z.string(),
       })
       .parse(request.body);
+    if (await blocked(b.phone)) return { id: 'blocked' };
     if (!PHOTO.test(b.img)) throw forbidden('مش صورة (jpeg/png/webp)');
     if (b.img.length > MAX_PHOTO_CHARS) throw forbidden('الصورة كبيرة');
+    if (await handleScrapMessage(db, { phone: b.phone, name: b.name, text: b.caption, img: b.img })) return { id: 'scrap' };
     try {
       const row = await db.waPhoto.create({
         data: { msgId: b.msgId || null, phone: b.phone, name: b.name, caption: b.caption, img: b.img },
@@ -106,6 +141,9 @@ export async function bridgeRoutes(app: FastifyInstance) {
 
   app.get('/rules', async () => {
     const s = await db.setting.findUnique({ where: { key: 'wa_rules' } });
+    const v = s?.value as { rules?: unknown[] } | null | undefined;
+    // كلمة «إلغاء» لازم توصل السيستم (الفلتر بيتجاهل أي رسالة من غير كلمة مفتاحية) — بتتضاف هنا من غير ما نغيّر قواعده المحفوظة
+    if (v && Array.isArray(v.rules) && v.rules.length) return { ...v, rules: [...v.rules, OPTOUT_RULE] };
     return s?.value ?? {};
   });
 

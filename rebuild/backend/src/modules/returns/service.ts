@@ -76,7 +76,9 @@ export class ReturnsService {
    * A sale return puts the goods back on the shelf; a purchase return sends them back to the
    * supplier. Settled in cash from/to the drawer, or against the contact's balance.
    */
-  async create(input: ReturnInput, actor: Actor): Promise<ReturnDto> {
+  async create(input: ReturnInput, actor: Actor, date?: string): Promise<ReturnDto> {
+    const day = date ?? todayYmd();
+    if (day > todayYmd()) throw badRequest('تاريخ المرتجع مينفعش يبقى في المستقبل');
     const id = await withTx(this.prisma, async (tx) => {
       const product = await tx.product.findUnique({ where: { id: input.productId } });
       if (!product || product.deletedAt) throw notFound('الصنف ده مش موجود');
@@ -109,7 +111,7 @@ export class ReturnsService {
           settlement: input.settlement,
           method: input.method,
           company: input.company,
-          date: dayToDate(todayYmd()),
+          date: dayToDate(day),
           note: input.note,
           createdById: actor.id,
         },

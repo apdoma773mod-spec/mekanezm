@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { PayMethod, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { actorOf, type Actor } from '../../lib/actor.js';
 import { writeAudit } from '../../lib/audit.js';
@@ -37,6 +37,8 @@ const importInput = z.object({
               qty: z.number().gt(0),
               price: z.number().min(0),
               pay: z.enum(['cash', 'credit']).default('cash'),
+              /** paid, but not into the drawer («انستا» / «تحويل» in the sheet's طريقة الدفع column) */
+              via: z.enum(['INSTAPAY', 'TRANSFER']).optional(),
             }),
           )
           .min(1),
@@ -47,12 +49,61 @@ const importInput = z.object({
 });
 export type DaybookImportInput = z.infer<typeof importInput>;
 
+/**
+ * How the invoice's paid amount divides between the drawer, InstaPay and transfers — from its own lines.
+ * Only when the lines account for the whole paid amount; otherwise it is all cash, as before.
+ */
+function splitOfImport(inv: DaybookImportInput['invoices'][number]): { main: PayMethod; split?: Partial<Record<PayMethod, number>> } {
+  const by: Partial<Record<PayMethod, number>> = {};
+  for (const l of inv.items) {
+    if (l.pay === 'credit') continue;
+    const m: PayMethod = l.via ?? 'CASH';
+    by[m] = (by[m] ?? 0) + l.qty * l.price;
+  }
+  const parts = (Object.entries(by) as [PayMethod, number][]).map(([m, v]) => [m, Math.round(v * 100) / 100] as [PayMethod, number]).filter(([, v]) => v > 0);
+  if (!parts.some(([m]) => m !== 'CASH')) return { main: 'CASH' };
+  parts.sort((a, b) => b[1] - a[1]);
+  const diff = Math.round((inv.paid - parts.reduce((s, [, v]) => s + v, 0)) * 100) / 100;
+  if (Math.abs(diff) > 0.05) return { main: 'CASH' };
+  parts[0]![1] = Math.round((parts[0]![1] + diff) * 100) / 100;
+  return { main: parts[0]![0], ...(parts.length > 1 ? { split: Object.fromEntries(parts) } : {}) };
+}
+
 interface LogRow {
   sig: string;
   at: string;
   iso: string;
   n: number;
   tot: number;
+}
+
+type ImpInvoice = DaybookImportInput['invoices'][number];
+const norm = (t: string) => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/**
+ * 🧾 اللي اتسجّل في اليومية قبل الاستيراد ماينفعش يتسجّل تاني: كل سطر في الملف بيتقارن بسطور اليومية الموجودة في نفس اليوم
+ * (نفس الصنف + نفس الكمية + نفس السعر، وماتختلفش العميل لو الاتنين مكتوبين). كل سطر موجود بيتطابق مع سطر واحد بس —
+ * لو السطر اتكرر في الملف مرتين (بيعتين فعلًا) والمسجّل مرة واحدة، المرة التانية بتتسجّل.
+ * بيرجّع لكل فاتورة مصفوفة: true = السطر ده متسجّل قبل كده.
+ */
+export async function matchExisting(db: Pick<PrismaClient, 'daybookEntry'>, date: string, invoices: ImpInvoice[]): Promise<boolean[][]> {
+  const rows = await db.daybookEntry.findMany({ where: { day: dayToDate(date), kind: 'ITEM' }, select: { productId: true, name: true, qty: true, price: true, person: true } });
+  const pool = rows.map((r) => ({ pid: r.productId, name: norm(r.name), qty: Number(r.qty), price: Number(r.price), person: norm(r.person), used: false }));
+  return invoices.map((inv) => {
+    const who = inv.noContact ? '' : norm(inv.person);
+    return inv.items.map((l) => {
+      const hit = pool.find(
+        (e) =>
+          !e.used &&
+          ((l.productId && e.pid === l.productId) || e.name === norm(l.name)) &&
+          Math.abs(e.qty - l.qty) < 0.0005 &&
+          Math.abs(e.price - l.price) < 0.005 &&
+          !(who && e.person && who !== e.person),
+      );
+      if (hit) hit.used = true;
+      return !!hit;
+    });
+  });
 }
 
 export async function importDay(db: PrismaClient, input: DaybookImportInput, actor: Actor) {
@@ -63,10 +114,25 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
     throw badRequest(`الملف ده اتستورد قبل كده (${seen.at.slice(0, 16).replace('T', ' ')} — ${seen.n} فاتورة).`);
   }
 
+  // what is already recorded for this day is left alone (see matchExisting)
+  const dup = await matchExisting(db, input.date, input.invoices);
+  const skipped: { name: string; qty: number; price: number }[] = [];
+  const todo = input.invoices
+    .map((inv, i) => {
+      const keep = inv.items.filter((_, k) => !dup[i]![k]);
+      inv.items.forEach((l, k) => dup[i]![k] && skipped.push({ name: l.name, qty: l.qty, price: l.price }));
+      if (keep.length === inv.items.length) return inv;
+      // part of the invoice was already there: the paid amount follows the lines that are really imported
+      const paid = Math.min(inv.paid, Math.round(keep.filter((l) => l.pay !== 'credit').reduce((a, l) => a + l.qty * l.price, 0) * 100) / 100);
+      return { ...inv, items: keep, paid };
+    })
+    .filter((inv) => inv.items.length > 0);
+
   const out = await withTx(db, async (tx) => {
     const made: { id: string; no: string }[] = [];
-    for (const [i, inv] of input.invoices.entries()) {
+    for (const [i, inv] of todo.entries()) {
       try {
+        const { main, split } = splitOfImport(inv);
         const id = await createInvoiceInTx(
           tx,
           {
@@ -80,11 +146,11 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
             shipping: 0,
             discount: 0,
             paid: inv.paid,
-            payMethod: 'CASH',
+            payMethod: main,
             items: inv.items.map((l) => ({ productId: l.productId, name: l.name, qty: l.qty, price: l.price })),
           },
           actor,
-          { source: 'IMPORT', noContact: inv.noContact },
+          { source: 'IMPORT', noContact: inv.noContact, ...(split ? { paidSplit: split } : {}) },
         );
         const row = await tx.invoice.findUniqueOrThrow({ where: { id }, select: { no: true } });
         const who = inv.noContact ? '' : inv.person.trim();
@@ -100,7 +166,7 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
               price: D(l.price),
               owed: D(0),
               person: who,
-              pay: l.pay === 'credit' ? 'CREDIT' : 'CASH',
+              pay: l.pay === 'credit' ? 'CREDIT' : (l.via ?? 'CASH'),
               note: NOTE,
               stockOut: D(l.qty),
               createdById: actor.id,
@@ -119,12 +185,12 @@ export async function importDay(db: PrismaClient, input: DaybookImportInput, act
     return made;
   });
 
-  if (input.sig) {
-    const tot = input.invoices.reduce((a, v) => a + v.items.reduce((b, l) => b + l.qty * l.price, 0), 0);
+  if (input.sig && out.length) {
+    const tot = todo.reduce((a, v) => a + v.items.reduce((b, l) => b + l.qty * l.price, 0), 0);
     const next = [{ sig: input.sig, at: new Date().toISOString(), iso: input.date, n: out.length, tot }, ...log].slice(0, 200);
     await db.setting.upsert({ where: { key: LOG_KEY }, create: { key: LOG_KEY, value: next as object }, update: { value: next as object } });
   }
-  return out;
+  return { made: out, skipped };
 }
 
 export async function daybookImportRoutes(app: FastifyInstance) {
@@ -140,7 +206,15 @@ export async function daybookImportRoutes(app: FastifyInstance) {
 
   app.post('/', async (request) => {
     const input = parse(importInput, request.body);
-    return { invoices: await importDay(app.prisma, input, actorOf(request)) };
+    const r = await importDay(app.prisma, input, actorOf(request));
+    // «skipped»: lines that were already in the daybook for that day (older screens just ignore it)
+    return { invoices: r.made, skipped: r.skipped };
+  });
+
+  /** Which lines of the file are already recorded for that day? (the screen shows them before the owner confirms) */
+  app.post('/check', async (request) => {
+    const input = parse(importInput, request.body);
+    return { dup: await matchExisting(app.prisma, input.date, input.invoices) };
   });
 }
 

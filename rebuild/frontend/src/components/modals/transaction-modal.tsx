@@ -1,10 +1,16 @@
 'use client';
 
 import { CustomerBar } from '@/components/modals/customer-bar';
+import { PhotoSearch } from "./photo-search";
 import { termsFor, useTerms } from '@/lib/terms';
+import { useCreditLimits } from '@/lib/kv';
+import { useIsAdmin } from '../use-role';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type ProductDto, type QuoteDto } from '@mk/shared';
-import { errorMessage } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { ONLINE_FROM, ONLINE_FROM_LABELS } from '@mk/shared';
+type OnlineFrom = (typeof ONLINE_FROM)[number];
+import { GOVS, normalizeDigits, type InvoiceDto, type InvoiceKind, type InvoiceListResult, type ProductDto, type QuoteDto } from '@mk/shared';
+import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import { serverErrors, type FieldErrors } from '@/lib/form';
 import { useCreateShipment, useQuote, useQuoteConverted, useSaveQuote } from '@/lib/phase4-queries';
@@ -25,6 +31,8 @@ import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { SCAN_EVENT, scanTargets } from '../scan/scan-bus';
+import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
 
 interface Line {
   key: string;
@@ -34,9 +42,13 @@ interface Line {
   available: number | null;
   qty: string;
   price: string;
+  /** Came from this invoice photo (a finer re-read replaces these lines). */
+  fromScan?: string;
   /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
   un?: number;
   unLabel?: string;
+  /** «لحساب»: الزبون اللي البند ده بتاعه (فاتورة مهندس/مقاول مقسومة على زباينه). */
+  forName?: string;
 }
 
 const r4 = (n: number) => Math.round(n * 10000) / 10000;
@@ -69,6 +81,11 @@ export interface SalePreset {
   paid?: number;
   lines: { productId?: string; name: string; qty: number; price: number }[];
   onSaved?: (invoice: { id: string; no: string }) => Promise<void> | void;
+  /** «🌐 عميل أونلاين» already chosen (orders that came from the site). */
+  online?: boolean;
+  onlineFrom?: OnlineFrom;
+  /** «👀 راجعها»: a purchase from a read invoice photo of the queue. */
+  scanId?: string;
 }
 
 export function TransactionModal(props: Props) {
@@ -122,9 +139,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           available: null,
           qty: String(it.qty),
           price: String(it.price),
+          forName: 'forName' in it ? it.forName : undefined,
         }))
       : (preset?.lines ?? []).map((it) => ({ key: newKey(), productId: it.productId, name: it.name, unit: 'قطعة', available: null, qty: String(it.qty), price: String(it.price) })),
   );
+  /** آخر «لحساب» اتكتب: البنود الجديدة بتاخده تلقائي. */
+  const [lastFor, setLastFor] = useState('');
+  const [bulkFor, setBulkFor] = useState('');
+  const [showFor, setShowFor] = useState(() => !!src?.items.some((it) => 'forName' in it && it.forName));
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [person, setPerson] = useState(src?.person ?? presetPerson ?? preset?.person ?? '');
@@ -134,16 +156,44 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const [paid, setPaid] = useState(invoice ? String(invoice.paid) : preset?.paid !== undefined ? String(preset.paid) : '');
   const [paidTouched, setPaidTouched] = useState(!!invoice || preset?.paid !== undefined);
   const [note, setNote] = useState(src?.note ?? preset?.note ?? '');
+  const [online, setOnline] = useState(invoice?.online ?? preset?.online ?? false);
+  const [onlineFrom, setOnlineFrom] = useState<OnlineFrom>((invoice?.onlineFrom as OnlineFrom) || preset?.onlineFrom || '');
   const [sno, setSno] = useState('');
   const [del, setDel] = useState<'' | 'DELIVERY' | 'SHIP'>('');
   const [gov, setGov] = useState('');
   const [area, setArea] = useState('');
   const [autoPaid, setAutoPaid] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [photoFind, setPhotoFind] = useState(false);
   const shipment = useCreateShipment();
-  const infos = useAllProductInfo().data ?? {};
+  // the packs (كرتونة/دستة) list is only needed once a stock item is in the invoice
+  const infos = useAllProductInfo(lines.some((l) => !!l.productId)).data ?? {};
   const [errors, setErrors] = useState<FieldErrors>({});
   const searchRef = useRef<HTMLInputElement>(null);
+  /** البند المفتوح دلوقتي (الباقي ملموم سطر واحد)، والصف المتعلّم في نتايج البحث. */
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [hl, setHl] = useState(0);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const qtyEls = useRef<Record<string, HTMLInputElement | null>>({});
+  const priceEls = useRef<Record<string, HTMLInputElement | null>>({});
+  const cardEls = useRef<Record<string, HTMLDivElement | null>>({});
+  const linesRef = useRef<Line[]>([]);
+  const scanRef = useRef<string | null>(null);
+  const qc = useQueryClient();
+
+  const addRef = useRef<(p: ProductDto) => void>(() => {});
+  useEffect(() => {
+    scanTargets.tx++;
+    const h = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (code) void lookupProduct(code).then((p) => addRef.current(p)).catch(() => {});
+    };
+    window.addEventListener(SCAN_EVENT, h);
+    return () => {
+      scanTargets.tx--;
+      window.removeEventListener(SCAN_EVENT, h);
+    };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 120);
@@ -157,42 +207,79 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const termsQ = useTerms(isSale);
   const cterm = isSale ? termsFor(termsQ.data, person) : null;
   const contactNow = contacts.data?.items.find((c) => c.name === person.trim());
+  // 🚦 حد الآجل من «تحليلات ذكية»: حد لكل عميل أو حد افتراضي — بيتحط في نفس الشريط والتحذير (لو مفيش حد في «أسعار وحدود العملاء»)
+  const isAdmin = useIsAdmin();
+  const credit = useCreditLimits(isSale && isAdmin);
+  const creditLimit = isSale && person.trim() ? +(credit.data?.lim[person.trim()] ?? credit.data?.def ?? 0) || 0 : 0;
+  const limit = cterm?.t.limit || creditLimit || 0;
   const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * toNum(l.price), 0)), [lines]);
   const total = r2(subtotal + toNum(shipping));
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
   const remaining = Math.max(0, r2(total - paidValue));
 
-  const addProduct = (p: ProductDto) => {
+  linesRef.current = lines;
+  useEffect(() => {
+    if (!openKey) return;
+    cardEls.current[openKey]?.scrollIntoView({ block: 'nearest' });
+    if (focusKey === openKey) {
+      qtyEls.current[openKey]?.focus();
+      setFocusKey(null);
+    }
+  }, [openKey, focusKey]);
+  /** Enter جوّه خانة مش المفروض يحفظ الفاتورة بالغلط. */
+  const noSubmit = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') e.preventDefault();
+  };
+
+  /** `edit` = اختيار باليد: البند يتفتح تحت البحث والمؤشر يروح على العدد. من غيره (سكانر/كاميرا) المؤشر يفضل في البحث للمسحة اللي بعدها. */
+  const addProduct = (p: ProductDto, edit = false) => {
+    const key = newKey();
+    const same = (l: Line) => l.productId === p.id && (l.forName ?? '') === lastFor;
+    const target = linesRef.current.find(same)?.key ?? key;
+    setOpenKey(target);
+    if (edit) setFocusKey(target);
     setLines((ls) => {
-      const ex = ls.find((l) => l.productId === p.id);
+      const ex = ls.find(same);
       if (ex) return ls.map((l) => (l === ex ? { ...l, qty: String(toNum(l.qty) + 1) } : l));
       return [
         ...ls,
         {
-          key: newKey(),
+          key,
           productId: p.id,
           name: p.name,
           unit: p.unit,
           available: p.qty,
           qty: '1',
+          forName: lastFor,
           price: String(isSale ? (cterm?.t.pct ? Math.round(p.price * (1 - cterm.t.pct / 100) * 100) / 100 : p.price) : (p.cost ?? 0)),
         },
       ];
     });
     setSearch('');
-    searchRef.current?.focus();
+    if (!edit) searchRef.current?.focus();
   };
 
   const addUnregistered = () => {
     const name = search.trim();
     if (!name) return;
-    setLines((ls) => [...ls, { key: newKey(), name, unit: 'قطعة', available: 0, qty: '1', price: '0' }]);
+    const key = newKey();
+    setLines((ls) => [...ls, { key, name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor }]);
+    setOpenKey(key);
+    setFocusKey(key);
     setSearch('');
-    searchRef.current?.focus();
   };
+
+  addRef.current = addProduct;
 
   /** A barcode scanner types the code and presses Enter: add the exact match straight away. */
   const onSearchKey = async (e: KeyboardEvent<HTMLInputElement>) => {
+    const list = results.data?.items ?? [];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!list.length) return;
+      e.preventDefault();
+      setHl((h) => (e.key === 'ArrowDown' ? Math.min(list.length - 1, h + 1) : Math.max(0, h - 1)));
+      return;
+    }
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const code = search.trim();
@@ -200,8 +287,15 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     try {
       addProduct(await lookupProduct(code));
     } catch {
-      const first = results.data?.items[0];
-      if (first) addProduct(first);
+      // Enter سريع قبل ما القايمة تتحدّث: القايمة اللي ظاهرة بتاعة كلمة قديمة — نجيب نتيجة الكلمة المكتوبة فعلاً بدل ما نضيف صنف غلط
+      const fresh = debounced.trim() === code && !results.isPlaceholderData && !results.isFetching;
+      const pick = fresh
+        ? (list[hl] ?? list[0])
+        : await api
+            .get<{ items: ProductDto[] }>('/products', { q: code, pageSize: 15 })
+            .then((r) => r.items[0])
+            .catch(() => undefined);
+      if (pick) addProduct(pick, true);
     }
   };
 
@@ -267,11 +361,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     if (total - paidValue > 0.001 && !person.trim()) {
       return toast(isSale ? 'اكتب اسم العميل عشان نسجل الباقي عليه' : 'اكتب اسم المورد عشان نسجل الباقي ليه', 'bad');
     }
-    if (isSale && !invoice && cterm?.t.limit && remaining > 0) {
+    if (isSale && !invoice && limit && remaining > 0) {
       const bal = contactNow?.balance ?? 0;
-      if (bal + remaining > cterm.t.limit && !window.confirm(`⚠️ ${person.trim()}
+      if (bal + remaining > limit && !window.confirm(`⚠️ ${person.trim()}
 عليه دلوقتي ${money(bal)} + الباقي في الفاتورة دي ${money(remaining)} = ${money(bal + remaining)}
-وحد دينه ${money(cterm.t.limit)}.
+وحد دينه ${money(limit)}.
 
 تكمّل الفاتورة برضو؟`)) return;
     }
@@ -283,6 +377,14 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       const dup = await checkDuplicatePurchase({ person: person.trim(), total, sno: sno.trim() || undefined }).catch(() => null);
       if (dup && !window.confirm(`⚠️ فيه فاتورة شراء بنفس المورد ${sno.trim() ? 'ونفس رقم الفاتورة ' : 'ونفس الإجمالي النهارده '}(${dup.no} — ${money(total)}). تحفظ تاني برضه؟`)) return;
     }
+    if (isSale && !invoice && !asQuote && total > 0) {
+      // 🧾 same customer + same total in the last 3 minutes = probably saved twice (double tap)
+      const recent = await api
+        .get<InvoiceListResult>('/invoices', { kind: 'SALE', ...(person.trim() ? { person: person.trim() } : {}), pageSize: 5 })
+        .catch(() => null);
+      const twin = recent?.items.find((r) => r.status !== 'VOID' && Math.abs(r.total - total) < 0.01 && Date.now() - new Date(r.createdAt).getTime() < 3 * 60_000);
+      if (twin && !window.confirm(`⚠️ لسه متسجلة فاتورة ${twin.no} بنفس ${person.trim() ? 'العميل و' : ''}الإجمالي (${money(total)}) من دقايق. تسجّلها تاني برضه؟`)) return;
+    }
     const noteOut = !isSale && !invoice && sno.trim() && !/فاتورة المورد:/.test(note) ? `فاتورة المورد: ${sno.trim()}${note ? ` — ${note}` : ''}` : note;
     const body = {
       person: person.trim(),
@@ -291,7 +393,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       note: noteOut,
       shipping: toNum(shipping),
       paid: paidValue,
-      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)) })),
+      ...(isSale ? { online, onlineFrom: online ? onlineFrom : '' } : {}),
+      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)), ...(isSale ? { forName: (l.forName ?? '').trim() } : {}) })),
     };
     try {
       const saved = invoice
@@ -323,6 +426,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
         }
       }
       if (fromQuote) await converted.mutateAsync({ id: fromQuote, invoiceId: saved.id }).catch(() => undefined);
+      // the photo became this invoice: «🧾 اتعملت فاتورة SH-…» in the queue, its pictures are dropped
+      if (!invoice && scanRef.current) {
+        await api.post(`/ai/scans/${scanRef.current}/used`, { pno: saved.no }).catch(() => undefined);
+        scanRef.current = null;
+        void qc.invalidateQueries({ queryKey: ['ai-scans'] });
+        toast(`✔ اتعملت فاتورة ${saved.no}`);
+      }
       if (!invoice && preset?.onSaved) {
         try {
           await preset.onSaved({ id: saved.id, no: saved.no });
@@ -357,7 +467,28 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     <Modal title={title} onClose={close}>
       <form onSubmit={submit} noValidate>
         <div className="form">
-          <div className="field full">
+          {!isSale && !invoice && !asQuote && (
+            <InvoicePhotoButtons
+              supplier={person}
+              autoScan={preset?.scanId}
+              onRead={async (r, scanId) => {
+                if (scanId) scanRef.current = scanId;
+                const all = await api.get<{ items: ProductDto[] }>('/products/all').then((x) => x.items).catch(() => [] as ProductDto[]);
+                const read: Line[] = r.items
+                  .filter((it) => String(it.text ?? '').trim())
+                  .map((it) => {
+                    const p = it.pid ? all.find((x) => x.id === it.pid) : it.newName ? undefined : matchProduct(String(it.text), it.code, all);
+                    const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
+                    const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
+                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.newName || it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
+                  });
+                setLines((ls) => [...ls.filter((l) => l.name.trim() && !(scanId && l.fromScan === scanId)), ...read]);
+                if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
+                if (r.invoice_no && !sno.trim()) setSno(String(r.invoice_no));
+              }}
+            />
+          )}
+          <div className="field full txtop">
             <label htmlFor="txSearch">ابحث عن الصنف واختاره</label>
             <div className="txsrow">
             <input
@@ -368,11 +499,18 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               name="mk-noauto-item"
               placeholder="اكتب اسم الصنف أو كوده أو الباركود..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setHl(0);
+              }}
               onKeyDown={onSearchKey}
+              data-scan="own"
             />
             <button type="button" className="secondary" id="txScan" title="امسح باركود (كل مسحة = قطعة)" aria-label="امسح باركود" onClick={() => setScanning(true)}>
               📷
+            </button>
+            <button type="button" className="primary" id="vsTxBtn" title="صوّر القطعة يطلعلك الصنف" aria-label="صوّر القطعة" onClick={() => setPhotoFind(true)}>
+              📸
             </button>
             </div>
             {showBox && (
@@ -380,8 +518,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                 {results.isPending ? (
                   <div style={{ color: '#888' }}>⏳</div>
                 ) : results.data?.items.length ? (
-                  results.data.items.map((p) => (
-                    <div key={p.id} onClick={() => addProduct(p)}>
+                  results.data.items.map((p, i) => (
+                    <div key={p.id} className={i === hl ? 'hl' : undefined} onClick={() => addProduct(p, true)}>
                       {p.name}{' '}
                       <small style={{ color: '#7a8a8f' }}>
                         ({qtyText(p.qty)} {p.unit})
@@ -398,13 +536,82 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             )}
           </div>
 
-          <div className="field full">
-            {lines.map((l) => {
+          <div className="field full" id="txLines">
+            {lines.length > 0 && (
+              <div className="txbar">
+                <span>
+                  🧾 <b>{lines.length}</b> صنف
+                </span>
+                {isSale && !asQuote && (
+                  <button type="button" className={showFor ? 'primary' : 'secondary'} onClick={() => setShowFor((v) => !v)}>
+                    👥 تقسيم على زباين
+                  </button>
+                )}
+              </div>
+            )}
+            {isSale && !asQuote && showFor && lines.length > 0 && (
+              <div className="txfor" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, marginBottom: 8 }}>
+                <small>اكتب اسم الزبون على كل بند («لحساب»)، وبعد الحفظ تطلع لكل زبون صفحة لوحده.</small>
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <input list="mk-for" placeholder="اسم زبون — يتطبق على البنود اللي من غير اسم" value={bulkFor} onChange={(e) => setBulkFor(e.target.value)} onKeyDown={noSubmit} style={{ flex: 1, minWidth: 0, padding: 10, border: '1px solid var(--border)', borderRadius: 10 }} />
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={!bulkFor.trim()}
+                    onClick={() => {
+                      const v = bulkFor.trim();
+                      setLines((ls) => ls.map((l) => ((l.forName ?? '').trim() ? l : { ...l, forName: v })));
+                      setLastFor(v);
+                      setBulkFor('');
+                    }}
+                  >
+                    علّم
+                  </button>
+                </div>
+              </div>
+            )}
+            {[...lines].reverse().map((l) => {
               const lineTotal = r2(toNum(l.qty) * toNum(l.price));
+              const who = (l.forName ?? '').trim();
+              if (l.key !== openKey) {
+                // سطر ملموم: الاسم والكمية × السعر والإجمالي — دوسة تفتحه
+                return (
+                  <div key={l.key} className={`txl txc${isSale && toNum(l.price) === 0 ? ' warn' : ''}`} onClick={() => setOpenKey(l.key)}>
+                    <div className="txc-n">
+                      <b>{l.name}</b>
+                      <small>
+                        {toNum(l.qty)} {l.unLabel || l.unit} × {money(toNum(l.price))}
+                        {who ? ` — 👤 ${who}` : ''}
+                      </small>
+                    </div>
+                    <b className="txc-t">{money(lineTotal)}</b>
+                    <button
+                      type="button"
+                      className="secondary danger txc-x"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLines((ls) => ls.filter((x) => x.key !== l.key));
+                      }}
+                      aria-label="شيل الصنف"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              }
               return (
-                <div key={l.key} className="txl">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                    <b>{l.name}</b>
+                <div
+                  key={l.key}
+                  className="txl txo"
+                  ref={(el) => {
+                    cardEls.current[l.key] = el;
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                    <b style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setOpenKey(null)}>
+                      {l.name}
+                    </b>
+                    <b style={{ whiteSpace: 'nowrap', color: 'var(--blue)' }}>{money(lineTotal)}</b>
                     <button
                       type="button"
                       className="secondary danger"
@@ -414,6 +621,64 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                     >
                       ✕
                     </button>
+                  </div>
+                  {l.available !== null && (
+                    <small style={{ color: '#7a8a8f' }}>
+                      المتاح: {qtyText(l.available)} {l.unit}
+                      {!l.productId && ' — صنف غير مسجل، هيتسجل مع الفاتورة'}
+                    </small>
+                  )}
+                  <div className="txrow">
+                    <div>
+                      <small>العدد</small>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button type="button" className="secondary step" onClick={() => step(l, -1)}>
+                          −
+                        </button>
+                        <input
+                          ref={(el) => {
+                            qtyEls.current[l.key] = el;
+                          }}
+                          inputMode="decimal"
+                          enterKeyHint="next"
+                          dir="ltr"
+                          value={l.qty}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setLine(l.key, { qty: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            e.preventDefault();
+                            priceEls.current[l.key]?.focus();
+                          }}
+                          style={{ width: 64, textAlign: 'center', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
+                        />
+                        <button type="button" className="secondary step" onClick={() => step(l, 1)}>
+                          ＋
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 90 }}>
+                      <small>{isSale ? 'سعر البيع' : 'سعر الشراء'}</small>
+                      <input
+                        ref={(el) => {
+                          priceEls.current[l.key] = el;
+                        }}
+                        inputMode="decimal"
+                        enterKeyHint="done"
+                        dir="ltr"
+                        value={l.price}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setLine(l.key, { price: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          // Enter على السعر = خلّصت البند: يتلمّ وترجع لخانة البحث تكتب اللي بعده
+                          e.preventDefault();
+                          setOpenKey(null);
+                          searchRef.current?.focus();
+                        }}
+                        style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
+                      />
+                    </div>
                   </div>
                   {l.productId && (infos[l.productId]?.packs.length ?? 0) > 0 && (
                     <div style={{ marginTop: 6 }}>
@@ -439,46 +704,32 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       {l.unLabel && <small style={{ display: 'block', color: '#087f8c', fontWeight: 700 }}>({toNum(l.qty)} {l.unLabel})</small>}
                     </div>
                   )}
-                  {l.available !== null && (
-                    <small style={{ color: '#7a8a8f' }}>
-                      المتاح: {qtyText(l.available)} {l.unit}
-                      {!l.productId && ' — صنف غير مسجل، هيتسجل مع الفاتورة'}
-                    </small>
-                  )}
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginTop: 8, flexWrap: 'wrap' }}>
-                    <div>
-                      <small>العدد</small>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        <button type="button" className="secondary step" onClick={() => step(l, -1)}>
-                          −
-                        </button>
-                        <input
-                          inputMode="decimal"
-                          dir="ltr"
-                          value={l.qty}
-                          onChange={(e) => setLine(l.key, { qty: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
-                          style={{ width: 64, textAlign: 'center', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
-                        />
-                        <button type="button" className="secondary step" onClick={() => step(l, 1)}>
-                          ＋
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 90 }}>
-                      <small>{isSale ? 'سعر البيع' : 'سعر الشراء'}</small>
+                  {isSale && !asQuote && showFor && (
+                    <div style={{ marginTop: 6 }}>
+                      <small>👤 لحساب (اسم الزبون — اختياري)</small>
                       <input
-                        inputMode="decimal"
-                        dir="ltr"
-                        value={l.price}
-                        onChange={(e) => setLine(l.key, { price: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                        list="mk-for"
+                        value={l.forName ?? ''}
+                        onChange={(e) => {
+                          setLine(l.key, { forName: e.target.value });
+                          setLastFor(e.target.value.trim());
+                        }}
+                        onKeyDown={noSubmit}
+                        placeholder="مثال: مدام سلوى"
                         style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
                       />
                     </div>
-                    <div>
-                      <small>الإجمالي</small>
-                      <div style={{ fontWeight: 700, padding: '10px 0' }}>{money(lineTotal)}</div>
-                    </div>
-                  </div>
+                  )}
+                  <button
+                    type="button"
+                    className="primary txdone"
+                    onClick={() => {
+                      setOpenKey(null);
+                      searchRef.current?.focus();
+                    }}
+                  >
+                    ✓ تمام — الصنف اللي بعده
+                  </button>
                 </div>
               );
             })}
@@ -503,6 +754,30 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             </div>
           )}
 
+          {isSale && !asQuote && (
+            <div className="field full" id="txOnline">
+              <label>نوع العميل</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className={online ? 'secondary' : 'primary'} style={{ flex: 1 }} onClick={() => setOnline(false)}>
+                  🏪 عميل عادي
+                </button>
+                <button type="button" className={online ? 'primary' : 'secondary'} style={{ flex: 1 }} onClick={() => setOnline(true)}>
+                  🌐 عميل أونلاين
+                </button>
+              </div>
+              {online && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }} id="txOnlineFrom">
+                  <small style={{ width: '100%', color: 'var(--muted)' }}>جه منين؟</small>
+                  {ONLINE_FROM.filter((k) => k).map((k) => (
+                    <button key={k} type="button" className={onlineFrom === k ? 'primary' : 'secondary'} style={{ padding: '6px 12px', borderRadius: 99 }} onClick={() => setOnlineFrom(k)}>
+                      {ONLINE_FROM_LABELS[k]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <Input
             label={isSale ? 'العميل' : 'المورد'}
             placeholder="الاسم"
@@ -511,9 +786,10 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => pickPerson(e.target.value)}
             error={errors.person}
           />
-          {cterm || (isSale && contactNow && contactNow.balance) ? (
-            <CustomerBar name={person.trim()} term={cterm?.t} balance={contactNow?.balance ?? 0} />
+          {cterm || limit || (isSale && contactNow) ? (
+            <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
           ) : null}
+          <datalist id="mk-for">{[...new Set(lines.map((l) => (l.forName ?? '').trim()).filter(Boolean))].map((n) => <option key={n} value={n} />)}</datalist>
           <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
           <Input
             label={isSale ? 'تليفون العميل' : 'تليفون المورد'}
@@ -569,6 +845,33 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           )}
           {!asQuote && (
             <>
+              {isSale && !invoice && contactNow && contactNow.balance < 0 && total > 0 && (() => {
+                // 🤝 العميل ليه عربون/رصيد من قبل كده: يظهر هنا ويتخصم من المطلوب بدوسة
+                const credit = r2(-contactNow.balance);
+                const use = Math.min(credit, total);
+                const used = paidTouched && Math.abs(toNum(paid) - r2(total - use)) < 0.005;
+                return (
+                  <div className="field full dep-box">
+                    <div>
+                      🤝 <b>{contactNow.name}</b> ليه عربون/رصيد <b>{money(credit)}</b>
+                      {used ? <> — ✔ اتخصم منه {money(use)}، والباقي ده بيتقفل من العربون مش دين عليه.</> : null}
+                    </div>
+                    {!used && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setPaidTouched(true);
+                          setPaid(String(r2(total - use)));
+                          setNote((n) => (/عربون/.test(n) ? n : [n.trim(), `مخصوم عربون سابق ${money(use)}`].filter(Boolean).join(' — ')));
+                        }}
+                      >
+                        اخصم العربون من الفاتورة دي (يدفع {money(r2(total - use))})
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <NumberInput
                 label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
                 value={paidTouched ? paid : total ? String(total) : ''}
@@ -593,7 +896,11 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           />
           <FormError message={errors._} />
         </div>
-        <div className="modal-foot">
+        <div className="modal-foot txfoot">
+          <div className="txfoot-t">
+            <span>{lines.length} صنف</span>
+            <b>{money(total)}</b>
+          </div>
           <button className="primary" disabled={busy}>
             {busy ? '⏳ بيحفظ…' : asQuote ? 'حفظ عرض السعر' : 'حفظ العملية'}
           </button>
@@ -602,6 +909,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           </button>
         </div>
       </form>
+      {photoFind && (
+        <PhotoSearch
+          ctx="tx"
+          onClose={() => setPhotoFind(false)}
+          onPick={(pr) => {
+            addProduct(pr);
+            setPhotoFind(false);
+          }}
+        />
+      )}
       {scanning && (
         <CameraScanner
           multi

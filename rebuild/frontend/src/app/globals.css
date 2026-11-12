@@ -17,7 +17,7 @@
   --onblue: #fff;
   --onaccent: #fff;
   --topgap: 0px;
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+  --font: Cairo, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
 }
 
 * {
@@ -615,7 +615,7 @@ input[type='color'] {
   color: #fff;
   padding: 12px 18px;
   border-radius: 10px;
-  z-index: 100;
+  z-index: 2147483600;
   max-width: calc(100% - 32px);
   text-align: center;
 }
@@ -911,3 +911,90 @@ svg.i {
 .kt-row{display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.kt-row>div{flex:1;min-width:110px}
 .kt-chip{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:700;background:#eef6f7;color:#087f8c;margin:2px}
 .kt-need{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px dashed var(--border,#e3e8ea)}
+
+/* 📷 الكاميرات + 📸 صور الوش */
+#camera .cm-box{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:12px;margin:10px 0;display:grid;gap:10px}
+#camera .cm-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#camera .cm-row select{max-width:100%}
+#camera .cm-note{margin:0;color:#7b8a90;font-size:13px}
+#camera .cm-ok{color:#0a7a45;font-weight:700}
+#camera .cm-bad,#camera .cm-tag.cm-bad{color:#b42318;font-weight:700}
+#camera .cm-h{margin:18px 0 8px}
+#camera .cm-chs{display:grid;gap:6px}
+#camera .cm-ch-set{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#camera .cm-cams{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+#camera .cm-cam{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:8px;display:grid;gap:4px}
+#camera .cm-cam img{width:100%;border-radius:10px;cursor:zoom-in}
+#camera .cm-noimg{background:#eef2f3;border-radius:10px;padding:40px 8px;text-align:center;color:#8a979c}
+#camera .cm-table td{vertical-align:top}
+#camera .cm-table tr.cm-warn{background:#fff4f2}
+#camera .cm-tag{display:inline-block;background:#eef2f3;border-radius:8px;padding:2px 8px;margin:2px;font-size:12px}
+#camera .cm-tag.cm-ok{background:#e6f6ee}
+#camera .cm-chips{display:flex;flex-wrap:wrap;gap:4px;max-width:260px}
+#camera .cm-chip{border:1px solid var(--border,#d4dcdf);background:#fff;border-radius:8px;padding:2px 7px;font-size:12px;cursor:pointer}
+#camera .cm-face{width:44px;height:44px;object-fit:cover;border-radius:50%;float:right;margin-left:6px}
+#camera .cm-x{padding:2px 8px;margin:2px}
+#camera .cm-market{font-size:12px}
+#camera .cm-unk{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+#camera .cm-unk-card{background:var(--card,#fff);border:1px solid var(--border,#e3e8ea);border-radius:14px;padding:8px;display:grid;gap:6px}
+#camera .cm-unk-card img{width:100%;border-radius:10px}
+.fc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.fc-item{display:grid;gap:4px;text-align:center}
+.fc-item img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}
+
+/* 🧩 Tiles: long screens become icon tiles (components/ui/tiles.tsx) */
+.mk-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin:12px 0}
+.mk-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;min-height:104px;padding:12px 6px;border:1px solid var(--border);border-radius:16px;background:var(--card);color:inherit;font:inherit;text-align:center;cursor:pointer;box-shadow:0 1px 3px #0000000d;transition:transform .08s}
+.mk-tile:active{transform:scale(.96)}
+.mk-tile .ic{font-size:30px;line-height:1.15}
+.mk-tile b{font-size:13.5px;line-height:1.35}
+.mk-tile small{font-size:11px;color:var(--muted);line-height:1.3}
+.mk-tile-badge{position:absolute;top:6px;inset-inline-start:6px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger,#c0392b);color:#fff;font-size:11px;font-weight:800;line-height:20px}
+.mk-tile-open{grid-column:1/-1;border:2px solid var(--blue);border-radius:16px;background:var(--card);overflow:hidden;scroll-margin-top:70px}
+.mk-tile-h{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:0;border-radius:0;background:var(--tint,#e6f2f3);color:inherit;font:inherit;text-align:start;cursor:pointer;min-height:52px}
+.mk-tile-h .ic{font-size:24px}
+.mk-tile-h b{flex:1;font-size:15.5px}
+.mk-tile-h .x{font-size:18px;opacity:.7;padding:0 4px}
+.mk-tile-b{padding:12px}
+.mk-tile-b > .card{border:0;box-shadow:none;padding:0;margin:0 0 12px !important;background:transparent}
+.mk-tile-b > .card:last-child{margin-bottom:0}
+.mk-tile-b > .card:first-child > h3:first-child{display:none}
+.mk-more{display:block;width:100%;margin:10px 0;padding:13px}
+#spEd .mk-tile-b > .sec,.mk-tile-b > .sec{border:0;box-shadow:none;padding:0;margin:0;background:transparent}
+#spEd .mk-tile-b > .sec > h3:first-child,.mk-tile-b > .sec > h3:first-child{display:none}
+
+/* 📦 قايمة المخزن على الموبايل: كارت مضغوط (الاسم + سطر واحد: كود · كمية · سعر بيع · حالة)، والباقي بيظهر لما تدوس عليه */
+@media (max-width: 700px) {
+  body.mk-tcards main table.mkTc.mk-pcards tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 12px; margin-bottom: 8px; border-width: 1.5px; }
+  body.mk-tcards main table.mkTc.mk-pcards td { display: inline-flex; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 600; flex: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td::before { font-size: 11px; font-weight: 600; margin-inline-end: 4px; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="المنتج"] { order: -2; flex: 1 1 100%; font-size: 15px; font-weight: 800; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="المنتج"]::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الكود"] { order: -1; font-size: 12px; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الكود"]::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="التصنيف"],
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="سعر الشراء"] { display: none; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"] { margin-inline-start: auto; }
+  body.mk-tcards main table.mkTc.mk-pcards td[data-l="الحالة"]::before { display: none; }
+}
+
+.pc-place-ed{display:grid;gap:10px}
+
+/* 🗂️ كارت بيتطوي (components/ui/fold.tsx): عنوان + ملخص سطر واحد، والمحتوى يتفتح بدوسة */
+.mk-fold{border:2px solid var(--blue,#087f8c);border-radius:14px;overflow:hidden;background:var(--card,#fff);margin-bottom:10px}
+.mk-fold>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none;min-height:48px}
+.mk-fold>summary::-webkit-details-marker{display:none}
+.mk-fold>summary::after{content:"▾";flex:none;color:var(--blue,#087f8c);font-size:16px}
+.mk-fold[open]>summary::after{content:"▴"}
+.mk-fold>summary span{flex:none}
+.mk-fold>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+.mk-fold[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+.mk-fold>.mk-fold-b{padding:12px 14px 14px}
+#pcv .mk-fold>.mk-fold-b>.pc-kv{margin:0}
+
+/* 🗂️ طي الشاشات الطويلة أوتوماتيك (lib/auto-fold.ts): العنوان باين وجنبه سهم، والباقي بيتخبّى لحد ما تدوس */
+[data-af]>h3:first-child{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;margin-bottom:0;min-height:44px}
+[data-af]>h3:first-child::after{content:"▾";margin-inline-start:auto;flex:none;color:var(--blue,#087f8c);font-size:16px}
+[data-af="1"]>h3:first-child::after{content:"▴"}
+[data-af="1"]>h3:first-child{margin-bottom:8px}
+[data-af="0"]>:not(h3:first-child){display:none!important}

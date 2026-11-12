@@ -266,6 +266,15 @@ aside .navhd{display:none}
 #pcv .pc-own{background:#fffaf0;border-color:#f1dfb5}
 #pcv .pc-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 #pcv .pc-acts button{flex:1 1 140px}
+#pce .pce-sec{border:2px solid #087f8c;border-radius:14px;overflow:hidden}
+#pce .pce-sec>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none}
+#pce .pce-sec>summary::-webkit-details-marker{display:none}
+#pce .pce-sec>summary::after{content:"▾";flex:none;color:#087f8c;font-size:16px;transition:none}
+#pce .pce-sec[open]>summary::after{content:"▴"}
+#pce .pce-sec>summary span{flex:none}
+#pce .pce-sec>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+#pce .pce-sec[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+#pce .pce-sec>.form{padding:12px 14px 14px}
 #pce .pc-imgs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
 #pce .pc-imgs div{position:relative}
 #pce .pc-imgs img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line,#e3e8ea)}
@@ -910,6 +919,22 @@ body.mk-fast #mkLogo svg *{animation:none!important}
  body.mk-tcards main table.mkTc td:first-child{font-weight:800;font-size:16px}
  body.mk-tcards main table.mkTc td:empty{display:none}
 }
+/* طلب صاحب المحل: الكارت يبان كله على عرض الموبايل من غير يمين وشمال، وكل مربع مفصول بلون عن اللي حواليه */
+@media(max-width:700px){
+ body.mk-tcards main table.mkTc{min-width:0!important}
+ body.mk-tcards main .table-wrap:has(table.mkTc){overflow-x:visible}
+ body.mk-tcards main table.mkTc td{flex-wrap:wrap;overflow-wrap:anywhere;word-break:break-word;min-width:0}
+ body.mk-tcards main table.mkTc td>*{min-width:0;max-width:100%}
+ body.mk-tcards main table.mkTc tr{background:var(--tint2,#f1f8f9);border:2.5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.07);color:var(--text,#18343a)}
+}
+body main .card .card,body .modal .card{background:var(--tint2,#f1f8f9);border:2.5px solid var(--blue,#087f8c);box-shadow:0 2px 8px rgba(0,0,0,.06);color:var(--text,#18343a)}
+/* 👆 على الموبايل: الزراير والخانات أكبر عشان الصباع مايدوسش غلط، والكتابة مايصغرش عشان الآيفون مايعملش زووم */
+@media(max-width:700px){
+ main button,main .primary,main .secondary,.modal button,.modal .primary,.modal .secondary{min-height:44px}
+ main input,main select,main textarea,.modal input,.modal select,.modal textarea{min-height:44px;font-size:16px}
+ main input[type=checkbox],main input[type=radio],.modal input[type=checkbox],.modal input[type=radio]{min-height:0}
+}
+body main .card .card .card,body .modal .card .card{background:var(--card,#fff);border:1.5px solid var(--tintb,#b9dadd)}
 
 
 /* ---- index.html 10904-10923 ---- */
@@ -935,8 +960,130 @@ body.mk-fast #mkLogo svg *{animation:none!important}
 
 
 /* ---- index.html 2880: 🔔 شريط التنبيهات الدايم (كان بيتحط بالـ JS) ---- */
-#mkNb{position:fixed;top:0;left:0;right:0;z-index:99990;display:none;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff4d6;border-bottom:2px solid #f0b46a;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;direction:rtl;box-shadow:0 2px 10px #0002}#mkNb button{flex:none;border:0;border-radius:99px;padding:8px 13px;font-size:14px;font-weight:700;background:#fff;color:#7a4a00;border:1px solid #f0b46a;white-space:nowrap}#mkNb button b{background:#d62d20;color:#fff;border-radius:99px;padding:1px 8px;margin-inline-start:4px}body.hasNb{padding-top:var(--nbH,48px)!important}body.hasNb #wkApp{top:var(--nbH,48px)!important}
+#mkNb{position:fixed;top:0;left:0;right:0;z-index:45;display:none;gap:6px;align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff4d6;border-bottom:2px solid #f0b46a;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;direction:rtl;box-shadow:0 2px 10px #0002}#mkNb button{flex:none;border:0;border-radius:99px;padding:8px 13px;font-size:14px;font-weight:700;background:#fff;color:#7a4a00;border:1px solid #f0b46a;white-space:nowrap}#mkNb button b{background:#d62d20;color:#fff;border-radius:99px;padding:1px 8px;margin-inline-start:4px}body.hasNb{padding-top:var(--nbH,48px)!important}body.hasNb #wkApp{top:var(--nbH,48px)!important}
 
 /* ---- index.html 1728-1733: زرار المستخدم فوق «👤 الاسم — خروج» ---- */
 #whoBtn{width:auto!important;padding:0 12px;font-size:13px!important;font-weight:700;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
 body.emp #whoBtn{background:#fff4e5!important;color:#8a4b00!important}
+
+/* 🧾 شكل الفاتورة على الشاشة: ورقة فاتورة مرتبة (رأس، بيانات العميل، جدول الأصناف، الإجماليات) */
+.inv-sheet{border:2px solid var(--blue);border-radius:14px;overflow:hidden;background:var(--card);color:var(--text)}
+.inv-sheet.void{opacity:.6}
+.inv-head{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--blue);color:#fff;padding:14px 16px}
+.inv-head>div{display:grid;gap:2px;min-width:0}
+.inv-head b{font-size:19px;font-weight:800}
+.inv-head span{font-size:13px;opacity:.92}
+.inv-head .inv-no{text-align:left;flex:none}
+.inv-head .inv-no b{font-size:17px;letter-spacing:.3px}
+.inv-who{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;padding:12px 16px;background:var(--tint2);border-bottom:1px solid var(--tintb)}
+.inv-who>div{display:grid;gap:1px;min-width:0}
+.inv-who .wide{grid-column:1/-1}
+.inv-who small{font-size:11.5px;color:var(--muted)}
+.inv-who b{font-size:15px;overflow-wrap:anywhere}
+.inv-items{width:100%;border-collapse:collapse;font-size:14px}
+.inv-items th{background:var(--tint);color:var(--blue2);font-size:12.5px;font-weight:800;padding:9px 8px;text-align:center;border-bottom:2px solid var(--blue)}
+.inv-items td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+.inv-items th:first-child,.inv-items td:first-child{text-align:right;white-space:normal;overflow-wrap:anywhere;padding-inline-start:16px;font-weight:700}
+.inv-items th:last-child,.inv-items td:last-child{padding-inline-end:16px;font-weight:800}
+.inv-items tbody tr:nth-child(even){background:#fafcfc}
+.inv-tot{display:grid;gap:2px;padding:10px 16px 12px;font-size:15px}
+.inv-tot>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;font-variant-numeric:tabular-nums}
+.inv-tot .grand{background:var(--blue);color:#fff;border-radius:10px;padding:10px 14px;margin:6px -4px;font-size:16px}
+.inv-tot .grand b{font-size:20px}
+.inv-tot .due{color:var(--danger);font-weight:800}
+.inv-tot .clear{color:var(--green)}
+.inv-foot{border-top:1px dashed var(--border);padding:10px 16px;font-size:13px;color:var(--muted);display:grid;gap:3px}
+
+/* 🟦 حواف المربعات: الأربع جهات واضحين وملوّنين في كل الشاشات (مش يمين وشمال بس) */
+.card,.stat,.txl,.txbox,.dbent,#dbBox,.shinv,.mk-tile,.ivrow,.scl,#pcv .pc-card,#pcv .pc-main,#spEd .sec,#dbMoney .mvsum div,.dtsum div,.shsum div,body.mkpro .card,body.mkpro .stat,body.mkpro .txl,body.mkpro .txbox,body.mkpro .dbent,body.mkpro #dbBox,body.mkpro .shinv,body.mkpro .mk-tile,body.mkpro .ivrow,body.mkpro .scl,body.mkpro #pcv .pc-card,body.mkpro #pcv .pc-main,body.mkpro #spEd .sec,body.mkpro #dbMoney .mvsum div,body.mkpro .dtsum div,body.mkpro .shsum div,body.mkpro.mkdark .card,body.mkpro.mkdark .stat,body.mkpro.mkdark .txl,body.mkpro.mkdark .txbox,body.mkpro.mkdark .dbent,body.mkpro.mkdark #dbBox,body.mkpro.mkdark .shinv,body.mkpro.mkdark .mk-tile,body.mkpro.mkdark .ivrow,body.mkpro.mkdark .scl,body.mkpro.mkdark #pcv .pc-card,body.mkpro.mkdark #pcv .pc-main,body.mkpro.mkdark #spEd .sec,body.mkpro.mkdark #dbMoney .mvsum div,body.mkpro.mkdark .dtsum div,body.mkpro.mkdark .shsum div{border:2px solid var(--blue);border-color:color-mix(in srgb,var(--blue) 70%,transparent)}
+.dbg,body.mkpro .dbg,body.mkpro.mkdark .dbg{border:1.5px solid hsl(var(--gh,174) 70% 45%);border-right-width:6px}
+body.mkpro .dbg.mk-anon,body.mkpro.mkdark .dbg.mk-anon{border-color:var(--or)}
+.inv-items th:first-child{width:44%}.inv-items td:not(:first-child){font-size:13px}
+
+/* سطر المصروف في «فلوس الدرج» بيتداس: يفتح التعديل والمسح */
+#dbMoney .mvl-btn{width:100%;background:none;border:0;border-top:1px solid var(--border);border-radius:0;color:inherit;font:inherit;font-size:14px;text-align:start;cursor:pointer;align-items:center}
+#dbMoney .mvl-btn:active{background:var(--tint2)}
+#dbMoney .mvl-btn small{color:var(--muted);font-size:12px}
+
+/* 🤝 عميل جديد جوه «فلوس دخلت من عميل» + عربون العميل في فاتورة البيع */
+#lcBox .mv-new{display:grid;gap:6px;border:1.5px dashed var(--blue);border-radius:12px;padding:10px 12px;background:var(--tint2)}
+.dep-box{border:1.5px solid var(--green);background:color-mix(in srgb,var(--green) 9%,transparent);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.8}
+.dep-box button{width:100%;margin-top:6px}
+
+/* 🧾 قايمة الفواتير على الموبايل: كارت ملموم — اسم العميل بلون مميز + الإجمالي، وتحته الرقم والتاريخ والحالة، وآخر سطر الأصناف */
+@media (max-width: 700px) {
+  body.mk-tcards main table.mkTc.mk-icards tr { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 10px; padding: 9px 12px; margin-bottom: 8px; }
+  body.mk-tcards main table.mkTc.mk-icards td { display: inline-flex; flex: none; padding: 0 !important; min-height: 0; font-size: 13px; font-weight: 600; }
+  body.mk-tcards main table.mkTc.mk-icards td::before { display: none; }
+  body.mk-tcards main table.mkTc.mk-icards td { background: transparent !important; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-who { order: 1; flex: 1 1 0; min-width: 0; font-size: 16px; font-weight: 800; color: var(--blue2, #075e68); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-total { order: 2; font-size: 16px; font-weight: 800; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-no { order: 3; font-size: 12px; font-weight: 700; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-date { order: 4; font-size: 12px; color: var(--muted, #718087); }
+  body.mk-tcards main table.mkTc.mk-icards td.c-pay { order: 5; margin-inline-start: auto; }
+  body.mk-tcards main table.mkTc.mk-icards td.c-items { order: 6; flex: 1 1 100%; justify-content: flex-start; font-size: 12.5px; font-weight: 500; color: var(--muted, #718087); gap: 4px; }
+  body.mk-tcards main table.mkTc.mk-icards tr::after { content: ""; order: 2; flex-basis: 100%; height: 0; }
+}
+
+/* 🟦 الحواف على أي خانة وأي مربع: الخانات (كتابة/اختيار) والزراير الفاتحة والنوافذ وشريط العميل، مش الكروت بس */
+body.mkpro,body.mkpro.mkdark{--ln2:color-mix(in srgb,var(--ac) 60%,transparent)}
+.field input,.field select,.field textarea,.secondary{border-color:color-mix(in srgb,var(--blue) 60%,transparent)}
+body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea,.secondary,.search){border-width:1.5px}
+body.mkpro .modal,body.mkpro.mkdark .modal{border:2px solid color-mix(in srgb,var(--blue) 70%,transparent)}
+#ctBar{border:1.5px solid color-mix(in srgb,#b9770e 60%,transparent)}
+#spEd .sp-fold{padding:0;overflow:hidden;border:2px solid var(--blue,#087f8c)}
+#spEd .sp-fold>summary{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;font-weight:800;font-size:15px;list-style:none;user-select:none}
+#spEd .sp-fold>summary::-webkit-details-marker{display:none}
+#spEd .sp-fold>summary::after{content:"▾";flex:none;color:var(--blue,#087f8c);font-size:16px}
+#spEd .sp-fold[open]>summary::after{content:"▴"}
+#spEd .sp-fold>summary span{flex:none}
+#spEd .sp-fold>summary small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:end;font-weight:600;font-size:12px;color:#7b8a90}
+#spEd .sp-fold[open]>summary{border-bottom:1px solid #087f8c33;background:#087f8c0f}
+#spEd .sp-fold>.sp-fold-b{padding:12px 14px 14px}
+.inv-items .inv-for td{background:var(--tint);text-align:right;font-weight:800;color:var(--blue2)}
+.inv-items .inv-for-sub td{font-weight:700;border-bottom:2px solid var(--blue);text-align:center}
+.inv-items .inv-for-sub td:first-child{text-align:right}
+
+/* ===== فاتورة سريعة: البحث ثابت فوق، البنود ملمومة تحته (الجديد أول واحد)، والإجمالي + الحفظ ثابتين تحت ===== */
+.modal .txtop{position:sticky;top:0;z-index:6;background:#fff;padding:10px 0 8px;margin-top:-10px;box-shadow:0 6px 8px -8px #0003}
+.modal .txfoot{position:sticky;bottom:-20px;z-index:6;background:#fff;padding:10px 0 22px;margin-bottom:-10px;margin-top:10px;border-top:1px solid var(--border);align-items:center}
+body.mkpro.mkdark .modal .txtop,body.mkpro.mkdark .modal .txfoot{background:var(--g2)}
+.txfoot .txfoot-t{display:flex;flex-direction:column;line-height:1.25;margin-inline-end:auto;order:-1}
+.txfoot .txfoot-t span{font-size:12.5px;color:var(--muted)}
+.txfoot .txfoot-t b{font-size:21px;font-variant-numeric:tabular-nums}
+.txbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;color:var(--muted);font-size:14px}
+.txbar button{padding:4px 12px!important;min-height:36px!important;border-radius:99px;font-size:13.5px}
+.txl{scroll-margin:150px 0 110px}
+.txl.txc{display:flex;align-items:center;gap:10px;padding:8px 10px!important;margin-bottom:6px;cursor:pointer}
+.txl.txc .txc-n{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.txl.txc .txc-n b{font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.txl.txc .txc-n small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.txl.txc .txc-t{white-space:nowrap;font-variant-numeric:tabular-nums}
+.txl.txc .txc-x{padding:0!important;width:36px;min-height:36px!important;flex:none;border-radius:10px}
+.txl.txc.warn{border-color:var(--danger,#c0392b)!important}
+.txl.txc.warn .txc-n small{color:var(--danger,#c0392b);font-weight:700}
+.txl.txo{border:2px solid var(--blue)!important;box-shadow:0 4px 14px #0001}
+.txl .txrow{display:flex;gap:10px;align-items:flex-end;margin-top:8px;flex-wrap:wrap}
+.txl .txdone{width:100%;margin-top:10px}
+/* زرار الاختيار (radio/checkbox) جوّه .field كان بياخد شكل خانة الكتابة (عرض كامل + إطار) فيبقى مربع كبير والكلام يطلع بره */
+body .field input[type=radio],body .field input[type=checkbox],body.mkpro .field input[type=radio],body.mkpro .field input[type=checkbox],body.mkpro.mkdark .field input[type=radio],body.mkpro.mkdark .field input[type=checkbox]{width:22px!important;height:22px!important;min-width:22px;min-height:0!important;flex:none!important;padding:0!important;margin:0!important;border:0!important;background:none!important;box-shadow:none!important;border-radius:50%}
+body .field input[type=checkbox]{border-radius:4px}
+.delopt{display:grid!important;grid-template-columns:1fr;gap:8px}
+.delopt label{display:flex!important;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-size:15px;line-height:1.4;min-width:0}
+@media(min-width:700px){.delopt{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* 👥 صندوق «الفاتورة مقسومة على زباين»: صفوف متساوية — الاسم والمبلغ يمين، زرارين ثابتين شمال */
+.splitbox{margin-top:14px;border:1.5px solid var(--border);border-radius:14px;padding:12px}
+.splitbox .sp-h{display:flex;flex-direction:column;gap:2px}.splitbox .sp-h b{font-size:16px}.splitbox .sp-h small,.splitbox .sp-foot,.splitbox .sp-note{color:var(--muted);font-size:12.5px}
+.splitbox .sp-note{margin:6px 0 0}
+.splitbox .sp-all{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.splitbox .sp-all button{padding:10px 6px!important;font-size:14.5px;white-space:nowrap;min-width:0}
+.splitbox .sp-list{margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.splitbox .sp-row{display:grid;grid-template-columns:minmax(0,1fr) 46px 46px;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)}
+.splitbox .sp-row:last-child{border-bottom:0}
+.splitbox .sp-who{min-width:0;display:flex;flex-direction:column;gap:1px}
+.splitbox .sp-who b{font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.splitbox .sp-who small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}.splitbox .sp-who small span{color:var(--blue);font-weight:700}
+.splitbox .sp-row button{width:46px;height:44px;min-height:44px!important;padding:0!important;font-size:19px;border-radius:10px}
+.splitbox .sp-foot{display:block;margin-top:8px;text-align:center}
+.splitbox .sp-each{width:100%;margin-top:8px;padding:12px 8px!important;font-size:15px}

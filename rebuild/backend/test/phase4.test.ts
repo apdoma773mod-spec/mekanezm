@@ -91,6 +91,10 @@ describe('staff and attendance', () => {
     expect((await call(staff, 'POST', '/staff/punch', { code })).json().result.kind).toBe('out');
     expect((await call(staff, 'POST', '/staff/punch', { code })).statusCode).toBe(400);
     expect((await call(admin, 'POST', '/staff/punch', { code: 'abcdef123456' })).statusCode).toBe(400);
+    // 🔔 the owner is told on WhatsApp when someone comes in and leaves
+    const alerts = (await prisma.outboundMessage.findMany({ where: { byName: '🔔 تنبيه تلقائي' }, orderBy: { createdAt: 'asc' } })).map((m) => m.body);
+    expect(alerts.some((b) => b.includes('كريم حضر الساعة'))).toBe(true);
+    expect(alerts.some((b) => b.includes('كريم انصرف الساعة'))).toBe(true);
 
     const mine = (await call(staff, 'GET', '/staff')).json();
     expect(mine.staff).toHaveLength(1);

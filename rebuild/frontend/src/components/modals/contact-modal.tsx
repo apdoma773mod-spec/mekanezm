@@ -11,7 +11,7 @@ import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 
-export function ContactModal({ id, type }: { id?: string; type?: ContactType }) {
+export function ContactModal({ id, type, preset }: { id?: string; type?: ContactType; preset?: { name?: string; phone?: string } }) {
   const { close } = useModal();
   const existing = useContact(id ?? null);
   if (id && existing.isPending) {
@@ -28,20 +28,20 @@ export function ContactModal({ id, type }: { id?: string; type?: ContactType }) 
       </Modal>
     );
   }
-  return <ContactForm contact={id ? existing.data : undefined} fixedType={type} />;
+  return <ContactForm contact={id ? existing.data : undefined} fixedType={type} preset={preset} />;
 }
 
 /** «إضافة عميل / مورد» and «تعديل بيانات …» from the old system. */
-function ContactForm({ contact: c, fixedType }: { contact?: ContactDto; fixedType?: ContactType }) {
+function ContactForm({ contact: c, fixedType, preset }: { contact?: ContactDto; fixedType?: ContactType; preset?: { name?: string; phone?: string } }) {
   const { open, close } = useModal();
   const toast = useToast();
   const create = useCreateContact();
   const update = useUpdateContact();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [f, setF] = useState({
-    name: c?.name ?? '',
+    name: c?.name ?? preset?.name ?? '',
     type: (c?.type ?? fixedType ?? 'CUSTOMER') as ContactType,
-    phone: c?.phone ?? '',
+    phone: c?.phone ?? preset?.phone ?? '',
     address: c?.address ?? '',
     openingBalance: '0',
     note: c?.note ?? '',

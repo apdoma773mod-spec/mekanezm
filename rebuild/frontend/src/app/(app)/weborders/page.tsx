@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import type { InvoiceDto, Paginated } from '@mk/shared';
 import { AdminOnly, PageHeader } from '@/components/app-shell';
+import { WebInsights } from '@/components/web-insights';
 import { waNum } from '@/components/hy/ui';
 import { useModal } from '@/components/modals/modal-host';
 import { Modal } from '@/components/ui/modal';
@@ -10,8 +12,9 @@ import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { money } from '@/lib/format';
-import { useAllProducts } from '@/lib/trade-queries';
-import { usePatchWebOrder, useWebOrders, type WebOrderRow } from '@/lib/web-queries';
+import { useAllContacts, useAllProducts, useCreateContact } from '@/lib/trade-queries';
+import { PendingReviews } from '@/components/modals/site-admin';
+import { usePatchWebCustom, usePatchWebOrder, usePatchWebRequest, useRemoveWebWait, useWebCounts, useWebCustom, useWebOrders, useWebRequests, useWebWaits, type WebCustomRow, type WebOrderRow, type WebRequestRow } from '@/lib/web-queries';
 
 /** 🛒 طلبات الموقع: الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة. */
 const ETAS = ['النهارده', 'بكره إن شاء الله', 'بعد يومين', 'خلال 3 لـ 5 أيام', 'أول ما المنتج يوصلنا هنكلمك'];
@@ -105,6 +108,9 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
   const rows = o.items.map((x) => ({ x, p: prod(x.code) }));
   const est = rows.reduce((s, r) => s + (r.p ? r.p.price * r.x.qty : 0), 0);
   const wa = o.phone ? waLink(o.phone, `أهلاً ${o.customerName}، بخصوص طلبك رقم ${sid} من موقع ميكانيزم`) : '';
+  const shipLine = o.ship
+    ? `${{ pickup: '🏬 استلام من المحل', delivery: '🚚 توصيل', ship: '📦 شحن' }[o.ship.method]}${[o.ship.gov, o.ship.area, o.ship.address].filter(Boolean).length ? ' — ' + [o.ship.gov, o.ship.area, o.ship.address].filter(Boolean).join('، ') : ''}`
+    : '';
 
   const invoice = () => {
     const missing = rows.filter((r) => !r.p).map((r) => r.x.code);
@@ -116,6 +122,8 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
         person: o.customerName,
         phone: o.phone,
         note: `من طلب الموقع ${sid}`,
+        online: true,
+        onlineFrom: 'SITE',
         lines: rows.flatMap((r) => (r.p ? [{ productId: r.p.id, name: r.p.name, qty: r.x.qty, price: r.p.price }] : [])),
         onSaved: async (inv) => {
           await patch.mutateAsync({ id: o.id, status: 'done', invoiceNo: inv.no });
@@ -162,6 +170,7 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
         </div>
         {o.status === 'done' ? <span className="badge green">اتعملها فاتورة</span> : o.status === 'new' ? <span className="badge red">جديد</span> : <span className="badge">ملغي</span>}
       </div>
+      {shipLine && <div style={{ marginTop: 8, fontWeight: 600 }}>{shipLine}</div>}
       <div className="table-wrap" style={{ marginTop: 10 }}>
         <table className="table" style={{ minWidth: 380 }}>
           <thead>
@@ -225,6 +234,8 @@ function OrderCard({ o, prod, onEta }: { o: WebOrderRow; prod: (code: string) =>
 function OrdersList() {
   const [tab, setTab] = useState<Tab>('new');
   const [eta, setEta] = useState<WebOrderRow | null>(null);
+  const [purging, setPurging] = useState(false);
+  const toast = useToast();
   const list = useWebOrders();
   const products = useAllProducts({}, !!list.data?.length).data;
   const byCode = useMemo(() => new Map((products ?? []).map((p) => [String(p.code), p])), [products]);
@@ -247,6 +258,29 @@ function OrdersList() {
           </button>
         ))}
       </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '-4px 0 10px' }}>
+        <button
+          type="button"
+          className="secondary"
+          style={{ color: 'var(--danger,#c0392b)' }}
+          disabled={purging}
+          onClick={async () => {
+            if (!window.confirm('مسح كل الطلبات الملغية من «طلبات الموقع» نهائياً؟\nالطلبات الجديدة واللي اتعملها فاتورة مش هتتلمس، والفواتير نفسها مش هتتمسح.')) return;
+            setPurging(true);
+            try {
+              const r = await api.post<{ count: number }>('/web/orders/purge-cancelled', {});
+              toast(`🗑️ اتمسح ${r.count} طلب ملغي`);
+              void list.refetch();
+            } catch (e) {
+              toast(errorMessage(e), 'bad');
+            } finally {
+              setPurging(false);
+            }
+          }}
+        >
+          🗑️ مسح الملغي
+        </button>
+      </div>
       {list.isPending && <Loading />}
       {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
       {list.data && !rows.length && (
@@ -262,11 +296,509 @@ function OrdersList() {
   );
 }
 
+// ───────────────────────── 📷 طلبات بالصور
+const RQ_OPTS: [string, string][] = [
+  ['ok', '✅ متوفر عندنا — تقدر تطلبه أو تيجي تاخده'],
+  ['will', '📦 هنوفّر لك'],
+  ['no', '❌ للأسف مش متاح عندنا حالياً'],
+  ['c', '✍️ رد تاني'],
+];
+
+function ReplyModal({ r, onClose }: { r: WebRequestRow; onClose: () => void }) {
+  const toast = useToast();
+  const patch = usePatchWebRequest();
+  const [k, setK] = useState('will');
+  const [when, setWhen] = useState('');
+  const [txt, setTxt] = useState('');
+  const [extra, setExtra] = useState('');
+  const go = async () => {
+    let t = '';
+    if (k === 'ok') t = 'المنتج ده متوفر عندنا ✅ — تقدر تطلبه أو تيجي تاخده';
+    else if (k === 'will') {
+      if (!when.trim()) return toast('اكتب الميعاد', 'bad');
+      t = `هنوفّرلك المنتج ده 📦 — هيبقى جاهز ${when.trim()}`;
+    } else if (k === 'no') t = 'للأسف المنتج ده مش متاح عندنا حالياً 🙏';
+    else {
+      if (!txt.trim()) return toast('اكتب الرد', 'bad');
+      t = txt.trim();
+    }
+    const msg = `أهلاً ${r.name} 👋\nبخصوص المنتج اللي بعتلنا ${r.imgs.length ? 'صورته' : 'تفاصيله'} على موقع ميكانيزم${r.note ? ` (${r.note.slice(0, 80)})` : ''}:\n\n${t}${extra.trim() ? `\n${extra.trim()}` : ''}\n\nلو عندك أي سؤال ردّ علينا هنا.`;
+    const wa = r.phone ? waLink(r.phone, msg) : '';
+    const win = wa ? window.open(wa, '_blank') : null; // open WhatsApp first so the browser does not block it
+    try {
+      await patch.mutateAsync({ id: r.id, reply: t });
+    } catch (e) {
+      toast(`الرد ماتسجلش: ${errorMessage(e)}`, 'bad');
+    }
+    onClose();
+    if (wa && !win) window.location.href = wa;
+    if (!wa) toast('العميل مالوش رقم موبايل', 'bad');
+  };
+  return (
+    <Modal title={`💬 الرد على ${r.name}`} onClose={onClose}>
+      {r.imgs[0] && <img src={r.imgs[0]} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 12, background: '#f3f5f6' }} />}
+      <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+        {RQ_OPTS.map(([v, t]) => (
+          <label key={v} className="chk" style={{ padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}>
+            <input type="radio" name="rqo" checked={k === v} onChange={() => setK(v)} /> {t}
+          </label>
+        ))}
+      </div>
+      <div className="form" style={{ marginTop: 10 }}>
+        <div className="field">
+          <label>الميعاد (لو هنوفّره)</label>
+          <input value={when} placeholder="مثلاً: خلال 3 أيام" onChange={(e) => setWhen(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>الرد اللي هتكتبه (لو اخترت «رد تاني»)</label>
+          <input value={txt} onChange={(e) => setTxt(e.target.value)} />
+        </div>
+        <div className="field full">
+          <label>ملاحظة إضافية (اختياري)</label>
+          <input value={extra} placeholder="مثلاً: تقدر تعدي على المحل في أي وقت" onChange={(e) => setExtra(e.target.value)} />
+        </div>
+      </div>
+      <div className="modal-foot">
+        <button type="button" className="primary" disabled={patch.isPending} onClick={go}>
+          💬 ابعت على الواتساب
+        </button>
+        <button type="button" className="secondary" onClick={onClose}>
+          إلغاء
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ───────────────────────── 📣 مشتركو جديد الواتساب
+/** طلب «اشتراك في جديد الواتساب» من موقع ميكانيزم (مش طلب منتج بالصور) — ليه شاشة وردود لوحده. */
+const isSub = (r: WebRequestRow) => r.note.trimStart().startsWith('📣 اشتراك');
+const topicsOf = (r: WebRequestRow): string[] => {
+  const m = r.note.match(/مهتم بـ:\s*(.+)/);
+  const t = (m?.[1] ?? '').split(/[،,]/).map((x) => x.trim()).filter(Boolean);
+  return t.length ? t : ['كل حاجة'];
+};
+const STOP = 'لو مش عايز توصلك رسايلنا ابعتلنا «إلغاء» وهنشيلك فوراً.';
+
+function WelcomeModal({ r, onClose }: { r: WebRequestRow; onClose: () => void }) {
+  const toast = useToast();
+  const patch = usePatchWebRequest();
+  const topics = topicsOf(r);
+  const [txt, setTxt] = useState(`أهلاً ${r.name} 👋\nشكراً لاشتراكك في جديد ميكانيزم 🎉\nهنبعتلك كل جديد عن: ${topics.join('، ')}.\n${STOP}`);
+  const go = async () => {
+    const wa = r.phone ? waLink(r.phone, txt.trim()) : '';
+    if (!wa) return toast('المشترك مالوش رقم موبايل', 'bad');
+    const win = window.open(wa, '_blank'); // نفتح الواتساب الأول عشان المتصفح مايمنعوش
+    try {
+      await patch.mutateAsync({ id: r.id, reply: 'ترحيب بالاشتراك' });
+    } catch (e) {
+      toast(`الترحيب ماتسجلش: ${errorMessage(e)}`, 'bad');
+    }
+    onClose();
+    if (!win) window.location.href = wa;
+  };
+  return (
+    <Modal title={`👋 رحّب بـ ${r.name}`} onClose={onClose}>
+      <div className="field full">
+        <label>رسالة الترحيب (عدّلها لو عايز)</label>
+        <textarea rows={7} value={txt} onChange={(e) => setTxt(e.target.value)} />
+      </div>
+      <div className="modal-foot">
+        <button type="button" className="primary" disabled={patch.isPending || !txt.trim()} onClick={go}>
+          💬 ابعت الترحيب على الواتساب
+        </button>
+        <button type="button" className="secondary" onClick={onClose}>
+          إلغاء
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** 📤 إعلان لكل المشتركين: رسالة واحدة، والواتساب بيتفتح لكل مشترك بالدور (دوسة واحدة لكل واحد). */
+function BroadcastModal({ subs, onClose }: { subs: WebRequestRow[]; onClose: () => void }) {
+  const toast = useToast();
+  const all = useMemo(() => [...new Set(subs.flatMap(topicsOf))].filter((t) => t !== 'كل حاجة'), [subs]);
+  const [topic, setTopic] = useState('');
+  const [txt, setTxt] = useState('');
+  const [i, setI] = useState(0);
+  const rec = useMemo(() => subs.filter((s) => !topic || topicsOf(s).includes('كل حاجة') || topicsOf(s).includes(topic)), [subs, topic]);
+  const cur = rec[i];
+  const send = () => {
+    if (!cur) return;
+    if (!txt.trim()) return toast('اكتب الإعلان الأول', 'bad');
+    const wa = waLink(cur.phone, `أهلاً ${cur.name} 👋\n${txt.trim()}\n\n${STOP}`);
+    if (!wa) toast(`${cur.name} مالوش رقم صالح — اتخطّيناه`, 'bad');
+    else {
+      const win = window.open(wa, '_blank');
+      if (!win) window.location.href = wa;
+    }
+    setI(i + 1);
+  };
+  return (
+    <Modal title="📤 إعلان لمشتركي الواتساب" onClose={onClose}>
+      <div className="field full">
+        <label>الإعلان</label>
+        <textarea rows={6} value={txt} placeholder="مثلاً: وصلنا مجرى بلي جديد بسعر خاص — تعالى شوفه أو اطلبه من الموقع" onChange={(e) => (setTxt(e.target.value), setI(0))} />
+      </div>
+      {all.length > 0 && (
+        <div className="field full">
+          <label>لمين؟</label>
+          <select value={topic} onChange={(e) => (setTopic(e.target.value), setI(0))}>
+            <option value="">كل المشتركين ({subs.length})</option>
+            {all.map((t) => (
+              <option key={t} value={t}>
+                المهتمين بـ {t}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+        هيتبعت لـ <b>{rec.length}</b> مشترك. الواتساب بيتفتح لكل واحد برسالته جاهزة — دوس «إرسال» عنده وارجع دوس «التالي».
+      </p>
+      <div className="modal-foot">
+        {cur ? (
+          <button type="button" className="primary" onClick={send}>
+            💬 ابعت لـ {cur.name} ({i + 1} من {rec.length})
+          </button>
+        ) : (
+          <b style={{ color: 'var(--green)' }}>{rec.length ? '✔ خلّصت كل المشتركين' : 'مفيش مشتركين بالاختيار ده'}</b>
+        )}
+        {cur && (
+          <button type="button" className="secondary" onClick={() => setI(i + 1)}>
+            تخطّى
+          </button>
+        )}
+        <button type="button" className="secondary" onClick={onClose}>
+          قفل
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function Subscribers({ rows }: { rows: WebRequestRow[] }) {
+  const toast = useToast();
+  const patch = usePatchWebRequest();
+  const add = useCreateContact();
+  const customers = useAllContacts('CUSTOMER');
+  const [welcome, setWelcome] = useState<WebRequestRow | null>(null);
+  const [bc, setBc] = useState(false);
+  const [showOff, setShowOff] = useState(false);
+  // مشترك واحد لكل رقم (آخر طلب ليه)، والملغي (مقفول) مش بيوصله إعلان
+  const subs = useMemo(() => {
+    const seen = new Set<string>();
+    return rows
+      .filter(isSub)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .filter((r) => {
+        const k = waNum(r.phone) || r.id;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+  }, [rows]);
+  const live = subs.filter((r) => r.status !== 'closed');
+  const L = showOff ? subs : live;
+  const nNew = live.filter((r) => r.status === 'new').length;
+  if (!subs.length) return null;
+  const addContact = async (r: WebRequestRow) => {
+    const phone = waNum(r.phone);
+    if (phone && (customers.data ?? []).some((c) => waNum(c.phone ?? '') === phone)) return toast('العميل ده موجود عندك في العملاء قبل كده');
+    try {
+      await add.mutateAsync({ type: 'CUSTOMER', name: r.name, phone: r.phone, address: '', note: `مشترك في جديد الواتساب — مهتم بـ: ${topicsOf(r).join('، ')}`, openingBalance: 0 });
+      toast('✔ اتضاف في العملاء');
+    } catch (e) {
+      toast(errorMessage(e), 'bad');
+    }
+  };
+  return (
+    <div id="subBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        📣 مشتركو جديد الواتساب {nNew > 0 && <span className="badge red">{nNew}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>
+        عملاء طلبوا يوصلهم كل جديد — رحّب بيهم، وابعتلهم الإعلانات. ({live.length} مشترك فعّال)
+      </p>
+      {live.length > 0 && (
+        <button type="button" className="primary" style={{ marginBottom: 10 }} onClick={() => setBc(true)}>
+          📤 ابعت إعلان لكل المشتركين
+        </button>
+      )}
+      {L.map((r) => (
+        <div key={r.id} className="card" style={{ marginBottom: 12, opacity: r.status === 'closed' ? 0.65 : 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div>
+              <b style={{ fontSize: 17 }}>{r.name}</b> — <span dir="ltr">{r.phone}</span>
+              <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+            </div>
+            {r.status === 'new' ? <span className="badge red">جديد</span> : r.status === 'replied' ? <span className="badge green">اترحّب بيه</span> : <span className="badge">ملغي</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '8px 0' }}>
+            {topicsOf(r).map((t) => (
+              <span key={t} className="badge">
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="btnrow">
+            {r.status !== 'closed' && (
+              <button type="button" className="primary" onClick={() => setWelcome(r)}>
+                👋 {r.status === 'new' ? 'رحّب بيه' : 'ابعتله تاني'}
+              </button>
+            )}
+            <button type="button" className="secondary" disabled={add.isPending} onClick={() => void addContact(r)}>
+              👤 ضيفه في العملاء
+            </button>
+            {r.status !== 'closed' ? (
+              <button type="button" className="secondary" disabled={patch.isPending} onClick={() => window.confirm(`تلغي اشتراك ${r.name}؟ مش هيوصله إعلانات.`) && patch.mutate({ id: r.id, status: 'closed' }, { onSuccess: () => toast('اتلغى الاشتراك') })}>
+                🚫 ألغي اشتراكه
+              </button>
+            ) : (
+              <button type="button" className="secondary" disabled={patch.isPending} onClick={() => patch.mutate({ id: r.id, status: 'replied' }, { onSuccess: () => toast('رجع مشترك') })}>
+                ↩️ رجّعه مشترك
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {subs.length > live.length && (
+        <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setShowOff(!showOff)}>
+          {showOff ? 'اخفي الملغي' : `اعرض الملغي (${subs.length - live.length})`}
+        </button>
+      )}
+      {welcome && <WelcomeModal r={welcome} onClose={() => setWelcome(null)} />}
+      {bc && <BroadcastModal subs={live} onClose={() => setBc(false)} />}
+    </div>
+  );
+}
+
+function Requests() {
+  const toast = useToast();
+  const list = useWebRequests();
+  const patch = usePatchWebRequest();
+  const [all, setAll] = useState(false);
+  const [reply, setReply] = useState<WebRequestRow | null>(null);
+  // طلبات الصور بس هنا — الاشتراكات ليها قسمها (Subscribers) بردود تناسبها
+  const photos = (list.data ?? []).filter((r) => !isSub(r));
+  const L = photos.filter((r) => all || r.status === 'new');
+  const n = photos.filter((r) => r.status === 'new').length;
+  return (
+    <>
+    <div id="rqBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        📷 طلبات بالصور {n > 0 && <span className="badge red">{n}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>منتجات العملاء بعتوا صورها لأنهم مالقوهاش في الموقع</p>
+      {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
+      {L.length ? (
+        L.map((r) => (
+          <div key={r.id} className="card" style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div>
+                <b style={{ fontSize: 17 }}>{r.name}</b> — <span dir="ltr">{r.phone}</span>
+                <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+              </div>
+              {r.status === 'new' ? <span className="badge red">جديد</span> : r.status === 'replied' ? <span className="badge green">اترد عليه</span> : <span className="badge">مقفول</span>}
+            </div>
+            {r.imgs.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                {r.imgs.map((u) => (
+                  <a key={u} href={u} target="_blank" rel="noopener">
+                    <img src={u} alt="" loading="lazy" style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 12, border: '1px solid var(--border)' }} />
+                  </a>
+                ))}
+              </div>
+            )}
+            {r.note && <p style={{ margin: '10px 0 0', whiteSpace: 'pre-line' }}>📝 {r.note}</p>}
+            {r.reply && (
+              <p style={{ margin: '8px 0 0', color: 'var(--green)' }}>
+                💬 الرد: {r.reply}
+                {r.repliedBy ? ` — ${r.repliedBy}` : ''}
+              </p>
+            )}
+            <div className="btnrow" style={{ marginTop: 10 }}>
+              <button type="button" className="primary" onClick={() => setReply(r)}>
+                💬 رد على العميل
+              </button>
+              {r.status !== 'closed' && (
+                <button type="button" className="secondary" disabled={patch.isPending} onClick={() => patch.mutate({ id: r.id, status: 'closed' }, { onSuccess: () => toast('اتقفل') })}>
+                  ✔ اقفل
+                </button>
+              )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="card">
+          <div className="empty">مفيش طلبات بالصور{all ? '' : ' جديدة'}</div>
+        </div>
+      )}
+      <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setAll(!all)}>
+        {all ? 'اعرض الجديد بس' : 'اعرض كل الطلبات (اللي اترد عليها كمان)'}
+      </button>
+      {reply && <ReplyModal r={reply} onClose={() => setReply(null)} />}
+    </div>
+    <Subscribers rows={list.data ?? []} />
+    </>
+  );
+}
+
+// ───────────────────────── 🛠️ طلبات تجهيز من الموقع
+const CUS_K: Record<string, string> = { steel: '🔩 استانلس', bamboo: '🎍 بامبو', delf: '🚪 دلفة' };
+
+function Custom() {
+  const toast = useToast();
+  const router = useRouter();
+  const list = useWebCustom();
+  const patch = usePatchWebCustom();
+  const [all, setAll] = useState(false);
+  const L = (list.data ?? []).filter((r) => all || r.status === 'new');
+  const n = (list.data ?? []).filter((r) => r.status === 'new').length;
+  const openAsOrder = async (r: WebCustomRow) => {
+    // the work-systems screen reads this on open and fills its order form from the request
+    try {
+      sessionStorage.setItem('mk_open_web', JSON.stringify(r));
+    } catch {
+      return toast('المتصفح مش سامح — جرّب تاني', 'bad');
+    }
+    await patch.mutateAsync({ id: r.id, status: 'opened' }).catch(() => undefined);
+    router.push('/work?k=ord');
+  };
+  return (
+    <div id="cuBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        🛠️ طلبات تجهيز من الموقع {n > 0 && <span className="badge red">{n}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>عملاء حدّدوا مقاسات استانلس أو بامبو أو دلفة من الموقع</p>
+      {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
+      {L.length ? (
+        L.map((r) => (
+          <div key={r.id} className="card" style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <div>
+                <b style={{ fontSize: 17 }}>{r.name}</b> — <span dir="ltr">{r.phone}</span>
+                <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+              </div>
+              <span className={`badge${r.status === 'new' ? ' red' : ''}`}>{r.status === 'new' ? 'جديد' : r.status === 'opened' ? 'اتفتح كأوردر' : r.status === 'closed' ? 'اتقفل' : r.status}</span>
+            </div>
+            <div style={{ marginTop: 8, fontWeight: 700 }}>{CUS_K[r.kind] ?? r.kind}</div>
+            {r.summary && <p style={{ margin: '6px 0 0', whiteSpace: 'pre-line' }}>{r.summary}</p>}
+            {r.note && <p style={{ margin: '6px 0 0', whiteSpace: 'pre-line' }}>📝 {r.note}</p>}
+            {r.img && (
+              <a href={r.img} target="_blank" rel="noopener">
+                <img src={r.img} alt="" loading="lazy" style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain', marginTop: 10, borderRadius: 12, border: '1px solid var(--border)', background: '#fff' }} />
+              </a>
+            )}
+            <div className="btnrow" style={{ marginTop: 10 }}>
+              {(r.status === 'new' || r.status === 'closed') && (
+                <button type="button" className="primary" onClick={() => openAsOrder(r)}>
+                  🛠️ افتح كأوردر
+                </button>
+              )}
+              {r.status === 'new' && (
+                <button type="button" className="secondary" disabled={patch.isPending} onClick={() => patch.mutate({ id: r.id, status: 'closed' }, { onSuccess: () => toast('اتقفل') })}>
+                  ✔ اقفل بدون أوردر
+                </button>
+              )}
+              {r.phone && (
+                <a className="secondary" style={{ padding: '10px 14px', borderRadius: 10, textDecoration: 'none' }} href={`https://wa.me/${waNum(r.phone)}`} target="_blank" rel="noopener">
+                  💬 واتساب
+                </a>
+              )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="card">
+          <div className="empty">مفيش طلبات تجهيز{all ? '' : ' جديدة'}</div>
+        </div>
+      )}
+      <button type="button" className="secondary" style={{ marginTop: 4 }} onClick={() => setAll(!all)}>
+        {all ? 'اعرض الجديد بس' : 'اعرض كل الطلبات'}
+      </button>
+    </div>
+  );
+}
+
+// ───────────────────────── ⭐ آراء مستنية موافقتك
+function Reviews() {
+  const counts = useWebCounts();
+  const n = counts.data?.reviews ?? 0;
+  return (
+    <div id="revBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        ⭐ آراء العملاء المستنية {n > 0 && <span className="badge red">{n}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>رأي كتبه عميل على الموقع — اقبله يظهر في «آراء العملاء»، أو ارفضه يتمسح</p>
+      <PendingReviews onChanged={() => void counts.refetch()} />
+    </div>
+  );
+}
+
+// ───────────────────────── 🔔 عملاء مستنيين منتج يتوفر
+function Waiting() {
+  const toast = useToast();
+  const list = useWebWaits();
+  const remove = useRemoveWebWait();
+  const rows = list.data ?? [];
+  return (
+    <div id="waitBody">
+      <h2 style={{ margin: '22px 0 10px' }}>
+        🔔 مستنيين منتج يتوفر {rows.length > 0 && <span className="badge red">{rows.length}</span>}
+      </h2>
+      <p style={{ color: 'var(--muted)', margin: '-4px 0 10px', fontSize: 13 }}>عميل ساب رقمه على منتج خالص — أول ما المنتج يتوفر السيستم يبعتله واتساب لوحده ويشيله من هنا</p>
+      {list.isError && <ErrorBox message={errorMessage(list.error)} onRetry={() => list.refetch()} />}
+      {rows.length ? (
+        rows.map((w) => (
+          <div key={w.id} className="card" style={{ marginBottom: 10 }}>
+            <b>{w.pname || w.product}</b>
+            <div style={{ marginTop: 4 }}>
+              {w.name ? <>{w.name} — </> : null}
+              <span dir="ltr">{w.phone}</span>
+            </div>
+            {w.at && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{new Date(w.at).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</div>}
+            <div className="btnrow" style={{ marginTop: 8 }}>
+              {waLink(w.phone, `أهلاً${w.name ? ' ' + w.name : ''} 👋
+بخصوص ${w.pname || 'المنتج'} اللي كنت مستنيه...`) && (
+                <a className="secondary" target="_blank" rel="noopener" href={waLink(w.phone, `أهلاً${w.name ? ' ' + w.name : ''} 👋
+بخصوص ${w.pname || 'المنتج'} اللي كنت مستنيه...`)} style={{ textDecoration: 'none' }}>
+                  💬 كلّمه واتساب
+                </a>
+              )}
+              <button type="button" className="secondary" disabled={remove.isPending} onClick={() => remove.mutate(w.id, { onSuccess: () => toast('اتشال من القايمة'), onError: (e) => toast(errorMessage(e), 'bad') })}>
+                ✔ شيله
+              </button>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="card">
+          <div className="empty">مفيش حد مستني منتج</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WebOrdersPage() {
+  // الإشعار بيفتح الصفحة على قسمه بالذات (…/weborders#subBody): ننزل له بعد ما البيانات تيجي
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const ts = [500, 1500, 3000].map((ms) => setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), ms));
+    return () => ts.forEach(clearTimeout);
+  }, []);
   return (
     <AdminOnly>
       <PageHeader title="طلبات الموقع" subtitle="الطلبات اللي العملاء بعتوها من الموقع — حوّلها لفاتورة بضغطة" />
+      <WebInsights />
       <OrdersList />
+      <Requests />
+      <Custom />
+      <Reviews />
+      <Waiting />
     </AdminOnly>
   );
 }

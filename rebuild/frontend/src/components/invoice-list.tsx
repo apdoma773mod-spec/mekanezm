@@ -114,7 +114,7 @@ export function InvoiceListScreen({ kind }: { kind: InvoiceKind }) {
           </label>
         </div>
         <div className="table-wrap">
-          <table className="table" style={{ opacity: list.isFetching && !list.isPending ? 0.7 : 1 }}>
+          <table className="table mk-icards" style={{ opacity: list.isFetching && !list.isPending ? 0.7 : 1 }}>
             <thead>
               <tr>
                 <th>رقم الفاتورة</th>
@@ -135,19 +135,19 @@ export function InvoiceListScreen({ kind }: { kind: InvoiceKind }) {
               >
                 {items.map((r) => (
                   <tr key={r.id} className="prow" onClick={() => open({ kind: 'invoice', id: r.id })}>
-                    <td>
+                    <td className="c-no">
                       <b>{r.no}</b>
                     </td>
-                    <td>{arDate(r.date)}</td>
-                    <td>{r.person || '—'}</td>
-                    <td>
+                    <td className="c-date">{arDate(r.date)}</td>
+                    <td className="c-who">{r.person || '—'}</td>
+                    <td className="c-items">
                       {r.firstItem || '—'}
                       {r.itemCount > 1 && <span className="badge"> +{(r.itemCount - 1).toLocaleString('ar-EG')} صنف</span>}
                       {r.shipping > 0 && <span className="badge"> 🚚 نقل</span>}
                     </td>
-                    <td>{money(r.total)}</td>
+                    <td className="c-total">{money(r.total)}</td>
                     {kind === 'SALE' && (
-                    <td>
+                    <td className="c-pay">
                       {r.status === 'VOID' ? (
                         <span className="badge red">ملغية</span>
                       ) : r.remaining > 0 ? (

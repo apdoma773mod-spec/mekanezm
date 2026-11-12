@@ -1,11 +1,13 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { ProductDto } from '@mk/shared';
 import { api, errorMessage } from '@/lib/api';
 import { money, qtyText } from '@/lib/format';
 import {
   useAllContacts,
+  useAllProducts,
   useInfoGroups,
   useMakeVariant,
   useProduct,
@@ -17,12 +19,16 @@ import {
   type ProductPack,
 } from '@/lib/trade-queries';
 import { useSettings } from '@/lib/queries';
+import { useAlts } from '@/lib/phase4-queries';
 import { Modal } from '../ui/modal';
 import { ErrorBox, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useIsAdmin } from '../use-role';
 import { useModal } from './modal-host';
 import { ExtraButtons } from './product-modal';
+import { PlaceCard, PlaceEditor } from '../product-place';
+import { Fold } from '@/components/ui/fold';
+import { AiDescribeButton, hintOf } from '../ai-describe';
 
 export type ProductCardSpec = { kind: 'productEdit'; id: string } | { kind: 'productDetails'; id: string } | { kind: 'productSend'; id: string } | { kind: 'productVariant'; id: string };
 
@@ -31,6 +37,31 @@ const kv = (l: string, v: React.ReactNode) => (v || v === 0 ? <div><small>{l}</s
 
 // ---------- 🏷️ شاشة المنتج ----------
 
+/** The 🔁 alternatives of a product as pills (old mkSX extra): in stock = teal, finished = grey. */
+function AltLinks({ ids, onOpen }: { ids: string[]; onOpen: (id: string) => void }) {
+  const all = useAllProducts({}).data ?? [];
+  return (
+    <>
+      {ids
+        .map((i) => all.find((x) => x.id === i))
+        .filter((a): a is ProductDto => !!a)
+        .map((a) => (
+          <a
+            key={a.id}
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpen(a.id);
+            }}
+            style={{ display: 'inline-block', margin: 3, padding: '3px 10px', borderRadius: 99, background: a.qty > 0 ? '#e3f4f5' : '#f3f3f3', color: a.qty > 0 ? '#087f8c' : '#999', textDecoration: 'none' }}
+          >
+            {a.name} ({a.qty > 0 ? qtyText(a.qty) : 'خلص'})
+          </a>
+        ))}
+    </>
+  );
+}
+
 export function ProductCard({ id }: { id: string }) {
   const { open, close } = useModal();
   const own = useIsAdmin();
@@ -38,6 +69,8 @@ export function ProductCard({ id }: { id: string }) {
   const info = useProductInfo(id);
   const sibs = useSiblings(id);
   const stats = useProductCard(id, own);
+  const reserved = useQuery({ queryKey: ['reserved', id], queryFn: ({ signal }) => api.get<{ qty: number; custs: string[] }>(`/work/reserved/${id}`, undefined, signal), staleTime: 15_000 });
+  const alts = useAlts().data?.[id];
   const [idx, setIdx] = useState(0);
 
   if (prod.isPending || info.isPending)
@@ -53,7 +86,7 @@ export function ProductCard({ id }: { id: string }) {
       </Modal>
     );
   const p = prod.data;
-  const inf = info.data ?? ({ brand: '', finish: '', size: '', specs: '', loc: '', grp: '', descr: '', packs: [], imgs: [] } as ProductInfo);
+  const inf = info.data ?? ({ brand: '', finish: '', size: '', specs: '', loc: '', grp: '', descr: '', packs: [], imgs: [], shelfQty: null, stores: [] } as ProductInfo);
   const cost = p.cost ?? 0;
   const st = p.qty <= 0 ? <span className="badge red">نفد</span> : p.qty <= p.minQty ? <span className="badge red">قرب يخلص</span> : <span className="badge green">متوفر</span>;
   const S = sibs.data?.items ?? [];
@@ -86,10 +119,7 @@ export function ProductCard({ id }: { id: string }) {
             </div>
           )}
         </div>
-        <div className="pc-card">
-          <h3>
-            🏷️ كارت المنتج <small style={{ color: '#7b8a90', fontWeight: 400 }}>(ده اللي بيتبعت للعميل)</small>
-          </h3>
+        <Fold k="pcv-card" title="🏷️ كارت المنتج" hint={[p.code, p.category, st].filter(Boolean).join(' · ') || 'ده اللي بيتبعت للعميل'} open0>
           <div className="pc-kv">
             {kv('الكود', <b>{p.code || '—'}</b>)}
             {kv('التصنيف', p.category)}
@@ -105,38 +135,29 @@ export function ProductCard({ id }: { id: string }) {
             </p>
           )}
           {inf.specs && <p className="pc-specs">{inf.specs}</p>}
-        </div>
+        </Fold>
         {own ? (
-          <div className="pc-card pc-own">
-            <h3>
-              🔒 بيانات المنتج <small style={{ color: '#7b8a90', fontWeight: 400 }}>(ليك انت بس)</small>
-            </h3>
+          <Fold k="pcv-own" className="pc-own" title="🔒 بيانات المنتج" hint={`بيع ${money(p.price)} · رصيد ${qtyText(p.qty)} ${p.unit}`}>
             <div className="pc-kv">
               {kv('سعر البيع', <b>{money(p.price)}</b>)}
               {kv('سعر الشراء', cost ? <>{money(cost)}{p.costEst ? <> <span className="badge red" title="تقدير لأن سعر الشراء الحقيقي مش معروف">تقديري</span></> : null}</> : <span className="badge red">مش معروف</span>)}
               {kv('هامش الربح', p.price ? `${Math.round(((p.price - cost) / p.price) * 100)}%` : '—')}
               {kv('الرصيد', `${qtyText(p.qty)} ${p.unit}`)}
               {kv('حد التنبيه', p.minQty)}
-              {kv('مكانه في المحل', inf.loc || '—')}
               {kv('آخر شراء', sd ? (sd.lastBuy ? `${money(sd.lastBuy.price)} من ${sd.lastBuy.person || '—'} (${sd.lastBuy.date})` : '—') : '…')}
               {sd && kv('اتباع آخر ٣ شهور', `${qtyText(sd.sold90)} ${p.unit}`)}
               {sd && kv('أكتر عملاء بيشتروه', sd.top.map((t) => `${t.name} (${t.qty})`).join('، ') || '—')}
               {p.barcode ? kv('الباركود', p.barcode) : null}
             </div>
-          </div>
-        ) : inf.loc ? (
+          </Fold>
+        ) : (
           <div className="pc-card">
-            <div className="pc-kv">
-              {kv('مكانه في المحل', inf.loc)}
-              {kv('سعر البيع', <b>{money(p.price)}</b>)}
-            </div>
+            <div className="pc-kv">{kv('سعر البيع', <b>{money(p.price)}</b>)}</div>
           </div>
-        ) : null}
+        )}
+        <PlaceCard inf={inf} qty={p.qty} unit={p.unit} />
         {(S.length > 0 || own) && (
-          <div className="pc-card">
-            <h3>
-              📏 المقاسات والألوان {inf.grp ? <small style={{ color: '#7b8a90', fontWeight: 400 }}>({inf.grp})</small> : null}
-            </h3>
+          <Fold k="pcv-variants" title="📏 المقاسات والألوان" hint={S.length ? `${S.length + 1} مقاسات وألوان${inf.grp ? ` · ${inf.grp}` : ''}` : inf.grp || 'مش مربوط'}>
             {S.length ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {[{ id: p.id, name: p.name, qty: p.qty, size: inf.size, finish: inf.finish, price: p.price }, ...S].map((x) => (
@@ -167,11 +188,10 @@ export function ProductCard({ id }: { id: string }) {
                 </button>
               </div>
             )}
-          </div>
+          </Fold>
         )}
         {inf.packs.length > 0 && (
-          <div className="pc-card">
-            <h3>📦 العبوات</h3>
+          <Fold k="pcv-packs" title="📦 العبوات" hint={`${inf.packs.length} عبوة`}>
             <div className="pc-kv">
               {inf.packs.map((k) =>
                 k.small ? (
@@ -189,6 +209,17 @@ export function ProductCard({ id }: { id: string }) {
                 ),
               )}
             </div>
+          </Fold>
+        )}
+        {!!reserved.data?.qty && (
+          <div id="pcRes" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#fff4e0', fontSize: 13 }}>
+            📌 محجوز {qtyText(reserved.data.qty)} ({reserved.data.custs.join('، ')}) — المتاح فعلاً <b>{qtyText(Math.max(0, p.qty - reserved.data.qty))}</b>
+          </div>
+        )}
+        {!!alts?.length && (
+          <div id="pcAlts" style={{ marginTop: 8, fontSize: 13 }}>
+            <b>🔁 البدائل{p.qty <= 0 ? ' (الصنف ده خلصان)' : ''}:</b>{' '}
+            <AltLinks ids={alts} onOpen={(aid) => open({ kind: 'product', id: aid })} />
           </div>
         )}
         <div className="pc-acts">
@@ -203,7 +234,7 @@ export function ProductCard({ id }: { id: string }) {
               <button type="button" className="secondary" onClick={() => open({ kind: 'productEdit', id })}>
                 ✏️ الاسم والسعر والكمية
               </button>
-              <button type="button" className="secondary" onClick={() => open({ kind: 'productEdit', id })}>
+              <button type="button" className="secondary" onClick={() => open({ kind: 'itemCard', id })}>
                 📋 حركة الصنف
               </button>
               <button type="button" className="secondary" onClick={() => open({ kind: 'siteProduct', id })}>
@@ -280,6 +311,39 @@ const blobB64 = (b: Blob) =>
     r.readAsDataURL(b);
   });
 
+/** قسم بيتطوي جوه «تفاصيل وصور»: العنوان باين دايمًا ومعاه ملخص اللي جواه، والسيستم بيفتكر كل قسم مفتوح ولا مقفول. */
+function Sec({ k, title, hint, open0 = false, children }: { k: string; title: string; hint: string; open0?: boolean; children: ReactNode }) {
+  const [on, setOn] = useState(() => {
+    try {
+      const s = localStorage.getItem(`pceSec:${k}`);
+      return s ? s === '1' : open0;
+    } catch {
+      return open0;
+    }
+  });
+  return (
+    <details
+      className="field full pce-sec"
+      open={on}
+      onToggle={(e) => {
+        const o = e.currentTarget.open;
+        setOn(o);
+        try {
+          localStorage.setItem(`pceSec:${k}`, o ? '1' : '0');
+        } catch {
+          /* التخزين مقفول: القسم بيشتغل عادي من غير ما يفتكر */
+        }
+      }}
+    >
+      <summary>
+        <span>{title}</span>
+        <small>{hint}</small>
+      </summary>
+      <div className="form">{children}</div>
+    </details>
+  );
+}
+
 export function ProductDetails({ id }: { id: string }) {
   const { open } = useModal();
   const toast = useToast();
@@ -339,7 +403,7 @@ export function ProductDetails({ id }: { id: string }) {
       })
       .filter((k): k is ProductPack => !!k && !!k.u);
     try {
-      await save.mutateAsync({ id, info: { ...v, packs } });
+      await save.mutateAsync({ id, info: { ...v, packs, stores: (v.stores ?? []).filter((x) => x.w).map((x) => ({ w: x.w, s: x.s.trim() })) } });
       ai.current = false;
       toast('✔ اتحفظ');
       back();
@@ -352,10 +416,15 @@ export function ProductDetails({ id }: { id: string }) {
     <Modal title={`📝 تفاصيل وصور: ${prod.name}`} onClose={back}>
       <div id="pce">
         <div className="form">
+          <Sec k="base" title="🏷️ الماركة والمقاس" hint={[v.brand, v.finish, v.size].filter(Boolean).join(' · ') || 'فاضي'} open0>
           {inp('brand', 'الماركة', 'مثلاً: ...')}
           {inp('finish', 'التشطيب / اللون', 'نيكل، كروم، أسود مطفي…')}
           {inp('size', 'المقاس', 'مثلاً: 45 سم / 35 مم')}
-          {inp('loc', 'مكانه في المحل', 'رف 3 – دولاب المفصلات')}
+          </Sec>
+          <Sec k="place" title="📍 المكان" hint={[v.loc, (v.stores ?? []).length ? `${(v.stores ?? []).length} مخزن` : ''].filter(Boolean).join(' · ') || 'مش متسجل'}>
+          <PlaceEditor v={v} set={set} qty={prod.qty} unit={prod.unit || 'قطعة'} />
+          </Sec>
+          <Sec k="packs" title="📦 المجموعة والعبوات" hint={[v.grp, v.packs.length ? `${v.packs.length} عبوة` : ''].filter(Boolean).join(' · ') || 'فاضي'}>
           <div className="field full">
             <label>مجموعة المقاسات والألوان (لو الصنف ده مقاس أو لون من صنف تاني)</label>
             <input list="pceGrps" value={v.grp} placeholder="مثلاً: مجرى بلي تلسكوبي" onChange={(e) => set({ grp: e.target.value })} />
@@ -402,14 +471,29 @@ export function ProductDetails({ id }: { id: string }) {
               {!v.packs.length && <small style={{ color: '#7b8a90', display: 'block', marginTop: 6 }}>بتبيع أو بتشتري بالعلبة أو الكرتونة؟ ضيف عبوة. وبتبيع سايب من صنف متسجل بالكيلو؟ ضيف وحدة أصغر.</small>}
             </div>
           </div>
+          </Sec>
+          <Sec k="text" title="✍️ الوصف والمواصفات" hint={v.descr.trim() || v.specs.trim() ? `${v.descr.trim() ? 'الوصف مكتوب' : 'من غير وصف'}${v.specs.trim() ? ` · ${v.specs.trim().split('\n').length} ميزة` : ''}` : 'فاضي'}>
           <div className="field full">
-            <label>الوصف (بيظهر في الكارت ويتبعت مع المنتج)</label>
+            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              الوصف (بيظهر في الكارت ويتبعت مع المنتج)
+              <AiDescribeButton
+                id="pceAi"
+                build={() => ({ name: prod.name, cat: prod.category ?? '', hint: hintOf({ الماركة: v.brand, التشطيب: v.finish, المقاس: v.size, مواصفات: v.specs }), image_url: v.imgs[0] ?? '' })}
+                onDone={(r) => {
+                  if (v.descr.trim() && v.descr.trim() !== r.description && !window.confirm('تستبدل الوصف الحالي بالجديد؟')) return;
+                  set({ descr: r.description, ...(v.specs.trim() || !r.specs.length ? {} : { specs: r.specs.map((x) => `${x.k}: ${x.v}`).join('\n') }) });
+                  toast('✔ الوصف اتكتب — راجعه ودوس «حفظ»');
+                }}
+              />
+            </label>
             <textarea rows={4} value={v.descr} onChange={(e) => set({ descr: e.target.value })} />
           </div>
           <div className="field full">
             <label>المواصفات (كل ميزة في سطر)</label>
             <textarea rows={4} placeholder={'كاتم صوت\nزاوية فتح 110°\nيستحمل 30 كيلو'} value={v.specs} onChange={(e) => set({ specs: e.target.value })} />
           </div>
+          </Sec>
+          <Sec k="imgs" title="🖼️ الصور" hint={v.imgs.length ? `${v.imgs.length} صورة` : 'مفيش صور'} open0={!v.imgs.length}>
           <div className="field full">
             <label>صور المنتج (أول صورة هي الأساسية)</label>
             <div className="pc-imgs" id="pceImgs">
@@ -449,6 +533,7 @@ export function ProductDetails({ id }: { id: string }) {
             </label>
             <small style={{ display: 'block', color: '#7b8a90', marginTop: 6 }}>الصور بتتحط في فريم المحل والكود لوحدها.</small>
           </div>
+          </Sec>
         </div>
         <div className="modal-foot">
           <button type="button" className="primary" disabled={busy || save.isPending} onClick={() => void go()}>

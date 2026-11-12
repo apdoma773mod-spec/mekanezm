@@ -65,8 +65,31 @@ function Work() {
   useEffect(() => {
     if (!ready) return;
     leaving.current = false;
-    const w = window as unknown as { mkWk?: { go: (k: string) => Promise<void> } };
-    void w.mkWk?.go(KEYS.includes(k) ? k : 'ord');
+    const w = window as unknown as { mkWk?: { go: (k: string) => Promise<void>; openWeb: (r: unknown) => Promise<void> } };
+    // «🛠️ افتح كأوردر» from طلبات الموقع leaves the request here: the order form opens filled in from it
+    let web: unknown = null;
+    try {
+      const raw = sessionStorage.getItem('mk_open_web');
+      if (raw) {
+        sessionStorage.removeItem('mk_open_web');
+        web = JSON.parse(raw);
+      }
+    } catch {
+      /* no stored request */
+    }
+    let steel: unknown = null;
+    try {
+      const raw = sessionStorage.getItem('mk_open_steel');
+      if (raw) {
+        sessionStorage.removeItem('mk_open_steel');
+        steel = JSON.parse(raw);
+      }
+    } catch {
+      /* none */
+    }
+    if (steel) void (w.mkWk as unknown as { stainlessFrom: (c: unknown) => Promise<void> }).stainlessFrom(steel);
+    else if (web) void w.mkWk?.openWeb(web);
+    else void w.mkWk?.go(KEYS.includes(k) ? k : 'ord');
   }, [ready, k]);
 
   // Leaving by the sidebar or the back button: take the old screen off the page.

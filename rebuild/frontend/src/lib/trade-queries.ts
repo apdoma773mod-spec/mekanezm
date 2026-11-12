@@ -46,6 +46,7 @@ import type {
   ReturnDto,
   ReturnInput,
   StockMoveDto,
+  StockMovesResult,
   TodaySummary,
   UpdateContactInput,
   UpdateExpenseInput,
@@ -98,7 +99,7 @@ export const useCategories = () =>
 export const useProductMoves = (id: string | null, page: number) =>
   useQuery({
     queryKey: ['moves', id, page],
-    queryFn: ({ signal }) => api.get<Paginated<StockMoveDto>>(`/products/${id}/moves`, { page, pageSize: 20 }, signal),
+    queryFn: ({ signal }) => api.get<StockMovesResult>(`/products/${id}/moves`, { page, pageSize: 20 }, signal),
     enabled: !!id,
     placeholderData: keepPreviousData,
   });
@@ -387,9 +388,12 @@ export const useAllProducts = (q: AllProductsQuery = {}, enabled = true) =>
     queryKey: ['products', 'all', q],
     queryFn: ({ signal }) => api.get<{ items: ProductDto[] }>('/products/all', q as Record<string, string>, signal).then((r) => r.items),
     enabled,
-    staleTime: 30_000,
+    staleTime: 300_000,
     placeholderData: keepPreviousData,
   });
+
+export const useRecat = () =>
+  useTradeMutation((items: { id: string; category: string }[]) => api.post<{ updated: number }>('/products/recat', { items }).then((r) => r.updated));
 
 export const useBulkPrice = () =>
   useTradeMutation((v: { ids: string[]; field: 'price' | 'cost' | 'both'; pct: number; round: number }) =>
@@ -485,7 +489,7 @@ export const useAllContacts = (type: 'CUSTOMER' | 'SUPPLIER', enabled = true) =>
     queryKey: ['contacts', 'all', type],
     queryFn: ({ signal }) => api.get<{ items: ContactDto[] }>('/contacts/all', { type }, signal).then((r) => r.items),
     enabled,
-    staleTime: 30_000,
+    staleTime: 300_000,
     placeholderData: keepPreviousData,
   });
 
@@ -536,13 +540,35 @@ export interface ProductInfo {
   descr: string;
   packs: ProductPack[];
   imgs: string[];
+  /** كام قطعة على الرف في المحل (null = مش متحدد). الباقي من الرصيد في المخزن. */
+  shelfQty: number | null;
+  /** أماكن الباقي في المخازن */
+  stores: ProductStore[];
 }
+export interface ProductStore {
+  /** Warehouse id */
+  w: string;
+  /** عين / رف جوه المخزن */
+  s: string;
+}
+export interface WarehouseDto {
+  id: string;
+  name: string;
+  note: string;
+  products: number;
+}
+export const useWarehouses = () =>
+  useQuery({
+    queryKey: ["warehouses"],
+    queryFn: ({ signal }) => api.get<{ warehouses: WarehouseDto[] }>("/warehouses", undefined, signal).then((r) => r.warehouses),
+    staleTime: 60_000,
+  });
 export const useAllProductInfo = (enabled = true) =>
   useQuery({
     queryKey: ['product-info', 'all'],
     queryFn: ({ signal }) => api.get<{ infos: Record<string, ProductInfo> }>('/products/info/all', undefined, signal).then((r) => r.infos),
     enabled,
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 export const useProductInfo = (id: string | null) =>
   useQuery({

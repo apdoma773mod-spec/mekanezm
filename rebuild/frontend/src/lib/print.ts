@@ -30,10 +30,34 @@ export function printHtml(html: string) {
 
 const FONT_LINKS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800&family=Tajawal:wght@400;700;800&family=Almarai:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;700;800&family=Amiri:wght@400;700&family=Changa:wght@400;700;800&display=swap">`;
 
+/**
+ * ملفات لوجو فيها سطر كتابة مدموج تحت الرسمة: `top`/`bottom` = حدود الرسمة نفسها (نسبة من عرض الصورة)،
+ * و`tags` = نفس كلام السطر بيتكتب نص حقيقي بخط الفاتورة. أي لوجو تاني بيتعرض كامل زي ما هو.
+ */
+const LOGO_ART = [{ id: '72eb97d5a47c0c381c0e5a99', top: 45 / 800, bottom: 290 / 800, tags: ['مطابخ', 'دريسنج روم', 'لوازم ورش'] }];
+
 const KIND_TITLE = { SALE: 'فاتورة بيع', PURCHASE: 'فاتورة شراء' } as const;
 
-/** The old system's A4 invoice (invoiceHTML), same layout and colors. */
-export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
+/** الزباين اللي على بنود الفاتورة («لحساب») بترتيب ظهورهم، و«بدون اسم» («») في الآخر. */
+export function invoiceFors(inv: InvoiceDto): string[] {
+  const names: string[] = [];
+  for (const it of inv.items) {
+    const n = (it.forName || '').trim();
+    if (!names.includes(n)) names.push(n);
+  }
+  return [...names.filter(Boolean), ...(names.includes('') ? [''] : [])];
+}
+export const forLabel = (n: string) => n || 'بدون اسم';
+
+/**
+ * The old system's A4 invoice (invoiceHTML), same layout and colors.
+ * فاتورة A4. `group` = كشف مفصّل: البنود مقسومة أقسام باسم كل زبون وإجمالي كل قسم.
+ * `only` = صفحة زبون واحد: بنوده وإجماليه بس (من غير المدفوع والمتبقي).
+ */
+export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap, opt: { group?: boolean; only?: string } = {}): string {
+  const only = opt.only;
+  const items = only === undefined ? inv.items : inv.items.filter((x) => (x.forName || '').trim() === only);
+  const partTotal = items.reduce((a, x) => a + x.total, 0);
   const T = s.theme;
   const H = T.invSync ? T.primary : T.invHeader;
   const A = T.invSync ? T.accent : T.invAccent;
@@ -46,46 +70,67 @@ export function invoiceA4Html(inv: InvoiceDto, s: SettingsMap): string {
   const ph = esc(s.store.phones.join(' - '));
   const isSale = inv.kind === 'SALE';
   const logo = T.logoInv && T.logo;
-  const wm = T.watermark && T.logo
-    ? `<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`
-    : '';
+  // اللوجو بيتعرض من ملفه الأصلي زي ما هو (من غير أي تعديل في الرسمة) وبحجم كبير عشان تفاصيله تفضل واضحة في الطباعة.
+  // لو ملف اللوجو فيه سطر كتابة مدموج تحته (LOGO_ART)، بنعرض الرسمة بس ونكتب السطر نص حقيقي حادّ جنبها.
+  const art = logo ? LOGO_ART.find((x) => T.logo.includes(x.id)) : undefined;
+  const LW = 400;
+  const logoImg = !logo
+    ? ''
+    : art
+      ? `<div style="width:${LW}px;height:${Math.round((art.bottom - art.top) * LW)}px;overflow:hidden;line-height:0"><img src="${T.logo}" style="width:${LW}px;display:block;margin-top:-${Math.round(art.top * LW)}px"></div>`
+      : `<img src="${T.logo}" style="max-width:${LW}px;max-height:190px;display:block">`;
+  const WW = 440;
+  const wm = !(T.watermark && T.logo)
+    ? ''
+    : art
+      ? `<div style="position:absolute;top:50%;left:50%;width:${WW}px;height:${Math.round((art.bottom - art.top) * WW)}px;transform:translate(-50%,-50%);overflow:hidden;opacity:.05;line-height:0"><img src="${T.logo}" style="width:${WW}px;display:block;margin-top:-${Math.round(art.top * WW)}px"></div>`
+      : `<img src="${T.logo}" style="position:absolute;top:50%;left:50%;width:420px;transform:translate(-50%,-50%);opacity:.06;object-fit:contain">`;
+  const tags = art?.tags ?? [];
+  const contact = [addr ? `📍 ${addr}` : '', ph ? `☎ <span dir="ltr">${ph}</span>` : ''].filter(Boolean).join(' &nbsp;•&nbsp; ');
   const header = logo
-    ? `<div style="position:relative;background:${H};line-height:0"><img src="${T.logo}" style="width:100%;display:block"></div>
-  <div style="position:relative;background:${H};color:${HT};padding:14px 44px 16px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-   <div><div style="display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;line-height:1.3"><span>${shop}</span></div><div style="margin-top:4px;font-size:13px;opacity:.9;line-height:1.6">${addr}${ph ? ` &nbsp;•&nbsp; تليفون: <span dir="ltr">${ph}</span>` : ''}</div></div>
-   <div style="font-size:20px;font-weight:800;white-space:nowrap">${KIND_TITLE[inv.kind]}</div></div>`
+    ? `<div style="position:relative;height:10px;background:${H}"></div>
+  <div style="position:relative;background:#fff;padding:26px 44px 22px;display:flex;justify-content:space-between;align-items:center;gap:24px">
+   <div>${logoImg}${tags.length ? `<div style="width:${LW}px;margin-top:12px;padding-top:10px;border-top:2px solid ${A};display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:${H};letter-spacing:.2px">${tags.map((t) => `<span>${esc(t)}</span>`).join(`<span style="color:${A}">◆</span>`)}</div>` : ''}</div>
+   <div style="text-align:center;border:2px solid ${H};border-radius:16px;padding:14px 26px;min-width:190px"><div style="font-size:30px;font-weight:800;color:${H};line-height:1.3;white-space:nowrap">${KIND_TITLE[inv.kind]}</div><div style="margin-top:4px;font-size:12px;font-weight:700;letter-spacing:5px;color:${A}" dir="ltr">${isSale ? 'INVOICE' : 'PURCHASE'}</div><div style="margin-top:8px;padding-top:8px;border-top:1px solid #e4eaed;font-size:17px;font-weight:800" dir="ltr">${esc(inv.no)}</div></div>
+  </div>
+  <div style="position:relative;background:${H};color:${HT};padding:${contact ? '10px 44px' : '0'};min-height:8px;font-size:14px;font-weight:700;text-align:center;line-height:1.7">${contact}</div>`
     : `<div style="position:relative;background:${H};color:${HT};padding:34px 44px;display:flex;justify-content:space-between;align-items:center">
    <div><div style="font-size:38px;font-weight:800">${shop}</div><div style="margin-top:8px;font-size:15px;opacity:.9">${addr}</div>${ph ? `<div style="margin-top:4px;font-size:15px;opacity:.9">تليفون: <span dir="ltr">${ph}</span></div>` : ''}</div>
    <div style="text-align:left"><div style="font-size:30px;font-weight:800;color:${A}">${KIND_TITLE[inv.kind]}</div></div></div>`;
-  const rows = inv.items
-    .map(
-      (x) => `<tr style="border-bottom:1px solid #e4eaed"><td style="padding:14px 12px"><b>${esc(x.name)}</b></td><td style="padding:14px 12px;text-align:center">${qtyText(x.qty)} ${esc(x.unit)}</td><td style="padding:14px 12px;text-align:center">${money(x.price)}</td><td style="padding:14px 12px;text-align:center;font-weight:700">${money(x.total)}</td></tr>`,
-    )
-    .join('');
+  const rowOf = (x: InvoiceDto['items'][number]) => `<tr style="border-bottom:1px solid #e4eaed"><td style="padding:14px 12px"><b>${esc(x.name)}</b></td><td style="padding:14px 12px;text-align:center">${qtyText(x.qty)} ${esc(x.unit)}</td><td style="padding:14px 12px;text-align:center">${money(x.price)}</td><td style="padding:14px 12px;text-align:center;font-weight:700">${money(x.total)}</td></tr>`;
+  const rows =
+    opt.group && only === undefined
+      ? invoiceFors(inv)
+          .map((n) => {
+            const part = inv.items.filter((x) => (x.forName || '').trim() === n);
+            return `<tr style="background:${tint}"><td colspan="4" style="padding:12px;font-weight:800;color:${H};font-size:17px">👤 لحساب: ${esc(forLabel(n))}</td></tr>${part.map(rowOf).join('')}<tr style="border-bottom:2px solid ${H}"><td colspan="3" style="padding:10px 12px;font-weight:700">إجمالي ${esc(forLabel(n))}</td><td style="padding:10px 12px;text-align:center;font-weight:800">${money(part.reduce((a, x) => a + x.total, 0))}</td></tr>`;
+          })
+          .join('')
+      : items.map(rowOf).join('');
   const extras =
-    inv.shipping || inv.discount
+    only === undefined && (inv.shipping || inv.discount)
       ? `<div style="display:flex;justify-content:flex-start;margin-top:20px"><div style="width:320px;font-size:17px;line-height:2.1;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>إجمالي الأصناف</span><b>${money(inv.subtotal)}</b></div>${inv.discount ? `<div style="display:flex;justify-content:space-between"><span>الخصم</span><b>${money(inv.discount)}</b></div>` : ''}${inv.shipping ? `<div style="display:flex;justify-content:space-between"><span>مصاريف النقل</span><b>${money(inv.shipping)}</b></div>` : ''}</div></div>`
       : '';
   const footer = esc(s.store.invoiceFooter) || `شكراً لتعاملكم معنا — ${shop}`;
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(inv.no)}</title>${FONT_LINKS}
 <style>@page{size:A4;margin:0}body{margin:0}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}</style></head><body>
-<div style="width:794px;min-height:1123px;background:#fff;direction:rtl;font-family:${fam};color:${T.text};position:relative;overflow:hidden">${wm}
+<div style="width:794px;min-height:1123px;background:#fff;direction:rtl;font-family:${fam};color:${T.text};position:relative;overflow:hidden;display:flex;flex-direction:column">${wm}
  ${header}
  <div style="position:relative;height:6px;background:${A}"></div>
- <div style="position:relative;padding:30px 44px">
+ <div style="position:relative;padding:30px 44px;flex:1 0 auto">
   <div style="display:flex;justify-content:space-between;gap:20px">
-   <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">${isSale ? 'بيانات العميل' : 'بيانات المورد'}</div><div>الاسم: <b>${esc(inv.person || (isSale ? 'عميل نقدي' : '—'))}</b></div>${inv.phone ? `<div>التليفون: <b dir="ltr">${esc(inv.phone)}</b></div>` : ''}${inv.address ? `<div>العنوان: <b>${esc(inv.address)}</b></div>` : ''}</div>
+   <div style="flex:1;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">${isSale ? 'بيانات العميل' : 'بيانات المورد'}</div>${only !== undefined ? `<div>الاسم: <b>${esc(forLabel(only))}</b></div>${inv.person ? `<div>عن طريق: <b>${esc(inv.person)}</b></div>` : ''}` : `<div>الاسم: <b>${esc(inv.person || (isSale ? 'عميل نقدي' : '—'))}</b></div>`}${inv.phone && only === undefined ? `<div>التليفون: <b dir="ltr">${esc(inv.phone)}</b></div>` : ''}${inv.address && only === undefined ? `<div>العنوان: <b>${esc(inv.address)}</b></div>` : ''}</div>
    <div style="width:260px;background:${tint};border-radius:12px;padding:16px 18px;line-height:2"><div style="font-weight:800;color:${H};margin-bottom:4px">بيانات الفاتورة</div><div>رقم الفاتورة: <b>${esc(inv.no)}</b></div><div>التاريخ: <b>${esc(arDate(inv.date))}</b></div><div style="height:42px;margin-top:4px">${code128Svg(inv.no, 42).replace('<svg ', '<svg style="width:100%;height:42px" ')}</div></div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-top:28px;font-size:16px">
    <thead><tr style="background:${H};color:${HT}"><th style="padding:12px;text-align:right;border-radius:0 10px 0 0">البيان</th><th style="padding:12px;text-align:center">الكمية</th><th style="padding:12px;text-align:center">سعر الوحدة</th><th style="padding:12px;text-align:center;border-radius:10px 0 0 0">الإجمالي</th></tr></thead>
    <tbody>${rows}</tbody></table>
   ${extras}
-  <div style="display:flex;justify-content:flex-start;margin-top:${extras ? 10 : 26}px"><div style="width:320px;background:${H};color:${HT};border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;font-size:20px"><span>الإجمالي المطلوب</span><b style="font-size:24px">${money(inv.total)}</b></div></div>
-  <div style="display:flex;justify-content:flex-start;margin-top:12px"><div style="width:320px;font-size:17px;line-height:2.3;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>المدفوع</span><b>${money(inv.paid)}</b></div><div style="display:flex;justify-content:space-between;color:${inv.remaining > 0 ? '#c0392b' : '#159447'}"><span>المتبقي</span><b>${money(inv.remaining)}</b></div></div></div>
-  ${inv.note ? `<div style="margin-top:18px;color:#596a70">ملاحظات: ${esc(inv.note)}</div>` : ''}
+  <div style="display:flex;justify-content:flex-start;margin-top:${extras ? 10 : 26}px"><div style="min-width:320px;background:${H};color:${HT};border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:22px;font-size:20px;white-space:nowrap"><span>${only !== undefined ? `إجمالي حساب ${esc(forLabel(only))}` : 'الإجمالي المطلوب'}</span><b style="font-size:24px">${money(only !== undefined ? partTotal : inv.total)}</b></div></div>
+  ${only !== undefined ? '' : `<div style="display:flex;justify-content:flex-start;margin-top:12px"><div style="width:320px;font-size:17px;line-height:2.3;padding:0 6px"><div style="display:flex;justify-content:space-between"><span>المدفوع</span><b>${money(inv.paid)}</b></div><div style="display:flex;justify-content:space-between;color:${inv.remaining > 0 ? '#c0392b' : '#159447'}"><span>المتبقي</span><b>${money(inv.remaining)}</b></div></div></div>`}
+  ${inv.note && only === undefined ? `<div style="margin-top:18px;color:#596a70">ملاحظات: ${esc(inv.note)}</div>` : ''}
  </div>
- <div style="position:absolute;bottom:0;right:0;left:0;text-align:center;padding:20px;border-top:1px solid #e4eaed;color:#718087;font-size:14px">${footer}</div></div>
+ <div style="position:relative;margin-top:26px;text-align:center;padding:20px;border-top:1px solid #e4eaed;color:#718087;font-size:14px">${footer}</div></div>
 </body></html>`;
 }
 
@@ -221,6 +266,17 @@ ${sh.note ? `<div class="nt">📝 ${esc(sh.note)}</div>` : ''}
 .gv{font-size:42pt;font-weight:900;line-height:1.25}.ad{font-size:30pt;font-weight:700;line-height:1.45}
 .nt{font-size:16pt;font-weight:700;border:2px dashed #000;border-radius:4mm;padding:3mm 5mm}
 .ft{display:flex;align-items:center;justify-content:space-between;gap:5mm;border-top:2px solid #000;padding-top:3mm}.gr{display:flex;flex-wrap:wrap;gap:2mm 6mm;font-size:12pt;font-weight:600}.gr b{font-weight:800}.bc{width:60mm;height:18mm;flex:none}.bc svg{width:100%;height:100%}</style></head><body>${pages}</body></html>`;
+}
+/** 🏷️ طباعة ليبل (old mkInvLabel): 50×30 mm sticker per carton with the invoice number as a barcode, scanning it opens the invoice. */
+export function invoiceLabelHtml(inv: InvoiceDto, s: SettingsMap, n = 1): string {
+  const items = inv.items.filter((x) => x.qty > 0);
+  const pcs = items.reduce((t, x) => t + x.qty, 0);
+  const shop = s.store.name || 'ميكانيزم';
+  const lab = (i: number) =>
+    `<div class="lb"><div class="top"><b>${esc(shop)}</b><span>${esc(inv.date)}</span></div><div class="who">${esc(inv.person || 'عميل نقدي')}${inv.phone ? ` · <span dir="ltr">${esc(inv.phone)}</span>` : ''}</div><div class="bc">${code128Svg(inv.no, 38)}<div class="nm">${esc(inv.no)}</div></div><div class="bot"><span>${items.length} صنف · ${pcs} قطعة</span>${n > 1 ? `<b>كرتونة ${i + 1} من ${n}</b>` : `<b>${esc(money(inv.total))}</b>`}</div></div>`;
+  let pages = '';
+  for (let i = 0; i < n; i++) pages += lab(i);
+  return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>ليبل ${esc(inv.no)}</title>${FONT_LINKS}<style>@page{size:50mm 30mm;margin:0}body{margin:0}*{box-sizing:border-box;font-family:Cairo,Tahoma,sans-serif;color:#000}.lb{width:50mm;height:30mm;padding:1.2mm 1.6mm;page-break-after:always;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}.top,.bot{display:flex;justify-content:space-between;align-items:center;font-size:7pt;line-height:1.1}.top b{font-size:8pt}.who{font-size:8pt;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.bc svg{width:100%;height:11mm;display:block}.nm{text-align:center;font-size:7pt;font-weight:700;direction:ltr}</style></head><body>${pages}</body></html>`;
 }
 // ---------- 🖨️ ورق التجهيز (index.html 11355): من غير أسعار ولا إجماليات ولا اسم العميل. A4 بخط كبير ----------
 export interface PrepSheet {

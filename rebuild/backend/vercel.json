@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd .. && npm install",
+  "buildCommand": "(cd ../shared && npx tsc -p tsconfig.json) && npx prisma generate && npm run build",
+  "outputDirectory": "public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "functions": { "api/index.js": { "maxDuration": 60, "memory": 1024, "includeFiles": "{dist,prisma}/**" } }
+}

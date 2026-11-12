@@ -11,6 +11,7 @@ import { Portal } from '@/components/ui/portal';
 import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { money, qtyText, todayYmd } from '@/lib/format';
+import { SCAN_EVENT } from '@/components/scan/scan-bus';
 import { dimOf, prepSheetHtml, printHtml } from '@/lib/print';
 import {
   lookupProduct,
@@ -516,6 +517,17 @@ export default function DaybookPage() {
     }
   };
 
+  const scanRef = useRef(scanAdd);
+  scanRef.current = scanAdd;
+  useEffect(() => {
+    const h = (e: Event) => {
+      const code = (e as CustomEvent<{ code: string }>).detail?.code;
+      if (code && !document.querySelector('.modal')) void scanRef.current(code);
+    };
+    window.addEventListener(SCAN_EVENT, h);
+    return () => window.removeEventListener(SCAN_EVENT, h);
+  }, []);
+
   const doPost = async (forPerson: string | null) => {
     const L = rows.filter((r) => !r.postedAt && (forPerson === null || r.person === forPerson));
     if (!L.length) return;
@@ -638,6 +650,7 @@ export default function DaybookPage() {
             }}
             placeholder="اكتب اسم الصنف أو الكود..."
             autoComplete="off"
+            data-scan="own"
           />
           <button type="button" className="secondary" id="dbScan" title="امسح باركود" onClick={() => setScanning(true)}>
             📷

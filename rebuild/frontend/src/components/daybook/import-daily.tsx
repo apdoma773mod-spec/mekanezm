@@ -7,7 +7,7 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { money, todayYmd } from '@/lib/format';
-import { fingerprint, groupRows, matchAll, parseAoa, vn, type ImpGroup, type ImpRow, type ImpSheet } from '@/lib/import-daily';
+import { fingerprint, groupRows, matchAll, parseAoa, pasteToAoa, vn, type ImpGroup, type ImpRow, type ImpSheet } from '@/lib/import-daily';
 import { invalidateTrade } from '@/lib/trade-queries';
 
 /** 📥 استيراد يومية من Excel — نفس شاشة القديم: ملف، ورقة، تاريخ، تجميع الصفوف، مطابقة الأصناف، تأكيد. */
@@ -39,18 +39,46 @@ async function fetchAll<T>(path: string, query: Record<string, string> = {}): Pr
 
 const btnSm = { padding: '3px 8px', fontSize: 12 } as const;
 
+/** أول كام صف فيهم كلام من الورقة — عشان نوري صاحب المحل السيستم شاف إيه لما مالقاش الجدول. */
+const peek = (aoa: unknown[][]) =>
+  aoa
+    .map((r) => (r || []).map((v) => (v instanceof Date ? v.toLocaleDateString('en-GB') : String(v ?? '').trim())).filter(Boolean))
+    .filter((r) => r.length)
+    .slice(0, 4)
+    .map((r) => r.slice(0, 6).join(' | '));
+
+const NEED = 'لازم الجدول يكون فيه صف عناوين فيه الثلاثة دول: «الصنف» (أو المنتج/البيان) + «عدد» (أو الكمية) + «سعر». واختياري: الإجمالي، اسم العميل، طريقة الدفع، ملاحظات.';
+
 export function ImportDailyButton({ children }: { children: React.ReactNode }) {
-  const toast = useToast();
   const file = useRef<HTMLInputElement>(null);
   const [sheets, setSheets] = useState<ImpSheet[] | null>(null);
+  const [problem, setProblem] = useState<{ title: string; lines: string[] } | null>(null);
+  const [paste, setPaste] = useState(false);
+  const [text, setText] = useState('');
+  const [pasteErr, setPasteErr] = useState('');
   // the library loads ahead, so the tap opens the file picker straight away (iPhone drops the picker after an await)
   useEffect(() => {
     loadXlsx().catch(() => undefined);
   }, []);
+  const readPaste = () => {
+    const aoa = pasteToAoa(text);
+    const p = parseAoa(aoa);
+    if (!p || !p.rows.length) {
+      const seen = peek(aoa);
+      return setPasteErr(`ما لقيتش جدول يومية في اللي لصقته. ${NEED}${seen.length ? `\n\nاللي وصلني:\n${seen.join('\n')}` : ''}`);
+    }
+    setPaste(false);
+    setText('');
+    setPasteErr('');
+    setSheets([{ name: 'لصق من إكسل', ...p }]);
+  };
   return (
     <>
       <button type="button" className="secondary" onClick={() => file.current?.click()}>
         {children}
+      </button>
+      <button type="button" className="secondary" title="لو الملف مش محفوظ: انسخ الجدول من إكسل والصقه هنا" onClick={() => { setPasteErr(''); setPaste(true); }}>
+        📋 لصق من إكسل
       </button>
       <input
         ref={file}
@@ -65,22 +93,69 @@ export function ImportDailyButton({ children }: { children: React.ReactNode }) {
           try {
             X = await loadXlsx();
           } catch (err) {
-            return toast(errorMessage(err), 'bad');
+            return setProblem({ title: 'مكتبة قراءة الإكسل ما اتحملتش', lines: [errorMessage(err), 'اتأكد من النت وجرّب تاني، أو استخدم «📋 لصق من إكسل».'] });
           }
           try {
             const wb = X.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
             const list: ImpSheet[] = [];
+            const seen: string[] = [];
             for (const n of wb.SheetNames) {
-              const p = parseAoa(X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }));
+              const aoa = X.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' });
+              const p = parseAoa(aoa);
               if (p && p.rows.length) list.push({ name: n, ...p });
+              else {
+                const pk = peek(aoa);
+                seen.push(`ورقة «${n}»: ${p ? 'فيها العناوين بس مفيش ولا صف بيع تحتها' : pk.length ? `مفيش صف عناوين — أول اللي فيها: ${pk[0]}` : 'فاضية'}`);
+              }
             }
-            if (!list.length) return toast('ما لقيتش جدول يومية (لازم أعمدة: الصنف، عدد، سعر)', 'bad');
+            if (!list.length) return setProblem({ title: `ما لقيتش جدول يومية في «${f.name}»`, lines: [NEED, ...seen] });
             setSheets(list);
-          } catch {
-            toast('تعذر قراءة الملف', 'bad');
+          } catch (err) {
+            setProblem({ title: `الملف «${f.name}» ما اتقراش`, lines: ['الملف ممكن يكون مفتوح في إكسل ومش محفوظ، أو بايظ، أو نوعه مش إكسل.', `تفاصيل: ${errorMessage(err)}`, 'احفظ الملف وجرّب تاني، أو انسخ الجدول واستخدم «📋 لصق من إكسل».'] });
           }
         }}
       />
+      {problem && (
+        <Modal title={`⚠️ ${problem.title}`} onClose={() => setProblem(null)}>
+          <div style={{ lineHeight: 1.9, fontSize: 14 }}>
+            {problem.lines.map((l, i) => (
+              <p key={i} style={{ margin: '0 0 8px', overflowWrap: 'anywhere' }}>
+                {l}
+              </p>
+            ))}
+          </div>
+          <div className="modal-foot">
+            <button type="button" className="primary" onClick={() => { setProblem(null); setPasteErr(''); setPaste(true); }}>
+              📋 الصق الجدول من إكسل
+            </button>
+            <button type="button" className="secondary" onClick={() => { setProblem(null); file.current?.click(); }}>
+              اختار ملف تاني
+            </button>
+            <button type="button" className="secondary" onClick={() => setProblem(null)}>
+              إغلاق
+            </button>
+          </div>
+        </Modal>
+      )}
+      {paste && (
+        <Modal title="📋 لصق يومية من إكسل" onClose={() => setPaste(false)}>
+          <p style={{ margin: '0 0 8px', lineHeight: 1.8, fontSize: 14 }}>في إكسل: علّم الجدول كله (ومعاه صف العناوين وسطر التاريخ لو موجود) ← نسخ ← والصقه هنا.</p>
+          <textarea rows={9} dir="rtl" autoFocus placeholder={'الصنف\tعدد\tسعر\tالإجمالي'} value={text} onChange={(e) => setText(e.target.value)} style={{ width: '100%', fontSize: 14, padding: 10, border: '1.5px solid var(--border)', borderRadius: 12, whiteSpace: 'pre' }} />
+          {pasteErr && (
+            <div className="form-error" style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {pasteErr}
+            </div>
+          )}
+          <div className="modal-foot">
+            <button type="button" className="primary" disabled={!text.trim()} onClick={readPaste}>
+              اقرا الجدول
+            </button>
+            <button type="button" className="secondary" onClick={() => setPaste(false)}>
+              إلغاء
+            </button>
+          </div>
+        </Modal>
+      )}
       {sheets && <ImportModal sheets={sheets} onClose={() => setSheets(null)} />}
     </>
   );
@@ -97,6 +172,9 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const [rows, setRows] = useState<ImpRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [done, setDone] = useState<{ nos: string[]; total: number; date: string; skipped: number; already: number } | null>(null);
+  // أسطر الملف اللي متسجّلة في اليومية قبل كده في اليوم ده (نفس الصنف والكمية والسعر) — مش هتتسجل تاني
+  const [dup, setDup] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     Promise.all([fetchAll<ProductDto>('/products'), fetchAll<ContactDto>('/contacts', { type: 'CUSTOMER' })])
@@ -132,7 +210,43 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
   const upd = (i: number, patch: Partial<ImpRow>) => setRows((R) => R.map((r, k) => (k === i ? { ...r, ...patch } : r)));
   const setGroup = (gi: number, patch: Partial<ImpRow>) => setRows((R) => R.map((r, k) => (G[gi]?.idx.includes(k) ? { ...r, ...patch } : r)));
 
+  useEffect(() => {
+    const ok = rows.map((r, i) => ({ r, i })).filter(({ r }) => r.pid || r.isNew);
+    if (!ok.length || !iso) {
+      setDup({});
+      return;
+    }
+    let dead = false;
+    const t = setTimeout(() => {
+      // سطر سطر (كل سطر فاتورة لوحده): المطابقة على الصنف والكمية والسعر والعميل، مش على شكل تجميع الفواتير
+      const invoices = ok.map(({ r }) => {
+        const p = r.pid ? byId.get(r.pid) : undefined;
+        const nm = (r.cust || '').trim();
+        return { person: nm || 'يومية', noContact: !nm, paid: 0, note: '', items: [{ productId: p?.id, name: p?.name ?? r.prod, qty: r.qty, price: r.price, pay: r.pay }] };
+      });
+      api
+        .post<{ dup: boolean[][] }>('/daybook-import/check', { date: iso, invoices })
+        .then((res) => {
+          if (dead) return;
+          const m: Record<number, boolean> = {};
+          res.dup.forEach((d, k) => {
+            if (d[0]) m[ok[k]!.i] = true;
+          });
+          setDup(m);
+        })
+        .catch(() => !dead && setDup({}));
+    }, 400);
+    return () => {
+      dead = true;
+      clearTimeout(t);
+    };
+  }, [rows, iso, byId]);
+  const already = rows.filter((_, i) => dup[i]).length;
+
   const tot = rows.reduce((s, r) => s + r.qty * r.price, 0);
+  const rets = sheets[cur].rets;
+  const retTot = rets.reduce((s, r) => s + r.total, 0);
+  const okTot = rows.filter((r) => r.pid || r.isNew).reduce((s, r) => s + r.qty * r.price, 0);
   const bad = rows.filter((r) => !r.pid && !r.isNew).length;
   const credit = rows.filter((r) => r.pay === 'credit').reduce((s, r) => s + r.qty * r.price, 0);
   const need = new Map<string, number>();
@@ -154,7 +268,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
       /* the server checks again on save */
     }
     const skipped = rows.length - ok.length;
-    const msg = `${seenMsg}${skipped ? `${skipped} صنف مش متطابق هيتخطى.\n\n` : ''}هيتسجل ${groups.length} فاتورة بتاريخ ${date} — الإجمالي ${money(ok.reduce((s, r) => s + r.qty * r.price, 0))}.\nالمخزون هيتخصم بعد الموافقة. متأكد؟`;
+    const msg = `${seenMsg}${skipped ? `${skipped} صنف مش متطابق هيتخطى.\n\n` : ''}هيتسجل ${groups.length} فاتورة بتاريخ ${date} — الإجمالي ${money(ok.reduce((s, r) => s + r.qty * r.price, 0))}.\n${rets.length ? `⚠️ فيه ${rets.length} صف مرتجع بـ ${money(retTot)} مش هيتسجل من هنا.\n` : ''}المخزون هيتخصم بعد الموافقة. متأكد؟`;
     if (!window.confirm(msg)) return;
     setBusy(true);
     try {
@@ -172,11 +286,11 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
           }),
         };
       });
-      const res = await api.post<{ invoices: { no: string }[] }>('/daybook-import', { date, sig, force: !!seenMsg, invoices });
+      const res = await api.post<{ invoices: { no: string }[]; skipped?: unknown[] }>('/daybook-import', { date, sig, force: !!seenMsg, invoices });
       invalidateTrade(qc);
       void qc.invalidateQueries({ queryKey: ['daybook'] });
-      toast(`✔ تم استيراد ${res.invoices.length} فاتورة — وظهرت في «📒 يومية المحل» بتاريخ ${date}`);
-      onClose();
+      setBusy(false);
+      setDone({ nos: res.invoices.map((x) => x.no), total: ok.filter((_, k) => !dup[rows.indexOf(ok[k]!)]).reduce((s, r) => s + r.qty * r.price, 0), date, skipped, already: res.skipped?.length ?? already });
     } catch (e) {
       setBusy(false);
       window.alert(`الاستيراد اتلغى — مفيش ولا فاتورة اتسجلت.\n\n${errorMessage(e)}`);
@@ -185,6 +299,7 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
 
   const status = (i: number) => {
     const r = rows[i];
+    if (dup[i]) return <span style={{ color: '#159447', fontWeight: 700 }}>✅ متسجل قبل كده في اليومية — مش هيتسجل تاني</span>;
     if (r.pid) return <span style={{ color: '#159447' }}>✓ متطابق</span>;
     if (r.isNew)
       return (
@@ -213,6 +328,37 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
       </>
     );
   };
+
+  if (done)
+    return (
+      <Modal title="✔ الاستيراد تم" onClose={onClose}>
+        <div style={{ lineHeight: 2, fontSize: 15 }}>
+          <div>
+            اتسجل <b>{done.nos.length}</b> فاتورة بتاريخ <b>{done.date}</b> — الإجمالي <b>{money(done.total)}</b>
+          </div>
+          <div style={{ color: 'var(--muted)', fontSize: 13, overflowWrap: 'anywhere' }}>أرقام الفواتير: {done.nos.join('، ')}</div>
+          <div>المخزون اتخصم، والصفوف ظهرت في «📒 يومية المحل».</div>
+          {done.skipped > 0 && <div style={{ color: '#c0392b' }}>⚠️ {done.skipped} صنف مش متطابق اتخطّى وما اتسجلش.</div>}
+          {done.already > 0 && <div style={{ color: '#159447' }}>✅ {done.already} سطر كانوا متسجلين في اليومية قبل الاستيراد — ما اتكرروش.</div>}
+          {rets.length > 0 && (
+            <div style={{ color: '#b9770e' }}>
+              ⚠️ فيه {rets.length} صف مرتجع بـ {money(retTot)} في الملف ما اتسجلش — سجّله من شاشة «المرتجعات»:
+              {rets.map((r, i) => (
+                <div key={i} style={{ fontSize: 13 }}>
+                  ↩️ {r.prod} — {r.qty} × {money(r.price)} = {money(r.total)}
+                  {r.cust ? ` — ${r.cust}` : ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="modal-foot">
+          <button type="button" className="primary" onClick={onClose}>
+            تمام
+          </button>
+        </div>
+      </Modal>
+    );
 
   return (
     <Modal title="استيراد يومية البيع" onClose={onClose} wide>
@@ -253,6 +399,27 @@ function ImportModal({ sheets, onClose }: { sheets: ImpSheet[]; onClose: () => v
         {credit > 0 && (
           <>
             آجل: <b>{money(credit)}</b> • نقدي: <b>{money(tot - credit)}</b>
+            <br />
+          </>
+        )}
+        {rets.length > 0 && (
+          <details style={{ color: '#b9770e' }}>
+            <summary style={{ cursor: 'pointer' }}>
+              ↩️ مرتجعات في الملف: <b>{rets.length}</b> صف بـ <b>{money(retTot)}</b> — صافي الملف <b>{money(tot - retTot)}</b> (مش هتتسجل من هنا)
+            </summary>
+            {rets.map((r, i) => (
+              <div key={i} style={{ fontSize: 13 }}>
+                ↩️ {r.prod} — {r.qty} × {money(r.price)} = {money(r.total)}
+                {r.cust ? ` — ${r.cust}` : ''}
+                {r.note ? ` • ${r.note}` : ''}
+              </div>
+            ))}
+            <div style={{ fontSize: 13 }}>المرتجع بيرجّع بضاعة للمخزون وفلوس للعميل، فبيتسجل من شاشة «المرتجعات» على فاتورته — الاستيراد بيسجل البيع بس.</div>
+          </details>
+        )}
+        {Math.abs(okTot - tot) > 0.005 && (
+          <>
+            هيتسجل دلوقتي: <b>{money(okTot)}</b> — الفرق عن بيع الملف: <b style={{ color: '#c0392b' }}>{money(tot - okTot)}</b> (أصناف مش متطابقة)
             <br />
           </>
         )}

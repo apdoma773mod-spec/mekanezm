@@ -140,7 +140,16 @@ export const listClosingsQuery = paginationQuery;
 
 export const stockCountInput = z.object({
   items: z
-    .array(z.object({ productId: z.string().min(1).max(64), counted: qtySchema.pipe(z.number().min(0, 'العدد مينفعش بالسالب')) }))
+    .array(
+      z.object({
+        productId: z.string().min(1).max(64),
+        counted: qtySchema.pipe(z.number().min(0, 'العدد مينفعش بالسالب')),
+        /** وقت ما اتعدّ الصنف فعلاً (بتوقيت السيرفر). الجرد بيتحسب على رصيد وقتها، فالبيع اللي حصل بعدها مايتمسحش. */
+        countedAt: z.string().datetime({ offset: true }).optional(),
+        /** للجلسات القديمة اللي اتحفظ فيها رصيد وقت العد بس من غير وقت */
+        baseline: z.number().finite().optional(),
+      }),
+    )
     .min(1, 'اعدّ صنف واحد على الأقل')
     .max(5000),
   note: z.string().trim().max(300).default(''),
@@ -155,6 +164,8 @@ export interface StockCountLine {
   counted: number;
   diff: number;
   cost: number;
+  /** الرصيد بعد الاعتماد (العدد + حركة البيع/الشراء بعد وقت العد) */
+  after?: number;
 }
 
 export interface StockCountDto {

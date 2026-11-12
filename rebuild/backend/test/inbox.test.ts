@@ -105,6 +105,15 @@ describe('whatsapp bridge', () => {
     expect(await prisma.waOrder.count()).toBe(1);
   });
 
+  it('a WhatsApp copy of an order already sent from the site is not a new WhatsApp order', async () => {
+    const o = await prisma.webOrder.create({ data: { customerName: 'سمير', phone: '01012345678', items: [] } });
+    const ref = o.id.slice(0, 8);
+    await bridge('POST', '/wa/submit', { msgId: 'dup1', phone: '01012345678', name: 'سمير', body: ['السلام عليكم، طلب جديد من موقع ميكانيزم', 'رقم الطلب: ' + ref, 'الاسم: سمير'].join(String.fromCharCode(10)) });
+    await bridge('POST', '/wa/submit', { msgId: 'dup2', phone: '01012345678', name: 'سمير', body: 'عايز طلب فلتر' });
+    const rows = await prisma.waOrder.findMany({ orderBy: { msgId: 'asc' } });
+    expect(rows.map((r) => r.status)).toEqual(['ignored', 'new']);
+  });
+
   it('accepts only real images and matches known phones by their last 10 digits', async () => {
     const bad = await bridge('POST', '/photo/submit', { phone: '1', img: 'data:text/plain;base64,aGk=' });
     expect(bad.statusCode).toBe(403);
@@ -121,7 +130,8 @@ describe('whatsapp keyword rules', () => {
     expect((await call(staff, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(403);
     expect((await call(admin, 'PUT', '/inbox/wa-rules', { rules })).statusCode).toBe(200);
     expect((await call(admin, 'GET', '/inbox/wa-rules')).json().rules).toMatchObject({ enabled: true });
-    expect((await bridge('GET', '/rules')).json()).toMatchObject({ rules: [{ type: 'استانلس' }] });
+    const read = (await bridge('GET', '/rules')).json() as { rules: { type: string }[] };
+    expect(read.rules.map((r) => r.type)).toEqual(['استانلس', 'إلغاء إعلانات']); // the opt-out word is added for the bridge only
   });
 
   it('refuses an empty rule list (the bridge would then accept everything)', async () => {

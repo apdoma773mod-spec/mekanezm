@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { Item, Product } from '@/lib/schema';
+import { SpinViewer } from './spin-viewer';
 import { images, orderText, parseSpecs, productPath, productUrl, sectionOf, sectionPath, shopPhones, toItem, videoEmbed, waUrl } from '@/lib/shop';
 import { evProduct } from '@/lib/track';
 import { HAND_LABEL, type HandInfo } from '@/lib/hand';
@@ -33,6 +34,8 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
   const vid = videoEmbed(p.video);
   const phone = shopPhones(site)[0] || site.phone;
   const n = cart[p.id]?.q ?? 0;
+  const spinF = (p.spin ?? []).length >= 8 ? p.spin : [];
+  const [view, setView] = useState<'spin' | 'photos'>(spinF.length ? 'spin' : 'photos');
   const [i, setI] = useState(0);
   const [q, setQ] = useState(1);
   const strip = useRef<HTMLDivElement>(null);
@@ -72,7 +75,12 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
       </div>
       <div className="pvwrap">
         <div className="pvg">
-          <div style={{ position: 'relative' }}>
+          {spinF.length > 0 && <div className="spin-tabs" style={{ marginBottom: 8 }}>
+            <button type="button" className={view === 'spin' ? 'on' : ''} onClick={() => setView('spin')}>🔄 360°</button>
+            <button type="button" className={view === 'photos' ? 'on' : ''} onClick={() => setView('photos')}>📷 صور</button>
+          </div>}
+          {view === 'spin' && spinF.length > 0 && <div className="framed"><SpinViewer frames={spinF} alt={p.name} /></div>}
+          <div style={{ position: 'relative', display: view === 'spin' && spinF.length > 0 ? 'none' : undefined }}>
             <div className="pvs framed" ref={strip} style={{ position: 'relative' }}
               onScroll={e => { const s = e.currentTarget; const k = Math.round(Math.abs(s.scrollLeft) / s.clientWidth); if (k !== i) setI(k); }}>
               {im.length ? im.map((x, k) => (
@@ -87,7 +95,7 @@ export function ProductView({ p, ok, sim, comp = [], prev, next, brand, works = 
               <span className="pvcnt" dir="ltr">{i + 1} / {im.length}</span>
             </>}
           </div>
-          {im.length > 1 && <>
+          {im.length > 1 && !(view === 'spin' && spinF.length > 0) && <>
             <div className="pvdots" aria-hidden="true">{im.map((x, k) => <i key={x} className={k === i ? 'on' : ''} />)}</div>
             <div className="pvth" ref={thumbs}>{im.map((x, k) => (
               <button key={x} className={k === i ? 'on' : ''} onClick={() => go(k)} aria-label={`صورة ${k + 1}`}>

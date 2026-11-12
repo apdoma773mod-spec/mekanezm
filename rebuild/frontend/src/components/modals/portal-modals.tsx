@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { useMakePortalLink, useMarkPortalSeen, usePortalLink, usePortalMsgs, useStopPortalLink, type PortalMsg } from '@/lib/portal-queries';
 import { useContact } from '@/lib/trade-queries';
+import { useOrderSale } from '@/lib/use-order-sale';
 import { useModal } from './modal-host';
 
 const when = (t: string) => new Date(t).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
@@ -122,6 +123,7 @@ export function PortalNew() {
   const { open, close } = useModal();
   const list = usePortalMsgs({ unseen: true });
   const seen = useMarkPortalSeen();
+  const toInvoice = useOrderSale();
   return (
     <Modal title={`🔗 طلبات العملاء الجديدة (${list.data?.length ?? 0})`} onClose={close}>
       {list.isPending && <Loading />}
@@ -143,6 +145,16 @@ export function PortalNew() {
             <button
               type="button"
               className="primary"
+              onClick={async () => {
+                await seen.mutateAsync({ id: m.id });
+                await toInvoice({ text: m.body, person: m.name, contactId: m.contactId, note: 'من رسالة العميل (رابطه)' });
+              }}
+            >
+              🧾 تحويل لفاتورة
+            </button>
+            <button
+              type="button"
+              className="secondary"
               onClick={async () => {
                 await seen.mutateAsync({ id: m.id });
                 open({ kind: 'contactFile', id: m.contactId });

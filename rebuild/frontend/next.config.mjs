@@ -8,9 +8,18 @@ const backend = process.env.BACKEND_URL ?? 'http://127.0.0.1:4000';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  // Self-contained build for Docker / a shop PC. On Vercel its own output is used instead.
+  ...(process.env.VERCEL ? {} : {
+    output: 'standalone',
+    outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  }),
+  // جهاز المحل بيبني النسخة الجديدة في فولدر تاني والقديمة شغالة، وبعدين يبدّل في ثواني (الأيقونة ماتقفش وقت التحديث)
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   poweredByHeader: false,
+  async headers() {
+    // الخطوط مبتتغيرش: الجهاز يحتفظ بيها سنة ومايطلبهاش تاني
+    return [{ source: '/fonts/:file*', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] }];
+  },
   reactStrictMode: true,
   async rewrites() {
     // The browser only ever talks to this origin, so auth cookies stay first-party.

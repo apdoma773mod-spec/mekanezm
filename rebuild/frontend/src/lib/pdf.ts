@@ -59,7 +59,7 @@ export async function htmlToPdf(fullHtml: string): Promise<{ blob: Blob; img: st
   try {
     const el = (doc.body.firstElementChild as HTMLElement | null) ?? doc.body;
     const cv = await withTimeout(
-      w.html2canvas!(el, { scale: IOS() ? 1.5 : 2, backgroundColor: '#fff', useCORS: true, logging: false, imageTimeout: 8000, windowWidth: 794, scrollX: 0, scrollY: 0 }),
+      w.html2canvas!(el, { scale: IOS() && el.scrollHeight > 2600 ? 1.5 : 2, backgroundColor: '#fff', useCORS: true, logging: false, imageTimeout: 8000, windowWidth: 794, scrollX: 0, scrollY: 0 }),
       40000,
     );
     if (cv === 'timeout') throw new Error('timeout');
@@ -67,7 +67,7 @@ export async function htmlToPdf(fullHtml: string): Promise<{ blob: Blob; img: st
     const wmm = 210;
     const hmm = Math.max(297, (cv.height * wmm) / cv.width);
     const pdf = new w.jspdf!.jsPDF({ unit: 'mm', format: [wmm, hmm] });
-    pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, wmm, (cv.height * wmm) / cv.width);
+    pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, wmm, (cv.height * wmm) / cv.width);
     return { blob: pdf.output('blob'), img: cv.toDataURL('image/jpeg', 0.6) };
   } finally {
     frame.remove();
@@ -97,5 +97,39 @@ export async function shareOrSave(blob: Blob, name: string, title: string): Prom
     a.remove();
     URL.revokeObjectURL(u);
   }, 60000);
+  return 'saved';
+}
+
+/**
+ * مشاركة ملف أو كذا ملف مرة واحدة (كل ملف بيوصل لوحده في الواتساب).
+ * 'blocked' = المتصفح (آيفون) رفض لأن التجهيز أخد وقت بعد الدوسة: الملفات جاهزة، والدوسة الجاية بتبعت فورًا.
+ * 'saved' = المتصفح مش بيدعم مشاركة الملفات: اتحفظوا على الجهاز.
+ */
+export async function shareFiles(files: File[], title: string): Promise<'shared' | 'cancelled' | 'blocked' | 'saved'> {
+  const data = { files, title };
+  if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+    try {
+      await navigator.share(data);
+      return 'shared';
+    } catch (e) {
+      const n = (e as Error)?.name;
+      if (n === 'AbortError') return 'cancelled';
+      if (n === 'NotAllowedError') return 'blocked';
+    }
+  }
+  for (const file of files) {
+    const a = document.createElement('a');
+    const u = URL.createObjectURL(file);
+    a.href = u;
+    a.download = file.name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(u);
+    }, 60000);
+    await new Promise((r) => setTimeout(r, 400));
+  }
   return 'saved';
 }

@@ -38,6 +38,8 @@ function header(i: Invoice & { createdBy: InvoiceWithRels['createdBy']; updatedB
     no: i.no,
     status: i.status,
     company: i.company,
+    online: i.online,
+    onlineFrom: i.onlineFrom,
     date: dateToDay(i.date),
     contactId: i.contactId,
     person: i.person,
@@ -76,6 +78,7 @@ export function toInvoiceDto(i: InvoiceWithRels, admin: boolean): InvoiceDto {
       qty: num(it.qty),
       price: num(it.price),
       total: num(it.total),
+      forName: it.forName,
       ...(admin ? { unitCost: num(it.unitCost) } : {}),
     })),
   };
@@ -86,6 +89,7 @@ interface PreparedLine {
   qty: Prisma.Decimal;
   price: Prisma.Decimal;
   total: Prisma.Decimal;
+  forName?: string;
 }
 
 interface Totals {
@@ -154,7 +158,7 @@ async function prepareLines(
     }
     const qty = roundQty(it.qty);
     const price = money(it.price);
-    out.push({ product, qty, price, total: money(qty.times(price)) });
+    out.push({ product, qty, price, total: money(qty.times(price)), forName: it.forName });
   }
   return out;
 }
@@ -163,6 +167,8 @@ async function prepareLines(
  * Writes the lines and moves stock. A sale snapshots the product cost; a purchase records its price as cost.
  * `skipStock` is for the daybook, whose lines already took their goods out of stock.
  */
+import { noteCostRise } from '../products/cost-rises.js';
+
 async function writeLines(
   tx: Prisma.TransactionClient,
   invoice: Invoice,
@@ -184,6 +190,7 @@ async function writeLines(
         total: l.total,
         unitCost: sale ? l.product.cost : l.price,
         position,
+        forName: l.forName ?? '',
       },
     });
     if (!skipStock) {
@@ -198,6 +205,7 @@ async function writeLines(
     }
     if (!sale && !l.price.isZero() && (!l.product.cost.equals(l.price) || l.product.costEst)) {
       // Latest purchase price becomes the product cost, as in the old system.
+      await noteCostRise(tx, l.product, l.price, invoice.no);
       await tx.product.update({ where: { id: l.product.id }, data: { cost: l.price, costEst: false } });
     }
   }
@@ -310,6 +318,8 @@ export async function createInvoiceInTx(
       payMethod: input.payMethod,
       ...(opts.paidSplit ? { paidSplit: opts.paidSplit } : {}),
       source: opts.source ?? '',
+      online: input.kind === 'SALE' && !!input.online,
+      onlineFrom: input.kind === 'SALE' && input.online ? (input.onlineFrom ?? '') : '',
       ...(opts.ic ? { ic: opts.ic, icRef: opts.icRef ?? null } : {}),
       createdById: actor.id,
     },
@@ -413,6 +423,13 @@ export class InvoicesService {
       }
 
       const lines = await prepareLines(tx, before.kind, input.company, input.items, actor);
+      // شاشة قديمة ما بتبعتش «لحساب»: نحتفظ باللي كان مكتوب على نفس الصنف بدل ما يتمسح.
+      const priorFor = before.items.filter((it) => it.forName);
+      for (const l of lines) {
+        if (l.forName !== undefined) continue;
+        const i = priorFor.findIndex((it) => it.productId === l.product.id);
+        if (i >= 0) l.forName = priorFor.splice(i, 1)[0]!.forName;
+      }
       const kept = new Set(lines.map((l) => l.product.id));
       const dropped = before.items.filter((it) => it.productId && !kept.has(it.productId)).map((it) => it.productId!);
       await assertNotSoldSince(tx, before, dropped);
@@ -434,6 +451,7 @@ export class InvoicesService {
         where: { id },
         data: {
           company: input.company,
+          ...(input.online !== undefined && before.kind === 'SALE' ? { online: input.online, onlineFrom: input.online ? (input.onlineFrom ?? before.onlineFrom) : '' } : {}),
           contactId: contact?.id ?? null,
           person: contact?.name ?? input.person,
           phone: input.phone || contact?.phone || '',

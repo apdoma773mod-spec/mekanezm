@@ -10,6 +10,7 @@ export const BRIDGE_SECRET = 'bridge-test-secret';
 
 export async function createTestApp(): Promise<{ app: FastifyInstance; prisma: PrismaClient }> {
   const url = process.env.TEST_DATABASE_URL!;
+  process.env.DATABASE_URL = url; // الاستعلامات المباشرة بتقرا اسم المخطط (schema) من هنا زي الإنتاج
   const prisma = new PrismaClient({ datasources: { db: { url } } });
   const config = loadConfig({
     NODE_ENV: 'test',
@@ -31,7 +32,7 @@ export async function resetDb(prisma: PrismaClient): Promise<void> {
       "Invoice", "InvoiceItem", "Payment", "Return", "Expense", "DaybookEntry", "DayClosing", "StockCount",
       "Quote", "Shipment", "Gift", "Staff", "Attendance", "StaffMove", "StaffPoint", "PunchCode", "Kit", "Sample", "WantedItem",
       "Partner", "PartnerMove", "Vehicle", "VehicleLog", "FieldOrder", "VanStock", "VanMove", "VanClose", "Contract", "OutboundMessage",
-      "SmsIn", "WaOrder", "WaPhoto", "Backup", "WebOrder", "Portal", "PortalMsg"
+      "SmsIn", "WaOrder", "WaPhoto", "Backup", "WebOrder", "WebRequest", "WebCustom", "Portal", "PortalMsg", "Warehouse"
       RESTART IDENTITY CASCADE`,
   );
 }
