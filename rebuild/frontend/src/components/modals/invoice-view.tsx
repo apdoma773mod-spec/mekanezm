@@ -4,7 +4,7 @@ import { Fragment, useState } from 'react';
 import { errorMessage } from '@/lib/api';
 import type { InvoiceDto, SettingsMap } from '@mk/shared';
 import { formatDateTime, money, qtyText } from '@/lib/format';
-import { htmlToPdf, shareOrSave } from '@/lib/pdf';
+import { htmlToPdf, shareFiles, shareOrSave } from '@/lib/pdf';
 import { dimOf, forLabel, invoiceA4Html, invoiceFors, invoiceLabelHtml, prepSheetHtml, printHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useInvNotes, useInvoice, useVoidInvoice } from '@/lib/trade-queries';
@@ -316,16 +316,45 @@ export function InvoiceView({ id }: { id: string }) {
 function SplitBox({ inv, fors, settings }: { inv: InvoiceDto; fors: string[]; settings: SettingsMap | undefined }) {
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
+  /** الملفات اللي اتجهّزت (بالمفتاح): الدوسة التانية بتبعت فورًا من غير تجهيز — ده اللي بيخلّي الإرسال يشتغل على الآيفون. */
+  const [ready, setReady] = useState<Record<string, File>>({});
+  const made = async (key: string, html: string, file: string): Promise<File> => {
+    if (ready[key]) return ready[key];
+    const res = await htmlToPdf(html);
+    const out = new File([res.blob], file, { type: 'application/pdf' });
+    setReady((r) => ({ ...r, [key]: out }));
+    return out;
+  };
+  const send = async (files: File[], title: string) => {
+    const out = await shareFiles(files, title);
+    if (out === 'blocked') toast(files.length > 1 ? `✅ الـ${files.length} ملفات جاهزين — دوس الزرار تاني يتبعتوا` : '✅ الملف جاهز — دوس الزرار تاني يتبعت');
+    if (out === 'saved') toast(files.length > 1 ? `الـ${files.length} ملفات اتحفظوا على الجهاز — ابعتهم من الواتساب` : 'الملف اتحفظ على الجهاز — افتحه وابعته من الواتساب');
+  };
   const share = async (key: string, html: string, file: string, title: string) => {
     setBusy(key);
     try {
-      const res = await htmlToPdf(html);
-      if (typeof res === 'object' && 'blob' in res) {
-        const out = await shareOrSave(res.blob, file, title);
-        if (out === 'saved') toast('الملف اتحفظ على الجهاز — افتحه وابعته من الواتساب');
-      } else toast('ما قدرتش أجهّز الملف — جرّب الطباعة', 'bad');
+      await send([await made(key, html, file)], title);
     } catch {
       toast('ما قدرتش أجهّز الملف — جرّب الطباعة', 'bad');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const keyOf = (n: string) => n || '-';
+  const allReady = fors.every((n) => ready[keyOf(n)]);
+  /** كل زبون ملف لوحده، والكل في إرسال واحد: بيوصلوا في الواتساب ملفات منفصلة يتبعت كل واحد لصاحبه. */
+  const shareEach = async () => {
+    if (!settings) return;
+    setBusy('each');
+    try {
+      const files: File[] = [];
+      for (const [i, n] of fors.entries()) {
+        setBusy(`each ${i + 1}/${fors.length}`);
+        files.push(await made(keyOf(n), invoiceA4Html(inv, settings, { only: n }), `${forLabel(n)}-${inv.no}.pdf`));
+      }
+      await send(files, `كشوف ${inv.no}`);
+    } catch {
+      toast('ما قدرتش أجهّز الملفات — جرّب تاني', 'bad');
     } finally {
       setBusy(null);
     }
@@ -346,6 +375,9 @@ function SplitBox({ inv, fors, settings }: { inv: InvoiceDto; fors: string[]; se
           {busy === 'all' ? '⏳ بيجهّز…' : '📤 إرسال الكشف'}
         </button>
       </div>
+      <button type="button" className="primary sp-each" disabled={!settings || busy !== null} onClick={() => void shareEach()}>
+        {busy?.startsWith('each') ? `⏳ بيجهّز ${busy.slice(5) || ''}…` : allReady ? `📤 ابعت الـ${fors.length} كشوف دلوقتي (كل زبون ملف)` : `📤 ابعت كل الكشوف — ${fors.length} ملفات، كل زبون لوحده`}
+      </button>
       <div className="sp-list">
         {fors.map((n) => {
           const part = inv.items.filter((x) => (x.forName || '').trim() === n);
@@ -365,9 +397,9 @@ function SplitBox({ inv, fors, settings }: { inv: InvoiceDto; fors: string[]; se
                 className="secondary"
                 aria-label={`إرسال صفحة ${forLabel(n)} PDF`}
                 disabled={!settings || busy !== null}
-                onClick={() => settings && void share(n || '-', invoiceA4Html(inv, settings, { only: n }), `${forLabel(n)}-${inv.no}.pdf`, `${forLabel(n)} — ${inv.no}`)}
+                onClick={() => settings && void share(keyOf(n), invoiceA4Html(inv, settings, { only: n }), `${forLabel(n)}-${inv.no}.pdf`, `${forLabel(n)} — ${inv.no}`)}
               >
-                {busy === (n || '-') ? '⏳' : '📤'}
+                {busy === keyOf(n) ? '⏳' : '📤'}
               </button>
             </div>
           );

@@ -99,3 +99,37 @@ export async function shareOrSave(blob: Blob, name: string, title: string): Prom
   }, 60000);
   return 'saved';
 }
+
+/**
+ * مشاركة ملف أو كذا ملف مرة واحدة (كل ملف بيوصل لوحده في الواتساب).
+ * 'blocked' = المتصفح (آيفون) رفض لأن التجهيز أخد وقت بعد الدوسة: الملفات جاهزة، والدوسة الجاية بتبعت فورًا.
+ * 'saved' = المتصفح مش بيدعم مشاركة الملفات: اتحفظوا على الجهاز.
+ */
+export async function shareFiles(files: File[], title: string): Promise<'shared' | 'cancelled' | 'blocked' | 'saved'> {
+  const data = { files, title };
+  if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
+    try {
+      await navigator.share(data);
+      return 'shared';
+    } catch (e) {
+      const n = (e as Error)?.name;
+      if (n === 'AbortError') return 'cancelled';
+      if (n === 'NotAllowedError') return 'blocked';
+    }
+  }
+  for (const file of files) {
+    const a = document.createElement('a');
+    const u = URL.createObjectURL(file);
+    a.href = u;
+    a.download = file.name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(u);
+    }, 60000);
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return 'saved';
+}

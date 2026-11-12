@@ -1086,3 +1086,4 @@ body .field input[type=checkbox]{border-radius:4px}
 .splitbox .sp-who small{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}.splitbox .sp-who small span{color:var(--blue);font-weight:700}
 .splitbox .sp-row button{width:46px;height:44px;min-height:44px!important;padding:0!important;font-size:19px;border-radius:10px}
 .splitbox .sp-foot{display:block;margin-top:8px;text-align:center}
+.splitbox .sp-each{width:100%;margin-top:8px;padding:12px 8px!important;font-size:15px}
