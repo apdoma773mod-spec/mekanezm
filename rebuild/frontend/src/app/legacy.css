@@ -1065,3 +1065,9 @@ body.mkpro.mkdark .modal .txtop,body.mkpro.mkdark .modal .txfoot{background:var(
 .txl.txo{border:2px solid var(--blue)!important;box-shadow:0 4px 14px #0001}
 .txl .txrow{display:flex;gap:10px;align-items:flex-end;margin-top:8px;flex-wrap:wrap}
 .txl .txdone{width:100%;margin-top:10px}
+/* زرار الاختيار (radio/checkbox) جوّه .field كان بياخد شكل خانة الكتابة (عرض كامل + إطار) فيبقى مربع كبير والكلام يطلع بره */
+body .field input[type=radio],body .field input[type=checkbox],body.mkpro .field input[type=radio],body.mkpro .field input[type=checkbox],body.mkpro.mkdark .field input[type=radio],body.mkpro.mkdark .field input[type=checkbox]{width:22px!important;height:22px!important;min-width:22px;min-height:0!important;flex:none!important;padding:0!important;margin:0!important;border:0!important;background:none!important;box-shadow:none!important;border-radius:50%}
+body .field input[type=checkbox]{border-radius:4px}
+.delopt{display:grid!important;grid-template-columns:1fr;gap:8px}
+.delopt label{display:flex!important;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-size:15px;line-height:1.4;min-width:0}
+@media(min-width:700px){.delopt{grid-template-columns:repeat(3,minmax(0,1fr))}}
