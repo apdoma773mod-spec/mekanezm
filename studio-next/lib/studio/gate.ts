@@ -132,10 +132,14 @@ export function gate(){
       const nm = ls.get('mkz-gate-name'), ph = ls.get('mkz-gate-phone');
       const r = await sb.rpc('studio_my_sub', { p_name: nm || null, p_phone: ph || null, p_src: 'web' });
       if (r.error) { if (/jwt|not_signed_in|invalid/i.test(r.error.message)) { await sb.auth.signOut().catch(() => { }); return showLogin('in'); } throw r.error; }
-      const s = r.data; window.mkzSub = s;
+      const s = r.data; window.mkzSub = s; if (s && (s.status === 'trial' || s.status === 'active' || s.status === 'admin')) ls.set('mkz-sub-last', JSON.stringify({ t: Date.now(), s }));
       if (s.status === 'trial' || s.status === 'active' || s.status === 'admin') { hideOverlay(); paintBar(s); try { const u = (await sb.auth.getUser()).data.user; if (u) accountCard(u.email) } catch (e) { } if (!timer) timer = setInterval(() => check(), 5 * 60 * 1000); }
       else { if (bar) { bar.remove(); bar = null } showBlocked(s.status, s); }
     } catch (e) {
+      /* السيرفر واقف مؤقتًا (حد الاستهلاك أو النت): لو آخر حالة اشتراك معروفة كانت شغالة من أقل من ١٤ يوم، الستوديو يكمّل شغل بيها بدل ما يتقفل */
+      try { const L = JSON.parse(ls.get('mkz-sub-last') || 'null'); if (L && L.s && Date.now() - L.t < 14 * 864e5) { window.mkzSub = L.s; hideOverlay(); paintBar(L.s); if (bar) bar.insertAdjacentHTML('beforeend', ' <span title="السيرفر واقف مؤقتًا">⚠️ أوفلاين</span>'); if (!timer) timer = setInterval(() => check(), 5 * 60 * 1000); return; } } catch (x) { }
+      /* ولسه مفيش حالة محفوظة: لو الجهاز ده كان مسجّل دخول قبل كده والسيرفر واقف (مش دخول غلط)، نسيب الستوديو يشتغل */
+      try { const down = /exceed|restricted|quota|fetch|network|failed|5\d\d|402/i.test(String((e && (e.message || e.code)) || '') + ' ' + String((e && e.status) || '')); const hasSes = Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k) || k === 'mkz-mk-auth'); if (down && hasSes) { hideOverlay(); if (!bar) { bar = E('div', { id: 'gt-bar' }); document.body.prepend(bar); } bar.className = 'warn'; bar.textContent = '⚠️ السيرفر واقف مؤقتًا — الستوديو شغال أوفلاين (الذكاء والنشر مش هيشتغلوا لحد ما يرجع)'; if (!timer) timer = setInterval(() => check(), 5 * 60 * 1000); return; } } catch (x) { }
       overlay(`<h1>🎬 ميكانيزم ستوديو</h1><p class="sub">${esc(errAr(e.message))}</p><button id="gt-rt">جرّب تاني</button>`); $('#gt-rt').onclick = () => { checking = false; check(true) };
     } finally { checking = false; }
   }
