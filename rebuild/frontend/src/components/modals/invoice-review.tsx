@@ -15,6 +15,8 @@ interface Row extends Partial<Match> {
   code: string;
   qty: number;
   price: number;
+  /** خصم المورد % على البند (السعر فوق = سعر المورد قبل الخصم) */
+  disc: number;
   inc: boolean;
   newName: string;
   open: boolean;
@@ -25,6 +27,16 @@ interface Row extends Partial<Match> {
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+/** السعر بعد خصم المورد: ده اللي بيدخل المخزون كتكلفة. */
+const net = (price: number, disc: number) => r2(price * (1 - (disc || 0) / 100));
+/** الفاتورة بتكتب سعر المورد وقيمة البند بعد الخصم (زي «305 × 50 = 13,725» بخصم 10%): الخصم اللي اتحسب لو الفرق واضح. */
+function detectDisc(qty: number, price: number, total: number): number {
+  if (!(qty > 0 && price > 0 && total > 0)) return 0;
+  const full = qty * price;
+  if (total >= full * 0.995 || total < full * 0.2) return 0;
+  const d = (1 - total / full) * 100;
+  return Math.abs(d - Math.round(d)) < 0.06 ? Math.round(d) : r2(d);
+}
 const num = (n: number) => Number(n || 0).toLocaleString('ar-EG', { maximumFractionDigits: 2 });
 
 /** What the review hands back: the read invoice with each kept line already pointed at a product (or a new name). */
@@ -85,8 +97,9 @@ export function InvoiceReview({
         const qty = Number(x.qty) > 0 ? Number(x.qty) : 1;
         let price = Number(x.price) >= 0 && x.price != null ? Number(x.price) : 0;
         if (!(price > 0) && Number(x.total) > 0) price = r2(Number(x.total) / qty);
+        const disc = Number(x.disc) > 0 ? Number(x.disc) : detectDisc(qty, price, Number(x.total));
         const text = String(x.text).trim();
-        return { text, code: x.code ?? '', qty, price, inc: true, newName: text, open: false, q: '', ...matchRow(al, supName, { text, code: x.code }, all) };
+        return { text, code: x.code ?? '', qty, price, disc, inc: true, newName: text, open: false, q: '', ...matchRow(al, supName, { text, code: x.code }, all) };
       }),
     );
   }, [al, rows, data.items, supName, all]);
@@ -94,12 +107,13 @@ export function InvoiceReview({
   if (!rows) return null;
   const set = (i: number, p: Partial<Row>) => setRows((rs) => rs!.map((r, j) => (j === i ? { ...r, ...p } : r)));
   const kept = rows.filter((x) => x.inc && !x.skip);
-  const tot = r2(kept.reduce((t, x) => t + x.qty * x.price, 0));
+  const tot = r2(kept.reduce((t, x) => t + x.qty * net(x.price, x.disc), 0));
+  const anyDisc = rows.some((x) => x.disc > 0);
 
   // 📊 read count + sum against the invoice's written total
   const c = data._check ?? {};
   const L = rows.filter((x) => !x.manual);
-  const sum = r2(L.reduce((t, x) => t + (x.qty || 0) * (x.price || 0), 0));
+  const sum = r2(L.reduce((t, x) => t + (x.qty || 0) * net(x.price || 0, x.disc), 0));
   const gt = Number(c.grand_total) || 0;
   const diff = r2(gt - sum);
   const nrows = Number(c.rows) || 0;
@@ -168,7 +182,7 @@ export function InvoiceReview({
   const addMissing = () => {
     const n = window.prompt('اسم الصنف الناقص زي ما هو في الفاتورة')?.trim();
     if (!n) return;
-    setRows((rs) => [...rs!, { text: n, code: '', qty: 1, price: 0, inc: true, newName: n, open: false, manual: true, q: '', ...matchRow(al ?? {}, supName, { text: n }, all) }]);
+    setRows((rs) => [...rs!, { text: n, code: '', qty: 1, price: 0, disc: 0, inc: true, newName: n, open: false, manual: true, q: '', ...matchRow(al ?? {}, supName, { text: n }, all) }]);
     setTimeout(() => {
       const els = document.querySelectorAll('#mkInv .ivrow');
       const r = els[els.length - 1];
@@ -199,7 +213,7 @@ export function InvoiceReview({
       {
         ...data,
         supplier: supName,
-        items: use.map((x) => ({ text: x.text, code: x.code, qty: x.qty, price: x.price, pid: x.pid ?? undefined, newName: x.pid ? undefined : x.newName })),
+        items: use.map((x) => ({ text: x.text, code: x.code, qty: x.qty, price: x.price, disc: x.disc > 0 ? x.disc : undefined, pid: x.pid ?? undefined, newName: x.pid ? undefined : x.newName })),
       },
       supName,
     );
@@ -274,6 +288,25 @@ export function InvoiceReview({
           </button>
         </div>
       </div>
+      <div className="card" style={{ marginBottom: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <b>🏷️ خصم المورد %</b>
+        <input
+          type="number"
+          min={0}
+          max={99}
+          step="0.5"
+          placeholder="0"
+          style={{ width: 80, padding: 8, textAlign: 'center' }}
+          value={rows.length && rows.every((x) => x.disc === rows[0]!.disc) && rows[0]!.disc > 0 ? rows[0]!.disc : ''}
+          onChange={(e) => {
+            const v = Math.min(99, Math.max(0, +e.target.value || 0));
+            setRows((rs) => rs!.map((x) => ({ ...x, disc: v })));
+          }}
+        />
+        <small style={{ color: 'var(--muted)', flex: 1, minWidth: 160 }}>
+          {anyDisc ? 'اتحسب من الفاتورة. السعر اللي بيدخل المخزون بعد الخصم. صفّره لو المورد ماحطش خصم.' : 'لو المورد حاطط خصم على الأصناف اكتبه هنا (أو على كل بند لوحده).'}
+        </small>
+      </div>
       {rows.map((it, i) => (
         <div key={i} className={`ivrow${it.inc ? '' : ' off'}`} data-i={i}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
@@ -292,12 +325,16 @@ export function InvoiceReview({
               <input type="number" min={0} step="0.01" value={it.qty} onChange={(e) => set(i, { qty: +e.target.value })} />
             </div>
             <div>
-              <small>سعر الشراء</small>
+              <small>{anyDisc ? 'سعر المورد' : 'سعر الشراء'}</small>
               <input type="number" min={0} step="0.01" value={it.price} onChange={(e) => set(i, { price: +e.target.value })} />
             </div>
+            <div>
+              <small>خصم %</small>
+              <input type="number" min={0} max={99} step="0.5" value={it.disc || ''} placeholder="0" onChange={(e) => set(i, { disc: Math.min(99, Math.max(0, +e.target.value || 0)) })} />
+            </div>
             <div style={{ flex: 1 }}>
-              <small>الإجمالي</small>
-              <b>{num(it.qty * it.price)}</b>
+              <small>{it.disc > 0 ? `الإجمالي (السعر بعد الخصم ${num(net(it.price, it.disc))})` : 'الإجمالي'}</small>
+              <b>{num(it.qty * net(it.price, it.disc))}</b>
             </div>
           </div>
           {it.open && pickList(it, i)}

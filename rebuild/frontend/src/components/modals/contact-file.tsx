@@ -100,6 +100,11 @@ export function ContactFile({ id }: { id: string }) {
         <div>
           التليفون: <b dir="ltr">{c.phone || '—'}</b>
         </div>
+        {c.phones?.map((p) => (
+          <div key={p.n}>
+            <small style={{ color: 'var(--muted)' }}>{p.l || 'رقم تاني'}:</small> <b dir="ltr">{p.n}</b>
+          </div>
+        ))}
         <div>
           العنوان: <b>{c.address || '—'}</b>
         </div>

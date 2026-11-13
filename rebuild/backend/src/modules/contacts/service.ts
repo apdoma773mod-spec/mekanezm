@@ -3,6 +3,7 @@ import type {
   ContactDto,
   ContactInput,
   ContactStatement,
+  ExtraPhone,
   ListContactsQuery,
   Paginated,
   StatementLine,
@@ -15,7 +16,14 @@ import { writeAudit } from '../../lib/audit.js';
 import { dateToDay, dayToDate, todayYmd } from '../../lib/dates.js';
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { D, ZERO, money, num } from '../../lib/money.js';
+import { tbl } from '../../lib/db-schema.js';
 import { withTx } from '../../lib/tx.js';
+
+/** The extra numbers as saved ([] when empty or malformed). */
+export const cleanPhones = (v: unknown): ExtraPhone[] =>
+  (Array.isArray(v) ? v : [])
+    .map((x) => ({ n: String((x as ExtraPhone)?.n ?? ''), l: String((x as ExtraPhone)?.l ?? '') }))
+    .filter((x) => x.n);
 
 export function toContactDto(c: Contact): ContactDto {
   return {
@@ -23,6 +31,8 @@ export function toContactDto(c: Contact): ContactDto {
     type: c.type,
     name: c.name,
     phone: c.phone,
+    phones: cleanPhones(c.phones),
+    buyDisc: num(c.buyDisc),
     address: c.address,
     note: c.note,
     balance: num(c.balance),
@@ -90,13 +100,14 @@ export class ContactsService {
 
   async list(query: ListContactsQuery): Promise<Paginated<ContactDto>> {
     const q = query.q?.trim();
+    // 📞 البحث برقم تاني (صاحب المؤسسة / موظف / أرضي) بيلاقي نفس العميل
+    const digits = (q ?? '').replace(/\D/g, '');
+    const phoneIds = digits.length >= 4 ? await this.idsByExtraPhone(digits) : [];
     const where: Prisma.ContactWhereInput = {
       deletedAt: null,
       ...(query.type ? { type: query.type } : {}),
       ...(query.withBalance ? { balance: { not: 0 } } : {}),
-      ...(q
-        ? { OR: [...arContains('name', q), { phone: { contains: q } }] }
-        : {}),
+      ...(q ? { OR: [...arContains('name', q), { phone: { contains: q } }, ...(phoneIds.length ? [{ id: { in: phoneIds } }] : [])] } : {}),
     };
     const orderBy: Prisma.ContactOrderByWithRelationInput =
       query.sort === 'balance' ? { balance: 'desc' } : query.sort === 'recent' ? { updatedAt: 'desc' } : { name: 'asc' };
@@ -105,6 +116,13 @@ export class ContactsService {
       this.prisma.contact.count({ where }),
     ]);
     return { items: rows.map(toContactDto), total, page: query.page, pageSize: query.pageSize };
+  }
+
+  private async idsByExtraPhone(digits: string): Promise<string[]> {
+    const rows = await this.prisma
+      .$queryRaw<{ id: string }[]>`SELECT id FROM ${tbl('Contact')} WHERE "deletedAt" IS NULL AND jsonb_array_length(phones) > 0 AND regexp_replace(phones::text, '[^0-9]', '', 'g') LIKE ${'%' + digits + '%'} LIMIT 200`
+      .catch(() => []);
+    return rows.map((r) => r.id);
   }
 
   async get(id: string): Promise<ContactDto> {
@@ -117,7 +135,8 @@ export class ContactsService {
         throw conflict(`فيه ${TYPE_LABEL[input.type]} بنفس الاسم`, [{ path: 'name', message: 'الاسم مستخدم' }]);
       }
       const opening = money(input.openingBalance);
-      const created = await tx.contact.create({ data: { ...input, openingBalance: opening, balance: opening } });
+      const { phones, ...rest } = input;
+      const created = await tx.contact.create({ data: { ...rest, ...(phones ? { phones: phones as unknown as Prisma.InputJsonValue } : {}), openingBalance: opening, balance: opening } });
       await writeAudit(tx, {
         userId: actor.id,
         action: 'CONTACT_CREATE',
@@ -137,7 +156,8 @@ export class ContactsService {
       if (input.name && (await findByName(tx, before.type, input.name, id))) {
         throw conflict(`فيه ${TYPE_LABEL[before.type]} بنفس الاسم`, [{ path: 'name', message: 'الاسم مستخدم' }]);
       }
-      const updated = await tx.contact.update({ where: { id }, data: input });
+      const { phones, ...rest } = input;
+      const updated = await tx.contact.update({ where: { id }, data: { ...rest, ...(phones ? { phones: phones as unknown as Prisma.InputJsonValue } : {}) } });
       await writeAudit(tx, {
         userId: actor.id,
         action: 'CONTACT_UPDATE',

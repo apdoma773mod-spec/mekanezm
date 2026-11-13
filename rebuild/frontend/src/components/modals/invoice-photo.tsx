@@ -14,7 +14,7 @@ export interface ReadInvoice {
   supplier?: string;
   invoice_no?: string;
   date?: string;
-  items: { text?: string; code?: string; qty?: number; unit?: string; price?: number; total?: number; pid?: string; newName?: string }[];
+  items: { text?: string; code?: string; qty?: number; unit?: string; price?: number; total?: number; disc?: number; pid?: string; newName?: string }[];
   notes?: string;
   pno?: string;
   _check?: { n?: number; rows?: number; sum?: number; grand_total?: number; discount?: number; ok?: boolean; strips?: number; pages?: number };

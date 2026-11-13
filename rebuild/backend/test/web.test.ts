@@ -127,7 +127,11 @@ describe('website: back in stock + insights', () => {
     await prisma.product.update({ where: { code: 'B1' }, data: { qty: 5 } });
     expect(await notifyBackInStock(prisma)).toBe(1);
     expect(await notifyBackInStock(prisma)).toBe(0);
-    const m = await prisma.outboundMessage.findMany();
+    // الطلب نفسه بيبعت كمان تنبيه للمالك (نوع «عميل مستني منتج»): الرسالة اللي تهمنا هنا هي اللي رايحة للعميل
+    const owner = await prisma.outboundMessage.findMany({ where: { toPhone: { not: '201001112223' } } });
+    expect(owner.length).toBeGreaterThan(0);
+    expect(owner[0].body).toContain('عميل مستني منتج يتوفر');
+    const m = await prisma.outboundMessage.findMany({ where: { toPhone: '201001112223' } });
     expect(m).toHaveLength(1);
     expect(m[0].toPhone).toBe('201001112223');
     expect(m[0].body).toContain('مقبض ذهبي');

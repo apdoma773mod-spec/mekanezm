@@ -302,6 +302,10 @@ model Contact {
   type           ContactType
   name           String
   phone          String      @default("")
+  /// أرقام تانية: [{n:"010…", l:"صاحب المؤسسة" | "موظف" | "أرضي"}]. الرقم الأساسي فوق في phone (اللي الواتساب والفواتير بيستخدموه).
+  phones         Json        @default("[]")
+  /// مورد: آخر خصم % حطه في فاتورة شراء — بيتحط تلقائي في الفاتورة الجاية وتقدر تغيّره أو تصفّره.
+  buyDisc        Decimal     @default(0) @db.Decimal(5, 2)
   address        String      @default("")
   note           String      @default("")
   /// Customer: what they owe us. Supplier: what we owe them. Kept in step with every invoice, payment and return.
@@ -383,6 +387,10 @@ model InvoiceItem {
   total     Decimal  @db.Decimal(14, 2)
   /// Cost per unit when the line was saved: product cost for a sale, the purchase price for a purchase.
   unitCost  Decimal  @db.Decimal(14, 2)
+  /// فاتورة شراء: خصم المورد % على البند. السعر (price) هو بعد الخصم — ده اللي بيدخل المخزون كتكلفة.
+  discPct   Decimal  @default(0) @db.Decimal(5, 2)
+  /// سعر المورد قبل الخصم (0 = من غير خصم).
+  listPrice Decimal  @default(0) @db.Decimal(14, 2)
   position  Int
   /// «لحساب مين»: the end customer this line is for (an engineer's invoice split per his clients). "" = not said.
   forName   String   @default("")

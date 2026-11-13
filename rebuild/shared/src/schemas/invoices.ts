@@ -12,6 +12,8 @@ export const invoiceItemInput = z
     price: moneySchema,
     /** «لحساب»: اسم الزبون اللي البند ده بتاعه (اختياري). Left out = unchanged on edit. */
     forName: z.string().trim().max(120).optional(),
+    /** فاتورة شراء: خصم المورد % على البند. `price` هنا = سعر المورد قبل الخصم، والسيرفر بيحسب السعر بعد الخصم (اللي بيدخل المخزون). */
+    discPct: z.coerce.number().min(0).max(99.99).optional(),
   })
   .refine((v) => v.productId || v.name, { message: 'اختار صنف أو اكتب اسمه', path: ['name'] });
 export type InvoiceItemInput = z.infer<typeof invoiceItemInput>;
@@ -32,6 +34,8 @@ export const invoiceInput = z.object({
   note: z.string().trim().max(1000).default(''),
   shipping: moneySchema.default(0),
   discount: moneySchema.default(0),
+  /** مورد: الخصم % اللي اتحط على الأصناف — بيتحفظ على المورد ويتحط تلقائي في الفاتورة الجاية. */
+  supplierDisc: z.coerce.number().min(0).max(99.99).optional(),
   /** Amount paid now. Defaults to the full total (cash sale). */
   paid: moneySchema.optional(),
   payMethod: z.enum(PAY_METHODS).default('CASH'),
@@ -77,8 +81,13 @@ export interface InvoiceItemDto {
   name: string;
   unit: string;
   qty: number;
+  /** بعد خصم المورد (لو فيه): ده اللي بيدخل المخزون كتكلفة. */
   price: number;
   total: number;
+  /** فاتورة شراء: خصم المورد % على البند (0 = من غير خصم). */
+  discPct: number;
+  /** سعر المورد قبل الخصم (= price لو مفيش خصم). */
+  listPrice: number;
   /** «لحساب»: the end customer this line is for ("" = not said). */
   forName: string;
   /** Only present for admins. */

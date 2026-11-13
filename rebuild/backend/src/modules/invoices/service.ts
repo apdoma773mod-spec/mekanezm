@@ -13,7 +13,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { COUNTER, nextNumber } from '../../lib/counters.js';
 import { dateToDay, dayRange, dayToDate, todayYmd } from '../../lib/dates.js';
 import { badRequest, notFound } from '../../lib/errors.js';
-import { ZERO, money, num, qty as roundQty, sum } from '../../lib/money.js';
+import { D, ZERO, money, num, qty as roundQty, sum } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
 import { alertInvoiceSaved, alertInvoiceVoided } from '../../lib/alert-hooks.js';
@@ -78,6 +78,8 @@ export function toInvoiceDto(i: InvoiceWithRels, admin: boolean): InvoiceDto {
       qty: num(it.qty),
       price: num(it.price),
       total: num(it.total),
+      discPct: num(it.discPct),
+      listPrice: it.listPrice.greaterThan(0) ? num(it.listPrice) : num(it.price),
       forName: it.forName,
       ...(admin ? { unitCost: num(it.unitCost) } : {}),
     })),
@@ -90,6 +92,9 @@ interface PreparedLine {
   price: Prisma.Decimal;
   total: Prisma.Decimal;
   forName?: string;
+  /** خصم المورد % وسعره قبل الخصم (فاتورة شراء بس): price/total هنا بعد الخصم */
+  discPct?: Prisma.Decimal;
+  listPrice?: Prisma.Decimal;
 }
 
 interface Totals {
@@ -157,8 +162,13 @@ async function prepareLines(
       }
     }
     const qty = roundQty(it.qty);
-    const price = money(it.price);
-    out.push({ product, qty, price, total: money(qty.times(price)), forName: it.forName });
+    const list = money(it.price);
+    // 🏷️ خصم المورد (شراء بس): السعر اللي بيدخل المخزون كتكلفة هو بعد الخصم، والإجمالي بيتحسب من السعر الكامل مرة واحدة (من غير تقريب مرتين)
+    const disc = kind === 'PURCHASE' && it.discPct && it.discPct > 0 ? D(it.discPct).toDecimalPlaces(2) : D(0);
+    const factor = D(1).minus(disc.div(100));
+    const price = disc.isZero() ? list : money(list.times(factor));
+    const total = disc.isZero() ? money(qty.times(price)) : money(qty.times(list).times(factor));
+    out.push({ product, qty, price, total, forName: it.forName, ...(disc.isZero() ? {} : { discPct: disc, listPrice: list }) });
   }
   return out;
 }
@@ -196,6 +206,8 @@ async function writeLines(
         unitCost: sale ? l.product.cost : l.price,
         position,
         forName: l.forName ?? '',
+        discPct: l.discPct ?? 0,
+        listPrice: l.listPrice ?? 0,
       },
     });
     if (!skipStock) {
@@ -269,6 +281,13 @@ async function resolveContact(
   return findOrCreateContact(tx, type, { name: input.person, phone: input.phone, address: input.address }, actor);
 }
 
+/** المورد بيفتكر آخر خصم % اتحط في فاتورة شراء منه (0 = مفيش خصم)، والفاتورة الجاية بتبدأ بيه. */
+async function rememberSupplierDisc(tx: Prisma.TransactionClient, kind: Invoice['kind'], contact: Contact | null, pct: number | undefined) {
+  if (kind !== 'PURCHASE' || !contact || pct === undefined) return;
+  const v = D(pct).toDecimalPlaces(2);
+  if (!contact.buyDisc.equals(v)) await tx.contact.update({ where: { id: contact.id }, data: { buyDisc: v } });
+}
+
 function settle(total: Prisma.Decimal, paidIn: number | undefined, contact: Contact | null) {
   const paid = paidIn === undefined ? total : money(paidIn);
   const remaining = money(total.minus(paid));
@@ -301,6 +320,7 @@ export async function createInvoiceInTx(
   const lines = await prepareLines(tx, input.kind, input.company, input.items, actor);
   const totals = computeTotals(lines, input.discount, input.shipping);
   const contact = opts.noContact ? null : await resolveContact(tx, input.kind, input, actor);
+  await rememberSupplierDisc(tx, input.kind, contact, input.supplierDisc);
   const { paid, remaining } = settle(totals.total, input.paid, contact);
   if (remaining.isNegative()) {
     throw badRequest('المدفوع أكبر من إجمالي الفاتورة', [{ path: 'paid', message: 'المدفوع أكبر من الإجمالي' }]);
@@ -445,6 +465,7 @@ export class InvoicesService {
       const totals = computeTotals(lines, input.discount, input.shipping);
       const contact = await resolveContact(tx, before.kind, input, actor);
       // Editing may leave the invoice overpaid; the negative remaining becomes credit on the contact.
+      await rememberSupplierDisc(tx, before.kind, contact, input.supplierDisc);
       const { paid, remaining } = settle(totals.total, input.paid ?? num(before.paid), contact);
       if (remaining.isNegative() && !contact) {
         throw badRequest('المدفوع أكبر من الإجمالي، اختار العميل عشان الفرق يتسجل له', [

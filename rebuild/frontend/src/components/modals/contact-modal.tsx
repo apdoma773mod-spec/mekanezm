@@ -46,6 +46,10 @@ function ContactForm({ contact: c, fixedType, preset }: { contact?: ContactDto; 
     openingBalance: '0',
     note: c?.note ?? '',
   });
+  /** أرقام تانية بمسمياتها (الرقم الأساسي فوق في «الهاتف»). */
+  const [extra, setExtra] = useState<{ n: string; l: string }[]>(() => (c?.phones ?? []).map((p) => ({ n: p.n, l: p.l })));
+  const setX = (i: number, p: Partial<{ n: string; l: string }>) => setExtra((xs) => xs.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const cleanExtra = () => extra.map((x) => ({ n: x.n.trim(), l: x.l.trim() })).filter((x) => x.n);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const back = () => (c ? open({ kind: 'contactFile', id: c.id }) : close());
 
@@ -54,13 +58,13 @@ function ContactForm({ contact: c, fixedType, preset }: { contact?: ContactDto; 
     setErrors({});
     try {
       if (c) {
-        const v = validate(updateContactInput, { name: f.name, phone: f.phone, address: f.address, note: f.note });
+        const v = validate(updateContactInput, { name: f.name, phone: f.phone, phones: cleanExtra(), address: f.address, note: f.note });
         if (!v.ok) return setErrors(v.errors);
         await update.mutateAsync({ id: c.id, input: v.data });
         toast('تم حفظ البيانات');
         open({ kind: 'contactFile', id: c.id });
       } else {
-        const v = validate(contactInput, f);
+        const v = validate(contactInput, { ...f, phones: cleanExtra() });
         if (!v.ok) return setErrors(v.errors);
         const created = await create.mutateAsync(v.data);
         toast('تم حفظ البيانات');
@@ -88,7 +92,27 @@ function ContactForm({ contact: c, fixedType, preset }: { contact?: ContactDto; 
             ]}
           />
           )}
-          <Input label="الهاتف" type="tel" dir="ltr" value={f.phone} onChange={set('phone')} error={errors.phone} />
+          <Input label="الهاتف (الأساسي)" type="tel" dir="ltr" value={f.phone} onChange={set('phone')} error={errors.phone} />
+          <div className="field full cphones">
+            {extra.map((x, i) => (
+              <div key={i} className="cph-row">
+                <input type="tel" dir="ltr" placeholder="رقم تاني" value={x.n} onChange={(e) => setX(i, { n: e.target.value })} />
+                <input placeholder="صاحب الرقم (صاحب المؤسسة، موظف، أرضي…)" value={x.l} list="mk-phone-labels" onChange={(e) => setX(i, { l: e.target.value })} />
+                <button type="button" className="secondary danger" aria-label="شيل الرقم" onClick={() => setExtra((xs) => xs.filter((_, j) => j !== i))}>
+                  ✕
+                </button>
+              </div>
+            ))}
+            {errors.phones && <small style={{ color: 'var(--danger)' }}>{errors.phones}</small>}
+            <datalist id="mk-phone-labels">
+              {['صاحب المؤسسة', 'موظف', 'أرضي', 'واتساب', 'حسابات', 'مبيعات'].map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <button type="button" className="secondary" disabled={extra.length >= 8} onClick={() => setExtra((xs) => [...xs, { n: '', l: '' }])}>
+              ➕ رقم تاني (صاحب المؤسسة / موظف / أرضي)
+            </button>
+          </div>
           {c ? (
             <Input label="العنوان" value={f.address} onChange={set('address')} error={errors.address} />
           ) : (

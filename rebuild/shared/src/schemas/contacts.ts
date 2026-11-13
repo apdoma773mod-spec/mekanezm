@@ -9,10 +9,16 @@ export const contactPhoneSchema = z
   .transform((v) => normalizePhone(v))
   .pipe(z.string().regex(/^\+?\d{0,15}$/, 'رقم التليفون أرقام بس'));
 
+/** رقم تاني لنفس العميل/المورد: الرقم + مين صاحبه (صاحب المؤسسة، موظف، أرضي…). */
+export const extraPhoneSchema = z.object({ n: contactPhoneSchema, l: z.string().trim().max(40).default('') });
+export type ExtraPhone = z.infer<typeof extraPhoneSchema>;
+
 export const contactInput = z.object({
   type: z.enum(CONTACT_TYPES),
   name: z.string().trim().min(1, 'اكتب الاسم').max(120, 'الاسم طويل جدًا'),
   phone: contactPhoneSchema.default(''),
+  /** أرقام تانية. لو اتشالت من الطلب (شاشة قديمة) الأرقام المسجلة تفضل زي ما هي. */
+  phones: z.array(extraPhoneSchema).max(8).optional(),
   address: z.string().trim().max(300).default(''),
   note: z.string().trim().max(1000).default(''),
   /** Customer: what they already owe. Supplier: what we already owe them. Only on create. */
@@ -52,6 +58,10 @@ export interface ContactDto {
   type: (typeof CONTACT_TYPES)[number];
   name: string;
   phone: string;
+  /** أرقام تانية بمسمياتها (الأساسي في phone). */
+  phones: ExtraPhone[];
+  /** مورد: آخر خصم % على بنود فاتورة الشراء. */
+  buyDisc: number;
   address: string;
   note: string;
   /** Customer: what they owe us. Supplier: what we owe them. */

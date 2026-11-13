@@ -49,6 +49,8 @@ interface Line {
   /** The unit the line is typed in: 1 = the product's own unit, 12 = «علبة» of 12 pieces, 0.004 = one loose piece of a kilo. */
   un?: number;
   unLabel?: string;
+  /** فاتورة شراء: خصم المورد % على البند (price هنا = سعر المورد قبل الخصم). */
+  disc?: string;
   /** «لحساب»: الزبون اللي البند ده بتاعه (فاتورة مهندس/مقاول مقسومة على زباينه). */
   forName?: string;
 }
@@ -59,6 +61,12 @@ const toNum = (s: string) => {
   return Number.isFinite(n) ? n : 0;
 };
 const r2 = (n: number) => Math.round(n * 100) / 100;
+/** السعر بعد خصم المورد % (فاتورة شراء). */
+const netOf = (price: string | number, disc?: string) => {
+  const p = typeof price === 'number' ? price : toNum(price);
+  const d = Math.min(99.99, Math.max(0, toNum(disc ?? '')));
+  return d > 0 ? p * (1 - d / 100) : p;
+};
 let seq = 0;
 const newKey = () => `l${++seq}`;
 
@@ -140,14 +148,21 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           unit: it.unit,
           available: null,
           qty: String(it.qty),
-          price: String(it.price),
+          price: String('listPrice' in it ? it.listPrice : it.price),
           forName: 'forName' in it ? it.forName : undefined,
+          ...(invoice && (it as { discPct?: number }).discPct ? { disc: String((it as { discPct?: number }).discPct) } : {}),
         }))
       : (preset?.lines ?? []).map((it) => ({ key: newKey(), productId: it.productId, name: it.name, unit: 'قطعة', available: null, qty: String(it.qty), price: String(it.price) })),
   );
   /** آخر «لحساب» اتكتب: البنود الجديدة بتاخده تلقائي. */
   const [lastFor, setLastFor] = useState('');
   const [bulkFor, setBulkFor] = useState('');
+  /** 🏷️ خصم المورد % على أصناف الفاتورة (شراء): بيتحط على كل البنود، وكل بند ممكن يتغيّر لوحده. */
+  const [supDisc, setSupDisc] = useState(() => {
+    const first = (invoice?.items ?? []).find((it) => it.discPct > 0);
+    return first ? String(first.discPct) : '';
+  });
+  const [supDiscTouched, setSupDiscTouched] = useState(!!invoice);
   const [showFor, setShowFor] = useState(() => !!src?.items.some((it) => 'forName' in it && it.forName));
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -214,7 +229,15 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
   const credit = useCreditLimits(isSale && isAdmin);
   const creditLimit = isSale && person.trim() ? +(credit.data?.lim[person.trim()] ?? credit.data?.def ?? 0) || 0 : 0;
   const limit = cterm?.t.limit || creditLimit || 0;
-  const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * toNum(l.price), 0)), [lines]);
+  // المورد بيفتكر آخر خصم: أول ما تختاره الخصم ينزل لوحده (لو ماكتبتش غيره)
+  const rememberedDisc = !isSale ? (contactNow as { buyDisc?: number } | undefined)?.buyDisc ?? 0 : 0;
+  useEffect(() => {
+    if (isSale || invoice || supDiscTouched || !(rememberedDisc > 0)) return;
+    setSupDisc(String(rememberedDisc));
+    setLines((ls) => ls.map((l) => (l.disc === undefined ? { ...l, disc: String(rememberedDisc) } : l)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rememberedDisc, contactNow?.id]);
+  const subtotal = useMemo(() => r2(lines.reduce((s, l) => s + toNum(l.qty) * netOf(l.price, isSale ? '' : l.disc), 0)), [lines, isSale]);
   const total = r2(subtotal + toNum(shipping));
   const paidValue = paidTouched ? (paid === '' ? total : toNum(paid)) : total;
   const remaining = Math.max(0, r2(total - paidValue));
@@ -253,6 +276,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
           available: p.qty,
           qty: '1',
           forName: lastFor,
+          ...(!isSale && toNum(supDisc) > 0 ? { disc: supDisc } : {}),
           price: String(isSale ? (cterm?.t.pct ? Math.round(p.price * (1 - cterm.t.pct / 100) * 100) / 100 : p.price) : (p.cost ?? 0)),
         },
       ];
@@ -265,7 +289,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     const name = search.trim();
     if (!name) return;
     const key = newKey();
-    setLines((ls) => [...ls, { key, name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor }]);
+    setLines((ls) => [...ls, { key, name, unit: 'قطعة', available: 0, qty: '1', price: '0', forName: lastFor, ...(!isSale && toNum(supDisc) > 0 ? { disc: supDisc } : {}) }]);
     setOpenKey(key);
     setFocusKey(key);
     setSearch('');
@@ -398,7 +422,8 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
       shipping: toNum(shipping),
       paid: paidValue,
       ...(isSale ? { online, onlineFrom: online ? onlineFrom : '' } : {}),
-      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)), ...(isSale ? { forName: (l.forName ?? '').trim() } : {}) })),
+      items: lines.map((l) => ({ productId: l.productId, name: l.name, qty: r4(toNum(l.qty) * (l.un || 1)), price: r4(toNum(l.price) / (l.un || 1)), ...(isSale ? { forName: (l.forName ?? '').trim() } : { discPct: Math.min(99.99, Math.max(0, toNum(l.disc ?? ''))) }) })),
+      ...(isSale ? {} : { supplierDisc: Math.min(99.99, Math.max(0, toNum(supDisc))) }),
     };
     try {
       const saved = invoice
@@ -484,9 +509,16 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                     const p = it.pid ? all.find((x) => x.id === it.pid) : it.newName ? undefined : matchProduct(String(it.text), it.code, all);
                     const qty = Number(it.qty) > 0 ? Number(it.qty) : 1;
                     const price = Number(it.price) > 0 ? Number(it.price) : Number(it.total) > 0 ? Number(it.total) / qty : 0;
-                    return { key: newKey(), productId: p?.id, name: p?.name ?? String(it.newName || it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
+                    const disc = Number(it.disc) > 0 ? String(it.disc) : undefined;
+                    return { key: newKey(), ...(disc ? { disc } : {}), productId: p?.id, name: p?.name ?? String(it.newName || it.text).trim(), unit: p?.unit ?? it.unit ?? 'قطعة', available: p ? p.qty : 0, qty: String(r4(qty)), price: String(r4(price)), fromScan: scanId ?? undefined };
                   });
                 setLines((ls) => [...ls.filter((l) => l.name.trim() && !(scanId && l.fromScan === scanId)), ...read]);
+                {
+                  // الخصم اللي اتحسب من فاتورة المورد: لو كل البنود نفس النسبة بيبقى «خصم المورد» العام
+                  const ds = [...new Set(read.map((x) => x.disc ?? ''))];
+                  if (ds.length === 1 && ds[0]) setSupDisc(ds[0]);
+                  setSupDiscTouched(true);
+                }
                 if (r.supplier && !person.trim()) setPerson(r.supplier.trim());
                 if (r.invoice_no && !sno.trim()) setSno(String(r.invoice_no));
               }}
@@ -576,7 +608,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               </div>
             )}
             {[...lines].reverse().map((l) => {
-              const lineTotal = r2(toNum(l.qty) * toNum(l.price));
+              const lineTotal = r2(toNum(l.qty) * netOf(l.price, isSale ? '' : l.disc));
               const who = (l.forName ?? '').trim();
               if (l.key !== openKey) {
                 // سطر ملموم: الاسم والكمية × السعر والإجمالي — دوسة تفتحه
@@ -586,6 +618,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       <b>{l.name}</b>
                       <small>
                         {toNum(l.qty)} {l.unLabel || l.unit} × {money(toNum(l.price))}
+                        {!isSale && toNum(l.disc ?? '') > 0 ? ` −${toNum(l.disc ?? '')}% = ${money(r2(netOf(l.price, l.disc)))}` : ''}
                         {who ? ` — 👤 ${who}` : ''}
                       </small>
                     </div>
@@ -663,7 +696,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 90 }}>
-                      <small>{isSale ? 'سعر البيع' : 'سعر الشراء'}</small>
+                      <small>{isSale ? 'سعر البيع' : toNum(supDisc) > 0 || toNum(l.disc ?? '') > 0 ? 'سعر المورد' : 'سعر الشراء'}</small>
                       <input
                         ref={(el) => {
                           priceEls.current[l.key] = el;
@@ -684,7 +717,27 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                         style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10 }}
                       />
                     </div>
+                    {!isSale && (
+                      <div style={{ width: 76 }}>
+                        <small>خصم %</small>
+                        <input
+                          inputMode="decimal"
+                          dir="ltr"
+                          value={l.disc ?? ''}
+                          placeholder="0"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setLine(l.key, { disc: normalizeDigits(e.target.value).replace(/[^0-9.]/g, '') })}
+                          onKeyDown={noSubmit}
+                          style={{ width: '100%', padding: 10, border: '1px solid var(--border)', borderRadius: 10, textAlign: 'center' }}
+                        />
+                      </div>
+                    )}
                   </div>
+                  {!isSale && toNum(l.disc ?? '') > 0 && (
+                    <small style={{ color: '#087f8c', fontWeight: 700 }}>
+                      السعر بعد الخصم {money(r2(netOf(l.price, l.disc)))} — ده اللي بيدخل المخزون
+                    </small>
+                  )}
                   {l.productId && (infos[l.productId]?.packs.length ?? 0) > 0 && (
                     <div style={{ marginTop: 6 }}>
                       <small>الوحدة</small>{' '}
@@ -755,6 +808,26 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => pickPerson(e.target.value)}
             error={errors.person}
           />
+          {!isSale && !asQuote && (
+            <div className="field full txsdisc">
+              <label htmlFor="txSupDisc">🏷️ خصم المورد على الأصناف (%)</label>
+              <input
+                id="txSupDisc"
+                inputMode="decimal"
+                dir="ltr"
+                placeholder="0 — المورد ماحطش خصم"
+                value={supDisc}
+                onKeyDown={noSubmit}
+                onChange={(e) => {
+                  const v = normalizeDigits(e.target.value).replace(/[^0-9.]/g, '');
+                  setSupDisc(v);
+                  setSupDiscTouched(true);
+                  setLines((ls) => ls.map((l) => ({ ...l, disc: v })));
+                }}
+              />
+              <small className="hint">{toNum(supDisc) > 0 ? 'السعر اللي بيدخل المخزون هو بعد الخصم. تقدر تغيّر الخصم على بند لوحده.' : 'لو المورد حاطط خصم (زي 10%) اكتبه، والأصناف تنزل بالسعر بعد الخصم.'}</small>
+            </div>
+          )}
           {cterm || limit || (isSale && contactNow) ? (
             <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
           ) : null}

@@ -49,8 +49,8 @@ const SAMPLE: InvoiceDto = {
   online: false,
   onlineFrom: '',
   items: [
-    { id: '1', productId: null, code: null, name: 'مفصلة هيدروليك', unit: 'قطعة', qty: 10, price: 30, total: 300, forName: '' },
-    { id: '2', productId: null, code: null, name: 'مقبض ألومنيوم', unit: 'قطعة', qty: 5, price: 30, total: 150, forName: '' },
+    { id: '1', productId: null, code: null, name: 'مفصلة هيدروليك', unit: 'قطعة', qty: 10, price: 30, total: 300, forName: '', discPct: 0, listPrice: 30 },
+    { id: '2', productId: null, code: null, name: 'مقبض ألومنيوم', unit: 'قطعة', qty: 5, price: 30, total: 150, forName: '', discPct: 0, listPrice: 30 },
   ],
   createdBy: null,
   updatedBy: null,

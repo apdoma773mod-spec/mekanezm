@@ -36,7 +36,7 @@ function ContactsScreen() {
   const rows = useMemo(() => {
     const w = vn(q[mode] ?? '').split(' ').filter(Boolean);
     return L.filter((c) => {
-      const hay = vn(`${c.name} ${c.phone || ''}`);
+      const hay = vn(`${c.name} ${c.phone || ''} ${(c.phones ?? []).map((p) => `${p.n} ${p.l}`).join(' ')}`);
       if (!w.every((x) => hay.includes(x))) return false;
       if (bf === 'open') return Math.abs(c.balance) >= 0.005;
       if (bf === 'pos') return c.balance >= 0.005;
@@ -138,6 +138,7 @@ function ContactsScreen() {
                     </td>
                     <td dir="ltr" style={{ textAlign: 'right' }}>
                       {c.phone || '—'}
+                      {c.phones?.length ? <small style={{ display: 'block', color: 'var(--muted)' }}>+{c.phones.length} رقم</small> : null}
                     </td>
                     <td style={{ fontWeight: 700, color: balanceColor(c.balance) }}>{balanceText(c)}</td>
                     <td>{c.address || '—'}</td>

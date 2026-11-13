@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Contact" ADD COLUMN     "phones" JSONB NOT NULL DEFAULT '[]',
+ADD COLUMN     "buyDisc" DECIMAL(5,2) NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "InvoiceItem" ADD COLUMN     "discPct" DECIMAL(5,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "listPrice" DECIMAL(14,2) NOT NULL DEFAULT 0;

@@ -158,7 +158,10 @@ export function InvoiceView({ id }: { id: string }) {
                       <td>
                         {qtyText(x.qty)} {x.unit}
                       </td>
-                      <td>{money(x.price)}</td>
+                      <td>
+                        {money(x.price)}
+                        {x.discPct > 0 ? <small style={{ display: 'block', color: 'var(--muted)' }}>سعر المورد {money(x.listPrice)} −{x.discPct}%</small> : null}
+                      </td>
                       <td>{money(x.total)}</td>
                     </tr>
                   ))}
