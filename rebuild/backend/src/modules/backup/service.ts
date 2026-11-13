@@ -48,6 +48,7 @@ export async function saveToday(db: PrismaClient): Promise<{ day: string; madeAt
     where: { day: snap.day },
     create: { day: snap.day, data: snap as unknown as object },
     update: { data: snap as unknown as object, madeAt: new Date(snap.madeAt) },
+    select: { day: true },
   });
   const cutoff = dayOf(new Date(Date.now() - KEEP_DAYS * 864e5));
   await db.backup.deleteMany({ where: { day: { lt: cutoff } } });
@@ -111,9 +112,14 @@ async function copyMissing(db: PrismaClient): Promise<boolean> {
 /** Makes sure today has a copy; used on a timer by the server. */
 export async function ensureToday(db: PrismaClient): Promise<boolean> {
   const today = dayOf(new Date());
-  const have = await db.backup.findUnique({ where: { day: today } });
+  // Existence check only: the row holds the whole shop (~30 MB of JSON), so never load `data` on every timer/cron tick —
+  // that alone pulled ~60 GB out of the database in two weeks. The data is read only when a copy really has to be written out.
+  const have = await db.backup.findUnique({ where: { day: today }, select: { day: true } });
   if (have) {
-    if (await copyMissing(db)) await copyOut(db, have.data as unknown as Snapshot);
+    if (await copyMissing(db)) {
+      const full = await db.backup.findUnique({ where: { day: today }, select: { data: true } });
+      if (full) await copyOut(db, full.data as unknown as Snapshot);
+    }
     return false;
   }
   await saveToday(db);
