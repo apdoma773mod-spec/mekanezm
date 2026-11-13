@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AttendanceDto, PointsConfig, StaffConfig, StaffDto, StaffInput, StaffMonth, StaffMoveDto } from '@mk/shared';
 import { FacesModal } from '@/components/camera/faces-modal';
+import { Fold } from '@/components/ui/fold';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -155,14 +156,6 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
           <input inputMode="tel" dir="ltr" value={f.phone} onChange={(e) => set({ phone: e.target.value })} />
         </div>
         <div className="field">
-          <label>الرقم القومي (اختياري)</label>
-          <input inputMode="numeric" dir="ltr" value={f.nid} onChange={(e) => set({ nid: e.target.value })} />
-        </div>
-        <div className="field full">
-          <label>العنوان (اختياري)</label>
-          <input value={f.address} onChange={(e) => set({ address: e.target.value })} />
-        </div>
-        <div className="field">
           <label>نظام القبض</label>
           <select value={f.payType} onChange={(e) => set({ payType: e.target.value as StaffInput['payType'] })}>
             {Object.entries(PT).map(([k, v]) => (
@@ -172,66 +165,9 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
             ))}
           </select>
         </div>
-        <div className="field">
+        <div className="field full">
           <label>المرتب / اليومية</label>
           <input type="number" min="0" value={f.salary || ''} onChange={(e) => set({ salary: num(e.target.value) })} />
-        </div>
-        <div className="field">
-          <label>ميعاد الحضور</label>
-          <input type="time" value={f.shiftStart} onChange={(e) => set({ shiftStart: e.target.value || '10:00' })} />
-        </div>
-        <div className="field">
-          <label>ميعاد الانصراف</label>
-          <input type="time" value={f.shiftEnd} onChange={(e) => set({ shiftEnd: e.target.value || '22:00' })} />
-        </div>
-        <div className="field">
-          <label>يوم الأجازة</label>
-          <select value={f.offDay} onChange={(e) => set({ offDay: Number(e.target.value) })}>
-            <option value={-1}>مفيش</option>
-            {DAYS.map((x, i) => (
-              <option key={x} value={i}>
-                {x}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label>بدأ الشغل من</label>
-          <input type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value || todayYmd() })} />
-        </div>
-        <div className="field full">
-          <label>حسابه على السيستم (عشان يسجل حضوره بالـ QR من موبايله)</label>
-          <select value={f.userId ?? ''} onChange={(e) => set({ userId: e.target.value || null })}>
-            <option value="">مالوش حساب — هسجله يدوي</option>
-            {d.members?.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name} ({m.role === 'ADMIN' ? 'مدير' : 'موظف'})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label>مكانه (للكاميرات)</label>
-          <select id="stPlace" value={f.place} onChange={(e) => set({ place: e.target.value as StaffInput['place'] })}>
-            <option value="shop">المحل</option>
-            <option value="market">السوق</option>
-            <option value="both">الاتنين</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>انصراف لو ما اتشافش بعد (ساعات)</label>
-          <input id="stGap" type="number" min="0.5" max="24" step="0.5" value={f.gapHours} onChange={(e) => set({ gapHours: num(e.target.value) || 2 })} />
-        </div>
-        {s && (
-          <div className="field full">
-            <button type="button" className="secondary" id="stFaces" onClick={() => setFaces(true)}>
-              📸 صور الوش (عشان الكاميرات تعرفه)
-            </button>
-          </div>
-        )}
-        <div className="field full">
-          <label>ملاحظات</label>
-          <input value={f.note} onChange={(e) => set({ note: e.target.value })} />
         </div>
         {s && (
           <div className="field full">
@@ -240,6 +176,90 @@ function EditStaff({ s, d, onClose }: { s?: StaffDto; d: StaffMonth; onClose: ()
             </label>
           </div>
         )}
+        {/* الأساسي ظاهر: مين وبيشتغل إيه وبيقبض كام. الباقي ملموم في كروت بعنوان وملخص سطر — دوسة تفتحه */}
+        <div className="field full txfolds">
+          <Fold k="st-shift" title="⏰ المواعيد والأجازة" hint={`${f.shiftStart} ← ${f.shiftEnd}${f.offDay >= 0 ? ` · أجازة ${DAYS[f.offDay] ?? ''}` : ''}`}>
+            <div className="form">
+              <div className="field">
+                <label>ميعاد الحضور</label>
+                <input type="time" value={f.shiftStart} onChange={(e) => set({ shiftStart: e.target.value || '10:00' })} />
+              </div>
+              <div className="field">
+                <label>ميعاد الانصراف</label>
+                <input type="time" value={f.shiftEnd} onChange={(e) => set({ shiftEnd: e.target.value || '22:00' })} />
+              </div>
+              <div className="field">
+                <label>يوم الأجازة</label>
+                <select value={f.offDay} onChange={(e) => set({ offDay: Number(e.target.value) })}>
+                  <option value={-1}>مفيش</option>
+                  {DAYS.map((x, i) => (
+                    <option key={x} value={i}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>بدأ الشغل من</label>
+                <input type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value || todayYmd() })} />
+              </div>
+            </div>
+          </Fold>
+          <Fold k="st-personal" title="🪪 بيانات شخصية وملاحظات" hint={[f.nid.trim(), f.address.trim(), f.note.trim()].filter(Boolean).join(' — ') || 'اختياري'}>
+            <div className="form">
+              <div className="field">
+                <label>الرقم القومي (اختياري)</label>
+                <input inputMode="numeric" dir="ltr" value={f.nid} onChange={(e) => set({ nid: e.target.value })} />
+              </div>
+              <div className="field full">
+                <label>العنوان (اختياري)</label>
+                <input value={f.address} onChange={(e) => set({ address: e.target.value })} />
+              </div>
+              <div className="field full">
+                <label>ملاحظات</label>
+                <input value={f.note} onChange={(e) => set({ note: e.target.value })} />
+              </div>
+            </div>
+          </Fold>
+          <Fold
+            k="st-system"
+            title="🔐 الحساب والكاميرات"
+            hint={[f.userId ? d.members?.find((m) => m.id === f.userId)?.name : 'من غير حساب', f.place === 'shop' ? 'المحل' : f.place === 'market' ? 'السوق' : 'الاتنين'].filter(Boolean).join(' · ')}
+          >
+            <div className="form">
+              <div className="field full">
+                <label>حسابه على السيستم (عشان يسجل حضوره بالـ QR من موبايله)</label>
+                <select value={f.userId ?? ''} onChange={(e) => set({ userId: e.target.value || null })}>
+                  <option value="">مالوش حساب — هسجله يدوي</option>
+                  {d.members?.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.role === 'ADMIN' ? 'مدير' : 'موظف'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>مكانه (للكاميرات)</label>
+                <select id="stPlace" value={f.place} onChange={(e) => set({ place: e.target.value as StaffInput['place'] })}>
+                  <option value="shop">المحل</option>
+                  <option value="market">السوق</option>
+                  <option value="both">الاتنين</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>انصراف لو ما اتشافش بعد (ساعات)</label>
+                <input id="stGap" type="number" min="0.5" max="24" step="0.5" value={f.gapHours} onChange={(e) => set({ gapHours: num(e.target.value) || 2 })} />
+              </div>
+              {s && (
+                <div className="field full">
+                  <button type="button" className="secondary" id="stFaces" onClick={() => setFaces(true)}>
+                    📸 صور الوش (عشان الكاميرات تعرفه)
+                  </button>
+                </div>
+              )}
+            </div>
+          </Fold>
+        </div>
       </div>
       <div className="modal-foot">
         <button type="button" className="primary" disabled={save.isPending} onClick={go}>
@@ -311,7 +331,8 @@ function StaffCard({ s, d, onClose, onEdit, onManual }: { s: StaffDto; d: StaffM
           {s.userId ? '✅ مربوط (بيسجل بالـ QR)' : '— يدوي'}
         </div>
       </div>
-      <h3 style={{ fontSize: 15, margin: '12px 0 6px' }}>حساب {d.month}</h3>
+      <div className="txfolds" style={{ marginTop: 10 }}>
+      <Fold k="stc-month" open0 title={`💵 حساب ${d.month}`} hint={`المستحق ${M(c.due)} · الباقي ${M(c.rest)}`}>
       <div style={{ fontSize: 14, lineHeight: 2 }}>
         {s.payType === 'month' ? (
           <>
@@ -351,9 +372,11 @@ function StaffCard({ s, d, onClose, onEdit, onManual }: { s: StaffDto; d: StaffM
           </>
         )}
       </div>
-      <h3 style={{ fontSize: 15, margin: '12px 0 6px' }}>الحضور</h3>
-      <AttTable rows={A} withMethod />
-      <h3 style={{ fontSize: 15, margin: '12px 0 6px' }}>آخر الحركات</h3>
+      </Fold>
+      <Fold k="stc-att" title="📅 الحضور" hint={A.length ? `${A.length} يوم` : 'مفيش حضور'}>
+        <AttTable rows={A} withMethod />
+      </Fold>
+      <Fold k="stc-moves" title="🧾 آخر الحركات" hint={V.length ? `${V.length} حركة` : 'مفيش حركات'}>
       {V.length ? (
         V.map((x) => (
           <div key={x.id} style={{ fontSize: 13, borderBottom: '1px solid var(--border)', padding: '5px 0' }}>
@@ -364,6 +387,8 @@ function StaffCard({ s, d, onClose, onEdit, onManual }: { s: StaffDto; d: StaffM
       ) : (
         <div className="empty">مفيش حركات.</div>
       )}
+      </Fold>
+      </div>
       <div className="modal-foot">
         <button type="button" className="secondary" onClick={onClose}>
           إغلاق

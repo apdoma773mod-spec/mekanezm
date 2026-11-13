@@ -8,6 +8,7 @@ import { useCreateShipment, useDeleteShipment, useShipPaid, useShipments, useUpd
 import { printHtml, shipLabelHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { useContacts, useInvoice } from '@/lib/trade-queries';
+import { Fold } from '../ui/fold';
 import { Modal } from '../ui/modal';
 import { useToast } from '../ui/toast';
 import { useIsAdmin } from '../use-role';
@@ -219,16 +220,8 @@ function ShipmentForm({ existing, preset, invoiceId }: { existing?: ShipmentDto;
           <datalist id="seCust">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
         </div>
         <div className="field">
-          <label>الفاتورة (اختياري)</label>
-          {inp('invoiceNo', { dir: 'ltr', placeholder: 'MK-0001' })}
-        </div>
-        <div className="field">
           <label>الموبايل</label>
           {inp('phone', { type: 'tel', dir: 'ltr' })}
-        </div>
-        <div className="field">
-          <label>موبايل تاني (اختياري)</label>
-          {inp('phone2', { type: 'tel', dir: 'ltr' })}
         </div>
         <div className="field">
           <label>المحافظة</label>
@@ -247,63 +240,98 @@ function ShipmentForm({ existing, preset, invoiceId }: { existing?: ShipmentDto;
           <label>العنوان بالتفصيل</label>
           <textarea rows={2} value={f.address ?? ''} onChange={(e) => set({ address: e.target.value })} style={{ padding: 11, border: '1px solid var(--border)', borderRadius: 10 }} />
         </div>
-        <div className="field">
-          <label>{kind === 'SHIP' ? 'شركة الشحن' : 'شركة التوصيل (اختياري)'}</label>
-          {inp('carrier', { list: 'seCars' })}
-          <datalist id="seCars">
-            {carriers.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </div>
-        {kind === 'SHIP' ? (
-          <div className="field">
-            <label>رقم البوليصة / التتبع</label>
-            {inp('tracking', { dir: 'ltr' })}
-          </div>
-        ) : (
-          <>
-            <div className="field">
-              <label>اسم المندوب</label>
-              {inp('driver')}
-            </div>
-            <div className="field">
-              <label>موبايل المندوب</label>
-              {inp('driverPhone', { type: 'tel', dir: 'ltr' })}
-            </div>
-          </>
-        )}
-        <div className="field">
+        <div className="field full">
           <label>💰 المطلوب تحصيله من العميل</label>
           {inp('cod', { inputMode: 'decimal' })}
         </div>
-        <div className="field">
-          <label>مصاريف الشحن علينا (اختياري)</label>
-          {inp('fee', { inputMode: 'decimal', placeholder: '0' })}
-        </div>
-        <div className="field">
-          <label>عدد الطرود (كل طرد ليه ملصق)</label>
-          {inp('pieces', { type: 'number', min: 1, max: 50 })}
-        </div>
-        {existing && (
-          <div className="field">
-            <label>الحالة</label>
-            <select value={f.status} onChange={(e) => set({ status: e.target.value as ShipStatus })}>
-              {[...SHIP_FLOW[kind], 'returned' as const, 'cancelled' as const].map((x) => (
-                <option key={x} value={x}>
-                  {stLabel(x, kind)}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <div className="field full">
-          <label>المحتويات</label>
-          {inp('content')}
-        </div>
-        <div className="field full">
-          <label>ملاحظات (بتتطبع على الملصق)</label>
-          {inp('note', { placeholder: 'مثلاً: قابل للكسر — كلّم العميل قبل الوصول' })}
+        {/* الأساسي ظاهر: مين وفين وهنحصّل كام. الباقي ملموم في كروت بعنوان وملخص سطر — دوسة تفتحه */}
+        <div className="field full txfolds">
+          <Fold k="se-link" title="🔗 الفاتورة وموبايل تاني" hint={[f.invoiceNo?.trim(), f.phone2?.trim()].filter(Boolean).join(' — ') || 'اختياري'}>
+            <div className="form">
+              <div className="field">
+                <label>الفاتورة (اختياري)</label>
+                {inp('invoiceNo', { dir: 'ltr', placeholder: 'MK-0001' })}
+              </div>
+              <div className="field">
+                <label>موبايل تاني (اختياري)</label>
+                {inp('phone2', { type: 'tel', dir: 'ltr' })}
+              </div>
+            </div>
+          </Fold>
+          <Fold
+            k="se-carrier"
+            title={kind === 'SHIP' ? '📦 شركة الشحن والتتبع' : '🛵 المندوب وشركة التوصيل'}
+            hint={[f.carrier?.trim(), kind === 'SHIP' ? f.tracking?.trim() : f.driver?.trim()].filter(Boolean).join(' — ') || 'اختياري'}
+          >
+            <div className="form">
+              <div className="field">
+                <label>{kind === 'SHIP' ? 'شركة الشحن' : 'شركة التوصيل (اختياري)'}</label>
+                {inp('carrier', { list: 'seCars' })}
+                <datalist id="seCars">
+                  {carriers.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              {kind === 'SHIP' ? (
+                <div className="field">
+                  <label>رقم البوليصة / التتبع</label>
+                  {inp('tracking', { dir: 'ltr' })}
+                </div>
+              ) : (
+                <>
+                  <div className="field">
+                    <label>اسم المندوب</label>
+                    {inp('driver')}
+                  </div>
+                  <div className="field">
+                    <label>موبايل المندوب</label>
+                    {inp('driverPhone', { type: 'tel', dir: 'ltr' })}
+                  </div>
+                </>
+              )}
+            </div>
+          </Fold>
+          <Fold
+            k="se-more"
+            title="⚙️ طرود ومصاريف وحالة"
+            hint={[`${Math.max(1, Number(f.pieces) || 1)} طرد`, Number(f.fee) > 0 ? `شحن علينا ${money(Number(f.fee))}` : '', existing && f.status ? stLabel(f.status, kind) : ''].filter(Boolean).join(' — ')}
+          >
+            <div className="form">
+              <div className="field">
+                <label>مصاريف الشحن علينا (اختياري)</label>
+                {inp('fee', { inputMode: 'decimal', placeholder: '0' })}
+              </div>
+              <div className="field">
+                <label>عدد الطرود (كل طرد ليه ملصق)</label>
+                {inp('pieces', { type: 'number', min: 1, max: 50 })}
+              </div>
+              {existing && (
+                <div className="field">
+                  <label>الحالة</label>
+                  <select value={f.status} onChange={(e) => set({ status: e.target.value as ShipStatus })}>
+                    {[...SHIP_FLOW[kind], 'returned' as const, 'cancelled' as const].map((x) => (
+                      <option key={x} value={x}>
+                        {stLabel(x, kind)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </Fold>
+          <Fold k="se-content" title="📝 المحتويات وملاحظات الملصق" hint={[f.content?.trim(), f.note?.trim()].filter(Boolean).join(' — ') || 'اختياري'}>
+            <div className="form">
+              <div className="field full">
+                <label>المحتويات</label>
+                {inp('content')}
+              </div>
+              <div className="field full">
+                <label>ملاحظات (بتتطبع على الملصق)</label>
+                {inp('note', { placeholder: 'مثلاً: قابل للكسر — كلّم العميل قبل الوصول' })}
+              </div>
+            </div>
+          </Fold>
         </div>
       </div>
       <div className="modal-foot">

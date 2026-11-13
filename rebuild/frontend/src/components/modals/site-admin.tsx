@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Fold } from '@/components/ui/fold';
 import { Modal } from '@/components/ui/modal';
 import { ErrorBox, Loading } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
@@ -400,7 +401,8 @@ function DeliveryTab({ d, save }: { d: SiteData; save: Save }) {
         <label>جملة عن التوصيل (اختياري)</label>
         <input value={note} placeholder="مثلاً: بنوصّل لكل المحافظات خلال 2-4 أيام" onChange={(e) => setNote(e.target.value)} />
       </div>
-      <h3 style={{ margin: '14px 0 6px' }}>🚚 زرار «محتاجه شحن؟» في صفحة المنتج</h3>
+      <div className="txfolds" style={{ marginTop: 10 }}>
+      <Fold k="sa-ship" title="🚚 زرار «محتاجه شحن؟» في صفحة المنتج" hint={[loc.fee, gov.fee].filter(Boolean).join(' | ') || 'مش متحدد'}>
       <div className="form">
         <div className="field">
           <label>🛵 توصيل القاهرة والجيزة — المصاريف</label>
@@ -427,7 +429,8 @@ function DeliveryTab({ d, save }: { d: SiteData; save: Save }) {
           <input value={gov.note} placeholder="مثلاً: مع شركات شحن موثوقة — الدفع عند الاستلام" onChange={(e) => setGov({ ...gov, note: e.target.value })} />
         </div>
       </div>
-      <h3 style={{ margin: '14px 0 6px' }}>المناطق</h3>
+      </Fold>
+      <Fold k="sa-areas" title="📍 المناطق" hint={`${rows.filter((r) => r.area.trim()).length} منطقة`}>
       {rows.map((x, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) auto', gap: 6, marginBottom: 6 }}>
           <input placeholder="المنطقة" value={x.area} onChange={(e) => upd(i, 'area', e.target.value)} />
@@ -441,15 +444,16 @@ function DeliveryTab({ d, save }: { d: SiteData; save: Save }) {
       <button type="button" className="secondary" onClick={() => setRows((R) => [...R, { area: '', fee: '', days: '' }])}>
         ＋ منطقة
       </button>
-      <div className="field" style={{ marginTop: 14 }}>
-        <label>🔁 سياسة الاستبدال والاسترجاع</label>
+      </Fold>
+      <Fold k="sa-policy" title="🔁 سياسة الاستبدال والاسترجاع" hint={pol.trim().slice(0, 40) || 'مش مكتوبة'}>
         <textarea
           rows={5}
           value={pol}
-          style={{ padding: 11, border: '1px solid var(--border)', borderRadius: 10 }}
+          style={{ padding: 11, border: '1px solid var(--border)', borderRadius: 10, width: '100%' }}
           placeholder="مثلاً: الاستبدال خلال 14 يوم من الاستلام والمنتج بحالته وبالكرتونة..."
           onChange={(e) => setPol(e.target.value)}
         />
+      </Fold>
       </div>
       <button
         type="button"
@@ -508,6 +512,9 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
           <label>رقم المحل 2</label>
           <input dir="ltr" value={p2} onChange={(e) => setP2(e.target.value)} />
         </div>
+        <div className="field full txfolds">
+          <Fold k="sa-contact" title="🕘 ساعات العمل والخريطة والكتالوج" hint={[hours.trim(), map.trim() ? 'خريطة' : '', cat ? 'كتالوج واتساب' : ''].filter(Boolean).join(' — ') || 'اختياري'}>
+          <div className="form">
         <div className="field full">
           <label>ساعات العمل</label>
           <input value={hours} placeholder="مثلاً: يومياً من 10 الصبح لـ 10 بالليل — الجمعة إجازة" onChange={(e) => setHours(e.target.value)} />
@@ -520,6 +527,9 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
           <label className="chk">
             <input type="checkbox" checked={cat} onChange={(e) => setCat(e.target.checked)} /> زرار «📒 شوف كتالوجنا على واتساب» في الموقع
           </label>
+        </div>
+          </div>
+          </Fold>
         </div>
       </div>
       <button
@@ -541,8 +551,8 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
       >
         حفظ
       </button>
-      <div id="soBox" style={{ marginTop: 18 }}>
-        <h3 style={{ margin: '0 0 8px' }}>📱 حسابات السوشيال</h3>
+      <div id="soBox" style={{ marginTop: 18 }} className="txfolds">
+      <Fold k="sa-social" title="📱 حسابات السوشيال" hint={`${SOC.filter(([k]) => (soc[k] ?? '').trim()).length} حساب`}>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 8px' }}>بتظهر في الموقع كأيقونات — سيب الخانة فاضية لو مفيش حساب</p>
         <div className="form">
           {SOC.map(([k, n, ph]) => (
@@ -574,6 +584,7 @@ function ContactTab({ d, save }: { d: SiteData; save: Save }) {
         >
           💾 حفظ الحسابات
         </button>
+      </Fold>
       </div>
     </>
   );

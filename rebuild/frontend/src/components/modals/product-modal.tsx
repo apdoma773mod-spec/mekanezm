@@ -19,6 +19,7 @@ import { useAlts } from '@/lib/phase4-queries';
 import { useCompany } from '../company';
 import { Icon } from '../icon';
 import { Input, NumberInput, Select } from '../ui/field';
+import { Fold } from '../ui/fold';
 import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
@@ -299,37 +300,48 @@ function ProductForm({ product: p, preset: pr }: { product?: NonNullable<ReturnT
     >
       <form onSubmit={submit} noValidate>
         <div className="form">
-          <Input
-            label={`كود المنتج${p ? '' : ' (اختياري)'}`}
-            value={f.code}
-            onChange={set('code')}
-            placeholder={p ? '' : 'سيبه فاضي = كود أوتوماتيك'}
-            dir="ltr"
-            error={errors.code}
-          />
-          <div className="field">
-            <label>الباركود (اختياري)</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input value={f.barcode} onChange={set('barcode')} dir="ltr" inputMode="numeric" placeholder="امسح أو اكتب" style={{ flex: 1, minWidth: 0 }} />
-              <button type="button" className="secondary" style={{ flex: 'none' }} onClick={() => setScan(true)}>
-                📷
-              </button>
-            </div>
-            {errors.barcode && <span className="err">{errors.barcode}</span>}
-          </div>
           <Input label="اسم المنتج" value={f.name} onChange={set('name')} error={errors.name} />
-          <Input label="التصنيف" value={f.category} onChange={set('category')} list="mk-cats" error={errors.category} />
-          <datalist id="mk-cats">{categories.data?.map((c) => <option key={c} value={c} />)}</datalist>
           <NumberInput label="الكمية" value={f.qty} onChange={set('qty')} error={errors.qty} />
           <NumberInput label="سعر الشراء" value={f.cost} onChange={set('cost')} error={errors.cost} />
           <NumberInput label="سعر البيع" value={f.price} onChange={set('price')} error={errors.price} />
-          <NumberInput label="حد التنبيه" value={f.minQty} onChange={set('minQty')} error={errors.minQty} />
-          <Select
-            label="الوحدة"
-            value={f.unit}
-            onChange={set('unit')}
-            options={[...new Set([...UNITS, f.unit])].map((u) => ({ value: u, label: u }))}
-          />
+          {/* الأساسي ظاهر: الاسم والكمية والأسعار. الباقي ملموم في كروت بعنوان وملخص سطر — بتفتح لوحدها لو فيها خطأ */}
+          <div className="field full txfolds">
+            <Fold k="pf-id" title="🏷️ الكود والباركود والتصنيف" hint={[f.code.trim(), f.barcode.trim(), f.category.trim()].filter(Boolean).join(' · ') || 'اختياري'} force={!!(errors.code || errors.barcode || errors.category)}>
+              <div className="form">
+                <Input
+                  label={`كود المنتج${p ? '' : ' (اختياري)'}`}
+                  value={f.code}
+                  onChange={set('code')}
+                  placeholder={p ? '' : 'سيبه فاضي = كود أوتوماتيك'}
+                  dir="ltr"
+                  error={errors.code}
+                />
+                <div className="field">
+                  <label>الباركود (اختياري)</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={f.barcode} onChange={set('barcode')} dir="ltr" inputMode="numeric" placeholder="امسح أو اكتب" style={{ flex: 1, minWidth: 0 }} />
+                    <button type="button" className="secondary" style={{ flex: 'none' }} onClick={() => setScan(true)}>
+                      📷
+                    </button>
+                  </div>
+                  {errors.barcode && <span className="err">{errors.barcode}</span>}
+                </div>
+                <Input label="التصنيف" value={f.category} onChange={set('category')} list="mk-cats" error={errors.category} />
+                <datalist id="mk-cats">{categories.data?.map((c) => <option key={c} value={c} />)}</datalist>
+              </div>
+            </Fold>
+            <Fold k="pf-more" title="⚙️ حد التنبيه والوحدة" hint={`تنبيه عند ${f.minQty || 0} · ${f.unit}`} force={!!errors.minQty}>
+              <div className="form">
+                <NumberInput label="حد التنبيه" value={f.minQty} onChange={set('minQty')} error={errors.minQty} />
+                <Select
+                  label="الوحدة"
+                  value={f.unit}
+                  onChange={set('unit')}
+                  options={[...new Set([...UNITS, f.unit])].map((u) => ({ value: u, label: u }))}
+                />
+              </div>
+            </Fold>
+          </div>
           <FormError message={errors._} />
         </div>
         <div className="modal-foot">
