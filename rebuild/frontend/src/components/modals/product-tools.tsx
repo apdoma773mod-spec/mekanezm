@@ -16,8 +16,11 @@ import {
   useCategories,
   useEstimateCosts,
   useImportNames,
+  useKitParts,
+  useOpenKit,
   useProducts,
   useRecat,
+  useSaveKitParts,
   useSplitProduct,
   useUpdateProduct,
   useZeroCost,
@@ -36,6 +39,7 @@ export type ProductToolSpec =
   | { kind: 'oldGoods' }
   | { kind: 'importFile' }
   | { kind: 'split' }
+  | { kind: 'kitParts'; id?: string }
   | { kind: 'recat' };
 
 const num = (v: unknown) => {
@@ -996,6 +1000,184 @@ function Recat() {
   );
 }
 
+// ---------- 🧩 طقم بيتباع بالقطعة ----------
+
+interface PartRow {
+  key: string;
+  productId?: string;
+  name: string;
+  n: string;
+  price: string;
+  qty?: number;
+}
+let partSeq = 0;
+
+/**
+ * الطقم المقفول (زي ما بييجي من المورد) + محتوياته. كل قطعة صنف عادي: بتتباع من أي شاشة بيع وبتظهر في البحث،
+ * ولو رصيدها خلص السيستم بيفك طقم لوحده. تكلفة الطقم بتتوزع على القطع بنسبة قيمتها (العدد × سعر البيع).
+ */
+function KitParts({ id }: { id?: string }) {
+  const { close } = useModal();
+  const toast = useToast();
+  const [kit, setKit] = useState<ProductDto | null>(null);
+  const kitId = kit?.id ?? id ?? null;
+  const view = useKitParts(kitId);
+  const save = useSaveKitParts();
+  const openKit = useOpenKit();
+  const [rows, setRows] = useState<PartRow[] | null>(null);
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const [cnt, setCnt] = useState('1');
+  const [pick, setPick] = useState(false);
+
+  // load the saved contents once per kit
+  if (view.data && loaded !== view.data.kit.id) {
+    setLoaded(view.data.kit.id);
+    setRows(view.data.parts.map((p) => ({ key: `r${++partSeq}`, productId: p.productId, name: p.name, n: String(p.n), price: String(p.price), qty: p.qty })));
+  }
+  const k = view.data?.kit;
+  const R = rows ?? [];
+  const set = (key: string, p: Partial<PartRow>) => setRows((rs) => (rs ?? []).map((r) => (r.key === key ? { ...r, ...p } : r)));
+  const value = R.reduce((t, r) => t + num(r.n) * num(r.price), 0);
+  const share = (r: PartRow) => (k && value > 0 && num(r.n) > 0 ? (k.cost * (num(r.n) * num(r.price))) / value / num(r.n) : 0);
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const dirty = !!view.data && JSON.stringify(R.map((r) => [r.productId ?? '', r.name.trim(), num(r.n), num(r.price)])) !== JSON.stringify(view.data.parts.map((p) => [p.productId, p.name, p.n, p.price]));
+
+  const doSave = async () => {
+    if (!kitId) return;
+    for (const [i, r] of R.entries()) {
+      if (!r.name.trim()) return toast(`اكتب اسم القطعة رقم ${i + 1}`, 'bad');
+      if (!(num(r.n) > 0)) return toast(`اكتب عدد «${r.name}» جوه الطقم`, 'bad');
+    }
+    try {
+      const v = await save.mutateAsync({ id: kitId, parts: R.map((r) => ({ productId: r.productId, name: r.name.trim(), n: num(r.n), price: num(r.price) })) });
+      setRows(v.parts.map((p) => ({ key: `r${++partSeq}`, productId: p.productId, name: p.name, n: String(p.n), price: String(p.price), qty: p.qty })));
+      toast(v.parts.length ? '✔ اتحفظ — القطع بقت أصناف تتباع من أي شاشة بيع' : '✔ اتحفظ — الصنف رجع عادي');
+    } catch (e) {
+      toast(`⚠️ ${errorMessage(e)}`, 'bad');
+    }
+  };
+  const doOpen = async () => {
+    if (!kitId) return;
+    const c = Math.floor(num(cnt));
+    if (!(c > 0)) return toast('اكتب عدد الأطقم', 'bad');
+    try {
+      const v = await openKit.mutateAsync({ id: kitId, count: c });
+      setRows(v.parts.map((p) => ({ key: `r${++partSeq}`, productId: p.productId, name: p.name, n: String(p.n), price: String(p.price), qty: p.qty })));
+      toast(`✔ اتفك ${c} ${v.kit.unit || 'طقم'}`);
+    } catch (e) {
+      toast(`⚠️ ${errorMessage(e)}`, 'bad');
+    }
+  };
+
+  return (
+    <Modal title="🧩 طقم بيتباع بالقطعة" onClose={close}>
+      <div style={{ lineHeight: 1.9, color: 'var(--muted)', fontSize: 14 }}>
+        الطقم بييجي مقفول من المورد وأحيانًا الزبون عايز حتة منه (دلفة، قضيب…). سجّل هنا محتويات الطقم مرة واحدة: كل قطعة هتبقى صنف تكتبه في البحث وتبيعه عادي، ولو رصيدها خلص
+        السيستم بيفك طقم لوحده والباقي يفضل رصيد بسعره وتكلفته.
+      </div>
+      {!kitId ? (
+        <PickProduct label="الطقم المقفول (الصنف الكبير)" value={kit} onPick={setKit} />
+      ) : view.isPending ? (
+        <Loading />
+      ) : view.isError || !k ? (
+        <div className="form-error">{errorMessage(view.error)}</div>
+      ) : (
+        <>
+          <div className="card" style={{ background: 'var(--tint2)', border: 0, lineHeight: 1.9, marginTop: 8 }}>
+            <b>{k.name}</b>
+            {!id && (
+              <button type="button" style={{ float: 'left', border: 0, background: 'transparent', color: 'var(--danger)' }} onClick={() => (setKit(null), setRows(null), setLoaded(null))}>
+                تغيير
+              </button>
+            )}
+            <br />
+            مقفول في المخزون: <b>{qtyText(k.qty)}</b> {k.unit} — سعر الطقم كامل: <b>{money(k.price)}</b> — تكلفته: <b>{money(k.cost)}</b>
+          </div>
+          {view.data.partOf ? (
+            <div className="form-error" style={{ marginTop: 8 }}>
+              الصنف ده نفسه قطعة من «{view.data.partOf.name}» — ماينفعش يبقى طقم.
+            </div>
+          ) : (
+            <>
+              <div id="kitRows" style={{ marginTop: 10 }}>
+                {R.map((r, i) => (
+                  <div key={r.key} className="kp-row">
+                    <div className="kp-name">
+                      <small>القطعة {i + 1}</small>
+                      <input value={r.name} disabled={!!r.productId} placeholder="مثال: دلفة جرار بلوم" onChange={(e) => set(r.key, { name: e.target.value })} />
+                    </div>
+                    <div>
+                      <small>العدد في الطقم</small>
+                      <input inputMode="decimal" dir="ltr" value={r.n} onChange={(e) => set(r.key, { n: e.target.value })} />
+                    </div>
+                    <div>
+                      <small>سعر بيع القطعة</small>
+                      <input inputMode="decimal" dir="ltr" value={r.price} onChange={(e) => set(r.key, { price: e.target.value })} />
+                    </div>
+                    <button type="button" className="secondary danger kp-x" aria-label="شيل القطعة" onClick={() => setRows((rs) => (rs ?? []).filter((x) => x.key !== r.key))}>
+                      ✕
+                    </button>
+                    <small className="kp-meta">
+                      تكلفة القطعة: <b>{money(r2(share(r)))}</b> — ربحها: <b>{money(r2(num(r.price) - share(r)))}</b>
+                      {r.productId ? (
+                        <>
+                          {' '}
+                          — رصيد مفكوك: <b>{qtyText(r.qty ?? 0)}</b>
+                        </>
+                      ) : null}
+                    </small>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => setRows((rs) => [...(rs ?? []), { key: `r${++partSeq}`, name: '', n: '1', price: '' }])}>
+                  ➕ قطعة جديدة
+                </button>
+                <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => setPick(!pick)}>
+                  🔎 صنف موجود عندي
+                </button>
+              </div>
+              {pick && (
+                <PickProduct
+                  label="الصنف الصغير (القطعة)"
+                  value={null}
+                  onPick={(p) => {
+                    if (!p) return;
+                    if (p.id === kitId || R.some((x) => x.productId === p.id)) return toast('الصنف ده متسجل', 'bad');
+                    setRows((rs) => [...(rs ?? []), { key: `r${++partSeq}`, productId: p.id, name: p.name, n: '1', price: String(p.price), qty: p.qty }]);
+                    setPick(false);
+                  }}
+                />
+              )}
+              {R.length > 0 && (
+                <div className="card" style={{ background: 'var(--tint2)', border: 0, lineHeight: 2, marginTop: 10 }}>
+                  لو الطقم اتباع كله قطاعي: <b>{money(r2(value))}</b> — سعر الطقم كامل: <b>{money(k.price)}</b>
+                  <br />
+                  {value > k.price ? `القطاعي أغلى بـ ${money(r2(value - k.price))} (طبيعي: اللي بياخد حتة بيدفع أكتر)` : value < k.price ? `⚠️ القطاعي أرخص من الطقم بـ ${money(r2(k.price - value))} — راجع الأسعار` : 'نفس سعر الطقم'}
+                </div>
+              )}
+              <button type="button" className="primary" style={{ width: '100%', padding: 14, marginTop: 12 }} disabled={save.isPending || !dirty} onClick={() => void doSave()}>
+                {save.isPending ? '⏳ بيحفظ…' : dirty ? '💾 حفظ محتويات الطقم' : '✔ محفوظ'}
+              </button>
+              {view.data.parts.length > 0 && !dirty && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <small>فك أطقم دلوقتي (اختياري — البيع بيفك لوحده)</small>
+                    <input inputMode="numeric" dir="ltr" value={cnt} onChange={(e) => setCnt(e.target.value)} style={{ width: '100%', padding: 12 }} />
+                  </div>
+                  <button type="button" className="secondary" disabled={openKit.isPending} onClick={() => void doOpen()}>
+                    {openKit.isPending ? '⏳' : '🔓 فك'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Modal>
+  );
+}
+
 export function ProductToolModal({ spec }: { spec: ProductToolSpec }) {
   switch (spec.kind) {
     case 'recat':
@@ -1014,5 +1196,7 @@ export function ProductToolModal({ spec }: { spec: ProductToolSpec }) {
       return <ImportFile />;
     case 'split':
       return <Split />;
+    case 'kitParts':
+      return <KitParts id={spec.id} />;
   }
 }

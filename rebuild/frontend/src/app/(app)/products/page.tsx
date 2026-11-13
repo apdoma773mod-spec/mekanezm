@@ -98,6 +98,11 @@ function ProductsScreen() {
             <button type="button" className="secondary" onClick={() => open({ kind: 'split' })}>
               🔪 فك لفة / تقسيم
             </button>
+            {isAdmin && (
+              <button type="button" className="secondary" id="kitPartsBtn" onClick={() => open({ kind: 'kitParts' })}>
+                🧩 طقم بيتباع بالقطعة
+              </button>
+            )}
           </div>
         }
       />

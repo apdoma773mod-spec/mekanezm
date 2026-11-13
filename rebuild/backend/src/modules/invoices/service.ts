@@ -168,6 +168,7 @@ async function prepareLines(
  * `skipStock` is for the daybook, whose lines already took their goods out of stock.
  */
 import { noteCostRise } from '../products/cost-rises.js';
+import { ensurePartStock } from '../../lib/kit-parts.js';
 
 async function writeLines(
   tx: Prisma.TransactionClient,
@@ -179,6 +180,10 @@ async function writeLines(
 ) {
   const sale = invoice.kind === 'SALE';
   for (const [position, l] of lines.entries()) {
+    // 🧩 قطعة من طقم ورصيدها مش مكفّي: الطقم يتفك الأول، عشان تكلفة القطعة (ربح الفاتورة) تتسجل صح
+    if (sale && !skipStock && (await ensurePartStock(tx, l.product.id, l.qty, actor.id, invoice.no))) {
+      l.product = await tx.product.findUniqueOrThrow({ where: { id: l.product.id } });
+    }
     await tx.invoiceItem.create({
       data: {
         invoiceId: invoice.id,

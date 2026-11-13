@@ -257,6 +257,8 @@ model ProductInfo {
   descr     String   @default("")
   /// [{u:"علبة", n:12} | {u:"مسمار", n:0.004, x:250, small:true}]
   packs     Json     @default("[]")
+  /// 🧩 طقم بيتباع بالقطعة: محتويات الطقم المقفول [{productId, n}] — كل قطعة صنف عادي، والطقم بيتفك لوحده وقت البيع (lib/kit-parts.ts)
+  parts     Json     @default("[]")
   imgs      Json     @default("[]")
   /// كام قطعة على الرف في المحل دلوقتي (loc = مكان الرف/العين). null = مش متحدد → كل الرصيد يتعامل إنه في المحل. الباقي (الرصيد − ده) في المخزن.
   shelfQty  Decimal? @db.Decimal(14, 3)

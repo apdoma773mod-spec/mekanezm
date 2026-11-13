@@ -1097,3 +1097,11 @@ body .field input[type=checkbox]{border-radius:4px}
 
 /* 🔁 اسم الصنف عند المورد تحت اسمنا في نتايج البحث: باهت ومتظلّل، واسمنا هو الأساسي */
 .mk-aka{display:block;width:fit-content;max-width:100%;margin-top:3px;padding:1px 8px;border-radius:6px;background:color-mix(in srgb,var(--muted,#7a8a8f) 12%,transparent);color:var(--muted,#7a8a8f);font-size:12px;font-weight:500;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-aka.mk-kit{background:color-mix(in srgb,var(--blue) 10%,transparent);color:var(--blue2,var(--blue))}
+/* 🧩 محتويات الطقم: اسم القطعة سطر كامل، وتحته العدد والسعر */
+.kp-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:8px;align-items:end;padding:10px;border:1.5px solid var(--border);border-radius:12px;margin-bottom:8px}
+.kp-row .kp-name{grid-column:1/-1}
+.kp-row input{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;min-width:0}
+.kp-row small{display:block;color:var(--muted);font-size:12.5px}
+.kp-row .kp-x{padding:0!important;height:44px;min-height:44px!important;border-radius:10px}
+.kp-row .kp-meta{grid-column:1/-1;font-size:13px}

@@ -62,6 +62,7 @@ export type ModalSpec =
   | { kind: 'siteProduct'; id?: string }
   | { kind: 'dimBulk' }
   | { kind: 'productFiles' }
+  | { kind: 'kitParts'; id?: string }
   | { kind: 'portal'; id: string }
   | { kind: 'portalNew' }
   | { kind: 'phoneImport' }
@@ -226,6 +227,7 @@ export function ModalHost({ children }: { children: ReactNode }) {
       case 'oldGoods':
       case 'importFile':
       case 'split':
+      case 'kitParts':
       case 'recat':
         content = <ProductToolModal spec={spec} />;
         break;

@@ -1,5 +1,9 @@
 import type { Prisma, StockReason } from '@prisma/client';
 import { D, qty as roundQty } from './money.js';
+import { ensurePartStock } from './kit-parts.js';
+
+/** Goods leaving to a customer: a piece of a kit that ran out opens a closed kit first. */
+const OUT: StockReason[] = ['SALE', 'DAYBOOK', 'GIFT', 'SAMPLE'];
 
 export interface StockChange {
   productId: string;
@@ -22,6 +26,7 @@ export async function moveStock(tx: Prisma.TransactionClient, c: StockChange): P
     const p = await tx.product.findUniqueOrThrow({ where: { id: c.productId }, select: { qty: true } });
     return p.qty;
   }
+  if (change.isNegative() && OUT.includes(c.reason)) await ensurePartStock(tx, c.productId, change.neg(), c.userId, c.note ?? '');
   const updated = await tx.product.update({
     where: { id: c.productId },
     data: { qty: { increment: change } },

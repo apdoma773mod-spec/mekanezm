@@ -20,6 +20,7 @@ import { D, money, num, qty as roundQty } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
 import { tbl } from '../../lib/db-schema.js';
+import { partsOf } from '../../lib/kit-parts.js';
 
 export function toProductDto(p: Product, admin: boolean): ProductDto {
   return {
@@ -94,6 +95,30 @@ export class ProductsService {
         out.set(id, L);
       }
     return out;
+  }
+  /** 🧩 {piece id: its kit} and {kit id: number of piece kinds} for the hint under a search result. */
+  private async kitHints(): Promise<{ piece: Map<string, { id: string; name: string; n: number; qty: number }>; kits: Map<string, number> }> {
+    const piece = new Map<string, { id: string; name: string; n: number; qty: number }>();
+    const kits = new Map<string, number>();
+    const infos = await this.prisma.$queryRaw<{ productId: string; parts: unknown }[]>`SELECT "productId", parts FROM ${tbl('ProductInfo')} WHERE jsonb_typeof(parts) = 'array' AND jsonb_array_length(parts) > 0`.catch(() => []);
+    if (!infos.length) return { piece, kits };
+    const rows = await this.prisma.product.findMany({ where: { id: { in: infos.map((i) => i.productId) }, deletedAt: null }, select: { id: true, name: true, qty: true } });
+    for (const i of infos) {
+      const k = rows.find((r) => r.id === i.productId);
+      if (!k) continue;
+      const parts = partsOf(i.parts);
+      kits.set(k.id, parts.length);
+      for (const p of parts) piece.set(p.productId, { id: k.id, name: k.name, n: p.n, qty: num(k.qty) });
+    }
+    return { piece, kits };
+  }
+  private async decorate(list: ProductDto[]): Promise<ProductDto[]> {
+    const [aka, h] = await Promise.all([this.akaMap(), this.kitHints()]);
+    return this.withAka(list, aka).map((p) => {
+      const kit = h.piece.get(p.id);
+      const kitParts = h.kits.get(p.id);
+      return kit || kitParts ? { ...p, ...(kit ? { kit } : {}), ...(kitParts ? { kitParts } : {}) } : p;
+    });
   }
   private withAka(list: ProductDto[], aka: Map<string, string[]>, ourName = (p: ProductDto) => p.name): ProductDto[] {
     const n = (t: string) => t.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
@@ -175,7 +200,7 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     const admin = isAdmin(actor);
-    return { items: this.withAka(rows.map((p) => toProductDto(p, admin)), await this.akaMap()), total, page: query.page, pageSize: query.pageSize };
+    return { items: await this.decorate(rows.map((p) => toProductDto(p, admin))), total, page: query.page, pageSize: query.pageSize };
   }
 
   async categories(): Promise<string[]> {
@@ -343,7 +368,7 @@ export class ProductsService {
       orderBy: { name: 'asc' },
     });
     const keep = query.stock === 'low' ? rows.filter((p) => p.qty.gt(0) && p.qty.lte(p.minQty)) : rows;
-    return this.withAka(keep.map((p) => toProductDto(p, admin)), await this.akaMap());
+    return this.decorate(keep.map((p) => toProductDto(p, admin)));
   }
 
   /** 💰 بضاعة قديمة: أصناف ليها سعر بيع ومن غير سعر شراء. */

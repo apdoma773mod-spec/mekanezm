@@ -400,6 +400,30 @@ export const useBulkPrice = () =>
     api.post<{ updated: number }>('/products/bulk-price', v).then((r) => r.updated),
   );
 
+/** 🧩 طقم بيتباع بالقطعة: محتويات الطقم (كل قطعة صنف في المخزون) + فك يدوي. */
+export interface KitView {
+  kit: { id: string; name: string; unit: string; qty: number; price: number; cost: number };
+  parts: { productId: string; name: string; n: number; price: number; qty: number; cost: number; share: number }[];
+  partOf: { id: string; name: string; n: number; qty: number } | null;
+}
+export const useKitParts = (id: string | null) =>
+  useQuery({ queryKey: ['kit-parts', id], queryFn: ({ signal }) => api.get<KitView>(`/products/${id}/parts`, undefined, signal), enabled: !!id });
+/** The saved view goes straight into the cache, so the screen shows «محفوظ» without waiting for a refetch. */
+function useKitWrite<V extends { id: string }>(fn: (v: V) => Promise<KitView>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (view, v) => {
+      qc.setQueryData(['kit-parts', v.id], view);
+      invalidateTrade(qc);
+      void qc.invalidateQueries({ queryKey: ['product-info'] });
+    },
+  });
+}
+export const useSaveKitParts = () =>
+  useKitWrite((v: { id: string; parts: { productId?: string; name: string; n: number; price: number }[] }) => api.put<KitView>(`/products/${v.id}/parts`, { parts: v.parts }));
+export const useOpenKit = () => useKitWrite((v: { id: string; count: number }) => api.post<KitView>(`/products/${v.id}/open`, { count: v.count }));
+
 export const useSplitProduct = () =>
   useTradeMutation((v: { sourceId: string; targetId: string; ratio: number; qty: number }) =>
     api.post<{ source: ProductDto; target: ProductDto }>('/products/split', v),
