@@ -27,12 +27,14 @@ import {
   useUpdateInvoice,
 } from '@/lib/trade-queries';
 import { Input, NumberInput } from '../ui/field';
+import { Fold } from '../ui/fold';
 import { Modal } from '../ui/modal';
 import { ErrorBox, FormError, Loading } from '../ui/states';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
 import { SCAN_EVENT, scanTargets } from '../scan/scan-bus';
 import { InvoicePhotoButtons, matchProduct } from './invoice-photo';
+import { Aka } from '../ui/aka';
 
 interface Line {
   key: string;
@@ -285,7 +287,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
     const code = search.trim();
     if (!code) return;
     try {
-      addProduct(await lookupProduct(code));
+      const hit = await lookupProduct(code);
+      if (!hit) throw new Error("not found");
+      addProduct(hit);
     } catch {
       // Enter سريع قبل ما القايمة تتحدّث: القايمة اللي ظاهرة بتاعة كلمة قديمة — نجيب نتيجة الكلمة المكتوبة فعلاً بدل ما نضيف صنف غلط
       const fresh = debounced.trim() === code && !results.isPlaceholderData && !results.isFetching;
@@ -524,6 +528,7 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                       <small style={{ color: '#7a8a8f' }}>
                         ({qtyText(p.qty)} {p.unit})
                       </small>
+                      <Aka p={p} />
                     </div>
                   ))
                 ) : (
@@ -735,25 +740,114 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             })}
           </div>
 
-          <NumberInput
-            label="🚚 مصاريف النقل (اختياري — بتتضاف على الإجمالي)"
-            placeholder="0"
-            value={shipping}
-            onChange={(e) => setShipping(e.target.value)}
-            error={errors.shipping}
-            full
-          />
-          <div className="field full" style={{ fontSize: 18 }}>
-            <span>
-              إجمالي الفاتورة: <b>{money(total)}</b>
-            </span>
-          </div>
           {asQuote && (
             <div className="field full" style={{ background: 'var(--tint2)', borderRadius: 12, padding: 10, fontSize: 13 }}>
               📝 عرض السعر مش بيخصم من المخزون ومش بيدخل في المبيعات أو التقارير. تقدر تحوّله لفاتورة بيع بعدين بضغطة.
             </div>
           )}
 
+          {/* الأساسي ظاهر: مين وهيدفع كام. الباقي ملموم في كروت بعنوان وملخص سطر — دوسة تفتحه */}
+          <Input
+            label={isSale ? 'العميل' : 'المورد'}
+            placeholder="الاسم"
+            value={person}
+            list="mk-people"
+            onChange={(e) => pickPerson(e.target.value)}
+            error={errors.person}
+          />
+          {cterm || limit || (isSale && contactNow) ? (
+            <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
+          ) : null}
+          <datalist id="mk-for">{[...new Set(lines.map((l) => (l.forName ?? '').trim()).filter(Boolean))].map((n) => <option key={n} value={n} />)}</datalist>
+          <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
+          {!asQuote && (
+            <>
+              {isSale && !invoice && contactNow && contactNow.balance < 0 && total > 0 && (() => {
+                // 🤝 العميل ليه عربون/رصيد من قبل كده: يظهر هنا ويتخصم من المطلوب بدوسة
+                const credit = r2(-contactNow.balance);
+                const use = Math.min(credit, total);
+                const used = paidTouched && Math.abs(toNum(paid) - r2(total - use)) < 0.005;
+                return (
+                  <div className="field full dep-box">
+                    <div>
+                      🤝 <b>{contactNow.name}</b> ليه عربون/رصيد <b>{money(credit)}</b>
+                      {used ? <> — ✔ اتخصم منه {money(use)}، والباقي ده بيتقفل من العربون مش دين عليه.</> : null}
+                    </div>
+                    {!used && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          setPaidTouched(true);
+                          setPaid(String(r2(total - use)));
+                          setNote((n) => (/عربون/.test(n) ? n : [n.trim(), `مخصوم عربون سابق ${money(use)}`].filter(Boolean).join(' — ')));
+                        }}
+                      >
+                        اخصم العربون من الفاتورة دي (يدفع {money(r2(total - use))})
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+              <div className="field full txpay">
+                <NumberInput
+                  label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
+                  value={paidTouched ? paid : total ? String(total) : ''}
+                  onChange={(e) => {
+                    setPaidTouched(true);
+                    setPaid(e.target.value);
+                  }}
+                  error={errors.paid}
+                />
+                <Input label={isSale ? 'المتبقي على العميل' : 'المتبقي للمورد'} readOnly value={String(remaining)} dir="ltr" />
+              </div>
+            </>
+          )}
+          <div className="field full txfolds">
+            <Fold k="tx-contact" title={isSale ? '📞 تليفون وعنوان العميل' : '📞 تليفون المورد'} hint={[phone.trim(), address.trim()].filter(Boolean).join(' — ') || 'اختياري'} force={!!errors.phone || !!del}>
+              <div className="form">
+          <Input
+            label={isSale ? 'تليفون العميل' : 'تليفون المورد'}
+            type="tel"
+            dir="ltr"
+            placeholder="01xxxxxxxxx"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            error={errors.phone}
+          />
+          {isSale && (
+            <Input label="عنوان العميل" value={address} onChange={(e) => setAddress(e.target.value)} full />
+          )}
+              </div>
+            </Fold>
+            {asQuote && (
+              <div className="form">
+          <NumberInput
+            label="مصاريف النقل (بتتضاف على الإجمالي)"
+            placeholder="0"
+            value={shipping}
+            onChange={(e) => setShipping(e.target.value)}
+            error={errors.shipping}
+            full
+          />
+              </div>
+            )}
+            {!asQuote && (
+              <Fold
+                k="tx-ship"
+                title={isSale ? '🚚 نقل وشحن ونوع العميل' : '🚚 مصاريف النقل'}
+                hint={[toNum(shipping) > 0 ? `نقل ${money(toNum(shipping))}` : '', del === 'DELIVERY' ? 'توصيل' : del === 'SHIP' ? 'شحن لمحافظة' : '', online ? 'أونلاين' : ''].filter(Boolean).join(' — ') || (isSale ? 'من المحل — من غير مصاريف' : 'من غير مصاريف')}
+                force={!!errors.shipping || !!del}
+              >
+                <div className="form">
+          <NumberInput
+            label="مصاريف النقل (بتتضاف على الإجمالي)"
+            placeholder="0"
+            value={shipping}
+            onChange={(e) => setShipping(e.target.value)}
+            error={errors.shipping}
+            full
+          />
           {isSale && !asQuote && (
             <div className="field full" id="txOnline">
               <label>نوع العميل</label>
@@ -776,32 +870,6 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
                 </div>
               )}
             </div>
-          )}
-
-          <Input
-            label={isSale ? 'العميل' : 'المورد'}
-            placeholder="الاسم"
-            value={person}
-            list="mk-people"
-            onChange={(e) => pickPerson(e.target.value)}
-            error={errors.person}
-          />
-          {cterm || limit || (isSale && contactNow) ? (
-            <CustomerBar name={person.trim()} term={cterm?.t ? { ...cterm.t, limit: limit || cterm.t.limit } : limit ? { limit } : undefined} balance={contactNow?.balance ?? 0} contactId={contactNow?.id} />
-          ) : null}
-          <datalist id="mk-for">{[...new Set(lines.map((l) => (l.forName ?? '').trim()).filter(Boolean))].map((n) => <option key={n} value={n} />)}</datalist>
-          <datalist id="mk-people">{contacts.data?.items.map((c) => <option key={c.id} value={c.name} />)}</datalist>
-          <Input
-            label={isSale ? 'تليفون العميل' : 'تليفون المورد'}
-            type="tel"
-            dir="ltr"
-            placeholder="01xxxxxxxxx"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            error={errors.phone}
-          />
-          {isSale && (
-            <Input label="عنوان العميل (اختياري)" value={address} onChange={(e) => setAddress(e.target.value)} full />
           )}
           {isSale && !asQuote && !invoice && (
             <>
@@ -843,49 +911,13 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
               )}
             </>
           )}
-          {!asQuote && (
-            <>
-              {isSale && !invoice && contactNow && contactNow.balance < 0 && total > 0 && (() => {
-                // 🤝 العميل ليه عربون/رصيد من قبل كده: يظهر هنا ويتخصم من المطلوب بدوسة
-                const credit = r2(-contactNow.balance);
-                const use = Math.min(credit, total);
-                const used = paidTouched && Math.abs(toNum(paid) - r2(total - use)) < 0.005;
-                return (
-                  <div className="field full dep-box">
-                    <div>
-                      🤝 <b>{contactNow.name}</b> ليه عربون/رصيد <b>{money(credit)}</b>
-                      {used ? <> — ✔ اتخصم منه {money(use)}، والباقي ده بيتقفل من العربون مش دين عليه.</> : null}
-                    </div>
-                    {!used && (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => {
-                          setPaidTouched(true);
-                          setPaid(String(r2(total - use)));
-                          setNote((n) => (/عربون/.test(n) ? n : [n.trim(), `مخصوم عربون سابق ${money(use)}`].filter(Boolean).join(' — ')));
-                        }}
-                      >
-                        اخصم العربون من الفاتورة دي (يدفع {money(r2(total - use))})
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
-              <NumberInput
-                label={isSale ? 'المدفوع الآن' : 'المدفوع للمورد'}
-                value={paidTouched ? paid : total ? String(total) : ''}
-                onChange={(e) => {
-                  setPaidTouched(true);
-                  setPaid(e.target.value);
-                }}
-                error={errors.paid}
-              />
-              <Input label={isSale ? 'المتبقي على العميل' : 'المتبقي للمورد'} readOnly value={String(remaining)} dir="ltr" />
-            </>
-          )}
+                </div>
+              </Fold>
+            )}
+            <Fold k="tx-note" title={!isSale && !asQuote && !invoice ? '📝 البيان ورقم فاتورة المورد' : '📝 البيان'} hint={[note.trim(), sno.trim() ? `رقم ${sno.trim()}` : ''].filter(Boolean).join(' — ').slice(0, 60) || 'اختياري'}>
+              <div className="form">
           {!isSale && !asQuote && !invoice && (
-            <Input label="رقم فاتورة المورد (اختياري — يمنع التكرار)" placeholder="رقم الفاتورة عند المورد" value={sno} onChange={(e) => setSno(e.target.value)} />
+            <Input label="رقم فاتورة المورد (يمنع التكرار)" placeholder="رقم الفاتورة عند المورد" value={sno} onChange={(e) => setSno(e.target.value)} />
           )}
           <Input
             label="البيان"
@@ -894,6 +926,9 @@ function TransactionForm({ type, person: presetPerson, invoice, quote, asQuote, 
             onChange={(e) => setNote(e.target.value)}
             full
           />
+              </div>
+            </Fold>
+          </div>
           <FormError message={errors._} />
         </div>
         <div className="modal-foot txfoot">

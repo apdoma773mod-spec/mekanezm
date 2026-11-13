@@ -83,7 +83,8 @@ const GSCHEMA = {
 // جوجل بيقفل موديلات قديمة (gemini-2.5-pro اتقفل للمستخدمين الجداد): كل درجة ليها قايمة، ولو موديل اتقفل بنعدّي للي بعده على طول
 const uniq = (a: (string | undefined)[]) => a.filter((m, i) => m && a.indexOf(m) === i) as string[];
 const STRONG_LIST = uniq([env("INVOICE_STRONG_MODEL"), "gemini-3.1-pro-preview", "gemini-pro-latest", "gemini-2.5-pro"]);
-const FAST_LIST = uniq([env("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
+// نفس الموديلات السريعة اللي شغالة في باقي السيستم (الحصر والكتالوج) + الأخف في الآخر
+const FAST_LIST = uniq([env("GEMINI_MODEL"), "gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
 const GONE = /no longer available|not found|is not supported|deprecated|unknown model/i;
 // كل موديل ليه حصة مجانية لوحده: لو حصة موديل خلصت أو زحمة، نجرّب اللي بعده بدل ما نقف
 const BUSY = /quota|exceeded|rate.?limit|resource.?exhausted|overloaded|high demand|unavailable|try again/i;
@@ -125,14 +126,23 @@ async function viaGemini(key: string, image: string, mt: string, part?: { i: num
   const partHint = part && part.n > 1 ? `دي شريحة رقم ${part.i} من ${part.n} من صورة فاتورة طويلة (الشرايح متداخلة شوية). اكتب كل صفوف الأصناف الظاهرة في الشريحة دي بس — حتى أول وآخر صف لو مقروءين. row_count = عدد الصفوف في الشريحة دي. grand_total بس لو الإجمالي النهائي ظاهر في الشريحة دي.` : "";
   let best: { d: Inv; c: ReturnType<typeof invCheck>; model: string } | null = null, lastErr = { status: 502, error: "ماقدرتش أقرا الفاتورة" }, passes = 0;
   // موديل شغال من القايمة (بيعدّي اللي جوجل قفله)
+  // السبب الحقيقي بيفضل محفوظ: «زحمة/الحصة خلصت» أهم من «موديل قديم اتقفل» (ده مش سبب الفشل، ده موديل اتشال من جوجل وبس)
+  let busySeen = false;
   const tryTier = async (list: string[], ms: number, hint: string) => {
-    for (const m of list) {
-      if (left() < 12000) break;
-      const r = await geminiInv(key, image, mt, m, Math.min(ms, left()), hint, text);
-      passes++;
-      if (!r.ok && (GONE.test(r.error) || r.status === 404)) { lastErr = { status: 502, error: "موديل جوجل اتقفل: " + m }; continue; }
-      if (!r.ok && BUSY.test(r.error)) { lastErr = r; continue; }
-      return { r, m };
+    // لفّة تانية بعد ثواني لو كل الموديلات قالت زحمة (الزحمة عند جوجل بتعدّي بسرعة)
+    for (let round = 0; round < 2; round++) {
+      let busyRound = false;
+      for (const m of list) {
+        if (left() < 12000) return null;
+        const r = await geminiInv(key, image, mt, m, Math.min(ms, left()), hint, text);
+        passes++;
+        if (!r.ok) console.warn("[read-invoice]", m, r.status, String(r.error).slice(0, 200));
+        if (!r.ok && (GONE.test(r.error) || r.status === 404)) { if (!busySeen) lastErr = { status: 502, error: "موديل جوجل اتقفل: " + m }; continue; }
+        if (!r.ok && BUSY.test(r.error)) { lastErr = r; busySeen = busyRound = true; continue; }
+        return { r, m };
+      }
+      if (!busyRound || left() < 25000) break;
+      await new Promise((ok) => setTimeout(ok, 6000));
     }
     return null;
   };
@@ -154,7 +164,11 @@ async function viaGemini(key: string, image: string, mt: string, part?: { i: num
       break;
     }
   }
-  if (!best) return json({ error: /quota|exceeded|resource.?exhausted/i.test(lastErr.error) ? "quota: حصة جوجل المجانية للقراءة خلصت دلوقتي — هيعيد المحاولة لوحده" : lastErr.error }, lastErr.status);
+  if (!best) {
+    const e = String(lastErr.error);
+    const msg = /quota|exceeded|resource.?exhausted/i.test(e) ? "quota: حصة جوجل المجانية للقراءة خلصت دلوقتي — هيعيد المحاولة لوحده" : BUSY.test(e) ? "busy: جوجل زحمة دلوقتي — هيعيد المحاولة لوحده كمان شوية" : e;
+    return json({ error: msg }, lastErr.status);
+  }
   return json({ ...best.d, _check: { ...best.c, model: best.model, passes } });
 }
 

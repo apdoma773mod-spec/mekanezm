@@ -11,6 +11,7 @@ import { useCompany } from '../company';
 import { Modal } from '../ui/modal';
 import { useToast } from '../ui/toast';
 import { useModal } from './modal-host';
+import { Aka } from '../ui/aka';
 
 /**
  * 🎤 أمر صوتي (openVoice القديمة بآخر شكل ليها): بتسمع أو بتقرا الأمر، وتفتح النموذج متعبّي.
@@ -470,6 +471,7 @@ export function VoiceModal() {
                 <small>
                   ({p.qty} {p.unit})
                 </small>
+                <Aka p={p} />
               </button>
             ))}
           </>

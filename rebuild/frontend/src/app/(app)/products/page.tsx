@@ -15,6 +15,7 @@ import { CameraScanner } from '@/components/scan/camera-scanner';
 import { useToast } from '@/components/ui/toast';
 import { useIsAdmin } from '@/components/use-role';
 import { lookupProduct, useProducts } from '@/lib/trade-queries';
+import { Aka } from '../../../components/ui/aka';
 
 type StockFilter = 'all' | 'low' | 'out';
 
@@ -97,6 +98,11 @@ function ProductsScreen() {
             <button type="button" className="secondary" onClick={() => open({ kind: 'split' })}>
               🔪 فك لفة / تقسيم
             </button>
+            {isAdmin && (
+              <button type="button" className="secondary" id="kitPartsBtn" onClick={() => open({ kind: 'kitParts' })}>
+                🧩 طقم بيتباع بالقطعة
+              </button>
+            )}
           </div>
         }
       />
@@ -186,6 +192,7 @@ function ProductsScreen() {
                         <Icon name="box" />
                       </span>
                       <b>{p.name}</b>
+                      <Aka p={p} />
                     </td>
                     <td>{p.category}</td>
                     <td>

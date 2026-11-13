@@ -19,6 +19,8 @@ import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { D, money, num, qty as roundQty } from '../../lib/money.js';
 import { moveStock } from '../../lib/stock.js';
 import { withTx } from '../../lib/tx.js';
+import { tbl } from '../../lib/db-schema.js';
+import { partsOf } from '../../lib/kit-parts.js';
 
 export function toProductDto(p: Product, admin: boolean): ProductDto {
   return {
@@ -81,16 +83,81 @@ async function generateCode(tx: Prisma.TransactionClient): Promise<string> {
 export class ProductsService {
   constructor(private readonly prisma: PrismaClient) {}
 
+  /** {product id: names suppliers use for it} from Setting `invoice_aliases` (one read per search). */
+  private async akaMap(): Promise<Map<string, string[]>> {
+    const al = ((await this.prisma.setting.findUnique({ where: { key: 'invoice_aliases' } }).catch(() => null))?.value ?? {}) as Record<string, Record<string, string>>;
+    const out = new Map<string, string[]>();
+    for (const m of Object.values(al && typeof al === 'object' ? al : {}))
+      for (const [text, id] of Object.entries(m && typeof m === 'object' ? m : {})) {
+        if (text.startsWith('#') || typeof id !== 'string') continue;
+        const L = out.get(id) ?? [];
+        if (!L.includes(text) && L.length < 3) L.push(text);
+        out.set(id, L);
+      }
+    return out;
+  }
+  /** 🧩 {piece id: its kit} and {kit id: number of piece kinds} for the hint under a search result. */
+  private async kitHints(): Promise<{ piece: Map<string, { id: string; name: string; n: number; qty: number }>; kits: Map<string, number> }> {
+    const piece = new Map<string, { id: string; name: string; n: number; qty: number }>();
+    const kits = new Map<string, number>();
+    const infos = await this.prisma.$queryRaw<{ productId: string; parts: unknown }[]>`SELECT "productId", parts FROM ${tbl('ProductInfo')} WHERE jsonb_typeof(parts) = 'array' AND jsonb_array_length(parts) > 0`.catch(() => []);
+    if (!infos.length) return { piece, kits };
+    const rows = await this.prisma.product.findMany({ where: { id: { in: infos.map((i) => i.productId) }, deletedAt: null }, select: { id: true, name: true, qty: true } });
+    for (const i of infos) {
+      const k = rows.find((r) => r.id === i.productId);
+      if (!k) continue;
+      const parts = partsOf(i.parts);
+      kits.set(k.id, parts.length);
+      for (const p of parts) piece.set(p.productId, { id: k.id, name: k.name, n: p.n, qty: num(k.qty) });
+    }
+    return { piece, kits };
+  }
+  private async decorate(list: ProductDto[]): Promise<ProductDto[]> {
+    const [aka, h] = await Promise.all([this.akaMap(), this.kitHints()]);
+    return this.withAka(list, aka).map((p) => {
+      const kit = h.piece.get(p.id);
+      const kitParts = h.kits.get(p.id);
+      return kit || kitParts ? { ...p, ...(kit ? { kit } : {}), ...(kitParts ? { kitParts } : {}) } : p;
+    });
+  }
+  private withAka(list: ProductDto[], aka: Map<string, string[]>, ourName = (p: ProductDto) => p.name): ProductDto[] {
+    const n = (t: string) => t.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+    return list.map((p) => {
+      const a = (aka.get(p.id) ?? []).filter((t) => n(t) !== n(ourName(p)));
+      return a.length ? { ...p, aka: a } : p;
+    });
+  }
+
+  /** Products whose saved supplier names (Setting `invoice_aliases`: {supplier: {their text: product id}}) contain every typed word. */
+  private async aliasHits(words: string[]): Promise<string[]> {
+    const al = ((await this.prisma.setting.findUnique({ where: { key: 'invoice_aliases' } }).catch(() => null))?.value ?? {}) as Record<string, Record<string, string>>;
+    const norm = (t: string) => t.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ');
+    const W = words.map(norm);
+    const ids = new Set<string>();
+    for (const m of Object.values(al && typeof al === 'object' ? al : {}))
+      for (const [text, id] of Object.entries(m && typeof m === 'object' ? m : {})) {
+        if (text.startsWith('#')) {
+          if (W.length === 1 && norm(text.slice(1)) === W[0]) ids.add(id); // the supplier's code typed exactly
+          continue;
+        }
+        const t = norm(text);
+        if (W.every((w) => t.includes(w))) ids.add(id);
+      }
+    return [...ids].slice(0, 200);
+  }
+
   async list(query: ListProductsQuery, actor: Actor): Promise<Paginated<ProductDto>> {
     let lowIds: string[] | undefined;
     if (query.stock === 'low') {
       // Prisma can't compare two columns, so the "at or under its own alert level" ids come from SQL.
       const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
+        SELECT id FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`;
       lowIds = rows.map((r) => r.id);
     }
     // Like the old search: every typed word must appear in the name, code, barcode or category.
     const words = (query.q ?? '').trim().split(/\s+/).filter(Boolean);
+    // 🔁 أسماء الموردين: الصنف اللي اتطابق مرة مع اسم المورد (مراجعة فاتورة الشراء) بيطلع بالاسمين في البحث
+    const aliasIds = words.length ? await this.aliasHits(words) : [];
     const where: Prisma.ProductWhereInput = {
       deletedAt: null,
       ...(query.category ? { category: query.category } : {}),
@@ -99,14 +166,19 @@ export class ProductsService {
       ...(query.stock === 'out' ? { qty: { lte: 0 } } : {}),
       ...(words.length
         ? {
-            AND: words.map((w) => ({
-              OR: [
-                ...arContains('name', w),
-                { code: { startsWith: w.toUpperCase() } },
-                { barcode: w },
-                { category: { contains: w, mode: 'insensitive' as const } },
-              ],
-            })),
+            OR: [
+              {
+                AND: words.map((w) => ({
+                  OR: [
+                    ...arContains('name', w),
+                    { code: { startsWith: w.toUpperCase() } },
+                    { barcode: w },
+                    { category: { contains: w, mode: 'insensitive' as const } },
+                  ],
+                })),
+              },
+              ...(aliasIds.length ? [{ id: { in: aliasIds } }] : []),
+            ],
           }
         : {}),
     };
@@ -128,7 +200,7 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     const admin = isAdmin(actor);
-    return { items: rows.map((p) => toProductDto(p, admin)), total, page: query.page, pageSize: query.pageSize };
+    return { items: await this.decorate(rows.map((p) => toProductDto(p, admin))), total, page: query.page, pageSize: query.pageSize };
   }
 
   async categories(): Promise<string[]> {
@@ -296,7 +368,7 @@ export class ProductsService {
       orderBy: { name: 'asc' },
     });
     const keep = query.stock === 'low' ? rows.filter((p) => p.qty.gt(0) && p.qty.lte(p.minQty)) : rows;
-    return keep.map((p) => toProductDto(p, admin));
+    return this.decorate(keep.map((p) => toProductDto(p, admin)));
   }
 
   /** 💰 بضاعة قديمة: أصناف ليها سعر بيع ومن غير سعر شراء. */

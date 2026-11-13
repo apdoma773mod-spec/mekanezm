@@ -16,6 +16,7 @@ import { printHtml, reportHtml } from '@/lib/print';
 import { useSettings } from '@/lib/queries';
 import { vn } from '@/lib/import-daily';
 import { lookupProduct, useAllProducts, useCategories, useCounts, useCreateCount, useProducts } from '@/lib/trade-queries';
+import { Aka, akaHay } from '../../../components/ui/aka';
 
 /** Same draft key as the old system, so a half-done count survives a reload. */
 const CD = 'mk_count_draft';
@@ -137,10 +138,10 @@ function CountScreen() {
   const setCount = (p: Pick<ProductDto, 'id' | 'name' | 'code' | 'category' | 'qty' | 'cost'>, v: string) =>
     update({ ...draft, [p.id]: { v: toWestern(v), name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0, t: serverNowIso() } });
 
-  type Line = { id: string; name: string; code: string; cat: string; qty: number; cost: number };
+  type Line = { id: string; name: string; code: string; cat: string; qty: number; cost: number; aka?: string[] };
   let lines: Line[];
   if (show === 'all') {
-    lines = (products.data?.items ?? []).map((p) => ({ id: p.id, name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0 }));
+    lines = (products.data?.items ?? []).map((p) => ({ id: p.id, name: p.name, code: p.code, cat: p.category ?? '', qty: p.qty, cost: p.cost ?? 0, aka: p.aka }));
   } else {
     const words = q.toLowerCase().split(' ').filter(Boolean);
     lines = Object.entries(draft)
@@ -190,7 +191,7 @@ function CountScreen() {
     if (!settings) return;
     const all = await allProducts.refetch();
     const w = vn(q).split(' ').filter(Boolean);
-    const L = (all.data ?? []).filter((p) => (!cat || p.category === cat) && w.every((x) => vn(`${p.name} ${p.code}`).includes(x)));
+    const L = (all.data ?? []).filter((p) => (!cat || p.category === cat) && w.every((x) => vn(akaHay(p)).includes(x)));
     printHtml(
       reportHtml(
         {
@@ -296,6 +297,7 @@ function CountScreen() {
                 <div key={p.id} className={`cnt-row${hit === p.id ? ' hit' : ''}`}>
                   <div style={{ minWidth: 0 }}>
                     <b>{p.name}</b>
+                    <Aka p={p} />
                     <br />
                     <small style={{ color: 'var(--muted)' }}>
                       {p.code}

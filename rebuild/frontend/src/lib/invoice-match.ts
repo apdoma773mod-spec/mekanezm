@@ -37,7 +37,10 @@ function tokSim(x: string, y: string): number {
   });
   return (2 * h) / (a.length + b.length);
 }
-const wordsOf = (s: string) => vn(s).split(/[^؀-ۿa-z0-9.]+/).filter(Boolean);
+// الموردين بيكتبوا الماركة بالإنجليزي واحنا بالعربي (Palma / بالما): الكلمة الإنجليزي بتتقارن بحروفها العربي
+const LAT: Record<string, string> = { a: 'ا', b: 'ب', c: 'ك', d: 'د', e: '', f: 'ف', g: 'ج', h: 'ه', i: 'ي', j: 'ج', k: 'ك', l: 'ل', m: 'م', n: 'ن', o: 'و', p: 'ب', q: 'ك', r: 'ر', s: 'س', t: 'ت', u: 'و', v: 'ف', w: 'و', x: 'كس', y: 'ي', z: 'ز' };
+const toAr = (w: string) => (/^[a-z]{3,}$/.test(w) ? [...w].map((c) => LAT[c] ?? '').join('') : w);
+const wordsOf = (s: string) => vn(s).split(/[^؀-ۿa-z0-9.]+/).filter(Boolean).map(toAr).filter(Boolean);
 
 export function nameSim(a: string, b: string): number {
   const A = vn(a);
@@ -55,14 +58,18 @@ export function nameSim(a: string, b: string): number {
     const sa = new Set(na);
     const sb = new Set(nb);
     const c = [...sa].filter((x) => sb.has(x)).length;
-    const u = new Set([...sa, ...sb]).size;
-    pen = c === 0 ? 0.35 : c < u ? 0.78 : 1;
-  } else if (na.length !== nb.length) pen = 0.88;
+    // المورد بيزوّد أرقام (زي «2 مرحلة»): لو كل مقاسات الاسم الأقصر موجودة في التاني يبقى نفس المقاس
+    pen = c === 0 ? 0.35 : c >= Math.min(sa.size, sb.size) ? 1 : 0.78;
+  } else if (na.length !== nb.length) pen = 0.7; // واحد فيه مقاس والتاني لأ: غالبًا مش نفس الصنف
   if (!wa.length || !wb.length) return pen * (wa.length === wb.length ? 0.6 : 0.25);
   const dir = (X: string[], Y: string[]) => X.reduce((t, x) => t + Math.max(...Y.map((y) => tokSim(x, y))), 0) / X.length;
   const s1 = dir(wa, wb);
   const s2 = dir(wb, wa);
-  return (0.6 * Math.min(s1, s2) + 0.4 * Math.max(s1, s2)) * pen;
+  const base = (0.6 * Math.min(s1, s2) + 0.4 * Math.max(s1, s2)) * pen;
+  // اسمنا القصير موجود كله جوه وصف المورد الطويل (كل كلمة + نفس المقاس): «سفلي بالما 45 سم» ⊂ «مجري سفلي سوفت كلوز 2 مرحلة 45 سم Palma»
+  const short = wa.length <= wb.length ? s1 : s2;
+  if (pen === 1 && na.length && nb.length && Math.min(wa.length, wb.length) >= 2 && short >= 0.9) return Math.max(base, 0.86);
+  return base;
 }
 
 export const normTxt = (s: unknown) => vn(s).replace(/\s+/g, ' ').trim();

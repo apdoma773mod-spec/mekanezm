@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from 'react';
 import type { ProductDto } from '@mk/shared';
 import { qtyText } from '@/lib/format';
 import { useProducts } from '@/lib/trade-queries';
+import { Aka } from './ui/aka';
 
 interface Props {
   label: string;
@@ -66,6 +67,7 @@ export function ProductPicker({ label, value, onPick, error }: Props) {
                     <small style={{ color: '#7a8a8f' }}>
                       — {qtyText(p.qty)} {p.unit}
                     </small>
+                    <Aka p={p} />
                   </div>
                 ))
               ) : (

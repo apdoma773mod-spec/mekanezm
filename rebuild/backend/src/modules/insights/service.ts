@@ -5,6 +5,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { addDays, dateToDay, dayToDate, todayYmd } from '../../lib/dates.js';
 import { notFound } from '../../lib/errors.js';
 import { num } from '../../lib/money.js';
+import { tbl } from '../../lib/db-schema.js';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const DAY_MS = 86_400_000;
@@ -128,7 +129,7 @@ export class InsightsService {
       this.prisma.invoice.findFirst({ where: { kind: 'SALE', status: 'ACTIVE' }, orderBy: { date: 'asc' }, select: { date: true } }),
       this.prisma.$queryRaw<{ productId: string; person: string }[]>`
         SELECT DISTINCT ON (ii."productId") ii."productId", i.person
-        FROM "InvoiceItem" ii JOIN "Invoice" i ON i.id = ii."invoiceId"
+        FROM ${tbl('InvoiceItem')} ii JOIN ${tbl('Invoice')} i ON i.id = ii."invoiceId"
         WHERE i.kind = 'PURCHASE' AND i.status = 'ACTIVE' AND ii."productId" IS NOT NULL AND i.person <> ''
         ORDER BY ii."productId", i.date DESC, i."createdAt" DESC`,
       this.prisma.contact.findMany({ where: { type: 'SUPPLIER', deletedAt: null }, select: { name: true, phone: true } }),

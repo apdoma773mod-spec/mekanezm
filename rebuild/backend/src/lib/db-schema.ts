@@ -17,4 +17,4 @@ export function dbSchema(): string {
 }
 
 /** اسم جدول مؤهَّل بالمخطط لاستخدامه جوه Prisma.sql */
-export const tbl = (name: 'Product' | 'ProductInfo' | 'StockMove' | 'Warehouse') => Prisma.raw(`"${dbSchema()}"."${name}"`);
+export const tbl = (name: 'Product' | 'ProductInfo' | 'StockMove' | 'Warehouse' | 'Invoice' | 'InvoiceItem') => Prisma.raw(`"${dbSchema()}"."${name}"`);

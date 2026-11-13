@@ -102,10 +102,15 @@ async function pageTextOf(pg: { getTextContent: () => Promise<{ items: { str?: s
       if (!rows.has(y)) rows.set(y, []);
       rows.get(y)!.push({ x: it.transform[4]!, s: str });
     }
-    return [...rows.entries()]
+    const text = [...rows.entries()]
       .sort((a, b) => b[0] - a[0])
       .map(([, r]) => r.sort((a, b) => b.x - a.x).map((c) => c.s).join(' | '))
       .join('\n');
+    // بعض برامج الفواتير (زي برنامج الحسابات اللي بيطبع «إذن التسليم») بتخزّن العربي حرف حرف في الـPDF: النص ده بيطلع مفكوك ويلخبط القراءة.
+    // لو أغلب الكلمات العربي حرف واحد، نرمي النص ونقرا الصفحة كصورة.
+    const ar = text.split(/[\s|]+/).filter((w) => /[؀-ۿﹰ-﻿]/.test(w));
+    if (ar.length && ar.filter((w) => w.length === 1).length / ar.length > 0.3) return '';
+    return text;
   } catch {
     return '';
   }
@@ -444,6 +449,8 @@ export function InvoicePhotoButtons({
   const [busy, setBusy] = useState('');
   const [waitId, setWaitId] = useState<string | null>(null);
   const [claude, setClaude] = useState(false);
+  /** الاستيراد ملموم في سطر واحد (الشاشة كانت بتبدأ بأربع أزرار وشرح وقايمة قبل ما توصل لخانة البحث). */
+  const [open, setOpen] = useState(false);
   const [clText, setClText] = useState('');
   const applied = useRef(new Set<string>());
 
@@ -530,8 +537,20 @@ export function InvoicePhotoButtons({
 
   const L = (scans.data?.items ?? []).filter((s) => s.status !== 'used' && s.id !== autoScan);
   const dups = dupIds(scans.data?.items ?? []);
+  const ready = L.filter((x) => x.status === 'done').length;
+  const waiting = L.filter((x) => x.status === 'pending' || x.status === 'working').length;
+  const shown = open || !!busy || !!waitId;
   return (
     <div className="field full" id="ivBtn">
+      <button type="button" className={`ivhead${shown ? ' on' : ''}`} aria-expanded={shown} onClick={() => setOpen(!shown)}>
+        <span className="ivh-t">📥 استيراد فاتورة المورد</span>
+        <small className="ivh-s">
+          {busy || (waitId ? '⏳ بتتقري…' : ready || waiting ? `${ready ? `${ready} جاهزة` : ''}${ready && waiting ? ' · ' : ''}${waiting ? `${waiting} بتتقري` : ''}` : 'صورة أو PDF أو Claude')}
+        </small>
+        <span className="ivh-a">{shown ? '▴' : '▾'}</span>
+      </button>
+      {shown && (
+      <div style={{ marginTop: 8 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" className="primary" style={{ flex: 1, minWidth: 120 }} disabled={!!busy} onClick={() => cam.current?.click()}>
           📷 صوّر الفاتورة
@@ -632,6 +651,8 @@ export function InvoicePhotoButtons({
             <ScanRow key={s.id} s={s} dupe={dups.has(s.id)} onReview={(x) => void apply(x)} />
           ))}
         </div>
+      )}
+      </div>
       )}
       {review && (
         <InvoiceReview

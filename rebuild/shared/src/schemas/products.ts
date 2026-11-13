@@ -77,6 +77,12 @@ export interface ProductDto {
   minQty: number;
   company: (typeof COMPANIES)[number];
   note: string;
+  /** الأسماء اللي الموردين بيكتبوها للصنف ده في فواتيرهم (بتتحفظ من مراجعة فاتورة الشراء). في نتايج البحث بس. */
+  aka?: string[];
+  /** 🧩 الصنف ده قطعة من طقم: الطقم، عدد القطعة جواه، وكام طقم مقفول لسه في المخزون (بيتفك لوحده وقت البيع). في نتايج البحث بس. */
+  kit?: { id: string; name: string; n: number; qty: number };
+  /** 🧩 الصنف ده طقم ليه محتويات بتتباع بالقطعة (عدد أنواع القطع). */
+  kitParts?: number;
   createdAt: string;
   updatedAt: string;
 }

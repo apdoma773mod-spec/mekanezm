@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { addDays, dayRange, dayToDate, todayYmd } from '../../lib/dates.js';
 import { ALERT_BY, alertConfig, n2 } from '../../lib/alerts.js';
+import { tbl } from '../../lib/db-schema.js';
 
 const DOW = ['الأحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة', 'السبت'];
 const num = (d: Prisma.Decimal | number | null | undefined) => Number(d ?? 0);
@@ -42,7 +43,7 @@ export async function dailyReport(db: PrismaClient, day: string): Promise<string
   const topMap = new Map<string, number>();
   sales.forEach((i) => i.items.forEach((it) => topMap.set(it.name, (topMap.get(it.name) ?? 0) + num(it.qty))));
   const top = [...topMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, q]) => `${n} (${n2(q)})`).join('، ');
-  const low = Number((await db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM "Product" WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`)[0]?.n ?? 0);
+  const low = Number((await db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM ${tbl('Product')} WHERE "deletedAt" IS NULL AND qty > 0 AND qty <= "minQty"`)[0]?.n ?? 0);
   const soldIds = [...new Set(sales.flatMap((i) => i.items.map((it) => it.productId).filter((x): x is string => !!x)))];
   const outList = soldIds.length ? (await db.product.findMany({ where: { id: { in: soldIds }, deletedAt: null, qty: { lte: 0 } }, take: 8, select: { name: true } })).map((p) => p.name).join('، ') : '';
   const debt = num((await db.contact.aggregate({ where: { type: 'CUSTOMER', deletedAt: null, balance: { gt: 0 } }, _sum: { balance: true } }))._sum.balance);

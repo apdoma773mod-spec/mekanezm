@@ -25,6 +25,7 @@ import {
   useProduct,
   useProducts,
 } from '@/lib/trade-queries';
+import { Aka } from '../../../components/ui/aka';
 
 /** Same payment chips, order and icons as the old daybook. */
 const PAYS: [DaybookPay, string][] = [
@@ -667,6 +668,7 @@ export default function DaybookPage() {
                 <small style={{ color: '#7a8a8f' }}>
                   ({qtyText(p.qty)} {p.unit || ''})
                 </small>
+                <Aka p={p} />
               </div>
             ))}
             <div onMouseDown={(e) => e.preventDefault()} onClick={() => pick(null)} style={{ color: 'var(--blue)', fontWeight: 700 }}>
