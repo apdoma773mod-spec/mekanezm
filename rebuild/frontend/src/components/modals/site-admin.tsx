@@ -714,6 +714,18 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
     return () => document.removeEventListener('keydown', k);
   }, [onClose]);
 
+  // صور المنتج بتترفع مرة واحدة: اللي اترفع في «تفاصيل وصور» بيظهر هنا لوحده أول ما المنتج يتنشر (من غير رفع تاني).
+  // منتج منشور قبل كده: مانضيفش لوحدنا (ممكن عبده شال صورة من الموقع بقصد) — بيظهر زرار «هات صور التفاصيل».
+  const infoImgs = (sysInfo?.imgs ?? []).filter((u): u is string => typeof u === 'string' && !!u);
+  const pulled = useRef(false);
+  const ready = !!f;
+  const fresh = ready && !f!.wasOn && !f!.imgs.length;
+  useEffect(() => {
+    if (pulled.current || !fresh || !infoImgs.length) return;
+    pulled.current = true;
+    setF((x) => (x ? { ...x, imgs: [...infoImgs] } : x));
+  }, [fresh, infoImgs]);
+
   const shell = (inner: React.ReactNode) => (
     <div id="spEd">
       <div className="sx">{inner}</div>
@@ -851,6 +863,18 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
         if (i > -1) d.products[i] = o;
         else d.products.push(o);
       });
+      // والعكس: صورة اترفعت هنا بتتحفظ في «تفاصيل وصور» كمان (صورة المقاسات لأ، دي بتاعة الموقع بس)
+      if (id && sysInfo && f.on) {
+        const add = imgsOut.filter((u) => u !== dimOut.dimImg && !infoImgs.includes(u));
+        if (add.length) {
+          try {
+            await api.put(`/products/${id}/info`, { ...sysInfo, imgs: [...infoImgs, ...add].slice(0, 30) });
+            void qc.invalidateQueries({ queryKey: ['product-info', id] });
+          } catch {
+            toast('اتنشر على الموقع، بس الصور ماتحفظتش في «تفاصيل وصور»', 'bad');
+          }
+        }
+      }
       toast(f.on ? '✔ اتحفظ واتنشر على الموقع' : '✔ اتشال من الموقع');
       onClose();
     } catch (e) {
@@ -959,6 +983,14 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
                   }}
                 />
                 <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{up}</div>
+                {(() => {
+                  const more = infoImgs.filter((u) => !f.imgs.includes(u));
+                  return more.length ? (
+                    <button type="button" className="secondary" style={{ margin: '6px 0' }} onClick={() => set({ imgs: [...f.imgs, ...more] })}>
+                      ➕ هات صور «تفاصيل وصور» ({more.length})
+                    </button>
+                  ) : null;
+                })()}
                 <div style={{ margin: '8px 0', padding: 10, borderRadius: 12, background: '#fff8e8', border: '1px solid #f0d98a' }}>
                   <b>📐 صورة المقاسات</b>
                   <div style={{ fontSize: 13, color: 'var(--muted)', margin: '4px 0 6px' }}>

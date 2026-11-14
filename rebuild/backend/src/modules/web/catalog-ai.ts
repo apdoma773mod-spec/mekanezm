@@ -6,6 +6,7 @@ import { writeAudit } from '../../lib/audit.js';
 import { badRequest } from '../../lib/errors.js';
 import { getFile, putFile } from '../../lib/files.js';
 import { drawDimensions } from './dim-draw.js';
+import { unframe } from './unframe.js';
 import { parse } from '../../lib/validate.js';
 import { cleanPhotoSafe } from './clean-photo.js';
 
@@ -159,10 +160,35 @@ const LINE_WORDS: Record<string, string> = {
   d: 'depth: front to back of the body',
 };
 /** Two end points per wanted size, ON the product's own edges (fractions x0,y0,x1,y1 of the photo). */
-const partLines = (key: string, photo: { data: string; mime: string }, kinds: string[]) =>
+/** Review BEFORE drawing: is this photo fit to carry size lines? (a tape/hand over the part, or a size that cannot be seen from this angle) */
+const photoCheck = (key: string, photo: { data: string; mime: string }, kinds: string[]) =>
+  geminiJson<{ tape?: boolean; missing?: string[] }>(
+    key,
+    `Product photo of a hardware part. Answer two things.
+1) "tape": true only if a measuring tape, ruler or a hand is touching or covering the product itself.
+2) "missing": the measurements from this list whose full extent can NOT be seen in this photo because of the camera angle or because the part is cut off by the photo edge (for example the height in a straight top-down photo). Empty list if all can be seen.
+Measurements:
+${kinds.map((k) => `- "${k}" = ${LINE_WORDS[k]}`).join(String.fromCharCode(10))}
+Return JSON only: {"tape":false,"missing":[]}`,
+    photo,
+    { ms: 18000, kind: 'dim' },
+  ).then((d) => ({ tape: d.tape === true, missing: Array.isArray(d.missing) ? d.missing.filter((m): m is string => typeof m === 'string') : [] }));
+
+/** Review AFTER drawing: the finished picture is shown back; which labelled lines do not sit on their own dimension? */
+const dimVerify = (key: string, drawn: { data: string; mime: string }, items: { kind: string; v: string }[]) =>
+  geminiJson<{ wrong?: { kind?: string; why?: string }[] }>(
+    key,
+    `This product photo has dimension lines drawn on it, each with a dark tag showing a number in cm. Check every line below: it must run along the named dimension of the product itself, from one real end of that dimension to the other (not across the background, not along a different edge, not clearly too short or too long).
+${items.map((i) => `- "${i.kind}" = tag "${i.v} cm" = ${LINE_WORDS[i.kind]}`).join(String.fromCharCode(10))}
+List only the lines that are clearly wrong. Return JSON only: {"wrong":[{"kind":"h","why":"short reason"}]}`,
+    drawn,
+    { ms: 15000, kind: 'dim' },
+  ).then((d) => (d.wrong ?? []).filter((w) => typeof w.kind === 'string').map((w) => ({ kind: w.kind as string, why: String(w.why ?? '').slice(0, 120) })));
+
+const partLines = (key: string, photo: { data: string; mime: string }, kinds: string[], note = '') =>
   geminiJson<{ lines?: { kind?: string; p1?: number[]; p2?: number[] }[] }>(
     key,
-    `Product photo. Ignore the background, logo, text, hands and any measuring tape/ruler. For EACH measurement below give two end points that sit exactly ON the product's own edges, following the direction of that dimension as it appears in the photo (the line may be tilted by perspective). Points are [y,x] integers 0-1000.
+    `${note ? note + String.fromCharCode(10) : ''}Product photo. Ignore the background, logo, text, hands and any measuring tape/ruler. For EACH measurement below give two end points that sit exactly ON the product's own edges, following the direction of that dimension as it appears in the photo (the line may be tilted by perspective). Points are [y,x] integers 0-1000.
 Measurements:
 ${kinds.map((k) => `- "${k}" = ${LINE_WORDS[k]}`).join(String.fromCharCode(10))}
 Return JSON only: {"lines":[{"kind":"h","p1":[y,x],"p2":[y,x]}]}`,
@@ -369,8 +395,11 @@ export async function catalogAiRoutes(app: FastifyInstance) {
   /** صورة المقاسات: صورة المنتج الحقيقية زي ما هي + مقاسات مرسومة على القطعة (من غير فصل خلفية ولا ذكاء بيرسم) */
   app.post('/catalog/ai/dim-image', { bodyLimit: 4 * 1024 * 1024, preHandler: app.requireAdmin, config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request) => {
     const p = parse(z.object({ img: z.string().max(500).default(''), imgData: z.string().max(12_000_000).default(''), w: z.string().max(12).default(''), h: z.string().max(12).default(''), d: z.string().max(12).default(''), l: z.string().max(12).default(''), t: z.string().max(12).default(''), bw: z.string().max(12).default(''), bl: z.string().max(12).default(''), foot: z.string().max(120).default('') }), request.body);
-    const photo = p.imgData ? { data: p.imgData, mime: 'image/jpeg' } : await loadImage(p.img);
-    if (!photo) throw badRequest('مقدرتش أفتح صورة المنتج');
+    const got = p.imgData ? { data: p.imgData, mime: 'image/jpeg' } : await loadImage(p.img);
+    if (!got) throw badRequest('مقدرتش أفتح صورة المنتج');
+    // الصور المرفوعة عليها الإطار الدهبي واللوجو مرسومين جواها: بنشيلهم الأول، عشان المقاسات تترسم على صورة المنتج نفسها
+    // (الموقع وكارت المنتج بيحطوا الإطار مرة واحدة على كل الصور) وعشان الذكاء الاصطناعي يشوف القطعة بس.
+    const photo = { data: (await unframe(Buffer.from(got.data, 'base64'))).toString('base64'), mime: 'image/jpeg' };
     const k = await getKey();
     const vals: [string, string, string, 'bottom' | 'right' | 'top' | 'left'][] = [['h', p.h, 'الارتفاع', 'right'], ['w', p.w, 'العرض', 'top'], ['l', p.l, 'الطول', 'top'], ['t', p.t, 'التخانة', 'left'], ['bw', p.bw, 'عرض القاعدة', 'bottom'], ['bl', p.bl, 'طول القاعدة', 'bottom'], ['d', p.d, 'العمق', 'left']];
     const want = vals.filter((x) => x[1]);
@@ -379,9 +408,32 @@ export async function catalogAiRoutes(app: FastifyInstance) {
     // بنكمّل من غيره بعد ٢٢ ثانية، والخطوط بتترسم على حدود القطعة نفسها بدل ما الصورة ما تطلعش خالص.
     const cap = <T>(pr: Promise<T>, fb: T) => Promise.race([pr.catch(() => fb), new Promise<T>((ok) => setTimeout(() => ok(fb), 22000))]);
     const noLines = {} as Record<string, [number, number, number, number]>;
-    const [hint, lines] = k ? await Promise.all([cap(partBox(k.key, photo), null), cap(partLines(k.key, photo, want.map((x) => x[0])), noLines)]) : [null, noLines];
-    const specs = want.map(([kind, v, name, slot]) => ({ k: name, v: v + ' سم', slot, line: lines[kind] ?? null }));
-    const buf = await drawDimensions(Buffer.from(photo.data, 'base64'), specs, '', hint, p.foot);
+    // من غير مفتاح ذكاء اصطناعي مفيش حد يحدد مكان القطعة: الرسم القديم كان بيحط الخطوط على حدود الصورة وخلاص (صورة غلط بتتنشر)
+    if (!k) throw badRequest('صورة المقاسات محتاجة مفتاح Gemini (من صفحة الكتالوج) عشان تعرف مكان القطعة في الصورة');
+    const kinds = want.map((x) => x[0]);
+    const started = Date.now();
+    const [hint, lines0, chk] = await Promise.all([cap(partBox(k.key, photo), null), cap(partLines(k.key, photo, kinds), noLines), cap(photoCheck(k.key, photo, kinds), null)]);
+    // المراجعة قبل الرسم: صورة فيها متر/إيد مغطية القطعة، أو مقاس مش باين من الزاوية دي = مانرسمش عليها (الصورة دي بتطلع على الموقع)
+    if (chk?.tape) throw badRequest('الصورة دي فيها متر أو إيد على القطعة — اختار صورة للمنتج لوحده وجرّب تاني');
+    const nameOf = (kind: string) => want.find((x) => x[0] === kind)?.[2] ?? kind;
+    const unseen = (chk?.missing ?? []).filter((m) => kinds.includes(m));
+    if (unseen.length) throw badRequest(`${unseen.map(nameOf).join(' و')} مش باين في الصورة دي — اختار صورة من زاوية بتبيّنه`);
+    let lines = lines0;
+    // خط ناقص (الذكاء كان مشغول أو مارجّعش نقطتين): محاولة تانية، وبعدها بنرفض بدل ما نرسم خط على حدود الصورة مالوش علاقة بالقطعة
+    if (kinds.some((kd) => !lines[kd])) lines = { ...(await cap(partLines(k.key, photo, kinds), noLines)), ...lines };
+    const lost = kinds.filter((kd) => !lines[kd]);
+    if (lost.length) throw badRequest(`مقدرتش أحدد مكان ${lost.map(nameOf).join(' و')} على القطعة (الذكاء الاصطناعي مشغول أو الصورة مش واضحة) — جرّب تاني بعد دقيقة أو اختار صورة أوضح`);
+    const render = (ls: typeof lines) => drawDimensions(Buffer.from(photo.data, 'base64'), want.map(([kind, v, name, slot]) => ({ k: name, v: v + ' سم', slot, line: ls[kind] ?? null })), '', hint, p.foot);
+    let buf = await render(lines);
+    // المراجعة بعد الرسم: الذكاء بيبص على الصورة النهائية، ولو خط مش راكب على مقاسه بنعيد تحديده مرة واحدة بملاحظته
+    if (Date.now() - started < 30000) {
+      const bad = await cap(dimVerify(k.key, { data: buf.toString('base64'), mime: 'image/jpeg' }, want.map(([kind, v]) => ({ kind, v }))), [] as { kind: string; why: string }[]);
+      const redo = bad.filter((b) => kinds.includes(b.kind));
+      if (redo.length) {
+        const fixed = await cap(partLines(k.key, photo, redo.map((b) => b.kind), redo.map((b) => `"${b.kind}": a previous attempt was wrong (${b.why}). Look again carefully.`).join(' ')), noLines);
+        if (Object.keys(fixed).length) buf = await render({ ...lines, ...fixed });
+      }
+    }
     return { data: buf.toString('base64') };
   });
 
