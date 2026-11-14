@@ -665,6 +665,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   const [vidPct, setVidPct] = useState<string | null>(null);
   const [dimErr, setDimErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const pulled = useRef(false);
   const p = prod.data;
   const isNew = !id;
 
@@ -684,6 +685,7 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
           if (m) rows.push([m[1]!.trim(), m[2]!.trim()]);
           else txt.push(t);
         });
+        pulled.current = false; // the form is filled again: the product's own photos may be brought in again
         setF({
           on: true,
           wasOn: !!sp,
@@ -717,7 +719,6 @@ export function SiteProduct({ id, onClose }: { id?: string; onClose: () => void 
   // صور المنتج بتترفع مرة واحدة: اللي اترفع في «تفاصيل وصور» بيظهر هنا لوحده أول ما المنتج يتنشر (من غير رفع تاني).
   // منتج منشور قبل كده: مانضيفش لوحدنا (ممكن عبده شال صورة من الموقع بقصد) — بيظهر زرار «هات صور التفاصيل».
   const infoImgs = (sysInfo?.imgs ?? []).filter((u): u is string => typeof u === 'string' && !!u);
-  const pulled = useRef(false);
   const ready = !!f;
   const fresh = ready && !f!.wasOn && !f!.imgs.length;
   useEffect(() => {
